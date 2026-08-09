@@ -211,3 +211,4 @@ NOTA: El correo no se envió porque falta RESEND_API_KEY en .env.local
  ✓ Compiled in 262ms (1511 modules)
  GET / 200 in 216ms
  ✓ Compiled in 210ms (752 modules)
+ ✓ Compiled in 407ms (1525 modules)
