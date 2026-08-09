@@ -128,7 +128,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white/90 mb-1">Tu Dirección en Miami</h2>
-                  <p className="text-sm text-white/70 mb-3">Úsala como "Shipping Address" en tus tiendas favoritas.</p>
+                  <p className="text-sm text-white/70 mb-3">Úsala como &quot;Shipping Address&quot; en tus tiendas favoritas.</p>
                   <div className="bg-black/20 p-4 rounded-xl border border-white/10 font-mono text-sm leading-relaxed max-w-sm">
                     <strong>Juan Pérez JRS-1054</strong><br/>
                     8456 NW 72nd St<br/>
