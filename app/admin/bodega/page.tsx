@@ -90,7 +90,7 @@ export default function BodegaScanner() {
     };
     const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
     // Eliminar si ya existía para actualizar
-    const filtered = saved.filter((p: any) => p.id !== newPackage.id);
+    const filtered = saved.filter((p: { id: string }) => p.id !== newPackage.id);
     localStorage.setItem('jrs_inventory', JSON.stringify([newPackage, ...filtered]));
   };
 
@@ -107,7 +107,7 @@ export default function BodegaScanner() {
 
     // Actualizar en localStorage
     const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
-    const updated = saved.map((p: any) => 
+    const updated = saved.map((p: { id: string }) => 
       p.id === packageData?.tracking ? { ...p, status: 'Entregado al Cliente' } : p
     );
     localStorage.setItem('jrs_inventory', JSON.stringify(updated));

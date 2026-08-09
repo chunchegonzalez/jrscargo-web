@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Search, Filter, RefreshCw } from 'lucide-react';
+import { Package, Search, Filter } from 'lucide-react';
 
 interface InventoryItem {
   id: string;
