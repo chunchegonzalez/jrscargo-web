@@ -1,15 +1,32 @@
 'use client';
 
-import React from 'react';
-import { Package, Search, Filter } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Package, Search, Filter, RefreshCw } from 'lucide-react';
+
+interface InventoryItem {
+  id: string;
+  client: string;
+  weight: string;
+  status: string;
+  date: string;
+}
 
 export default function BodegaInventario() {
-  // Datos de prueba para mostrar cómo se verá el inventario
-  const mockInventory = [
-    { id: 'TRK-982374', client: 'Valeria Sanchez', weight: '4.5 lb', status: 'En Bodega CR', date: 'Hoy, 09:30 AM' },
-    { id: 'TRK-102938', client: 'Carlos Perez', weight: '2.1 lb', status: 'En Bodega CR', date: 'Ayer, 16:45 PM' },
-    { id: 'TRK-554123', client: 'Ana Rojas', weight: '1.2 lb', status: 'Listo para retiro', date: 'Ayer, 11:20 AM' },
-  ];
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const loadInventory = () => {
+      const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
+      setInventory(saved);
+    };
+    loadInventory();
+  }, []);
+
+  const activePackages = inventory.filter(p => p.status === 'En Bodega CR').length;
+
+  if (!mounted) return null;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -22,7 +39,7 @@ export default function BodegaInventario() {
         <div className="flex items-center gap-3">
           <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="font-bold text-brand-blue">3 Paquetes Activos</span>
+            <span className="font-bold text-brand-blue">{activePackages} Paquetes Activos</span>
           </div>
         </div>
       </div>
@@ -57,7 +74,12 @@ export default function BodegaInventario() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
-              {mockInventory.map((item) => (
+              {inventory.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">No hay paquetes registrados localmente aún.</td>
+                </tr>
+              )}
+              {inventory.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="p-4 pl-6 font-bold text-brand-blue flex items-center gap-3">
                     <Package size={16} className="text-gray-400" />
@@ -88,7 +110,7 @@ export default function BodegaInventario() {
         
         {/* Footer Tabla */}
         <div className="p-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 text-center font-medium">
-          Mostrando 3 de 3 paquetes
+          Mostrando {inventory.length} de {inventory.length} paquetes
         </div>
       </div>
     </div>

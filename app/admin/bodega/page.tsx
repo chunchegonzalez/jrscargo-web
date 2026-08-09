@@ -79,6 +79,19 @@ export default function BodegaScanner() {
       action: 'Paquete Recibido en Bodega Costa Rica',
       user: 'Operador Bodega'
     }, ...prev]);
+
+    // Guardar en localStorage para que lo vea la página de Inventario
+    const newPackage = {
+      id: packageData?.tracking,
+      client: packageData?.consignatario?.replace(/jrs\s*cargo/i, '').trim(),
+      weight: `${packageData?.weight} ${packageData?.weightUnit}`,
+      status: 'En Bodega CR',
+      date: formattedDate
+    };
+    const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
+    // Eliminar si ya existía para actualizar
+    const filtered = saved.filter((p: any) => p.id !== newPackage.id);
+    localStorage.setItem('jrs_inventory', JSON.stringify([newPackage, ...filtered]));
   };
 
   const handleDeliver = async () => {
@@ -91,6 +104,13 @@ export default function BodegaScanner() {
       action: 'Paquete Entregado al Cliente',
       user: 'Operador Bodega'
     }, ...prev]);
+
+    // Actualizar en localStorage
+    const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
+    const updated = saved.map((p: any) => 
+      p.id === packageData?.tracking ? { ...p, status: 'Entregado al Cliente' } : p
+    );
+    localStorage.setItem('jrs_inventory', JSON.stringify(updated));
   };
 
   const resetScanner = () => {

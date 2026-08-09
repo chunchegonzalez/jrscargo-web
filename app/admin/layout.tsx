@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Package, ScanBarcode, Search, LogOut } from 'lucide-react';
+import { Package, ScanBarcode, LogOut } from 'lucide-react';
 import Image from 'next/image';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -28,10 +28,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/inventario" className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
             <Package size={20} />
             Inventario CR
-          </Link>
-          <Link href="/admin/buscar" className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
-            <Search size={20} />
-            Buscador Global
           </Link>
         </nav>
 
