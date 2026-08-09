@@ -114,15 +114,15 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-white/10 pt-8 mt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="border-t border-white/10 pt-8 mt-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <p className="text-sm text-white/60 text-center md:text-left">
             JRS CARGO CR &copy; 2026. Todos los derechos reservados.
           </p>
-          <div className="flex items-center gap-6">
-            <Link href="/politica-de-privacidad" className="text-sm text-white/60 hover:text-white transition-colors">
+          <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 md:pr-20">
+            <Link href="/politica-de-privacidad" className="text-sm text-white/60 hover:text-white transition-colors p-2 -m-2">
               Política de privacidad
             </Link>
-            <Link href="/terminos-y-condiciones" className="text-sm text-white/60 hover:text-white transition-colors">
+            <Link href="/terminos-y-condiciones" className="text-sm text-white/60 hover:text-white transition-colors p-2 -m-2">
               Términos y condiciones
             </Link>
           </div>
