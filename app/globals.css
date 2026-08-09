@@ -1,27 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --brand-blue: #12435e;
+    --brand-red: #fd4e64;
+    --brand-yellow: #fdc151;
+    --foreground-rgb: 0, 0, 0;
+    --background-start-rgb: 249, 250, 251;
+    --background-end-rgb: 255, 255, 255;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #0f172a;
+    background: #f9fafb;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    box-sizing: border-box;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Botones principales */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-95;
+    background: linear-gradient(135deg, #1c6289, #12435e);
+    box-shadow: 0 4px 14px rgba(18, 67, 94, 0.3);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #2481b5, #1c6289);
+    box-shadow: 0 6px 20px rgba(18, 67, 94, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-red-300 active:scale-95;
+    background: linear-gradient(135deg, #fd4e64, #d33c4f);
+    box-shadow: 0 4px 14px rgba(253, 78, 100, 0.35);
+  }
+  .btn-accent:hover {
+    background: linear-gradient(135deg, #ff6b7e, #fd4e64);
+    box-shadow: 0 6px 20px rgba(253, 78, 100, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold border-2 transition-all duration-200 focus:outline-none focus:ring-4 active:scale-95;
+    border-color: #12435e;
+    color: #12435e;
+  }
+  .btn-outline:hover {
+    background: #12435e;
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  .btn-white {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-brand-blue bg-white transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-white/50 active:scale-95;
+    box-shadow: 0 4px 14px rgba(255,255,255,0.25);
+  }
+  .btn-white:hover {
+    background: #f9fafb;
+    box-shadow: 0 6px 20px rgba(255,255,255,0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-whatsapp {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-green-300 active:scale-95;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  }
+  .btn-whatsapp:hover {
+    background: linear-gradient(135deg, #128C7E, #25D366);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45);
+    transform: translateY(-1px);
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-2xl transition-all duration-300;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+  .card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .card-glass {
+    @apply rounded-2xl transition-all duration-300;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  /* Section layouts */
+  .section-padding {
+    @apply py-16 px-4 sm:px-6 lg:px-8;
+  }
+
+  section[id] {
+    scroll-margin-top: 88px; /* Offset for the sticky header */
+  }
+
+  .container-max {
+    @apply max-w-6xl mx-auto;
+  }
+
+  .section-title {
+    @apply text-3xl sm:text-4xl font-bold text-brand-blue;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-brand-text-gray mt-3;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #1c6289, #12435e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  /* Input styles */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-gray-200 font-medium text-brand-blue transition-all duration-200 focus:outline-none;
+  }
+  .input-field:focus {
+    border-color: #12435e;
+    box-shadow: 0 0 0 3px rgba(18, 67, 94, 0.1);
+  }
+
+  .select-field {
+    @apply input-field bg-white appearance-none cursor-pointer;
+  }
+
+  /* Step connector */
+  .step-connector {
+    @apply hidden md:flex items-center justify-center flex-1;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+::-webkit-scrollbar-thumb {
+  background: #12435e;
+  border-radius: 3px;
+}
+
+/* WhatsApp flotante animación */
+@keyframes wa-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
+  70% { box-shadow: 0 0 0 14px rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
+.wa-pulse {
+  animation: wa-pulse 2.5s ease-in-out infinite;
+}
+
+/* Animations for Glowing Tracking Section */
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
