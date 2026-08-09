@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,7 +24,7 @@ export default function ChatBotWidget() {
           <div className="bg-brand-blue p-4 flex justify-between items-center text-white">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1">
-                <img src="/logo.png" alt="JRS Cargo" className="w-full h-auto object-contain" />
+                <Image src="/logo.png" alt="JRS Cargo" width={32} height={32} className="w-full h-auto object-contain" />
               </div>
               <div>
                 <h3 className="font-bold">Asistente JRS</h3>
