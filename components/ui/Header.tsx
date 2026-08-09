@@ -37,7 +37,7 @@ export default function Header() {
       <div 
         className={`mx-auto transition-all duration-300 ease-out pointer-events-auto flex items-center justify-between ${
           isScrolled && !isMobileMenuOpen
-            ? 'w-[calc(100%-2rem)] max-w-6xl bg-white/90 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full py-3 px-6 sm:px-8 border border-white/60' 
+            ? 'w-[calc(100%-2rem)] max-w-6xl bg-white/90 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full py-1.5 px-6 sm:px-8 border border-white/60' 
             : 'w-full max-w-full bg-white/95 backdrop-blur-sm rounded-none py-4 px-4 sm:px-6 lg:px-8 border border-transparent'
         }`}
       >
@@ -48,7 +48,11 @@ export default function Header() {
             alt="JRS CARGO" 
             width={240} 
             height={96} 
-            className="w-auto h-14 sm:h-16 lg:h-[72px] object-contain transition-all duration-300"
+            className={`w-auto object-contain transition-all duration-300 ease-out ${
+              isScrolled && !isMobileMenuOpen 
+                ? 'h-12 sm:h-14 lg:h-[56px]' 
+                : 'h-14 sm:h-16 lg:h-[72px]'
+            }`}
             priority
           />
         </Link>
