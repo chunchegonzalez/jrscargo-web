@@ -1,4 +1,5 @@
 import Hero from '@/components/sections/Hero';
+import AmazonDeals from '@/components/sections/AmazonDeals';
 import TrackingSearch from '@/components/sections/TrackingSearch';
 import Rates from '@/components/sections/Rates';
 import QuoteCalculator from '@/components/sections/QuoteCalculator';
@@ -11,6 +12,7 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <AmazonDeals />
       <TrackingSearch />
       <Rates />
       <QuoteCalculator />
