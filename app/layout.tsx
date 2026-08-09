@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import Header from '@/components/ui/Header'
-import Footer from '@/components/ui/Footer'
+import { HeaderWrapper, FooterWrapper } from '@/components/ui/LayoutWrapper'
 import ChatBotWidget from '@/components/ui/ChatBotWidget'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -74,37 +73,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'LocalBusiness',
-              name: 'JRS CARGO CR',
-              description:
-                'Empresa de logística internacional que conecta Costa Rica con Estados Unidos, España y China mediante soluciones de transporte aéreo y marítimo.',
-              url: 'https://jrscargocr.com',
-              telephone: '+50672601238',
-              email: 'info@jrscargocr.com',
-              address: {
-                '@type': 'PostalAddress',
-                addressLocality: 'Heredia',
-                addressCountry: 'CR',
-              },
-              sameAs: ['https://www.instagram.com/jrscargocr/'],
-              openingHoursSpecification: [],
-              priceRange: 'USD',
-              servesCuisine: undefined,
-            }),
-          }}
-        />
       </head>
       <body className={`${inter.className} antialiased flex flex-col min-h-screen`}>
-        <Header />
-        <main className="flex-1 pt-[72px] sm:pt-[88px]">
+        <HeaderWrapper />
+        <main className="flex-1 pt-[72px] sm:pt-[88px] relative z-10">
           {children}
         </main>
-        <Footer />
+        <FooterWrapper />
         <ChatBotWidget />
       </body>
     </html>
