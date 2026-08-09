@@ -15,12 +15,11 @@ export default function Hero() {
       </div>
 
       <div className="container-max relative z-10 px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           
           {/* Content */}
-          {/* Content */}
           <div className="max-w-2xl animate-slide-up">
-            <h1 className="text-4xl sm:text-5xl lg:text-[4.5rem] font-black text-brand-blue leading-[1.05] mb-6 text-balance tracking-tight">
+            <h1 className="text-[2.5rem] sm:text-5xl lg:text-[4.5rem] font-black text-brand-blue leading-[1.1] mb-6 text-balance tracking-tight">
               Tus compras del mundo, <br className="hidden lg:block"/>
               <span className="text-brand-red">más cerca de</span> <br className="hidden lg:block"/>
               Costa Rica.

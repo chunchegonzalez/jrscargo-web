@@ -11,7 +11,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           
           {/* Brand */}
-          <div className="space-y-6">
+          <div className="space-y-6 flex flex-col items-center md:items-start text-center md:text-left">
             <Link href="/" className="inline-block">
               <Image 
                 src="/logo.png" 
@@ -27,7 +27,7 @@ export default function Footer() {
           </div>
 
           {/* Services */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold text-lg mb-6">Servicios</h3>
             <ul className="space-y-4">
               <li>
@@ -54,7 +54,7 @@ export default function Footer() {
           </div>
 
           {/* Customers */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold text-lg mb-6">Clientes</h3>
             <ul className="space-y-4">
               <li>
@@ -81,29 +81,29 @@ export default function Footer() {
           </div>
 
           {/* Contact */}
-          <div>
+          <div className="text-center md:text-left flex flex-col items-center md:items-start">
             <h3 className="text-white font-semibold text-lg mb-6">Contacto</h3>
             <ul className="space-y-4">
               <li>
-                <a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
+                <a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center md:justify-start gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
                   <Phone size={18} className="group-hover:scale-110 transition-transform" />
                   +506 7260 1238
                 </a>
               </li>
               <li>
-                <a href="mailto:info@jrscargocr.com" className="flex items-center gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
+                <a href="mailto:info@jrscargocr.com" className="flex items-center justify-center md:justify-start gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
                   <Mail size={18} className="group-hover:scale-110 transition-transform" />
                   info@jrscargocr.com
                 </a>
               </li>
               <li>
-                <a href="https://www.instagram.com/jrscargocr/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
+                <a href="https://www.instagram.com/jrscargocr/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center md:justify-start gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
                   <Camera size={18} className="group-hover:scale-110 transition-transform" />
                   @jrscargocr
                 </a>
               </li>
               <li>
-                <a href="https://www.google.com/maps/place/JRS+CARGO+CR/@9.9999918,-84.0962979,253m/data=!3m2!1e3!4b1!4m6!3m5!1s0x8fa0e50070b2b9c3:0x57e9993aae41eab2!8m2!3d9.9999905!4d-84.0956542!16s%2Fg%2F11zd7mddck?entry=ttu&g_ep=EgoyMDI2MDgwNS4xIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
+                <a href="https://www.google.com/maps/place/JRS+CARGO+CR/@9.9999918,-84.0962979,253m/data=!3m2!1e3!4b1!4m6!3m5!1s0x8fa0e50070b2b9c3:0x57e9993aae41eab2!8m2!3d9.9999905!4d-84.0956542!16s%2Fg%2F11zd7mddck?entry=ttu&g_ep=EgoyMDI2MDgwNS4xIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center md:justify-start gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
                   <MapPin size={18} className="group-hover:scale-110 transition-transform" />
                   Heredia, Costa Rica
                 </a>

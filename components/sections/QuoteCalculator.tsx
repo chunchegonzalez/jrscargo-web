@@ -128,7 +128,7 @@ export default function QuoteCalculator() {
                 <span className="w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-sm">1</span>
                 Origen
               </h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {(['USA', 'Spain', 'China'] as Origin[]).map((o) => (
                   <button
                     key={o}
@@ -155,7 +155,7 @@ export default function QuoteCalculator() {
                 <span className="w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-sm">2</span>
                 Tipo de envío
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -197,7 +197,7 @@ export default function QuoteCalculator() {
               </h3>
               
               {service === 'Air' ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-brand-text-gray mb-2">Peso</label>
                     <div className="relative">
@@ -271,7 +271,7 @@ export default function QuoteCalculator() {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-sm font-medium text-brand-text-gray mb-2">Largo (cm)</label>
                         <input 
