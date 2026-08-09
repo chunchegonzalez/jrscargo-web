@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Calculator, MessageCircle, MapPin, Package, Plane, Container, Ship } from 'lucide-react';
+import { ArrowRight, Calculator, Plane, Container, Ship } from 'lucide-react';
 import { FaStar, FaWhatsapp } from 'react-icons/fa';
 import Image from 'next/image';
 import { motion } from 'framer-motion';

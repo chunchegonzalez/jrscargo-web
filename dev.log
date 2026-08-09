@@ -192,3 +192,5 @@ NOTA: El correo no se envió porque falta RESEND_API_KEY en .env.local
  GET / 200 in 131ms
  GET /favicon.ico 200 in 6ms
  GET / 200 in 60ms
+ ✓ Compiled in 348ms (1525 modules)
+ GET / 200 in 155ms
