@@ -15,18 +15,22 @@ export default function CorporateClients() {
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      companyName: formData.get('companyName'),
-      contactName: formData.get('contactName'),
+      empresa: formData.get('companyName'),
+      contacto: formData.get('contactName'),
       email: formData.get('email'),
-      phone: formData.get('phone'),
-      volume: formData.get('volume'),
-      message: formData.get('message'),
+      telefono: formData.get('phone'),
+      volumen: formData.get('volume'),
+      mensaje: formData.get('message'),
+      _subject: `Nueva Cotización Corporativa: ${formData.get('companyName')}`
     };
 
     try {
-      const response = await fetch('/api/contact', {
+      const response = await fetch('https://formsubmit.co/ajax/info@jrscargocr.com', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(data),
       });
 

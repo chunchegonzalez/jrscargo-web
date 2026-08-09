@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
+    const apiKey = process.env.RESEND_API_KEY || "re_GPTpJMRG_4eQ7dUT89kjXmBqKsjhZCvhy";
 
     // Si no hay API key configurada, solo registramos en consola (útil para desarrollo)
     if (!apiKey) {
