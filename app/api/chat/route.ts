@@ -43,10 +43,11 @@ export async function POST(req: Request) {
     });
 
     return result.toDataStreamResponse();
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error detallado de API:", error);
+    const errorMessage = error instanceof Error ? error.message : "Error interno del servidor al procesar la IA.";
     return new Response(
-      error.message || "Error interno del servidor al procesar la IA.",
+      errorMessage,
       { status: 500 }
     );
   }
