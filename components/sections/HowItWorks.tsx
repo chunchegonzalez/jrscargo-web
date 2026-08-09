@@ -1,6 +1,8 @@
 'use client';
 
 import { UserPlus, ShoppingBag, Box, Truck, ArrowRight, MapPin, PlaneTakeoff } from 'lucide-react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 const steps = [
   {
@@ -103,14 +105,12 @@ export default function HowItWorks() {
                   </p>
 
                   {idx === 0 && (
-                    <a 
-                      href="https://worldboxcr.com/jrscargo/register"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-6 btn-outline py-2 px-6 text-sm hover:bg-brand-blue hover:text-white transition-colors"
+                    <Link 
+                      href="/registro"
+                      className="mt-6 btn-primary py-3 px-6 text-sm shadow-lg shadow-brand-blue/20 transition-colors"
                     >
                       Crear casillero
-                    </a>
+                    </Link>
                   )}
                 </motion.div>
               );

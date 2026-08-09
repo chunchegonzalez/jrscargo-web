@@ -3,6 +3,7 @@
 import { ArrowRight, Calculator, Plane, Container, Ship } from 'lucide-react';
 import { FaStar, FaWhatsapp } from 'react-icons/fa';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export default function Hero() {
@@ -65,10 +66,8 @@ export default function Hero() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <a 
-                href="https://worldboxcr.com/jrscargo/register"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link 
+                href="/registro"
                 className="btn-primary py-4 px-8 text-base shadow-xl shadow-brand-blue/20"
               >
                 Abrir mi casillero gratis

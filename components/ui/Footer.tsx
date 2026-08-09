@@ -58,14 +58,14 @@ export default function Footer() {
             <h3 className="text-white font-semibold text-lg mb-6">Clientes</h3>
             <ul className="space-y-4">
               <li>
-                <a href="https://worldboxcr.com/jrscargo/register" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/registro" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Crear casillero
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="https://worldboxcr.com/jrscargo/login" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/login" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Iniciar sesión
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/#tracking" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">

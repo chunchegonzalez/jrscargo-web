@@ -72,24 +72,20 @@ export default function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden lg:flex items-center space-x-4">
-          <a 
-            href="https://worldboxcr.com/jrscargo/login" 
-            target="_blank" 
-            rel="noopener noreferrer"
+          <Link 
+            href="/login" 
             className="text-sm font-semibold text-brand-blue hover:text-brand-red transition-colors flex items-center gap-2"
           >
             <UserCircle size={18} />
             Iniciar sesión
-          </a>
-          <a 
-            href="https://worldboxcr.com/jrscargo/register" 
-            target="_blank" 
-            rel="noopener noreferrer"
+          </Link>
+          <Link 
+            href="/registro" 
             className="btn-primary text-sm py-2.5 px-5"
           >
             <PackageOpen size={18} />
             Crear mi casillero
-          </a>
+          </Link>
         </div>
 
         {/* Mobile menu button */}
@@ -118,26 +114,22 @@ export default function Header() {
             ))}
             
             <div className="mt-6 pt-6 border-t border-gray-100 grid gap-4">
-              <a 
-                href="https://worldboxcr.com/jrscargo/login" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <Link 
+                href="/login" 
                 className="flex items-center justify-center gap-2 w-full btn-outline py-3"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <UserCircle size={20} />
                 Iniciar sesión
-              </a>
-              <a 
-                href="https://worldboxcr.com/jrscargo/register" 
-                target="_blank" 
-                rel="noopener noreferrer"
+              </Link>
+              <Link 
+                href="/registro" 
                 className="flex items-center justify-center gap-2 w-full btn-primary py-3"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <PackageOpen size={20} />
                 Crear mi casillero
-              </a>
+              </Link>
             </div>
           </div>
         </div>
