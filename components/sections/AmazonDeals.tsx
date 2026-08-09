@@ -2,7 +2,7 @@
 
 import { ArrowRight, ShoppingBag, Laptop, Smartphone, Shirt, ShieldCheck } from 'lucide-react';
 import { FaAmazon } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 const deals = [
   {
@@ -35,7 +35,7 @@ const deals = [
   },
 ];
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -43,7 +43,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
 };
