@@ -5,9 +5,10 @@ import { streamText } from 'ai';
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  try {
+    const { messages } = await req.json();
 
-  const result = await streamText({
+    const result = await streamText({
     model: google('models/gemini-1.5-flash'),
     system: `Eres el asistente virtual oficial de JRS CARGO, una empresa de logística en Costa Rica enfocada en traer paquetes desde Estados Unidos, España y China hacia San José (SJ), Costa Rica.
     Tu tono debe ser amable, profesional, confiable y directo. Usa un lenguaje claro y cordial. 
@@ -39,7 +40,14 @@ export async function POST(req: Request) {
     - Usa formato Markdown (negritas, viñetas) para hacer la lectura más fácil.
     - Sé conciso, no escribas respuestas gigantes a menos que sea necesario.`,
     messages,
-  });
+    });
 
-  return result.toDataStreamResponse();
+    return result.toDataStreamResponse();
+  } catch (error: any) {
+    console.error("Error detallado de API:", error);
+    return new Response(
+      error.message || "Error interno del servidor al procesar la IA.",
+      { status: 500 }
+    );
+  }
 }
