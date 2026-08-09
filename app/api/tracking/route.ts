@@ -8,10 +8,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Tracking number is required' }, { status: 400 });
   }
 
-  const apiToken = process.env.TRACKING_API_TOKEN;
+  const apiToken = process.env.TRACKING_API_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyNiwiZW1haWwiOiJqb3NlZ29uMjAwMEBob3RtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsInJvbGVJZCI6MTIsInRlbmFudElkIjoiOWRjZGFlZGItZmZlMS00M2Y3LWI1ZTgtMDMzOGVjYjk4NmQwIiwiY2xpZW50SWQiOjYwODMsImNsaWVudENvZGUiOiJKUlMtMTAwMSIsImlzVG9wTWFzdGVyIjpmYWxzZSwiaXNNYXlvcmlzdGEiOnRydWUsImlhdCI6MTc4NjIzNzE1Mn0.ZLEBwa8iR_wLw59Akpl-PpR_Mwq3h3IBO6XKVi2PZpQ";
 
   if (!apiToken) {
-    console.warn("TRACKING_API_TOKEN is not configured.");
     return NextResponse.json({ error: 'System configuration error' }, { status: 500 });
   }
 
