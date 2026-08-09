@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Search, MapPin, Calendar, AlertCircle, MessageCircle, Package, Plane, CheckCircle2, Warehouse, Image as ImageIcon, ChevronRight } from 'lucide-react';
+import { Search, Calendar, AlertCircle, MessageCircle, Package, Plane, CheckCircle2, Warehouse, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 
 interface PackagePhoto {

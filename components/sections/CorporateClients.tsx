@@ -33,7 +33,7 @@ export default function CorporateClients() {
       if (!response.ok) throw new Error('Error al enviar');
       
       setSubmitStatus('success');
-    } catch (error) {
+    } catch {
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
