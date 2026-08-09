@@ -1,12 +1,21 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ScanBarcode, Search, Package, User, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ScanBarcode, Package, User, CheckCircle2, ArrowRight } from 'lucide-react';
+
+interface PackageData {
+  tracking: string;
+  consignatario: string;
+  weight: string;
+  weightUnit: string;
+  provider: string;
+  description: string;
+}
 
 export default function BodegaScanner() {
   const [scannedCode, setScannedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [packageData, setPackageData] = useState<any>(null);
+  const [packageData, setPackageData] = useState<PackageData | null>(null);
   
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,8 +52,9 @@ export default function BodegaScanner() {
       } else {
         throw new Error('No se encontraron datos del paquete');
       }
-    } catch (err: any) {
-      alert(err.message || 'Error al buscar paquete');
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Error al buscar paquete';
+      alert(errorMsg);
       // Limpiamos el input para que vuelva a intentar
       setScannedCode('');
     } finally {
