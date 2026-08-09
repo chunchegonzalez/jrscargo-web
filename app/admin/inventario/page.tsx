@@ -19,7 +19,7 @@ export default function BodegaInventario() {
     setMounted(true);
     const loadInventory = async () => {
       try {
-        const res = await fetch('/api/inventory');
+        const res = await fetch('/api/inventory', { cache: 'no-store' });
         if (res.ok) {
           const { data } = await res.json();
           // Transform from DB format
