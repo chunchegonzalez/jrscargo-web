@@ -53,8 +53,20 @@ export default function BodegaScanner() {
       
       if (data.status === 'SUCCESS' && data.rawData?.package) {
         setPackageData(data.rawData.package);
-        // Simulamos que el paquete aún no está en nuestra BD local
-        setLocalStatus(null); 
+        
+        // 2. Revisamos si ya está en nuestra BD local de Supabase
+        const dbRes = await fetch(`/api/inventory/${encodeURIComponent(scannedCode)}`);
+        if (dbRes.ok) {
+          const dbData = await dbRes.json();
+          if (dbData.success && dbData.data) {
+            setLocalStatus(dbData.data.status);
+            setHistory(dbData.data.history || []);
+          } else {
+            setLocalStatus(null);
+          }
+        } else {
+          setLocalStatus(null); 
+        }
       } else {
         throw new Error('No se encontraron datos del paquete');
       }
@@ -69,48 +81,64 @@ export default function BodegaScanner() {
   };
 
   const handleRegisterLocal = async () => {
-    // Aquí conectaremos con Supabase para guardar el paquete localmente
     const now = new Date();
     const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
     
-    setLocalStatus('En Bodega CR');
-    setHistory(prev => [{
+    const newEvent = {
       date: formattedDate,
       action: 'Paquete Recibido en Bodega Costa Rica',
       user: 'Operador Bodega'
-    }, ...prev]);
-
-    // Guardar en localStorage para que lo vea la página de Inventario
-    const newPackage = {
-      id: packageData?.tracking,
-      client: packageData?.consignatario?.replace(/jrs\s*cargo/i, '').trim(),
-      weight: `${packageData?.weight} ${packageData?.weightUnit}`,
-      status: 'En Bodega CR',
-      date: formattedDate
     };
-    const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
-    // Eliminar si ya existía para actualizar
-    const filtered = saved.filter((p: { id: string }) => p.id !== newPackage.id);
-    localStorage.setItem('jrs_inventory', JSON.stringify([newPackage, ...filtered]));
+
+    const newHistory = [newEvent, ...history];
+
+    setLocalStatus('En Bodega CR');
+    setHistory(newHistory);
+
+    try {
+      await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: packageData?.tracking,
+          client: packageData?.consignatario?.replace(/jrs\s*cargo/i, '').trim(),
+          weight: `${packageData?.weight} ${packageData?.weightUnit}`,
+          status: 'En Bodega CR',
+          history: newHistory
+        })
+      });
+    } catch (e) {
+      console.error('Error guardando en BD', e);
+    }
   };
 
   const handleDeliver = async () => {
     const now = new Date();
     const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
     
-    setLocalStatus('Entregado');
-    setHistory(prev => [{
+    const newEvent = {
       date: formattedDate,
       action: 'Paquete Entregado al Cliente',
       user: 'Operador Bodega'
-    }, ...prev]);
+    };
 
-    // Actualizar en localStorage
-    const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
-    const updated = saved.map((p: { id: string }) => 
-      p.id === packageData?.tracking ? { ...p, status: 'Entregado al Cliente' } : p
-    );
-    localStorage.setItem('jrs_inventory', JSON.stringify(updated));
+    const newHistory = [newEvent, ...history];
+
+    setLocalStatus('Entregado al Cliente');
+    setHistory(newHistory);
+
+    try {
+      await fetch(`/api/inventory/${packageData?.tracking}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'Entregado al Cliente',
+          history: newHistory
+        })
+      });
+    } catch (e) {
+      console.error('Error actualizando en BD', e);
+    }
   };
 
   const resetScanner = () => {

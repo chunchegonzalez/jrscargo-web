@@ -17,9 +17,24 @@ export default function BodegaInventario() {
 
   useEffect(() => {
     setMounted(true);
-    const loadInventory = () => {
-      const saved = JSON.parse(localStorage.getItem('jrs_inventory') || '[]');
-      setInventory(saved);
+    const loadInventory = async () => {
+      try {
+        const res = await fetch('/api/inventory');
+        if (res.ok) {
+          const { data } = await res.json();
+          // Transform from DB format
+          const formatted = data.map((item: any) => ({
+            id: item.id,
+            client: item.client,
+            weight: item.weight,
+            status: item.status,
+            date: new Date(item.created_at).toLocaleString('es-CR')
+          }));
+          setInventory(formatted);
+        }
+      } catch (error) {
+        console.error('Error fetching inventory', error);
+      }
     };
     loadInventory();
   }, []);
