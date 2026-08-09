@@ -312,3 +312,14 @@ Module not found: Can't resolve 'ai/react'
 [0m [90m 7 |[39m[0m
 
 https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./components/ui/ChatBotWidget.tsx:4:1
+Module not found: Can't resolve 'ai/react'
+[0m [90m 2 |[39m[0m
+[0m [90m 3 |[39m [36mimport[39m { useState[33m,[39m useRef[33m,[39m useEffect } [36mfrom[39m [32m'react'[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { useChat } [36mfrom[39m [32m'ai/react'[39m[33m;[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 5 |[39m [36mimport[39m { [33mMessageCircle[39m[33m,[39m [33mX[39m[33m,[39m [33mSend[39m[33m,[39m [33mBot[39m[33m,[39m [33mLoader2[39m } [36mfrom[39m [32m'lucide-react'[39m[33m;[39m[0m
+[0m [90m 6 |[39m [36mimport[39m [33mImage[39m [36mfrom[39m [32m'next/image'[39m[33m;[39m[0m
+[0m [90m 7 |[39m[0m
+
+https://nextjs.org/docs/messages/module-not-found

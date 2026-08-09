@@ -7,13 +7,13 @@ import Image from 'next/image';
 
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, error]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -41,7 +41,7 @@ export default function ChatBotWidget() {
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.length === 0 && (
+            {messages.length === 0 && !error && (
               <div className="text-center text-sm text-gray-500 mt-10">
                 <p className="mb-2 font-semibold">¡Hola! Soy el asistente virtual de JRS CARGO.</p>
                 <p>¿En qué te puedo ayudar hoy? (Ej: Tarifas, tiempos, casilleros)</p>
@@ -66,6 +66,17 @@ export default function ChatBotWidget() {
                 </div>
               </div>
             ))}
+            
+            {error && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 rounded-full bg-red-500 flex-shrink-0 flex items-center justify-center text-white">
+                  <X size={16} />
+                </div>
+                <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl rounded-tl-sm p-3 text-sm shadow-sm max-w-[85%]">
+                  Hubo un error de conexión: {error.message}
+                </div>
+              </div>
+            )}
             {isLoading && (
               <div className="flex gap-3 justify-start">
                 <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
