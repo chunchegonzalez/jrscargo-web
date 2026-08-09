@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { MessageCircle, Box, Scale } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const LOCAL_RATES = {
   usaAir: 7,
@@ -313,11 +314,24 @@ export default function QuoteCalculator() {
 
           {/* Result Card */}
           <div className="lg:col-span-5 relative z-20">
-            <div className="bg-brand-blue rounded-3xl p-6 sm:p-8 text-white shadow-xl h-full flex flex-col relative overflow-hidden">
+            <motion.div 
+              animate={quoteResult.isValid ? { scale: [0.98, 1], opacity: 1 } : { opacity: 0.95 }}
+              transition={{ duration: 0.4 }}
+              className={`rounded-3xl p-6 sm:p-8 text-white shadow-xl h-full flex flex-col relative overflow-hidden transition-colors duration-500 ${
+                quoteResult.isValid ? 'bg-gradient-to-br from-brand-blue to-[#081e33] border border-white/20' : 'bg-brand-blue border border-transparent'
+              }`}
+            >
+              {/* Dynamic glowing background when valid */}
+              {quoteResult.isValid && (
+                <div className="absolute inset-0 bg-brand-yellow/5 animate-pulse pointer-events-none" />
+              )}
+              
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-bl-full pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-yellow/10 rounded-tr-full pointer-events-none" />
               
-              <h3 className="text-xl font-bold mb-6 text-brand-yellow z-10">Tu envío estimado</h3>
+              <h3 className="text-xl font-bold mb-6 text-brand-yellow z-10 flex items-center gap-2">
+                Tu envío estimado
+              </h3>
               
               <div className="space-y-4 mb-8 flex-1 z-10">
                 <div className="flex justify-between items-center border-b border-white/10 pb-3">
@@ -332,18 +346,35 @@ export default function QuoteCalculator() {
                   <span className="text-brand-light/70 text-sm">Tarifa aplicada</span>
                   <span className="font-semibold">{rateLabel}</span>
                 </div>
-                {quoteResult.isValid && (
-                  <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                    <span className="text-brand-light/70 text-sm">Peso/Volumen</span>
-                    <span className="font-semibold text-right max-w-[150px]">{quoteResult.appliedDimensionStr}</span>
-                  </div>
-                )}
+                <AnimatePresence>
+                  {quoteResult.isValid && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex justify-between items-center border-b border-white/10 pb-3 overflow-hidden"
+                    >
+                      <span className="text-brand-light/70 text-sm">Peso/Volumen</span>
+                      <span className="font-semibold text-right max-w-[150px]">{quoteResult.appliedDimensionStr}</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="bg-white/10 rounded-2xl p-5 mb-6 backdrop-blur-sm z-10">
+              <div className="bg-white/10 rounded-2xl p-5 mb-6 backdrop-blur-sm z-10 relative overflow-hidden border border-white/10 shadow-inner">
                 <span className="block text-brand-light/80 text-sm mb-1">TOTAL ESTIMADO</span>
-                <div className="text-4xl font-black">
-                  {quoteResult.isValid ? `US$${quoteResult.total}` : 'US$0.00'}
+                <div className="text-4xl font-black h-[40px] flex items-center">
+                  <AnimatePresence mode="popLayout">
+                    <motion.div
+                      key={quoteResult.isValid ? quoteResult.total : 'empty'}
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -20, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    >
+                      {quoteResult.isValid ? `US$${quoteResult.total}` : 'US$0.00'}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </div>
 
@@ -352,7 +383,7 @@ export default function QuoteCalculator() {
                   href={waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all duration-300 z-30 bg-[#25D366] hover:bg-[#128C7E] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1 relative cursor-pointer pointer-events-auto"
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all duration-300 z-30 bg-[#25D366] hover:bg-[#128C7E] text-white shadow-[0_0_15px_rgba(37,211,102,0.4)] hover:shadow-[0_0_25px_rgba(37,211,102,0.6)] transform hover:-translate-y-1 relative cursor-pointer pointer-events-auto wa-pulse"
                 >
                   <MessageCircle size={22} />
                   Confirmar por WhatsApp
@@ -361,13 +392,13 @@ export default function QuoteCalculator() {
                 <button
                   type="button"
                   disabled
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all duration-300 z-30 bg-gray-400 text-gray-200 cursor-not-allowed opacity-50 relative pointer-events-none"
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all duration-300 z-30 bg-white/10 text-white/40 cursor-not-allowed relative pointer-events-none border border-white/5"
                 >
-                  <MessageCircle size={22} />
-                  Confirmar por WhatsApp
+                  <MessageCircle size={22} className="opacity-50" />
+                  Ingresa datos para cotizar
                 </button>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
