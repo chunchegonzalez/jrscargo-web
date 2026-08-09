@@ -230,6 +230,17 @@ export default function TrackingSearch() {
                     <div className="relative border-l-2 border-gray-100 ml-4 space-y-8">
                       {result.rawData.timeline?.map((event, index) => {
                         const isLatest = index === 0;
+                        
+                        // Interceptar y mejorar los textos del API de Worldbox
+                        let displayStatus = event.status;
+                        let displayDesc = event.description;
+                        
+                        const targetText = "Cambio de Estatus de Paquete de En Oficina Central a Entregado";
+                        if (displayStatus === targetText || displayDesc === targetText) {
+                          displayStatus = "Paquete en Oficina (Costa Rica)";
+                          displayDesc = "El paquete se encuentra en nuestras oficinas en Costa Rica. Nuestro departamento le enviará un mensaje cuando esté listo para retiro.";
+                        }
+
                         return (
                           <div key={index} className="relative pl-10">
                             {/* Icon / Dot */}
@@ -242,8 +253,8 @@ export default function TrackingSearch() {
                             </div>
                             
                             <div className={`${isLatest ? 'text-brand-blue' : 'text-brand-text-light'} bg-gray-50/50 p-4 rounded-2xl border border-gray-50`}>
-                              <p className="font-bold text-lg mb-1">{event.status}</p>
-                              <p className="text-sm opacity-80 mb-3">{event.description}</p>
+                              <p className="font-bold text-lg mb-1">{displayStatus}</p>
+                              <p className="text-sm opacity-80 mb-3">{displayDesc}</p>
                               
                               <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-wider opacity-70">
                                 <span className="flex items-center gap-1">
