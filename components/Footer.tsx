@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Package, MessageCircle, Mail, Instagram, ArrowRight } from 'lucide-react'
+import { Package, MessageCircle, Mail, ArrowRight } from 'lucide-react'
+import { FaInstagram } from 'react-icons/fa'
 import { WHATSAPP_NUMBER, EMAIL, INSTAGRAM_URL, PORTAL_LOGIN_URL, PORTAL_REGISTER_URL } from '@/data/rates'
 
 const footerLinks = {
@@ -75,7 +76,7 @@ export default function Footer() {
                 className="w-9 h-9 bg-white/10 hover:bg-pink-500 rounded-lg flex items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-400"
                 aria-label="Instagram de JRS CARGO"
               >
-                <Instagram className="w-4 h-4 text-white" />
+                <FaInstagram className="w-4 h-4 text-white" />
               </a>
             </div>
           </div>
@@ -157,7 +158,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="text-white/50 hover:text-white text-sm transition-colors duration-200 flex items-center gap-2 focus:outline-none focus:underline"
                 >
-                  <Instagram className="w-4 h-4 flex-shrink-0" />
+                  <FaInstagram className="w-4 h-4 flex-shrink-0" />
                   @jrscargocr
                 </a>
               </li>

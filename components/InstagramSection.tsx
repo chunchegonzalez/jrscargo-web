@@ -1,6 +1,7 @@
 'use client'
 
-import { Instagram, ExternalLink, Grid } from 'lucide-react'
+import { ExternalLink, Grid } from 'lucide-react'
+import { FaInstagram } from 'react-icons/fa'
 import { INSTAGRAM_URL } from '@/data/rates'
 
 export default function InstagramSection() {
@@ -13,7 +14,7 @@ export default function InstagramSection() {
             className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-4 text-white text-sm font-semibold"
             style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)' }}
           >
-            <Instagram className="w-4 h-4" aria-hidden="true" />
+            <FaInstagram className="w-4 h-4" aria-hidden="true" />
             Instagram
           </div>
           <h2 className="section-title">Síguenos en Instagram</h2>
