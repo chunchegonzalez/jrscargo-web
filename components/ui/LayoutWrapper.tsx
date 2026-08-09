@@ -21,3 +21,14 @@ export function ChatBotWrapper() {
   if (pathname?.startsWith('/admin')) return null;
   return <ChatBotWidget />;
 }
+
+export function MainWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith('/admin');
+  
+  return (
+    <main className={`flex-1 relative z-10 ${isAdmin ? '' : 'pt-[72px] sm:pt-[88px]'}`}>
+      {children}
+    </main>
+  );
+}

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { HeaderWrapper, FooterWrapper, ChatBotWrapper } from '@/components/ui/LayoutWrapper'
+import { HeaderWrapper, FooterWrapper, ChatBotWrapper, MainWrapper } from '@/components/ui/LayoutWrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -75,9 +75,9 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased flex flex-col min-h-screen`}>
         <HeaderWrapper />
-        <main className="flex-1 pt-[72px] sm:pt-[88px] relative z-10">
+        <MainWrapper>
           {children}
-        </main>
+        </MainWrapper>
         <FooterWrapper />
         <ChatBotWrapper />
       </body>

@@ -1,9 +1,25 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { Package, ScanBarcode, LogOut } from 'lucide-react';
 import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const isLoginPage = pathname === '/admin/login';
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/admin/login');
+  };
+
+  if (isLoginPage) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">{children}</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -32,7 +48,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-brand-red font-medium hover:bg-white/10 transition-colors w-full text-left">
+          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-brand-red font-medium hover:bg-white/10 transition-colors w-full text-left">
             <LogOut size={20} />
             Cerrar sesión
           </button>
