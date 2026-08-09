@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ScanBarcode, Search, Package, User, CheckCircle2, ArrowRight } from 'lucide-react';
-import { toast, Toaster } from 'react-hot-toast';
 
 export default function BodegaScanner() {
   const [scannedCode, setScannedCode] = useState('');
@@ -40,12 +39,12 @@ export default function BodegaScanner() {
       
       if (data.status === 'SUCCESS' && data.rawData?.package) {
         setPackageData(data.rawData.package);
-        toast.success('Paquete encontrado');
+        // alert('Paquete encontrado');
       } else {
         throw new Error('No se encontraron datos del paquete');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error al buscar paquete');
+      alert(err.message || 'Error al buscar paquete');
       // Limpiamos el input para que vuelva a intentar
       setScannedCode('');
     } finally {
@@ -55,7 +54,7 @@ export default function BodegaScanner() {
 
   const handleRegisterLocal = async () => {
     // Aquí conectaremos con Supabase para guardar el paquete localmente
-    toast.success('¡Paquete registrado exitosamente en Bodega CR!', { duration: 3000 });
+    alert('¡Paquete registrado exitosamente en Bodega CR!');
     
     // Simular que se registró y limpiar la pantalla para el siguiente paquete
     setTimeout(() => {
@@ -67,7 +66,6 @@ export default function BodegaScanner() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Toaster position="top-right" />
       
       <div className="mb-8">
         <h1 className="text-3xl font-black text-brand-blue mb-2">Escáner de Bodega</h1>
