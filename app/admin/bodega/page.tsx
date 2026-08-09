@@ -96,19 +96,25 @@ export default function BodegaScanner() {
     setHistory(newHistory);
 
     try {
-      await fetch('/api/inventory', {
+      const res = await fetch('/api/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: packageData?.tracking,
-          client: packageData?.consignatario?.replace(/jrs\s*cargo/i, '').trim(),
-          weight: `${packageData?.weight} ${packageData?.weightUnit}`,
+          client: packageData?.consignatario?.replace(/jrs\s*cargo/i, '').trim() || 'Desconocido',
+          weight: `${packageData?.weight || '0'} ${packageData?.weightUnit || 'lbs'}`,
           status: 'En Bodega CR',
           history: newHistory
         })
       });
+      if (!res.ok) {
+        alert('Error: No se pudo guardar el paquete en la base de datos.');
+        setLocalStatus(null);
+      }
     } catch (e) {
       console.error('Error guardando en BD', e);
+      alert('Error de conexión al guardar el paquete.');
+      setLocalStatus(null);
     }
   };
 

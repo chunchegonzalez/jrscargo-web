@@ -33,7 +33,11 @@ export async function insertInventoryItem(item: Record<string, unknown>) {
     headers,
     body: JSON.stringify(item)
   });
-  if (!res.ok) throw new Error('Error inserting item');
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error('Supabase Error:', errText);
+    throw new Error('Error inserting item: ' + errText);
+  }
   return res.json();
 }
 
