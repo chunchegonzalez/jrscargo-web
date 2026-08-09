@@ -166,7 +166,7 @@ export default function BodegaInventario() {
                 } else {
                   alert('Error al guardar los cambios');
                 }
-              } catch (err) {
+              } catch {
                 alert('Error de conexión al guardar');
               } finally {
                 setIsSaving(false);
