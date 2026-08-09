@@ -31,22 +31,22 @@ export default function Footer() {
             <h3 className="text-white font-semibold text-lg mb-6">Servicios</h3>
             <ul className="space-y-4">
               <li>
-                <Link href="#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Aéreo Estados Unidos
                 </Link>
               </li>
               <li>
-                <Link href="#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Marítimo Estados Unidos
                 </Link>
               </li>
               <li>
-                <Link href="#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Aéreo España
                 </Link>
               </li>
               <li>
-                <Link href="#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Aéreo China
                 </Link>
               </li>
@@ -68,12 +68,12 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <Link href="#tracking" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/#tracking" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Tracking
                 </Link>
               </li>
               <li>
-                <Link href="#cotizador" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                <Link href="/#cotizador" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   Cotizador
                 </Link>
               </li>
