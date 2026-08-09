@@ -1,7 +1,7 @@
 'use client';
 
 import { UserPlus, ShoppingBag, Box, Truck, ArrowRight, MapPin, PlaneTakeoff } from 'lucide-react';
-import Link from 'next/link';
+
 import { motion, Variants } from 'framer-motion';
 
 const steps = [

@@ -3,7 +3,7 @@
 import { ArrowRight, Calculator, Plane, Container, Ship } from 'lucide-react';
 import { FaStar, FaWhatsapp } from 'react-icons/fa';
 import Image from 'next/image';
-import Link from 'next/link';
+
 import { motion } from 'framer-motion';
 
 export default function Hero() {
