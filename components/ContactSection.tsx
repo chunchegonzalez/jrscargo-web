@@ -1,6 +1,7 @@
 'use client'
 
-import { MessageCircle, Mail, Instagram } from 'lucide-react'
+import { MessageCircle, Mail } from 'lucide-react'
+import { FaInstagram } from 'react-icons/fa'
 import { WHATSAPP_NUMBER, EMAIL, INSTAGRAM_URL } from '@/data/rates'
 
 const contacts = [
@@ -28,7 +29,7 @@ const contacts = [
   },
   {
     id: 'instagram',
-    icon: Instagram,
+    icon: FaInstagram,
     label: 'Instagram',
     value: '@jrscargocr',
     href: INSTAGRAM_URL,

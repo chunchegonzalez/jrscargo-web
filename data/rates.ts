@@ -6,3 +6,5 @@ export const rates = {
 };
 
 export const WHATSAPP_NUMBER = '50672601238';
+export const EMAIL = 'info@jrscargocr.com';
+export const INSTAGRAM_URL = 'https://www.instagram.com/jrscargocr/';
