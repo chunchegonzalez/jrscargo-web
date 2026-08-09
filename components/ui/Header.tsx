@@ -7,9 +7,9 @@ import { Menu, X, UserCircle, PackageOpen } from 'lucide-react';
 
 const navLinks = [
   { name: 'Inicio', href: '/' },
+  { name: 'Tracking', href: '#tracking' },
   { name: 'Tarifas', href: '#tarifas' },
   { name: 'Cotizador', href: '#cotizador' },
-  { name: 'Tracking', href: '#tracking' },
   { name: '¿Cómo funciona?', href: '#como-funciona' },
   { name: 'Contacto', href: '#contacto' },
 ];
