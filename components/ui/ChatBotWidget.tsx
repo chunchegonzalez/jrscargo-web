@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
-import { MessageCircle, X, Send, Bot, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ChatBotWidget() {
@@ -118,12 +118,14 @@ export default function ChatBotWidget() {
           onClick={() => setIsOpen(true)}
           className="group flex items-center gap-3 animate-bounce-slow"
         >
-          <div className="bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 text-sm font-semibold text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block">
-            ¿Necesitas ayuda? Escríbenos
+          <div className="bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 text-sm font-semibold text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:flex items-center gap-2">
+            <Sparkles size={16} className="text-brand-yellow" />
+            Asistente IA JRS
           </div>
-          <div className="w-16 h-16 bg-brand-blue rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform relative">
-            <div className="absolute inset-0 bg-brand-blue rounded-full animate-ping opacity-20"></div>
-            <MessageCircle size={32} />
+          <div className="w-16 h-16 bg-gradient-to-tr from-brand-blue to-cyan-500 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center text-white hover:scale-110 hover:-rotate-12 transition-all duration-300 relative">
+            <div className="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-20"></div>
+            <Bot size={32} className="relative z-10" />
+            <Sparkles size={14} className="absolute top-3 right-3 text-brand-yellow animate-pulse" />
           </div>
         </button>
       )}
