@@ -31,7 +31,7 @@ export default function AdminLogin() {
         const data = await res.json();
         setError(data.error || 'Credenciales inválidas');
       }
-    } catch (err) {
+    } catch {
       setError('Error de conexión');
     } finally {
       setIsLoading(false);
