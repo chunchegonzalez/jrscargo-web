@@ -84,6 +84,7 @@ export default function Rates() {
                   {/* Left Column */}
                   <div className="flex flex-col items-center justify-between shrink-0">
                     <div className="w-14 h-14 rounded-full overflow-hidden shadow-sm border-2 border-white ring-1 ring-gray-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={rate.flagUrl} 
                         alt={`Bandera de ${rate.origin}`} 
