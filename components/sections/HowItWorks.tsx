@@ -2,7 +2,7 @@
 
 import { UserPlus, ShoppingBag, Box, Truck, ArrowRight, MapPin, PlaneTakeoff } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 
 const steps = [
   {
@@ -35,7 +35,7 @@ const steps = [
   },
 ];
 
-import { motion, Variants } from 'framer-motion';
+
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },

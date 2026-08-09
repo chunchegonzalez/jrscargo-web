@@ -72,7 +72,7 @@ export default function Hero() {
               >
                 Abrir mi casillero gratis
                 <ArrowRight size={20} />
-              </a>
+              </Link>
               <a 
                 href="#cotizador"
                 className="btn-white border-2 border-gray-200 py-4 px-8 text-base hover:border-brand-blue/30"
