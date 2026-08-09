@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { HeaderWrapper, FooterWrapper } from '@/components/ui/LayoutWrapper'
-import ChatBotWidget from '@/components/ui/ChatBotWidget'
+import { HeaderWrapper, FooterWrapper, ChatBotWrapper } from '@/components/ui/LayoutWrapper'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -80,7 +79,7 @@ export default function RootLayout({
           {children}
         </main>
         <FooterWrapper />
-        <ChatBotWidget />
+        <ChatBotWrapper />
       </body>
     </html>
   )
