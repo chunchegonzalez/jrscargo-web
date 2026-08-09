@@ -12,7 +12,7 @@ export default function TermsAndConditions() {
         
         <div className="prose prose-blue max-w-none text-brand-text-gray space-y-6">
           <p>
-            El presente documento establece los Términos y Condiciones que regulan la prestación de los servicios de transporte, logística y recepción de paquetes brindados por JRS Cargo (en adelante, "La Empresa"). Al hacer uso de nuestros servicios o solicitar el envío de paquetes a nuestras direcciones, el cliente (en adelante, "El Cliente") acepta plenamente y sin reservas las cláusulas aquí descritas.
+            El presente documento establece los Términos y Condiciones que regulan la prestación de los servicios de transporte, logística y recepción de paquetes brindados por JRS Cargo (en adelante, &quot;La Empresa&quot;). Al hacer uso de nuestros servicios o solicitar el envío de paquetes a nuestras direcciones, el cliente (en adelante, &quot;El Cliente&quot;) acepta plenamente y sin reservas las cláusulas aquí descritas.
           </p>
 
           <h2 className="text-xl font-bold text-brand-blue mt-8">1. Uso de la Dirección de Entrega (Casillero / Warehouse)</h2>
@@ -24,7 +24,7 @@ export default function TermsAndConditions() {
           <h2 className="text-xl font-bold text-brand-blue mt-8">2. Manejo de Paquetes y Entregas por Proveedores (USPS, FedEx, UPS, Correo Local, etc.)</h2>
           <ul className="list-disc pl-5 space-y-2">
             <li><strong>2.1. Confirmación de Recepción:</strong> La responsabilidad de JRS Cargo sobre la custodia y manejo de cualquier mercancía inicia únicamente a partir del momento en que el paquete es físicamente recibido e ingresado en el sistema en nuestras bodegas autorizadas de origen.</li>
-            <li><strong>2.2. Estatus del Rastreo (Tracking) y Prácticas de Proveedores:</strong> La actualización de un estado como "Entregado" (Delivered) en el rastreo del proveedor o del correo público/privado (como USPS, FedEx, DHL, etc.) no constituye una prueba de recepción física. Los transportistas locales con frecuencia marcan paquetes como entregados antes de dejarlos físicamente o los entregan en direcciones incorrectas.</li>
+            <li><strong>2.2. Estatus del Rastreo (Tracking) y Prácticas de Proveedores:</strong> La actualización de un estado como &quot;Entregado&quot; (Delivered) en el rastreo del proveedor o del correo público/privado (como USPS, FedEx, DHL, etc.) no constituye una prueba de recepción física. Los transportistas locales con frecuencia marcan paquetes como entregados antes de dejarlos físicamente o los entregan en direcciones incorrectas.</li>
             <li><strong>2.3. Exención por Fallas del Proveedor:</strong> JRS Cargo no se responsabiliza por la pérdida, extravío o entrega errónea de paquetes por parte de empresas de correo o transportistas locales si no existe un registro de ingreso confirmado en el sistema de JRS Cargo. Dichos reclamos deben realizarse directamente ante el vendedor o la empresa de transporte emisor.</li>
           </ul>
 

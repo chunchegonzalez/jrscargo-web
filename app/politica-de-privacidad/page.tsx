@@ -12,7 +12,7 @@ export default function PrivacyPolicy() {
         
         <div className="prose prose-blue max-w-none text-brand-text-gray space-y-6">
           <p>
-            En JRS Cargo (en adelante, "La Empresa"), nos comprometemos a proteger la privacidad y seguridad de los datos personales de nuestros clientes y usuarios (en adelante, "El Usuario"). La presente Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y protegemos la información personal proporcionada a través de nuestros canales digitales, plataformas de rastreo, formularios o servicio al cliente, en cumplimiento con la normativa aplicable en Costa Rica (Ley N° 8968).
+            En JRS Cargo (en adelante, &quot;La Empresa&quot;), nos comprometemos a proteger la privacidad y seguridad de los datos personales de nuestros clientes y usuarios (en adelante, &quot;El Usuario&quot;). La presente Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y protegemos la información personal proporcionada a través de nuestros canales digitales, plataformas de rastreo, formularios o servicio al cliente, en cumplimiento con la normativa aplicable en Costa Rica (Ley N° 8968).
           </p>
 
           <h2 className="text-xl font-bold text-brand-blue mt-8">1. Información que Recopilamos</h2>
