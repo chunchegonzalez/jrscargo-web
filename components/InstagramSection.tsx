@@ -30,7 +30,7 @@ export default function InstagramSection() {
               className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
               style={{ background: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)' }}
             >
-              <Instagram className="w-10 h-10 text-white" aria-hidden="true" />
+              <FaInstagram className="w-10 h-10 text-white" aria-hidden="true" />
             </div>
             <h3 className="font-bold text-brand-navy text-xl">@jrscargocr</h3>
             <p className="text-brand-text-gray text-sm mt-2 mb-6">
@@ -46,7 +46,7 @@ export default function InstagramSection() {
               id="instagram-follow-btn"
               aria-label="Seguir a JRS CARGO en Instagram"
             >
-              <Instagram className="w-5 h-5" aria-hidden="true" />
+              <FaInstagram className="w-5 h-5" aria-hidden="true" />
               Seguir a JRS CARGO
               <ExternalLink className="w-4 h-4" aria-hidden="true" />
             </a>
@@ -64,7 +64,7 @@ export default function InstagramSection() {
                     className="aspect-square rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
                     aria-hidden="true"
                   >
-                    <Instagram className="w-6 h-6 text-gray-300" />
+                    <FaInstagram className="w-6 h-6 text-gray-300" />
                   </div>
                 ))}
               </div>
