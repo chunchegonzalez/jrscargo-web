@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Search, Filter } from 'lucide-react';
+import { Package, Search, Filter, X } from 'lucide-react';
 
 interface InventoryItem {
   id: string;
   client: string;
+  company?: string;
   weight: string;
   status: string;
   date: string;
@@ -14,6 +15,8 @@ interface InventoryItem {
 export default function BodegaInventario() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -23,9 +26,10 @@ export default function BodegaInventario() {
         if (res.ok) {
           const { data } = await res.json();
           // Transform from DB format
-          const formatted = data.map((item: { id: string, client: string, weight: string, status: string, created_at: string }) => ({
+          const formatted = data.map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => ({
             id: item.id,
             client: item.client,
+            company: item.company || 'N/A',
             weight: item.weight,
             status: item.status,
             date: new Date(item.created_at).toLocaleString('es-CR')
@@ -82,6 +86,7 @@ export default function BodegaInventario() {
               <tr className="bg-white border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
                 <th className="p-4 pl-6">Tracking</th>
                 <th className="p-4">Cliente</th>
+                <th className="p-4">Empresa</th>
                 <th className="p-4">Peso</th>
                 <th className="p-4">Fecha de Ingreso</th>
                 <th className="p-4">Estado Interno</th>
@@ -101,6 +106,7 @@ export default function BodegaInventario() {
                     {item.id}
                   </td>
                   <td className="p-4 font-medium text-gray-700">{item.client}</td>
+                  <td className="p-4 text-gray-500">{item.company}</td>
                   <td className="p-4 text-gray-500">{item.weight}</td>
                   <td className="p-4 text-gray-500">{item.date}</td>
                   <td className="p-4">
@@ -113,7 +119,7 @@ export default function BodegaInventario() {
                     </span>
                   </td>
                   <td className="p-4 pr-6 text-right">
-                    <button className="text-brand-blue font-bold text-xs hover:underline opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setEditingItem(item)} className="text-brand-blue font-bold text-xs hover:underline opacity-0 group-hover:opacity-100 transition-opacity">
                       Editar
                     </button>
                   </td>
@@ -128,6 +134,106 @@ export default function BodegaInventario() {
           Mostrando {inventory.length} de {inventory.length} paquetes
         </div>
       </div>
+
+      {/* Modal de Edición */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-brand-blue text-lg">Editar Paquete</h3>
+              <button onClick={() => setEditingItem(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSaving(true);
+              try {
+                const res = await fetch(`/api/inventory/${editingItem.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    client: editingItem.client,
+                    weight: editingItem.weight,
+                    company: editingItem.company,
+                    status: editingItem.status
+                  })
+                });
+                if (res.ok) {
+                  setInventory(prev => prev.map(p => p.id === editingItem.id ? editingItem : p));
+                  setEditingItem(null);
+                } else {
+                  alert('Error al guardar los cambios');
+                }
+              } catch (err) {
+                alert('Error de conexión al guardar');
+              } finally {
+                setIsSaving(false);
+              }
+            }} className="p-6 space-y-4">
+              
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tracking</label>
+                <input type="text" value={editingItem.id} disabled className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 font-mono text-sm" />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
+                <input 
+                  type="text" 
+                  value={editingItem.client} 
+                  onChange={e => setEditingItem({...editingItem, client: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Empresa / Proveedor</label>
+                <input 
+                  type="text" 
+                  value={editingItem.company || ''} 
+                  onChange={e => setEditingItem({...editingItem, company: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Peso</label>
+                  <input 
+                    type="text" 
+                    value={editingItem.weight} 
+                    onChange={e => setEditingItem({...editingItem, weight: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado</label>
+                  <select 
+                    value={editingItem.status} 
+                    onChange={e => setEditingItem({...editingItem, status: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                  >
+                    <option value="En Bodega CR">En Bodega CR</option>
+                    <option value="Entregado">Entregado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
+                <button type="button" onClick={() => setEditingItem(null)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isSaving} className="flex-1 py-3 font-bold bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 disabled:opacity-50 transition-colors">
+                  {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
