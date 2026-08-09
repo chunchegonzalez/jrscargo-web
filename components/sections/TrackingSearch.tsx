@@ -288,17 +288,13 @@ export default function TrackingSearch() {
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs text-brand-text-light uppercase font-semibold">Consignatario</p>
-                        <p className="font-medium text-brand-text-gray">{result.rawData.package.consignatario}</p>
+                        <p className="font-medium text-brand-text-gray">
+                          {result.rawData.package.consignatario?.replace(/jrs\s*cargo/i, '').trim()}
+                        </p>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-brand-text-light uppercase font-semibold">Peso</p>
-                          <p className="font-medium text-brand-text-gray">{result.rawData.package.weight} {result.rawData.package.weightUnit}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-brand-text-light uppercase font-semibold">Proveedor</p>
-                          <p className="font-medium text-brand-text-gray">{result.rawData.package.provider}</p>
-                        </div>
+                      <div>
+                        <p className="text-xs text-brand-text-light uppercase font-semibold">Peso</p>
+                        <p className="font-medium text-brand-text-gray">{result.rawData.package.weight} {result.rawData.package.weightUnit}</p>
                       </div>
                       <div>
                         <p className="text-xs text-brand-text-light uppercase font-semibold">Descripción</p>
