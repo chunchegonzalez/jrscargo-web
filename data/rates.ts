@@ -4,3 +4,5 @@ export const rates = {
   spainAir: 15, // USD/lb
   chinaAir: 17, // USD/lb
 };
+
+export const WHATSAPP_NUMBER = '50672601238';
