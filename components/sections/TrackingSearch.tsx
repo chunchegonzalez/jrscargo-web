@@ -219,7 +219,14 @@ export default function TrackingSearch() {
                       <p className="text-brand-light/70 text-xs mb-1 uppercase font-semibold">Estado Actual</p>
                       <p className="font-bold flex items-center gap-2 text-lg text-brand-yellow">
                         <span className="w-2 h-2 rounded-full bg-brand-yellow animate-pulse"></span>
-                        {result.rawData.package.statusLabel}
+                        {(() => {
+                          const latest = result.rawData.timeline?.[0];
+                          const target = "Cambio de Estatus de Paquete de En Oficina Central a Entregado";
+                          if (latest && (latest.status === target || latest.description === target)) {
+                            return "Paquete en Oficina (Costa Rica)";
+                          }
+                          return result.rawData.package.statusLabel;
+                        })()}
                       </p>
                     </div>
                   </div>
