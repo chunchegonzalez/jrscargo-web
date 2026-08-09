@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
 
     const result = await streamText({
-    model: google('gemini-1.5-flash'),
+    model: google('gemini-flash-latest'),
     system: `Eres el asistente virtual oficial de JRS CARGO, una empresa de logística en Costa Rica enfocada en traer paquetes desde Estados Unidos, España y China hacia San José (SJ), Costa Rica.
     Tu tono debe ser amable, profesional, confiable y directo. Usa un lenguaje claro y cordial. 
     Responde en español de Costa Rica de ser posible, pero siempre muy profesional.
