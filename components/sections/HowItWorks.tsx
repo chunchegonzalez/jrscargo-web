@@ -105,12 +105,14 @@ export default function HowItWorks() {
                   </p>
 
                   {idx === 0 && (
-                    <Link 
-                      href="/registro"
-                      className="mt-6 btn-primary py-3 px-6 text-sm shadow-lg shadow-brand-blue/20 transition-colors"
+                    <a 
+                      href="https://worldboxcr.com/jrscargo/register"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-6 btn-primary py-3 px-6 text-sm shadow-lg shadow-brand-blue/20 transition-colors inline-block text-center"
                     >
                       Crear casillero
-                    </Link>
+                    </a>
                   )}
                 </motion.div>
               );

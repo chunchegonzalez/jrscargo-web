@@ -66,13 +66,15 @@ export default function Hero() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <Link 
-                href="/registro"
+              <a 
+                href="https://worldboxcr.com/jrscargo/register"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn-primary py-4 px-8 text-base shadow-xl shadow-brand-blue/20"
               >
                 Abrir mi casillero gratis
                 <ArrowRight size={20} />
-              </Link>
+              </a>
               <a 
                 href="#cotizador"
                 className="btn-white border-2 border-gray-200 py-4 px-8 text-base hover:border-brand-blue/30"
