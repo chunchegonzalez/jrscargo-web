@@ -27,7 +27,7 @@ export async function getInventoryItem(id: string) {
   return data.length > 0 ? data[0] : null;
 }
 
-export async function insertInventoryItem(item: any) {
+export async function insertInventoryItem(item: Record<string, unknown>) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/local_inventory`, {
     method: 'POST',
     headers,
@@ -37,7 +37,7 @@ export async function insertInventoryItem(item: any) {
   return res.json();
 }
 
-export async function updateInventoryItem(id: string, updates: any) {
+export async function updateInventoryItem(id: string, updates: Record<string, unknown>) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/local_inventory?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers,

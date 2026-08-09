@@ -23,7 +23,7 @@ export default function BodegaInventario() {
         if (res.ok) {
           const { data } = await res.json();
           // Transform from DB format
-          const formatted = data.map((item: any) => ({
+          const formatted = data.map((item: { id: string, client: string, weight: string, status: string, created_at: string }) => ({
             id: item.id,
             client: item.client,
             weight: item.weight,
