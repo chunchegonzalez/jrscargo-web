@@ -215,18 +215,6 @@ export default function Hero() {
 
               {/* Center Premium Hub */}
               <div className="relative z-20 flex items-center justify-center">
-                {/* Glowing Outer Pulses */}
-                <motion.div
-                  animate={{ scale: [1, 2], opacity: [0.3, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeOut" }}
-                  className="absolute w-40 h-40 bg-brand-blue/20 rounded-full"
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.8], opacity: [0.2, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeOut", delay: 1.5 }}
-                  className="absolute w-40 h-40 bg-brand-red/20 rounded-full"
-                />
-                
                 {/* Glassmorphic Base */}
                 <div className="absolute w-48 h-48 bg-white/40 backdrop-blur-xl rounded-full border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.1)]"></div>
                 
