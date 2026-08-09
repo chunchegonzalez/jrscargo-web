@@ -37,12 +37,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <Link href="/admin/bodega" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors">
-            <ScanBarcode size={20} className="text-brand-yellow" />
+          <Link 
+            href="/admin/bodega" 
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+              pathname === '/admin/bodega' 
+                ? 'bg-white/10 text-white' 
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <ScanBarcode size={20} className={pathname === '/admin/bodega' ? 'text-brand-yellow' : ''} />
             Escanear Bodega
           </Link>
-          <Link href="/admin/inventario" className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
-            <Package size={20} />
+          <Link 
+            href="/admin/inventario" 
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+              pathname === '/admin/inventario' 
+                ? 'bg-white/10 text-white' 
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <Package size={20} className={pathname === '/admin/inventario' ? 'text-brand-yellow' : ''} />
             Inventario CR
           </Link>
         </nav>
