@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, ShoppingBag, Laptop, Smartphone, Shirt, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowRight, Laptop, Smartphone, Shirt, ShieldCheck, Zap } from 'lucide-react';
 import { FaAmazon } from 'react-icons/fa';
 import { motion, Variants } from 'framer-motion';
 
