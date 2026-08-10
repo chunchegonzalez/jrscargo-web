@@ -23,6 +23,27 @@ export default function BodegaInventario() {
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   
+  const [viewingPhotos, setViewingPhotos] = useState<{ id: string, photos: any[] } | null>(null);
+  const [loadingPhotosFor, setLoadingPhotosFor] = useState<string | null>(null);
+
+  const handleViewPhotos = async (trackingId: string) => {
+    setLoadingPhotosFor(trackingId);
+    try {
+      const res = await fetch(`/api/tracking?number=${trackingId}`);
+      if (res.ok) {
+        const { rawData } = await res.json();
+        const photos = rawData?.package?.fotos || [];
+        setViewingPhotos({ id: trackingId, photos });
+      } else {
+        alert('Error al cargar fotos desde el API');
+      }
+    } catch {
+      alert('Error de conexión al cargar fotos');
+    } finally {
+      setLoadingPhotosFor(null);
+    }
+  };
+  
   const openEditModal = (item: InventoryItem) => {
     setEditingItem({...item});
     setOriginalTracking(item.id);
@@ -48,7 +69,7 @@ export default function BodegaInventario() {
             company: item.company || 'N/A',
             weight: item.weight,
             status: item.status,
-            date: new Date(item.created_at).toLocaleString('es-CR'),
+            date: new Date(item.created_at).toLocaleDateString('es-CR'),
             createdAt: item.created_at
           }));
           setInventory(formatted);
@@ -165,7 +186,18 @@ export default function BodegaInventario() {
               {filteredInventory.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="p-4 pl-6 font-bold text-brand-blue flex items-center gap-3">
-                    <Package size={16} className="text-gray-400" />
+                    <button 
+                      onClick={() => handleViewPhotos(item.id)} 
+                      disabled={loadingPhotosFor === item.id}
+                      className="p-1.5 hover:bg-brand-blue/10 rounded-md transition-colors shrink-0"
+                      title="Ver fotos del paquete"
+                    >
+                      {loadingPhotosFor === item.id ? (
+                        <div className="w-4 h-4 rounded-full border-2 border-brand-blue border-t-transparent animate-spin"></div>
+                      ) : (
+                        <Package size={16} className="text-brand-blue cursor-pointer" />
+                      )}
+                    </button>
                     {item.id}
                   </td>
                   <td className="p-4 font-medium text-gray-700">{item.client}</td>
@@ -387,6 +419,36 @@ export default function BodegaInventario() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Fotos */}
+      {viewingPhotos && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setViewingPhotos(null)}>
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
+                <Package size={20} /> Fotos del Paquete {viewingPhotos.id}
+              </h3>
+              <button onClick={() => setViewingPhotos(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {viewingPhotos.photos.length === 0 ? (
+                <p className="text-center text-gray-500 py-12">No hay fotos disponibles para este paquete en Worldbox.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {viewingPhotos.photos.map((foto, index) => (
+                    <div key={foto.id || index} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                      <img src={foto.url} alt={`Evidencia ${index + 1}`} className="w-full h-auto object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
