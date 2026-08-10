@@ -139,7 +139,7 @@ export default function AmazonDeals() {
                 
                 <div className="relative z-10 mt-auto">
                   <h3 className="font-bold text-xl text-white mb-1 group-hover:text-brand-yellow transition-colors">{deal.title}</h3>
-                  <p className="text-sm font-medium text-brand-light/70">{deal.discount}</p>
+                  <p className="text-sm font-medium text-gray-300">{deal.discount}</p>
                 </div>
 
                 {/* Giant watermark icon */}

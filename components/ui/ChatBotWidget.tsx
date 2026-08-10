@@ -170,11 +170,20 @@ export default function ChatBotWidget() {
             
             {error && (
               <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-red-500 flex-shrink-0 flex items-center justify-center text-white">
-                  <X size={16} />
+                <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
+                  <Bot size={16} />
                 </div>
-                <div className="bg-red-50 border border-red-100 text-red-700 rounded-2xl rounded-tl-sm p-3 text-sm shadow-sm max-w-[85%]">
-                  Hubo un error de conexión: {error.message}
+                <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm p-4 text-sm shadow-sm max-w-[90%] text-center">
+                  <p className="mb-2 font-medium">¡Ups! En este momento estoy experimentando un alto volumen de consultas.</p>
+                  <p className="mb-3 text-gray-500">Para una atención inmediata, por favor escríbenos a nuestro WhatsApp oficial:</p>
+                  <a 
+                    href="https://wa.me/50672601238" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white font-bold py-2 px-5 rounded-full transition-all shadow-md hover:shadow-lg hover:scale-105"
+                  >
+                    Abrir WhatsApp
+                  </a>
                 </div>
               </div>
             )}
