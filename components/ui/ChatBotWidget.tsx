@@ -88,7 +88,9 @@ const AnimatedRobotFace = () => {
 
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat();
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
+    maxSteps: 5
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages arrive
