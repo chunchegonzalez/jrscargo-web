@@ -45,10 +45,11 @@ export default function AjustesPage() {
         setNewPassword('');
         loadData();
       } else {
-        alert('Error al crear usuario. Verifica que el nombre no exista ya.');
+        const errorData = await res.json();
+        alert(`Error al crear usuario: ${errorData.error}`);
       }
-    } catch {
-      alert('Error de red');
+    } catch (err: any) {
+      alert(`Error de red: ${err.message}`);
     } finally {
       setLoading(false);
     }

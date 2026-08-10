@@ -86,7 +86,11 @@ export async function createUser(user: Record<string, unknown>) {
     headers: getHeaders(),
     body: JSON.stringify(user)
   });
-  if (!res.ok) throw new Error('Error creating user');
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Supabase createUser error:', res.status, errorText);
+    throw new Error(`Error creating user: ${res.status} ${errorText}`);
+  }
   return { success: true };
 }
 
