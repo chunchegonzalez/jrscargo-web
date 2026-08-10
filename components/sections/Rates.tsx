@@ -24,7 +24,7 @@ const ratesData = [
     unit: 'pie cúbico',
     icon: Ship,
     flagUrl: 'https://flagcdn.com/us.svg',
-    note: 'Ref: Una caja de 30×30×30 cm equivale aprox. a 0.95 ft³.',
+    note: 'Importante: No se pueden enviar cargamentos que requieran permisos especiales. Se debe adjuntar la factura de cada producto para la declaración de aduanas.',
   },
   {
     id: 'spain-air',
