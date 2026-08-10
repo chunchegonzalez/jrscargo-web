@@ -16,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ success: false, error: 'Error updating request' }, { status: 500 });
   }
 }

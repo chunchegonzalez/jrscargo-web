@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Users, Trash2, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
 
 export default function AjustesPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [requests, setRequests] = useState<any[]>([]);
+  const [users, setUsers] = useState<{id: string, username: string, role: string}[]>([]);
+  const [requests, setRequests] = useState<{id: string, package_id: string, requested_by: string, reason: string, status: string}[]>([]);
   
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');

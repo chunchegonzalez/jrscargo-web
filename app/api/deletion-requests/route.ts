@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const data = await getDeletionRequests();
     return NextResponse.json({ success: true, data }, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ success: false, error: 'Error fetching requests' }, { status: 500 });
   }
 }
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     await createDeletionRequest(body);
     return NextResponse.json({ success: true }, { status: 201 });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ success: false, error: 'Error creating request' }, { status: 500 });
   }
 }

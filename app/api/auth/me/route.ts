@@ -22,7 +22,7 @@ export async function GET() {
     }
     
     return NextResponse.json({ authenticated: true, user: data }, { status: 200 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 }
