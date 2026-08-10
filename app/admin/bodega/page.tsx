@@ -265,12 +265,17 @@ export default function BodegaScanner() {
 
             <div className="p-8 grid md:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div>
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Consignatario</p>
-                  <div className="flex items-center gap-3 text-brand-blue font-medium text-lg bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <User size={20} className="text-brand-text-light" />
-                    {packageData.consignatario?.replace(/jrs\s*cargo/i, '').trim()}
-                  </div>
+                <div className="mb-4 relative">
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Consignatario</p>
+                    <div className="relative">
+                      <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={packageData.consignatario || ''}
+                        onChange={(e) => setPackageData({ ...packageData, consignatario: e.target.value })}
+                        className="w-full pl-10 pr-4 py-4 rounded-xl border border-gray-100 bg-gray-50 text-brand-blue font-bold focus:border-brand-blue focus:ring-0 focus:bg-white transition-colors"
+                      />
+                    </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
