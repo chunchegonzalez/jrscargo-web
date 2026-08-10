@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Tracking API responded with an error' }, { status: res.status });
     }
 
-    let data = await res.json();
+    const data = await res.json();
     
     try {
       const localItem = await getInventoryItem(trackingNumber);
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
         data.package.statusLabel = 'Entregado';
         
         // Remove the existing 'Entregado' event if it already exists to avoid duplicates
-        data.timeline = data.timeline.filter((e: any) => e.status !== 'Paquete Entregado');
+        data.timeline = data.timeline.filter((e: { status: string }) => e.status !== 'Paquete Entregado');
 
         data.timeline.unshift({
           date: localItem.updated_at || localItem.created_at || new Date().toISOString(),
