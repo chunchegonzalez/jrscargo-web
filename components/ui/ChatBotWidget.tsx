@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
-import { X, Send, MessageCircleQuestion, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Bot, MessageCircleQuestion, Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ChatBotWidget() {
