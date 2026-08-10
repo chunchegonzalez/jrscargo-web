@@ -24,7 +24,10 @@ const ratesData = [
     unit: 'pie cúbico',
     icon: Ship,
     flagUrl: 'https://flagcdn.com/us.svg',
-    note: 'Importante: No se pueden enviar cargamentos que requieran permisos especiales. Se debe adjuntar la factura de cada producto para la declaración de aduanas.',
+    note: [
+      'Importante: No se pueden enviar cargamentos que requieran permisos especiales.',
+      'Se debe adjuntar la factura de cada producto enviado marítimo para la declaración de aduanas.'
+    ],
   },
   {
     id: 'spain-air',
@@ -115,7 +118,15 @@ export default function Rates() {
 
                 {rate.note && (
                   <div className="mt-4 pt-4 border-t border-gray-100 text-[11px] text-brand-text-gray/70 leading-relaxed">
-                    {rate.note}
+                    {Array.isArray(rate.note) ? (
+                      <ul className="list-disc pl-3 space-y-1">
+                        {rate.note.map((n, i) => (
+                          <li key={i}>{n}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      rate.note
+                    )}
                   </div>
                 )}
               </div>
