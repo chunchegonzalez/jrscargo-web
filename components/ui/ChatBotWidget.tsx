@@ -4,16 +4,41 @@ import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import { X, Send, Bot, Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 const AnimatedRobotFace = () => {
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  
+  // Smooth out the mouse movement
+  const springConfig = { damping: 25, stiffness: 250, mass: 0.5 };
+  const smoothX = useSpring(mouseX, springConfig);
+  const smoothY = useSpring(mouseY, springConfig);
+  
+  // Map mouse position to eye offset
+  const eyeX = useTransform(smoothX, [-0.5, 0.5], [-4, 4]);
+  const eyeY = useTransform(smoothY, [-0.5, 0.5], [-3, 3]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Normalize mouse position between -0.5 and 0.5 based on window size
+      const x = (e.clientX / window.innerWidth) - 0.5;
+      const y = (e.clientY / window.innerHeight) - 0.5;
+      mouseX.set(x);
+      mouseY.set(y);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mouseX, mouseY]);
+
   return (
     <div className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center justify-center relative overflow-hidden border border-white">
-      {/* Outer Glow Ring */}
+      {/* Outer Glow Ring (Brand Colors: Blue, Yellow, Red) */}
       <motion.div 
         animate={{ rotate: 360 }}
         transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#ec4899,#a855f7,#06b6d4,transparent)] opacity-90"
+        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-90"
       />
       
       {/* Background to mask out the center of the ring */}
@@ -24,19 +49,18 @@ const AnimatedRobotFace = () => {
         {/* Reflection */}
         <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-full blur-[1px]"></div>
         
-        {/* Eyes Group with look-around animation */}
+        {/* Eyes Group with Mouse Tracking */}
         <motion.div 
-          animate={{ x: [0, -3, 0, 3, 0], y: [0, -1, 0, 1, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          style={{ x: eyeX, y: eyeY }}
           className="flex gap-2 relative z-10"
         >
-          {/* Left Eye */}
+          {/* Left Eye (Blinking only) */}
           <motion.div 
             animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
             transition={{ duration: 4, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
             className="w-2.5 h-4 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]"
           />
-          {/* Right Eye */}
+          {/* Right Eye (Blinking only) */}
           <motion.div 
             animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
             transition={{ duration: 4, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
@@ -70,8 +94,8 @@ export default function ChatBotWidget() {
                 <Image src="/logo.png" alt="JRS Cargo" width={32} height={32} className="w-full h-auto object-contain" />
               </div>
               <div>
-                <h3 className="font-bold">Asistente JRS</h3>
-                <p className="text-xs text-white/70">En línea</p>
+                <h3 className="font-bold text-lg">Clari</h3>
+                <p className="text-xs text-brand-yellow font-medium">Asistente en línea</p>
               </div>
             </div>
             <button 
@@ -86,7 +110,7 @@ export default function ChatBotWidget() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {messages.length === 0 && !error && (
               <div className="text-center text-sm text-gray-500 mt-10">
-                <p className="mb-2 font-semibold">¡Hola! Soy el asistente virtual de JRS CARGO.</p>
+                <p className="mb-2 font-semibold">¡Hola! Soy Clari, tu asistente virtual en JRS CARGO.</p>
                 <p>¿En qué te puedo ayudar hoy? (Ej: Tarifas, tiempos, casilleros)</p>
               </div>
             )}
@@ -146,9 +170,9 @@ export default function ChatBotWidget() {
               <button 
                 type="submit" 
                 disabled={isLoading || !input.trim()}
-                className="w-11 h-11 bg-brand-blue text-white rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-[#12435e]/90 transition-colors flex-shrink-0"
+                className="w-12 h-12 bg-gradient-to-tr from-brand-yellow to-yellow-400 text-brand-blue rounded-full flex items-center justify-center disabled:opacity-50 disabled:grayscale hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex-shrink-0"
               >
-                <Send size={18} className="ml-1" />
+                <Send size={20} className="-ml-1" />
               </button>
             </form>
           </div>
@@ -163,7 +187,7 @@ export default function ChatBotWidget() {
         >
           <div className="bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 text-sm font-semibold text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:flex items-center gap-2">
             <Sparkles size={16} className="text-brand-yellow" />
-            Asistente IA JRS
+            Habla con Clari
           </div>
           <motion.div 
             whileHover={{ scale: 1.1 }}
