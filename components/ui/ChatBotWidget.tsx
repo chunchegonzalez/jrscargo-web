@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
-import { X, Send, Bot, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, MessageCircleQuestion, Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ChatBotWidget() {
@@ -116,16 +116,17 @@ export default function ChatBotWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-3 animate-bounce-slow"
+          className="group flex items-center gap-3 transition-transform hover:scale-105"
         >
           <div className="bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 text-sm font-semibold text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:flex items-center gap-2">
             <Sparkles size={16} className="text-brand-yellow" />
             Asistente IA JRS
           </div>
-          <div className="w-16 h-16 bg-gradient-to-tr from-brand-blue to-cyan-500 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center text-white hover:scale-110 hover:-rotate-12 transition-all duration-300 relative">
-            <div className="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-20"></div>
-            <Bot size={32} className="relative z-10" />
-            <Sparkles size={14} className="absolute top-3 right-3 text-brand-yellow animate-pulse" />
+          <div className="w-16 h-16 bg-gradient-to-tr from-brand-blue to-[#0A2636] rounded-full shadow-[0_8px_30px_rgba(18,67,94,0.3)] flex items-center justify-center text-white border-2 border-white relative overflow-hidden group-hover:shadow-[0_8px_30px_rgba(18,67,94,0.5)] transition-shadow">
+            {/* Subtle inner glow */}
+            <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10"></div>
+            <MessageCircleQuestion size={32} strokeWidth={2} className="relative z-10" />
+            <Sparkles size={12} className="absolute top-4 right-4 text-brand-yellow z-10" />
           </div>
         </button>
       )}
