@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 const AnimatedRobotFace = () => {
+  const faceRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   
@@ -15,17 +16,30 @@ const AnimatedRobotFace = () => {
   const smoothX = useSpring(mouseX, springConfig);
   const smoothY = useSpring(mouseY, springConfig);
   
-  // Map mouse position to eye offset
-  const eyeX = useTransform(smoothX, [-0.5, 0.5], [-4, 4]);
-  const eyeY = useTransform(smoothY, [-0.5, 0.5], [-3, 3]);
+  // Map normalized vector [-1, 1] to pixel offsets
+  const eyeX = useTransform(smoothX, [-1, 1], [-6, 6]);
+  const eyeY = useTransform(smoothY, [-1, 1], [-4, 4]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse position between -0.5 and 0.5 based on window size
-      const x = (e.clientX / window.innerWidth) - 0.5;
-      const y = (e.clientY / window.innerHeight) - 0.5;
-      mouseX.set(x);
-      mouseY.set(y);
+      if (!faceRef.current) return;
+      
+      const rect = faceRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const deltaX = e.clientX - centerX;
+      const deltaY = e.clientY - centerY;
+      
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const maxDistance = 400; // distance at which eyes reach edge
+      const normalizedDist = Math.min(distance / maxDistance, 1);
+      
+      const angle = Math.atan2(deltaY, deltaX);
+      
+      // Calculate final x and y mapped to [-1, 1] range
+      mouseX.set(Math.cos(angle) * normalizedDist);
+      mouseY.set(Math.sin(angle) * normalizedDist);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -33,7 +47,7 @@ const AnimatedRobotFace = () => {
   }, [mouseX, mouseY]);
 
   return (
-    <div className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center justify-center relative overflow-hidden border border-white">
+    <div ref={faceRef} className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center justify-center relative overflow-hidden border border-white">
       {/* Outer Glow Ring (Brand Colors: Blue, Yellow, Red) */}
       <motion.div 
         animate={{ rotate: 360 }}
