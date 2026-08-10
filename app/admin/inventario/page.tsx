@@ -77,9 +77,12 @@ export default function BodegaInventario() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-            <span className="font-bold text-brand-blue">{activePackages} Paquetes Activos</span>
+          <div className="bg-gradient-to-r from-brand-blue to-[#0A2636] px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(18,67,94,0.3)] border border-brand-blue/20 flex items-center gap-3 hover:scale-105 transition-transform cursor-default select-none">
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-yellow opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-yellow"></span>
+            </div>
+            <span className="font-black text-white uppercase tracking-wider text-sm">{activePackages} Paquetes en Bodega</span>
           </div>
         </div>
       </div>

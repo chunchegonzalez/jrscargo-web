@@ -93,11 +93,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-brand-blue">Operador Bodega</p>
-              <p className="text-xs text-gray-500">Bodega Principal CR</p>
+              <p className="text-[13px] font-black text-brand-blue uppercase tracking-wide">Administrador de Bodega</p>
+              <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sede: Costa Rica</p>
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-brand-yellow/20 border-2 border-brand-yellow flex items-center justify-center text-brand-blue font-bold">
-              OP
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-blue to-[#0A2636] shadow-[0_2px_10px_-2px_rgba(18,67,94,0.4)] flex items-center justify-center text-brand-yellow font-black text-lg border border-brand-blue/20">
+              AD
             </div>
           </div>
         </header>
