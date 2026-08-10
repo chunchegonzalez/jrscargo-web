@@ -98,13 +98,13 @@ export default function ChatBotWidget() {
                     <Bot size={16} />
                   </div>
                 )}
-                <div className={`max-w-[85%] p-3 text-sm shadow-sm ${
+                <div className={`max-w-[90%] p-4 text-sm shadow-sm ${
                   m.role === 'user' 
-                    ? 'bg-brand-blue text-white rounded-2xl rounded-tr-sm' 
-                    : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm'
+                    ? 'bg-brand-blue text-white rounded-2xl rounded-tr-sm text-right' 
+                    : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm text-center'
                 }`}>
                   <div className="whitespace-pre-wrap leading-relaxed">
-                    {m.content}
+                    {m.content.replace(/\*\*/g, '').replace(/###/g, '').replace(/\*/g, '•')}
                   </div>
                 </div>
               </div>

@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       - Nunca inventes precios o reglas que no estén en tu conocimiento.
       - Si te preguntan algo complejo (cotizaciones comerciales grandes, quejas o problemas con un paquete específico), recomienda amablemente que contacten a WhatsApp (+506 7260 1238).
       - Si el cliente pregunta por el estado de su paquete, pídele su número de tracking (rastreo) y usa la herramienta 'trackPackage' para buscar la información y darle un resumen de dónde se encuentra.
-      - Usa formato Markdown (negritas, viñetas) para hacer la lectura más fácil.
+      - IMPORTANTE: NO uses formato Markdown (como asteriscos ** o #). Usa texto plano puro con saltos de línea para que se vea limpio en pantalla.
       - Sé conciso, no escribas respuestas gigantes a menos que sea necesario.`,
       messages,
       tools: {
