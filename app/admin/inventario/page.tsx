@@ -10,6 +10,7 @@ interface InventoryItem {
   weight: string;
   status: string;
   date: string;
+  createdAt: string;
 }
 
 export default function BodegaInventario() {
@@ -20,6 +21,7 @@ export default function BodegaInventario() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCompany, setFilterCompany] = useState('Todas');
   const [filterStatus, setFilterStatus] = useState('Todos');
+  const [filterDate, setFilterDate] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -35,7 +37,8 @@ export default function BodegaInventario() {
             company: item.company || 'N/A',
             weight: item.weight,
             status: item.status,
-            date: new Date(item.created_at).toLocaleString('es-CR')
+            date: new Date(item.created_at).toLocaleString('es-CR'),
+            createdAt: item.created_at
           }));
           setInventory(formatted);
         }
@@ -54,7 +57,13 @@ export default function BodegaInventario() {
     const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
     // Note: Since 'Entregado' might be saved as 'Entregado al Cliente' or 'Entregado', we check includes just in case
     const matchesStatus = filterStatus === 'Todos' || item.status.includes(filterStatus.replace(' al Cliente', ''));
-    return matchesSearch && matchesCompany && matchesStatus;
+    
+    // Compare YYYY-MM-DD
+    const itemDate = new Date(item.createdAt);
+    const itemDateString = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}-${String(itemDate.getDate()).padStart(2, '0')}`;
+    const matchesDate = !filterDate || itemDateString === filterDate;
+
+    return matchesSearch && matchesCompany && matchesStatus && matchesDate;
   });
 
   if (!mounted) return null;
@@ -88,9 +97,15 @@ export default function BodegaInventario() {
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-sm"
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Filter size={16} className="text-gray-400" />
             
+            <input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-500 font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
+            />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
