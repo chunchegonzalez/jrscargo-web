@@ -23,47 +23,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className="w-72 bg-brand-blue text-white flex flex-col fixed inset-y-0 left-0 z-50">
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="bg-white p-2 rounded-xl">
-              <Image src="/logo.png" alt="JRS Cargo" width={40} height={40} className="w-8 h-8 object-contain" />
+      <aside className="w-72 bg-gradient-to-b from-brand-blue to-[#0A2636] text-white flex flex-col fixed inset-y-0 left-0 z-50 shadow-2xl overflow-hidden relative">
+        
+        {/* Patrón de fondo sutil */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+
+        <div className="p-8 border-b border-white/5 relative z-10">
+          <div className="flex items-center gap-4 group cursor-default">
+            <div className="bg-white p-2.5 rounded-2xl shadow-lg transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
+              <Image src="/logo.png" alt="JRS Cargo" width={48} height={48} className="w-10 h-10 object-contain" />
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-none">JRS CARGO</h1>
-              <p className="text-brand-yellow text-xs font-semibold uppercase tracking-wider mt-1">Admin WMS</p>
+              <h1 className="font-black text-xl tracking-tight leading-none group-hover:text-brand-yellow transition-colors duration-300">JRS CARGO</h1>
+              <p className="text-brand-yellow/80 text-[11px] font-bold uppercase tracking-[0.2em] mt-1.5">Admin WMS</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-5 space-y-3 overflow-y-auto relative z-10">
           <Link 
             href="/admin/bodega" 
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 overflow-hidden ${
               pathname === '/admin/bodega' 
-                ? 'bg-white/10 text-white' 
-                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                ? 'bg-white/10 text-white shadow-lg border border-white/10' 
+                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
             }`}
           >
-            <ScanBarcode size={20} className={pathname === '/admin/bodega' ? 'text-brand-yellow' : ''} />
+            {pathname === '/admin/bodega' && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-yellow rounded-l-2xl shadow-[0_0_10px_rgba(255,204,0,0.5)]"></div>
+            )}
+            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/bodega' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
+              <ScanBarcode size={20} className={pathname === '/admin/bodega' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
+            </div>
             Escanear Bodega
           </Link>
+
           <Link 
             href="/admin/inventario" 
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 overflow-hidden ${
               pathname === '/admin/inventario' 
-                ? 'bg-white/10 text-white' 
-                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                ? 'bg-white/10 text-white shadow-lg border border-white/10' 
+                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
             }`}
           >
-            <Package size={20} className={pathname === '/admin/inventario' ? 'text-brand-yellow' : ''} />
+            {pathname === '/admin/inventario' && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-yellow rounded-l-2xl shadow-[0_0_10px_rgba(255,204,0,0.5)]"></div>
+            )}
+            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/inventario' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
+              <Package size={20} className={pathname === '/admin/inventario' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
+            </div>
             Inventario CR
           </Link>
         </nav>
 
-        <div className="p-4 border-t border-white/10">
-          <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-brand-red font-medium hover:bg-white/10 transition-colors w-full text-left">
-            <LogOut size={20} />
+        <div className="p-5 border-t border-white/5 relative z-10">
+          <button onClick={handleLogout} className="group flex items-center gap-3 px-4 py-3 rounded-2xl text-brand-red font-bold hover:bg-brand-red/10 transition-all duration-300 w-full text-left">
+            <div className="p-2 rounded-xl bg-brand-red/10 group-hover:bg-brand-red/20 transition-colors">
+              <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+            </div>
             Cerrar sesión
           </button>
         </div>
