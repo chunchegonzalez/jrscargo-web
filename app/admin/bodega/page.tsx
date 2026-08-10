@@ -101,7 +101,7 @@ export default function BodegaScanner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: packageData?.tracking,
-          client: packageData?.consignatario?.replace(/jrs\s*cargo/i, '').trim() || 'Desconocido',
+          client: packageData?.consignatario || 'Desconocido',
           company: packageData?.provider || 'N/A',
           weight: `${packageData?.weight || '0'} ${packageData?.weightUnit || 'lbs'}`,
           status: 'En Bodega CR',
