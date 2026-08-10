@@ -23,7 +23,7 @@ export default function BodegaInventario() {
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   
-  const [viewingPhotos, setViewingPhotos] = useState<{ id: string, photos: any[] } | null>(null);
+  const [viewingPhotos, setViewingPhotos] = useState<{ id: string, photos: { id?: number | string, url: string }[] } | null>(null);
   const [loadingPhotosFor, setLoadingPhotosFor] = useState<string | null>(null);
 
   const handleViewPhotos = async (trackingId: string) => {
@@ -443,6 +443,7 @@ export default function BodegaInventario() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {viewingPhotos.photos.map((foto, index) => (
                     <div key={foto.id || index} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={foto.url} alt={`Evidencia ${index + 1}`} className="w-full h-auto object-cover" />
                     </div>
                   ))}
