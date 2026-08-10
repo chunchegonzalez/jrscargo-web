@@ -104,6 +104,21 @@ export async function deleteUser(id: string) {
   return { success: true };
 }
 
+export async function updateUser(id: string, updates: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/users?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Supabase updateUser error:', res.status, errorText);
+    throw new Error(`Error updating user: ${res.status} ${errorText}`);
+  }
+  return { success: true };
+}
+
 export async function getUsers() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const res = await fetch(`${url}/rest/v1/users?order=created_at.desc`, {

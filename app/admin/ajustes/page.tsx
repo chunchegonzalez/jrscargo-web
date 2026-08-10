@@ -1,16 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Users, Trash2, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
+import { Users, Trash2, CheckCircle, XCircle, ShieldAlert, Eye, EyeOff, Edit2, Save } from 'lucide-react';
 
 export default function AjustesPage() {
-  const [users, setUsers] = useState<{id: string, username: string, role: string}[]>([]);
+  const [users, setUsers] = useState<{id: string, username: string, role: string, password?: string}[]>([]);
   const [requests, setRequests] = useState<{id: string, package_id: string, requested_by: string, reason: string, status: string}[]>([]);
   
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('user');
   
+  const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
+  const [editingPasswordFor, setEditingPasswordFor] = useState<string | null>(null);
+  const [editPasswordValue, setEditPasswordValue] = useState('');
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -65,6 +69,26 @@ export default function AjustesPage() {
       }
     } catch {
       alert('Error eliminando usuario');
+    }
+  };
+
+  const handleUpdatePassword = async (id: string) => {
+    if (!editPasswordValue.trim()) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: editPasswordValue })
+      });
+      if (res.ok) {
+        setEditingPasswordFor(null);
+        setEditPasswordValue('');
+        loadData();
+      } else {
+        alert('Error actualizando contraseña');
+      }
+    } catch {
+      alert('Error de red');
     }
   };
 
@@ -186,18 +210,73 @@ export default function AjustesPage() {
             <div className="space-y-3">
               <h3 className="font-bold text-gray-500 text-sm uppercase tracking-wider mb-2">Usuarios Registrados</h3>
               {users.map(u => (
-                <div key={u.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <p className="font-bold text-gray-800">{u.username}</p>
-                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-gray-200 text-gray-600'}`}>
-                      {u.role === 'admin' ? 'Admin' : 'Regular'}
-                    </span>
+                <div key={u.id} className="flex flex-col gap-3 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-gray-800">{u.username}</p>
+                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-gray-200 text-gray-600'}`}>
+                        {u.role === 'admin' ? 'Admin' : 'Regular'}
+                      </span>
+                    </div>
+                    {u.username !== 'AdminJRS' && (
+                      <button onClick={() => handleDeleteUser(u.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
-                  {u.username !== 'AdminJRS' && (
-                    <button onClick={() => handleDeleteUser(u.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                      <Trash2 size={18} />
-                    </button>
-                  )}
+                  
+                  {/* Password Section (Only for Admins) */}
+                  <div className="bg-white border border-gray-100 p-3 rounded-lg flex items-center justify-between mt-1">
+                    <div className="flex-1 flex flex-col">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Contraseña</span>
+                      {editingPasswordFor === u.id ? (
+                        <input 
+                          type="text" 
+                          value={editPasswordValue}
+                          onChange={(e) => setEditPasswordValue(e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-brand-blue rounded focus:outline-none"
+                          placeholder="Nueva contraseña"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="text-sm font-medium text-gray-700 tracking-wider font-mono">
+                          {showPasswordFor === u.id ? (u.password || '••••••••') : '••••••••'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-1 ml-4">
+                      {editingPasswordFor === u.id ? (
+                        <button 
+                          onClick={() => handleUpdatePassword(u.id)}
+                          className="p-1.5 text-white bg-green-500 hover:bg-green-600 rounded-md transition-colors"
+                          title="Guardar"
+                        >
+                          <Save size={16} />
+                        </button>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={() => setShowPasswordFor(showPasswordFor === u.id ? null : u.id)}
+                            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                            title={showPasswordFor === u.id ? "Ocultar" : "Mostrar"}
+                          >
+                            {showPasswordFor === u.id ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setEditingPasswordFor(u.id);
+                              setEditPasswordValue(u.password || '');
+                            }}
+                            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                            title="Editar contraseña"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
