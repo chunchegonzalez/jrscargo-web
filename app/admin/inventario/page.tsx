@@ -264,17 +264,21 @@ export default function BodegaInventario() {
             <form onSubmit={async (e) => {
               e.preventDefault();
               setIsSaving(true);
+              
+              const updates = {
+                id: editingItem.id !== originalTracking ? editingItem.id : undefined,
+                client: editingItem.client,
+                weight: editingItem.weight,
+                company: editingItem.company,
+                status: editingItem.status,
+                updated_at: new Date().toISOString()
+              };
+
               try {
                 const res = await fetch(`/api/inventory/${originalTracking}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    id: editingItem.id !== originalTracking ? editingItem.id : undefined,
-                    client: editingItem.client,
-                    weight: editingItem.weight,
-                    company: editingItem.company,
-                    status: editingItem.status
-                  })
+                  body: JSON.stringify(updates)
                 });
                 if (res.ok) {
                   setInventory(prev => prev.map(p => p.id === originalTracking ? editingItem : p));

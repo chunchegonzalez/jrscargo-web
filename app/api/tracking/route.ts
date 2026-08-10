@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-
+import { getInventoryItem } from '@/lib/supabase';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const trackingNumber = searchParams.get('number');
@@ -30,8 +30,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Tracking API responded with an error' }, { status: res.status });
     }
 
-    const data = await res.json();
+    let data = await res.json();
     
+    try {
+      const localItem = await getInventoryItem(trackingNumber);
+      if (localItem && localItem.status && localItem.status.includes('Entregado')) {
+        if (!data.package) data.package = { tracking: trackingNumber };
+        if (!data.timeline) data.timeline = [];
+        
+        data.package.statusLabel = 'Entregado';
+        
+        // Remove the existing 'Entregado' event if it already exists to avoid duplicates
+        data.timeline = data.timeline.filter((e: any) => e.status !== 'Paquete Entregado');
+
+        data.timeline.unshift({
+          date: localItem.updated_at || localItem.created_at || new Date().toISOString(),
+          status: 'Paquete Entregado',
+          description: 'El paquete ha sido entregado exitosamente al cliente.',
+          icon: 'circle'
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching local inventory for tracking:', e);
+    }
+
     // We pass the raw data to the frontend so it can be mapped.
     return NextResponse.json({
       trackingNumber,
