@@ -57,22 +57,45 @@ const itemVariants: Variants = {
 export default function HowItWorks() {
   return (
     <section id="como-funciona" className="section-padding bg-brand-bg-light relative overflow-hidden">
-      <div className="container-max">
+      {/* Decorative floating background elements */}
+      <motion.div 
+        animate={{ y: [0, -20, 0], opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-20 left-10 text-brand-blue/10 pointer-events-none"
+      >
+        <PlaneTakeoff size={120} />
+      </motion.div>
+      <motion.div 
+        animate={{ y: [0, 20, 0], opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute bottom-20 right-10 text-brand-yellow/10 pointer-events-none"
+      >
+        <ShoppingBag size={100} />
+      </motion.div>
+
+      <div className="container-max relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="section-title">Comprar afuera nunca fue tan sencillo</h2>
+          <h2 className="section-title">Trae lo que quieras del mundo, sin complicaciones</h2>
           <p className="section-subtitle max-w-2xl mx-auto">
-            Sigue estos simples pasos y nosotros nos encargamos del resto.
+            Sigue esta guía rápida y recibe tus paquetes directo en casa.
           </p>
         </motion.div>
 
         <div className="relative max-w-5xl mx-auto">
-          {/* Connecting Line (Desktop) */}
-          <div className="hidden lg:block absolute top-12 left-16 right-16 h-1 border-t-2 border-dashed border-gray-300 z-0"></div>
+          {/* Animated Connecting Line (Desktop) */}
+          <div className="hidden lg:block absolute top-12 left-16 right-16 h-[2px] bg-gray-200 z-0 overflow-hidden">
+            <motion.div 
+              initial={{ x: "-100%" }}
+              whileInView={{ x: "100%" }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+              className="w-1/2 h-full bg-gradient-to-r from-transparent via-brand-blue to-transparent"
+            />
+          </div>
 
           <motion.div 
             variants={containerVariants}
@@ -91,10 +114,16 @@ export default function HowItWorks() {
                     {idx + 1}
                   </div>
 
-                  {/* Icon Circle */}
-                  <div className={`w-24 h-24 rounded-3xl ${step.color} text-white flex items-center justify-center mb-6 shadow-md transform group-hover:-translate-y-2 transition-transform duration-300`}>
-                    <Icon size={40} />
-                  </div>
+                  {/* Icon Circle with continuous floating animation */}
+                  <motion.div 
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: idx * 0.2 }}
+                    className={`w-24 h-24 rounded-3xl ${step.color} text-white flex items-center justify-center mb-6 shadow-lg shadow-${step.color}/30 transform transition-transform duration-300 relative`}
+                  >
+                    <Icon size={40} className="relative z-10" />
+                    <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 rounded-3xl transition-opacity" />
+                  </motion.div>
 
                   {/* Content */}
                   <h3 className={`text-xl font-bold mb-4 ${step.textColor}`}>
@@ -120,26 +149,37 @@ export default function HowItWorks() {
           </motion.div>
         </div>
 
-        {/* Visual summary */}
-        <div className="mt-20 pt-12 border-t border-gray-200">
+        {/* Visual summary with hover interactions */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-20 pt-12 border-t border-gray-200"
+        >
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 font-bold text-brand-text-gray">
-            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
+            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
               <ShoppingBag size={18} className="text-brand-red" /> Compra
-            </span>
-            <ArrowRight className="text-gray-300" />
-            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
+            </motion.span>
+            <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+              <ArrowRight className="text-brand-blue/50" />
+            </motion.div>
+            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
               <UserPlus size={18} className="text-brand-blue" /> Casillero
-            </span>
-            <ArrowRight className="text-gray-300" />
-            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
+            </motion.span>
+            <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+              <ArrowRight className="text-brand-blue/50" />
+            </motion.div>
+            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
               <PlaneTakeoff size={18} className="text-brand-yellow" /> Transporte
-            </span>
-            <ArrowRight className="text-gray-300" />
-            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm">
+            </motion.span>
+            <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+              <ArrowRight className="text-brand-blue/50" />
+            </motion.div>
+            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
               <MapPin size={18} className="text-brand-blue" /> Costa Rica
-            </span>
+            </motion.span>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
