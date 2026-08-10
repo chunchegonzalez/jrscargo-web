@@ -54,7 +54,6 @@ export default function BodegaScanner() {
       if (data.status === 'SUCCESS' && data.rawData?.package) {
         const pkg = data.rawData.package;
         const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
-        const upperConsignee = fullConsignee.toUpperCase();
         let extractedCompany = 'Independiente';
         let cleanClient = fullConsignee;
 
