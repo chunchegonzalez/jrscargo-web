@@ -22,7 +22,7 @@ export default function TerminosYCondiciones() {
             
             <div className="p-8 sm:p-12 prose prose-blue max-w-none prose-headings:text-brand-blue prose-headings:font-black prose-p:text-brand-text-gray prose-li:text-brand-text-gray">
               <p className="lead font-medium text-lg">
-                El presente documento establece los Términos y Condiciones que regulan la prestación de los servicios de transporte, logística y recepción de paquetes brindados por JRS Cargo (en adelante, "La Empresa"). Al hacer uso de nuestros servicios o solicitar el envío de paquetes a nuestras direcciones, el cliente (en adelante, "El Cliente") acepta plenamente y sin reservas las cláusulas aquí descritas.
+                El presente documento establece los Términos y Condiciones que regulan la prestación de los servicios de transporte, logística y recepción de paquetes brindados por JRS Cargo (en adelante, &quot;La Empresa&quot;). Al hacer uso de nuestros servicios o solicitar el envío de paquetes a nuestras direcciones, el cliente (en adelante, &quot;El Cliente&quot;) acepta plenamente y sin reservas las cláusulas aquí descritas.
               </p>
 
               <hr className="my-8 border-gray-100" />
@@ -47,7 +47,7 @@ export default function TerminosYCondiciones() {
                 </li>
                 <li className="pl-8 relative">
                   <span className="absolute left-0 top-0 font-bold text-brand-blue">2.2.</span> 
-                  <strong className="text-gray-900">Estatus del Rastreo (Tracking) y Prácticas de Proveedores:</strong> La actualización de un estado como "Entregado" (Delivered) en el rastreo del proveedor o del correo público/privado (como USPS, FedEx, DHL, etc.) no constituye una prueba de recepción física. Los transportistas locales con frecuencia marcan paquetes como entregados antes de dejarlos físicamente o los entregan en direcciones incorrectas.
+                  <strong className="text-gray-900">Estatus del Rastreo (Tracking) y Prácticas de Proveedores:</strong> La actualización de un estado como &quot;Entregado&quot; (Delivered) en el rastreo del proveedor o del correo público/privado (como USPS, FedEx, DHL, etc.) no constituye una prueba de recepción física. Los transportistas locales con frecuencia marcan paquetes como entregados antes de dejarlos físicamente o los entregan en direcciones incorrectas.
                 </li>
                 <li className="pl-8 relative">
                   <span className="absolute left-0 top-0 font-bold text-brand-blue">2.3.</span> 
