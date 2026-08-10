@@ -171,6 +171,35 @@ export default function BodegaScanner() {
     }
   };
 
+  const handleRevertDeliver = async () => {
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
+    
+    const newEvent = {
+      date: formattedDate,
+      action: 'Reversión: Paquete devuelto a Bodega',
+      user: 'Operador Bodega'
+    };
+
+    const newHistory = [newEvent, ...history];
+
+    setLocalStatus('En Bodega CR');
+    setHistory(newHistory);
+
+    try {
+      await fetch(`/api/inventory/${packageData?.tracking}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'En Bodega CR',
+          history: newHistory
+        })
+      });
+    } catch (e) {
+      console.error('Error actualizando en BD', e);
+    }
+  };
+
   const resetScanner = () => {
     setPackageData(null);
     setScannedCode('');
@@ -233,7 +262,7 @@ export default function BodegaScanner() {
                   Tracking: {packageData.tracking}
                 </h3>
               </div>
-              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus === 'Entregado' ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : 'bg-brand-yellow/20 text-brand-blue'}`}>
+              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus === 'Entregado al Cliente' ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : 'bg-brand-yellow/20 text-brand-blue'}`}>
                 {localStatus || 'Encontrado en Worldbox'}
               </span>
             </div>
@@ -309,21 +338,29 @@ export default function BodegaScanner() {
                   </div>
                 )}
 
-                {localStatus === 'Entregado' && (
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 flex flex-col justify-center text-center opacity-70">
+                {localStatus === 'Entregado al Cliente' && (
+                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 flex flex-col justify-center text-center opacity-90">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-200">
                       <CheckCircle2 size={32} className="text-gray-400" />
                     </div>
                     <h4 className="text-lg font-bold text-gray-500 mb-2">Paquete Entregado</h4>
                     <p className="text-gray-400 text-sm mb-6 text-balance">
-                      Este paquete ya no está en tu inventario activo.
+                      Este paquete ya fue entregado al cliente.
                     </p>
-                    <button 
-                      onClick={resetScanner}
-                      className="bg-white border-2 border-gray-200 text-gray-500 font-bold rounded-xl py-4 w-full hover:border-brand-blue hover:text-brand-blue transition-colors flex items-center justify-center gap-2"
-                    >
-                      Escanear Nuevo
-                    </button>
+                    <div className="flex flex-col gap-3">
+                      <button 
+                        onClick={resetScanner}
+                        className="bg-white border-2 border-gray-200 text-gray-500 font-bold rounded-xl py-3 w-full hover:border-brand-blue hover:text-brand-blue transition-colors flex items-center justify-center"
+                      >
+                        Escanear Nuevo
+                      </button>
+                      <button 
+                        onClick={handleRevertDeliver}
+                        className="bg-transparent text-brand-red text-xs font-bold py-2 hover:underline transition-colors"
+                      >
+                        ¿Fue un error? Devolver a Inventario
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
