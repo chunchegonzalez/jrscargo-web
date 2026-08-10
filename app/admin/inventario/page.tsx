@@ -95,9 +95,6 @@ export default function BodegaInventario() {
               <option value="Todas">Todas las Empresas</option>
               <option value="JRS CARGO">JRS CARGO</option>
               <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
-              <option value="ASI">ASI</option>
-              <option value="Independiente">Independiente</option>
-              <option value="N/A">N/A (Sin asignar)</option>
             </select>
           </div>
         </div>
