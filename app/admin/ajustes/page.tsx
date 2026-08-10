@@ -48,8 +48,9 @@ export default function AjustesPage() {
         const errorData = await res.json();
         alert(`Error al crear usuario: ${errorData.error}`);
       }
-    } catch (err: any) {
-      alert(`Error de red: ${err.message}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+      alert(`Error de red: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

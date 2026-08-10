@@ -17,7 +17,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     await createUser(body);
     return NextResponse.json({ success: true }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message || 'Error creating user' }, { status: 500 });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error creating user';
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
