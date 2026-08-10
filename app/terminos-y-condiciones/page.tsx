@@ -1,13 +1,9 @@
 import React from 'react';
-import Header from '@/components/ui/Header';
-import Footer from '@/components/ui/Footer';
-import LayoutWrapper from '@/components/ui/LayoutWrapper';
 import { FileText } from 'lucide-react';
 
 export default function TerminosYCondiciones() {
   return (
-    <LayoutWrapper>
-      <Header />
+    <>
       
       <main className="pt-28 pb-20 bg-gray-50 min-h-screen">
         <div className="container-max">
@@ -122,8 +118,6 @@ export default function TerminosYCondiciones() {
           </div>
         </div>
       </main>
-
-      <Footer />
-    </LayoutWrapper>
+    </>
   );
 }
