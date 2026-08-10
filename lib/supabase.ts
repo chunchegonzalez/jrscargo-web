@@ -56,3 +56,14 @@ export async function updateInventoryItem(id: string, updates: Record<string, un
   if (!res.ok) throw new Error('Error updating item');
   return res.json();
 }
+
+export async function deleteInventoryItem(id: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/local_inventory?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Error deleting item');
+  // DELETE on Supabase usually returns 204 No Content, so we don't try to parse JSON
+  return { success: true };
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInventoryItem, updateInventoryItem } from '@/lib/supabase';
+import { getInventoryItem, updateInventoryItem, deleteInventoryItem } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,5 +20,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch {
     return NextResponse.json({ success: false, error: 'Error updating item' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    await deleteInventoryItem(params.id);
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Error deleting item' }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Search, Filter, X } from 'lucide-react';
+import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
 
 interface InventoryItem {
   id: string;
@@ -17,6 +17,17 @@ export default function BodegaInventario() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [originalTracking, setOriginalTracking] = useState<string>('');
+  const [trackingJustification, setTrackingJustification] = useState('');
+  
+  const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  
+  const openEditModal = (item: InventoryItem) => {
+    setEditingItem({...item});
+    setOriginalTracking(item.id);
+    setTrackingJustification('');
+  };
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCompany, setFilterCompany] = useState('Todas');
@@ -159,7 +170,9 @@ export default function BodegaInventario() {
                   </td>
                   <td className="p-4 font-medium text-gray-700">{item.client}</td>
                   <td className="p-4 text-gray-500">{item.company}</td>
-                  <td className="p-4 text-gray-500 whitespace-nowrap">{item.weight}</td>
+                  <td className="p-4 text-gray-500 whitespace-nowrap">
+                    {item.weight} {item.weight && !item.weight.includes('kg') ? `/ ${(parseFloat(item.weight) * 0.453592).toFixed(2)} kg` : ''}
+                  </td>
                   <td className="p-4 text-gray-500 whitespace-nowrap">{item.date}</td>
                   <td className="p-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold inline-block ${
@@ -171,9 +184,14 @@ export default function BodegaInventario() {
                     </span>
                   </td>
                   <td className="p-4 pr-6 text-right">
-                    <button onClick={() => setEditingItem(item)} className="text-brand-blue font-bold text-xs hover:underline opacity-0 group-hover:opacity-100 transition-opacity">
-                      Editar
-                    </button>
+                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEditModal(item)} className="p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors" title="Editar">
+                        <Pencil size={18} />
+                      </button>
+                      <button onClick={() => setDeletingItem(item)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -202,10 +220,11 @@ export default function BodegaInventario() {
               e.preventDefault();
               setIsSaving(true);
               try {
-                const res = await fetch(`/api/inventory/${editingItem.id}`, {
+                const res = await fetch(`/api/inventory/${originalTracking}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
+                    id: editingItem.id !== originalTracking ? editingItem.id : undefined,
                     client: editingItem.client,
                     weight: editingItem.weight,
                     company: editingItem.company,
@@ -213,7 +232,7 @@ export default function BodegaInventario() {
                   })
                 });
                 if (res.ok) {
-                  setInventory(prev => prev.map(p => p.id === editingItem.id ? editingItem : p));
+                  setInventory(prev => prev.map(p => p.id === originalTracking ? editingItem : p));
                   setEditingItem(null);
                 } else {
                   alert('Error al guardar los cambios');
@@ -227,8 +246,30 @@ export default function BodegaInventario() {
               
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tracking</label>
-                <input type="text" value={editingItem.id} disabled className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 font-mono text-sm" />
+                <input 
+                  type="text" 
+                  value={editingItem.id} 
+                  onChange={e => setEditingItem({...editingItem, id: e.target.value.toUpperCase()})}
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-mono" 
+                />
               </div>
+
+              {originalTracking !== editingItem.id && (
+                <div className="bg-orange-50 border border-orange-100 p-4 rounded-xl space-y-3">
+                  <div className="flex gap-2 items-center text-orange-800">
+                    <AlertTriangle size={16} />
+                    <span className="text-sm font-bold">Justificación de Cambio de Tracking</span>
+                  </div>
+                  <textarea
+                    required
+                    value={trackingJustification}
+                    onChange={(e) => setTrackingJustification(e.target.value)}
+                    placeholder="¿Por qué se está modificando el número de tracking original?"
+                    className="w-full text-sm px-4 py-2 rounded-lg border border-orange-200 focus:ring-0 focus:border-orange-400 bg-white"
+                    rows={2}
+                  />
+                </div>
+              )}
               
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
@@ -282,6 +323,69 @@ export default function BodegaInventario() {
                 </button>
               </div>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Eliminación */}
+      {deletingItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-red-50">
+              <h3 className="font-bold text-red-600 text-lg flex items-center gap-2">
+                <AlertCircle size={20} /> Eliminar Paquete
+              </h3>
+              <button onClick={() => setDeletingItem(null)} className="text-red-400 hover:text-red-600">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSaving(true);
+              try {
+                const res = await fetch(`/api/inventory/${deletingItem.id}`, {
+                  method: 'DELETE',
+                });
+                if (res.ok) {
+                  setInventory(prev => prev.filter(p => p.id !== deletingItem.id));
+                  setDeletingItem(null);
+                  setDeleteReason('');
+                } else {
+                  alert('Error al eliminar');
+                }
+              } catch {
+                alert('Error de conexión');
+              } finally {
+                setIsSaving(false);
+              }
+            }} className="p-6 space-y-4">
+              
+              <p className="text-sm text-gray-600">
+                ¿Estás seguro de que deseas eliminar permanentemente el paquete con tracking <strong className="text-gray-900">{deletingItem.id}</strong> del sistema? Esta acción no se puede deshacer.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Motivo / Notificación de Eliminación</label>
+                <textarea 
+                  required
+                  value={deleteReason} 
+                  onChange={e => setDeleteReason(e.target.value)}
+                  placeholder="Por favor, indica el motivo de la eliminación..."
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-red-400 focus:ring-0 text-sm" 
+                  rows={3}
+                />
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
+                <button type="button" onClick={() => setDeletingItem(null)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isSaving || !deleteReason.trim()} className="flex-1 py-3 font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors">
+                  {isSaving ? 'Eliminando...' : 'Eliminar Paquete'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
