@@ -23,6 +23,19 @@ export default function BodegaInventario() {
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   
+  const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(console.error);
+  }, []);
+  
   const [viewingPhotos, setViewingPhotos] = useState<{ id: string, photos: { id?: number | string, url: string }[] } | null>(null);
   const [loadingPhotosFor, setLoadingPhotosFor] = useState<string | null>(null);
 
@@ -377,15 +390,36 @@ export default function BodegaInventario() {
               e.preventDefault();
               setIsSaving(true);
               try {
-                const res = await fetch(`/api/inventory/${deletingItem.id}`, {
-                  method: 'DELETE',
-                });
-                if (res.ok) {
-                  setInventory(prev => prev.filter(p => p.id !== deletingItem.id));
-                  setDeletingItem(null);
-                  setDeleteReason('');
+                if (currentUser?.role === 'admin') {
+                  // Direct deletion for admin
+                  const res = await fetch(`/api/inventory/${deletingItem.id}`, {
+                    method: 'DELETE',
+                  });
+                  if (res.ok) {
+                    setInventory(prev => prev.filter(p => p.id !== deletingItem.id));
+                    setDeletingItem(null);
+                    setDeleteReason('');
+                  } else {
+                    alert('Error al eliminar');
+                  }
                 } else {
-                  alert('Error al eliminar');
+                  // Request deletion for regular user
+                  const res = await fetch('/api/deletion-requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      package_id: deletingItem.id,
+                      requested_by: currentUser?.username || 'user',
+                      reason: deleteReason
+                    })
+                  });
+                  if (res.ok) {
+                    alert('Solicitud enviada al Administrador Principal para su aprobación.');
+                    setDeletingItem(null);
+                    setDeleteReason('');
+                  } else {
+                    alert('Error al enviar la solicitud');
+                  }
                 }
               } catch {
                 alert('Error de conexión');
@@ -395,11 +429,15 @@ export default function BodegaInventario() {
             }} className="p-6 space-y-4">
               
               <p className="text-sm text-gray-600">
-                ¿Estás seguro de que deseas eliminar permanentemente el paquete con tracking <strong className="text-gray-900">{deletingItem.id}</strong> del sistema? Esta acción no se puede deshacer.
+                {currentUser?.role === 'admin' 
+                  ? `¿Estás seguro de que deseas eliminar permanentemente el paquete con tracking `
+                  : `¿Estás seguro de solicitar la eliminación del paquete con tracking `}
+                <strong className="text-gray-900">{deletingItem.id}</strong>? 
+                {currentUser?.role === 'admin' ? ' Esta acción no se puede deshacer.' : ' El Administrador Principal deberá aprobar esta solicitud.'}
               </p>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Motivo / Notificación de Eliminación</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Motivo / Justificación</label>
                 <textarea 
                   required
                   value={deleteReason} 
@@ -415,7 +453,7 @@ export default function BodegaInventario() {
                   Cancelar
                 </button>
                 <button type="submit" disabled={isSaving || !deleteReason.trim()} className="flex-1 py-3 font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors">
-                  {isSaving ? 'Eliminando...' : 'Eliminar Paquete'}
+                  {isSaving ? (currentUser?.role === 'admin' ? 'Eliminando...' : 'Enviando...') : (currentUser?.role === 'admin' ? 'Eliminar Paquete' : 'Solicitar Eliminación')}
                 </button>
               </div>
             </form>

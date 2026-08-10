@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Package, ScanBarcode, LogOut } from 'lucide-react';
+import { Package, ScanBarcode, LogOut, Settings } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -10,6 +10,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === '/admin/login';
+  
+  const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
+
+  useEffect(() => {
+    if (!isLoginPage) {
+      fetch('/api/auth/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.authenticated) {
+            setCurrentUser(data.user);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isLoginPage]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -43,15 +58,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 p-5 space-y-3 overflow-y-auto relative z-10">
           <Link 
             href="/admin/bodega" 
-            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 overflow-hidden ${
+            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
               pathname === '/admin/bodega' 
-                ? 'bg-white/10 text-white shadow-lg border border-white/10' 
+                ? 'bg-brand-yellow/10 text-brand-yellow' 
                 : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
             }`}
           >
-            {pathname === '/admin/bodega' && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-yellow rounded-l-2xl shadow-[0_0_10px_rgba(255,204,0,0.5)]"></div>
-            )}
             <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/bodega' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
               <ScanBarcode size={20} className={pathname === '/admin/bodega' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
             </div>
@@ -60,20 +72,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <Link 
             href="/admin/inventario" 
-            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 overflow-hidden ${
+            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
               pathname === '/admin/inventario' 
-                ? 'bg-white/10 text-white shadow-lg border border-white/10' 
+                ? 'bg-brand-yellow/10 text-brand-yellow' 
                 : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
             }`}
           >
-            {pathname === '/admin/inventario' && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-yellow rounded-l-2xl shadow-[0_0_10px_rgba(255,204,0,0.5)]"></div>
-            )}
             <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/inventario' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
               <Package size={20} className={pathname === '/admin/inventario' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
             </div>
             Inventario CR
           </Link>
+          
+          {currentUser?.role === 'admin' && (
+            <Link 
+              href="/admin/ajustes" 
+              className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
+                pathname === '/admin/ajustes' 
+                  ? 'bg-brand-yellow/10 text-brand-yellow' 
+                  : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
+              }`}
+            >
+              <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/ajustes' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
+                <Settings size={20} className={pathname === '/admin/ajustes' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
+              </div>
+              Ajustes
+            </Link>
+          )}
         </nav>
 
         <div className="p-5 border-t border-white/5 relative z-10">
@@ -93,14 +118,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-[13px] font-black text-brand-blue uppercase tracking-wide">Administrador de Bodega</p>
+              <p className="text-[13px] font-black text-brand-blue uppercase tracking-wide">{currentUser?.username || 'Cargando...'}</p>
               <div className="flex items-center justify-end gap-1.5 mt-0.5">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sede: Costa Rica</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{currentUser?.role === 'admin' ? 'Administrador Principal' : 'Usuario Operador'}</p>
               </div>
             </div>
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-blue to-[#0A2636] shadow-[0_2px_10px_-2px_rgba(18,67,94,0.4)] flex items-center justify-center text-brand-yellow font-black text-lg border border-brand-blue/20">
-              AD
+              {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
             </div>
           </div>
         </header>
