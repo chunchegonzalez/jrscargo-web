@@ -10,6 +10,7 @@ export default function AjustesPage() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('user');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   
   const [showPasswordFor, setShowPasswordFor] = useState<string | null>(null);
   const [editingPasswordFor, setEditingPasswordFor] = useState<string | null>(null);
@@ -189,7 +190,16 @@ export default function AjustesPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1">Contraseña</label>
-                  <input required type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-0 focus:border-brand-blue" />
+                  <div className="relative">
+                    <input required type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full pl-3 pr-10 py-2 rounded-lg border border-gray-200 text-sm focus:ring-0 focus:border-brand-blue" />
+                    <button 
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4 items-end">
