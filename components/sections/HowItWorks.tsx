@@ -57,22 +57,6 @@ const itemVariants: Variants = {
 export default function HowItWorks() {
   return (
     <section id="como-funciona" className="section-padding bg-brand-bg-light relative overflow-hidden">
-      {/* Decorative floating background elements */}
-      <motion.div 
-        animate={{ y: [0, -20, 0], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-20 left-10 text-brand-blue/10 pointer-events-none"
-      >
-        <PlaneTakeoff size={120} />
-      </motion.div>
-      <motion.div 
-        animate={{ y: [0, 20, 0], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-20 right-10 text-brand-yellow/10 pointer-events-none"
-      >
-        <ShoppingBag size={100} />
-      </motion.div>
-
       <div className="container-max relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -88,13 +72,17 @@ export default function HowItWorks() {
 
         <div className="relative max-w-5xl mx-auto">
           {/* Animated Connecting Line (Desktop) */}
-          <div className="hidden lg:block absolute top-12 left-16 right-16 h-[2px] bg-gray-200 z-0 overflow-hidden">
-            <motion.div 
-              initial={{ x: "-100%" }}
-              whileInView={{ x: "100%" }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-              className="w-1/2 h-full bg-gradient-to-r from-transparent via-brand-blue to-transparent"
-            />
+          <div className="hidden lg:block absolute top-12 left-24 right-24 h-1 z-0">
+            <svg width="100%" height="100%" className="text-gray-300">
+              <motion.line 
+                x1="0" y1="50%" x2="100%" y2="50%" 
+                stroke="currentColor" 
+                strokeWidth="3" 
+                strokeDasharray="10 10" 
+                animate={{ strokeDashoffset: [-20, 0] }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+            </svg>
           </div>
 
           <motion.div 

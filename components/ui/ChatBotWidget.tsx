@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
-import { X, Send, Bot, MessageCircleQuestion, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Bot, BotMessageSquare, Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 export default function ChatBotWidget() {
@@ -125,7 +125,7 @@ export default function ChatBotWidget() {
           <div className="w-16 h-16 bg-gradient-to-tr from-brand-blue to-[#0A2636] rounded-full shadow-[0_8px_30px_rgba(18,67,94,0.3)] flex items-center justify-center text-white border-2 border-white relative overflow-hidden group-hover:shadow-[0_8px_30px_rgba(18,67,94,0.5)] transition-shadow">
             {/* Subtle inner glow */}
             <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10"></div>
-            <MessageCircleQuestion size={32} strokeWidth={2} className="relative z-10" />
+            <BotMessageSquare size={32} strokeWidth={2} className="relative z-10" />
             <Sparkles size={12} className="absolute top-4 right-4 text-brand-yellow z-10" />
           </div>
         </button>
