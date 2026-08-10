@@ -83,7 +83,7 @@ export async function POST(req: Request) {
                     icon: 'circle'
                   });
                 }
-              } catch (e) {
+              } catch {
                 // ignore local db error
               }
               
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
                 trackingInfo: data,
                 message: 'Información obtenida. Por favor, resume los últimos eventos del timeline y el status actual para el usuario.'
               };
-            } catch (error) {
+            } catch {
               return { error: 'Error interno al consultar el sistema de rastreo. Pídele al usuario que intente más tarde.' };
             }
           },
