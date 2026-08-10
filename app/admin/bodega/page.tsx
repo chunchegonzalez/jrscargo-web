@@ -281,10 +281,16 @@ export default function BodegaScanner() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Proveedor</p>
-                    <p className="text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100 truncate">
-                      {packageData.provider || 'N/A'}
-                    </p>
+                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Empresa</p>
+                    <select
+                      value={packageData.provider || 'Independiente'}
+                      onChange={(e) => setPackageData({ ...packageData, provider: e.target.value })}
+                      className="w-full text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100 focus:border-brand-blue focus:ring-0 cursor-pointer"
+                    >
+                      <option value="Independiente">Independiente</option>
+                      <option value="JRS CARGO">JRS CARGO</option>
+                      <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+                    </select>
                   </div>
                 </div>
 
