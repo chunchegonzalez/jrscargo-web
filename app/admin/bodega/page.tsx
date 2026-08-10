@@ -52,7 +52,30 @@ export default function BodegaScanner() {
       const data = await res.json();
       
       if (data.status === 'SUCCESS' && data.rawData?.package) {
-        setPackageData(data.rawData.package);
+        const pkg = data.rawData.package;
+        const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+        const upperConsignee = fullConsignee.toUpperCase();
+        let extractedCompany = 'Independiente';
+        let cleanClient = fullConsignee;
+
+        if (upperConsignee.includes('JRS CARGO')) {
+          extractedCompany = 'JRS CARGO';
+          cleanClient = fullConsignee.replace(/jrs\s*cargo/i, '').trim();
+        } else if (upperConsignee.includes('AT IMPORTS')) {
+          extractedCompany = 'AT IMPORTS';
+          cleanClient = fullConsignee.replace(/at\s*imports/i, '').trim();
+        } else if (/\basi\b/i.test(fullConsignee)) {
+          extractedCompany = 'ASI';
+          cleanClient = fullConsignee.replace(/\basi\b/i, '').trim();
+        }
+
+        const newPackageData = {
+          ...pkg,
+          consignatario: cleanClient,
+          provider: extractedCompany
+        };
+
+        setPackageData(newPackageData);
         
         // 2. Revisamos si ya está en nuestra BD local de Supabase
         const dbRes = await fetch(`/api/inventory/${encodeURIComponent(scannedCode)}`);
