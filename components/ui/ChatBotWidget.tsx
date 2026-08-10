@@ -129,24 +129,42 @@ export default function ChatBotWidget() {
               </div>
             )}
             
-            {messages.map(m => (
-              <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {m.role !== 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                    <Bot size={16} />
+            {messages.map(m => {
+              if (!m.content && m.toolInvocations && m.toolInvocations.length > 0) {
+                return (
+                  <div key={m.id} className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
+                      <Bot size={16} />
+                    </div>
+                    <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm text-center p-4 text-sm shadow-sm max-w-[90%] flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin text-brand-blue" />
+                      <span>Buscando paquete en el sistema...</span>
+                    </div>
                   </div>
-                )}
-                <div className={`max-w-[90%] p-4 text-sm shadow-sm ${
-                  m.role === 'user' 
-                    ? 'bg-brand-blue text-white rounded-2xl rounded-tr-sm text-right' 
-                    : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm text-center'
-                }`}>
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    {m.content.replace(/\*\*/g, '').replace(/###/g, '').replace(/\*/g, '•')}
+                );
+              }
+
+              if (!m.content) return null;
+
+              return (
+                <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {m.role !== 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
+                      <Bot size={16} />
+                    </div>
+                  )}
+                  <div className={`max-w-[90%] p-4 text-sm shadow-sm ${
+                    m.role === 'user' 
+                      ? 'bg-brand-blue text-white rounded-2xl rounded-tr-sm text-right' 
+                      : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm text-center'
+                  }`}>
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      {m.content.replace(/\*\*/g, '').replace(/###/g, '').replace(/\*/g, '•')}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             
             {error && (
               <div className="flex gap-3 justify-start">

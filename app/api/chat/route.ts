@@ -45,6 +45,7 @@ export async function POST(req: Request) {
       - IMPORTANTE: NO uses formato Markdown (como asteriscos ** o #). Usa texto plano puro con saltos de línea para que se vea limpio en pantalla.
       - Sé conciso, no escribas respuestas gigantes a menos que sea necesario.`,
       messages,
+      maxSteps: 5,
       tools: {
         trackPackage: tool({
           description: 'Obtiene el estado y ubicación actual de un paquete usando su número de tracking (rastreo).',
