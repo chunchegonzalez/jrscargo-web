@@ -93,7 +93,7 @@ export default function AmazonDeals() {
               <h2 className="text-3xl md:text-5xl font-black text-white mb-3 tracking-tight">
                 Promociones <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-yellow to-brand-red">Exclusivas</span>
               </h2>
-              <p className="text-brand-light/80 text-sm md:text-base max-w-md text-balance font-medium">
+              <p className="text-gray-300 text-sm md:text-base max-w-md text-balance font-medium">
                 Aprovecha los descuentos de Amazon y trae tus compras a Costa Rica de forma rápida y segura con JRS Cargo.
               </p>
             </div>
