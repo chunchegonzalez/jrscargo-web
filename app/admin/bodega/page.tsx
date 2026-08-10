@@ -58,15 +58,12 @@ export default function BodegaScanner() {
         let extractedCompany = 'Independiente';
         let cleanClient = fullConsignee;
 
-        if (upperConsignee.includes('JRS CARGO')) {
+        if (/\bJRS(\s*CARGO)?\b/i.test(fullConsignee)) {
           extractedCompany = 'JRS CARGO';
-          cleanClient = fullConsignee.replace(/jrs\s*cargo/i, '').trim();
-        } else if (upperConsignee.includes('AT IMPORTS')) {
-          extractedCompany = 'AT IMPORTS';
-          cleanClient = fullConsignee.replace(/at\s*imports/i, '').trim();
-        } else if (/\basi\b/i.test(fullConsignee)) {
-          extractedCompany = 'ASI';
-          cleanClient = fullConsignee.replace(/\basi\b/i, '').trim();
+          cleanClient = fullConsignee.replace(/\bJRS(\s*CARGO)?\b/i, '').replace(/-/g, '').trim();
+        } else if (/\b(AT(\s*IMPORTS?)?|ATLANTIC\s*IMPORTS?|AT-\d+)\b/i.test(fullConsignee)) {
+          extractedCompany = 'ATLANTIC IMPORTS';
+          cleanClient = fullConsignee.replace(/\b(AT(\s*IMPORTS?)?|ATLANTIC\s*IMPORTS?|AT-\d+)\b/i, '').replace(/-/g, '').trim();
         }
 
         const newPackageData = {

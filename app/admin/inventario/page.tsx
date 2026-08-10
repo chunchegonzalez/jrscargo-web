@@ -17,6 +17,8 @@ export default function BodegaInventario() {
   const [mounted, setMounted] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCompany, setFilterCompany] = useState('Todas');
 
   useEffect(() => {
     setMounted(true);
@@ -45,6 +47,13 @@ export default function BodegaInventario() {
 
   const activePackages = inventory.filter(p => p.status === 'En Bodega CR').length;
 
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch = item.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.client.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
+    return matchesSearch && matchesCompany;
+  });
+
   if (!mounted) return null;
 
   return (
@@ -71,12 +80,26 @@ export default function BodegaInventario() {
             <input 
               type="text" 
               placeholder="Buscar por tracking, cliente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-sm"
             />
           </div>
-          <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors">
-            <Filter size={16} /> Filtrar
-          </button>
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-gray-400" />
+            <select
+              value={filterCompany}
+              onChange={(e) => setFilterCompany(e.target.value)}
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
+            >
+              <option value="Todas">Todas las Empresas</option>
+              <option value="JRS CARGO">JRS CARGO</option>
+              <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+              <option value="ASI">ASI</option>
+              <option value="Independiente">Independiente</option>
+              <option value="N/A">N/A (Sin asignar)</option>
+            </select>
+          </div>
         </div>
 
         {/* Tabla */}
@@ -94,12 +117,12 @@ export default function BodegaInventario() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
-              {inventory.length === 0 && (
+              {filteredInventory.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">No hay paquetes registrados localmente aún.</td>
+                  <td colSpan={7} className="p-8 text-center text-gray-500">No hay paquetes que coincidan con la búsqueda.</td>
                 </tr>
               )}
-              {inventory.map((item) => (
+              {filteredInventory.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="p-4 pl-6 font-bold text-brand-blue flex items-center gap-3">
                     <Package size={16} className="text-gray-400" />
@@ -107,10 +130,10 @@ export default function BodegaInventario() {
                   </td>
                   <td className="p-4 font-medium text-gray-700">{item.client}</td>
                   <td className="p-4 text-gray-500">{item.company}</td>
-                  <td className="p-4 text-gray-500">{item.weight}</td>
-                  <td className="p-4 text-gray-500">{item.date}</td>
-                  <td className="p-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  <td className="p-4 text-gray-500 whitespace-nowrap">{item.weight}</td>
+                  <td className="p-4 text-gray-500 whitespace-nowrap">{item.date}</td>
+                  <td className="p-4 whitespace-nowrap">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold inline-block ${
                       item.status === 'En Bodega CR' 
                         ? 'bg-brand-blue/10 text-brand-blue'
                         : 'bg-green-100 text-green-700'
@@ -131,7 +154,7 @@ export default function BodegaInventario() {
         
         {/* Footer Tabla */}
         <div className="p-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 text-center font-medium">
-          Mostrando {inventory.length} de {inventory.length} paquetes
+          Mostrando {filteredInventory.length} de {inventory.length} paquetes totales
         </div>
       </div>
 
