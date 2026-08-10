@@ -258,7 +258,7 @@ export default function BodegaScanner() {
                   Tracking: {packageData.tracking}
                 </h3>
               </div>
-              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus === 'Entregado al Cliente' ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : 'bg-brand-yellow/20 text-brand-blue'}`}>
+              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus?.includes('Entregado') ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : 'bg-brand-yellow/20 text-brand-blue'}`}>
                 {localStatus || 'Encontrado en Worldbox'}
               </span>
             </div>
@@ -334,7 +334,7 @@ export default function BodegaScanner() {
                   </div>
                 )}
 
-                {localStatus === 'Entregado al Cliente' && (
+                {localStatus?.includes('Entregado') && (
                   <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 flex flex-col justify-center text-center opacity-90">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-200">
                       <CheckCircle2 size={32} className="text-gray-400" />
