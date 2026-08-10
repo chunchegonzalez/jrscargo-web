@@ -161,18 +161,31 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Utility to completely hide scrollbar but allow scrolling */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 /* Scrollbar personalizado */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f9fafb;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #12435e;
-  border-radius: 3px;
+  background: rgba(18, 67, 94, 0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(18, 67, 94, 0.8);
 }
 
 /* WhatsApp flotante animación */

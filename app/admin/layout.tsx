@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        <nav className="flex-1 p-5 space-y-3 overflow-y-auto relative z-10">
+        <nav className="flex-1 p-5 space-y-3 overflow-y-auto scrollbar-hide relative z-10">
           <Link 
             href="/admin/bodega" 
             className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
