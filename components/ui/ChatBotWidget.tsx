@@ -2,8 +2,51 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
-import { X, Send, Bot, BotMessageSquare, Loader2, Sparkles } from 'lucide-react';
+import { X, Send, Bot, Loader2, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+
+const AnimatedRobotFace = () => {
+  return (
+    <div className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center justify-center relative overflow-hidden border border-white">
+      {/* Outer Glow Ring */}
+      <motion.div 
+        animate={{ rotate: 360 }}
+        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#ec4899,#a855f7,#06b6d4,transparent)] opacity-90"
+      />
+      
+      {/* Background to mask out the center of the ring */}
+      <div className="absolute inset-1 rounded-full bg-white z-0"></div>
+      
+      {/* Inner Black Visor */}
+      <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-800 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/30 z-10">
+        {/* Reflection */}
+        <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-full blur-[1px]"></div>
+        
+        {/* Eyes Group with look-around animation */}
+        <motion.div 
+          animate={{ x: [0, -3, 0, 3, 0], y: [0, -1, 0, 1, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          className="flex gap-2 relative z-10"
+        >
+          {/* Left Eye */}
+          <motion.div 
+            animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
+            transition={{ duration: 4, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
+            className="w-2.5 h-4 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+          />
+          {/* Right Eye */}
+          <motion.div 
+            animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
+            transition={{ duration: 4, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
+            className="w-2.5 h-4 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+          />
+        </motion.div>
+      </div>
+    </div>
+  );
+};
 
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -122,12 +165,13 @@ export default function ChatBotWidget() {
             <Sparkles size={16} className="text-brand-yellow" />
             Asistente IA JRS
           </div>
-          <div className="w-16 h-16 bg-gradient-to-tr from-brand-blue to-[#0A2636] rounded-full shadow-[0_8px_30px_rgba(18,67,94,0.3)] flex items-center justify-center text-white border-2 border-white relative overflow-hidden group-hover:shadow-[0_8px_30px_rgba(18,67,94,0.5)] transition-shadow">
-            {/* Subtle inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/10"></div>
-            <BotMessageSquare size={32} strokeWidth={2} className="relative z-10" />
-            <Sparkles size={12} className="absolute top-4 right-4 text-brand-yellow z-10" />
-          </div>
+          <motion.div 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative group-hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-shadow rounded-full"
+          >
+            <AnimatedRobotFace />
+          </motion.div>
         </button>
       )}
     </div>

@@ -69,7 +69,9 @@ export default function QuoteCalculator() {
         if (origin === 'China') rateApplied = LOCAL_RATES.chinaAir;
         
         total = weightInLb * rateApplied;
-        appliedDimensionStr = `${w || 0} ${weightUnit} (≈ ${weightInLb.toFixed(2)} lb)`;
+        appliedDimensionStr = weightUnit === 'kg' 
+          ? `${w || 0} kg (≈ ${weightInLb.toFixed(2)} lb)` 
+          : `${w || 0} lb`;
       } else if (service === 'Sea' && origin === 'USA') {
         rateApplied = LOCAL_RATES.usaSea;
         let calculatedFt3 = 0;
@@ -317,11 +319,8 @@ export default function QuoteCalculator() {
             <motion.div 
               animate={quoteResult.isValid ? { scale: [0.98, 1], opacity: 1 } : { opacity: 0.95 }}
               transition={{ duration: 0.4 }}
-              className="bg-brand-blue rounded-3xl p-6 sm:p-8 text-white shadow-xl h-full flex flex-col relative overflow-hidden transition-colors duration-500"
+              className="bg-gradient-to-br from-[#0a1e2d] to-brand-blue rounded-3xl p-6 sm:p-8 text-white shadow-2xl shadow-brand-blue/20 h-full flex flex-col relative overflow-hidden border border-white/10"
             >
-              
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-bl-full pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-tr-full pointer-events-none" />
               
               <h3 className="text-xl font-bold mb-6 text-brand-yellow z-10 flex items-center gap-2">
                 Tu envío estimado

@@ -18,7 +18,7 @@ export default function Footer() {
                 alt="JRS CARGO" 
                 width={200} 
                 height={75} 
-                className="w-auto h-12 md:h-14 object-contain brightness-0 invert opacity-90 hover:opacity-100 transition-opacity"
+                className="w-auto h-12 md:h-14 object-contain"
               />
             </Link>
             <p className="text-white/80 text-sm leading-relaxed text-balance">

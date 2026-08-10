@@ -79,7 +79,7 @@ export default function HowItWorks() {
                 stroke="currentColor" 
                 strokeWidth="3" 
                 strokeDasharray="10 10" 
-                animate={{ strokeDashoffset: [-20, 0] }}
+                animate={{ strokeDashoffset: [0, -20] }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
             </svg>
