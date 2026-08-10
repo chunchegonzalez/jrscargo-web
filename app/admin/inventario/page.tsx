@@ -19,6 +19,7 @@ export default function BodegaInventario() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCompany, setFilterCompany] = useState('Todas');
+  const [filterStatus, setFilterStatus] = useState('Todos');
 
   useEffect(() => {
     setMounted(true);
@@ -51,7 +52,9 @@ export default function BodegaInventario() {
     const matchesSearch = item.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.client.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
-    return matchesSearch && matchesCompany;
+    // Note: Since 'Entregado' might be saved as 'Entregado al Cliente' or 'Entregado', we check includes just in case
+    const matchesStatus = filterStatus === 'Todos' || item.status.includes(filterStatus.replace(' al Cliente', ''));
+    return matchesSearch && matchesCompany && matchesStatus;
   });
 
   if (!mounted) return null;
@@ -87,6 +90,17 @@ export default function BodegaInventario() {
           </div>
           <div className="flex items-center gap-2">
             <Filter size={16} className="text-gray-400" />
+            
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
+            >
+              <option value="Todos">Todos los Estados</option>
+              <option value="En Bodega CR">En Bodega CR</option>
+              <option value="Entregado">Entregados</option>
+            </select>
+
             <select
               value={filterCompany}
               onChange={(e) => setFilterCompany(e.target.value)}
