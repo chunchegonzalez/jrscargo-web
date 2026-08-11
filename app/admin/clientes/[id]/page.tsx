@@ -12,6 +12,7 @@ type Client = {
   email: string;
   phone?: string;
   address?: string;
+  cedula?: string;
   created_at: string;
 };
 
@@ -43,6 +44,11 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'facturas' | 'pagos'>('facturas');
+
+  // Modal de Edición
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Client>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Filtros de fecha para historial de pagos
   const [paymentStartDate, setPaymentStartDate] = useState('');
@@ -85,6 +91,29 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     }
   };
 
+  const handleUpdateClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsEditing(false);
+        loadData();
+      } else {
+        await showAlert('Aviso', 'Error: ' + (data.error || 'Ocurrió un error al guardar. Verifica si la columna cedula existe en Supabase si actualizaste la cédula.'));
+      }
+    } catch {
+      await showAlert('Aviso', 'Error de red al actualizar');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando perfil del cliente...</div>;
   if (!client) return <div className="p-8 text-center text-red-500">Cliente no encontrado</div>;
 
@@ -117,6 +146,21 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
           <h1 className="text-xl font-bold text-gray-800">Perfil del Cliente</h1>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              setEditForm({ 
+                name: client.name, 
+                email: client.email, 
+                phone: client.phone || '', 
+                cedula: client.cedula || '',
+                created_at: new Date(client.created_at).toISOString().split('T')[0] 
+              });
+              setIsEditing(true);
+            }}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            Editar Perfil
+          </button>
           {(totalPendienteUSD > 0 || totalPendienteCRC > 0) && (
             <Link 
               href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
@@ -166,14 +210,24 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
                 <Mail size={16} className="text-gray-400" />
-                <span>{client.email || '-'}</span>
+                <a href={`mailto:${client.email}`} className="hover:text-brand-blue transition-colors truncate max-w-[200px]">{client.email}</a>
               </div>
-              <div className="flex items-center gap-3 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
                 <Phone size={16} className="text-gray-400" />
-                <span>{client.phone || '-'}</span>
+                {client.phone ? (
+                  <a href={`tel:${client.phone}`} className="hover:text-brand-blue transition-colors">{client.phone}</a>
+                ) : (
+                  <span>-</span>
+                )}
               </div>
+              {client.cedula && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
+                  <FileText size={16} className="text-gray-400" />
+                  <span>Cédula: {client.cedula}</span>
+                </div>
+              )}
               {client.address && (
                 <div className="flex items-center gap-3 text-sm text-gray-600 sm:col-span-2">
                   <MapPin size={16} className="text-gray-400" />
@@ -361,6 +415,102 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
         </div>
 
       </div>
+
+      {/* Edit Profile Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <h3 className="font-black text-xl text-brand-blue">Editar Perfil del Cliente</h3>
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
+              >
+                <Trash2 size={20} className="hidden" /> {/* Para mantener alineación si se necesita */}
+                <span className="font-bold text-xl leading-none">&times;</span>
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <form id="edit-client-form" onSubmit={handleUpdateClient} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Nombre Completo *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={editForm.name || ''}
+                    onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Correo Electrónico *</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={editForm.email || ''}
+                      onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Teléfono / WhatsApp</label>
+                    <input 
+                      type="text" 
+                      value={editForm.phone || ''}
+                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Cédula / Identificación</label>
+                    <input 
+                      type="text" 
+                      value={editForm.cedula || ''}
+                      onChange={(e) => setEditForm({...editForm, cedula: e.target.value})}
+                      placeholder="Para facturación"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Cliente Desde</label>
+                    <input 
+                      type="date" 
+                      required
+                      value={editForm.created_at || ''}
+                      onChange={(e) => setEditForm({...editForm, created_at: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+              <button 
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-6 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                form="edit-client-form"
+                disabled={isSaving}
+                className="btn-primary px-8 py-3"
+              >
+                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
