@@ -29,39 +29,27 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [clientRes, invoicesRes, paymentsRes] = await Promise.all([
-          fetch(`/api/clients`), 
-          fetch('/api/invoices'),
-          fetch(`/api/clients/${clientId}/payments`)
-        ]);
+        const res = await fetch(`/api/clients/${clientId}`);
+        const data = await res.json();
 
-        const clientsData = await clientRes.json();
-        const invoicesData = await invoicesRes.json();
-        const paymentsData = await paymentsRes.json();
+        if (data.success) {
+          setClient(data.client);
+          setClientPayments(data.payments || []);
 
-        const currentClient = clientsData.data?.find((c: Record<string, unknown>) => String(c.id) === String(clientId));
-        setClient(currentClient);
+          // Calculate pending balance for each invoice
+          const processedInvs = (data.invoices || []).map((inv: Record<string, unknown>) => {
+            const stats = getInvoiceStats(inv);
+            return {
+              ...inv,
+              pendingBalance: stats.pending,
+              displayStatus: stats.displayStatus
+            };
+          }).filter((inv: Record<string, unknown>) => (inv.pendingBalance as number) > 0);
 
-        if (paymentsData.success) {
-          setClientPayments(paymentsData.data || []);
+          setInvoices(processedInvs);
+        } else {
+          console.error('Error fetching client data', data.error);
         }
-
-        // Filter invoices for this client that are not 'Pagada'
-        const clientInvs = invoicesData.data.filter((inv: Record<string, unknown>) => 
-          String(inv.client_id) === String(clientId)
-        );
-        
-        // Calculate pending balance for each
-        const processedInvs = clientInvs.map((inv: Record<string, unknown>) => {
-          const stats = getInvoiceStats(inv);
-          return {
-            ...inv,
-            pendingBalance: stats.pending,
-            displayStatus: stats.displayStatus
-          };
-        }).filter((inv: Record<string, unknown>) => (inv.pendingBalance as number) > 0);
-
-        setInvoices(processedInvs);
       } catch (error) {
         console.error('Error loading data', error);
       } finally {
