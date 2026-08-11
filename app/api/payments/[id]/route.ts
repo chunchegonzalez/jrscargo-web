@@ -33,7 +33,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     if (!delRes.ok) throw new Error('Failed to delete payment');
 
     // 3. Revert statuses of affected invoices to 'Pendiente'
-    const uniqueInvoiceIds = [...new Set(invoiceIds)];
+    const uniqueInvoiceIds = invoiceIds.filter((id, index) => invoiceIds.indexOf(id) === index);
     for (const invId of uniqueInvoiceIds) {
       await updateInvoiceStatus(invId, 'Pendiente');
     }
