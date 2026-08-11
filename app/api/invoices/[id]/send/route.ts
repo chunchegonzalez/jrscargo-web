@@ -36,8 +36,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
           <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 24px 0;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Total a Pagar</td>
-                <td style="padding: 8px 0; text-align: right; font-weight: bold; font-size: 18px; color: #12435e;">$${invoice.total.toFixed(2)} USD</td>
+                <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Subtotal</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 500; font-size: 14px; color: #374151;">$${invoice.subtotal.toFixed(2)} USD</td>
+              </tr>
+              ${invoice.discount_percent > 0 ? `
+              <tr>
+                <td style="padding: 8px 0; color: #10b981; font-size: 14px;">Descuento (${invoice.discount_percent}%)</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: 500; font-size: 14px; color: #10b981;">-$${((invoice.subtotal * invoice.discount_percent) / 100).toFixed(2)} USD</td>
+              </tr>
+              ` : ''}
+              <tr style="border-top: 1px solid #e5e7eb;">
+                <td style="padding: 12px 0 8px 0; color: #6b7280; font-size: 14px; font-weight: bold;">Total a Pagar</td>
+                <td style="padding: 12px 0 8px 0; text-align: right; font-weight: bold; font-size: 18px; color: #12435e;">$${invoice.total.toFixed(2)} USD</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Fecha de Emisión</td>

@@ -16,8 +16,12 @@ export default function NuevaFacturaPage() {
 
   // Invoice state
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState(`F-${Math.floor(Date.now() / 1000)}`);
+  const [searchClientTerm, setSearchClientTerm] = useState('');
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  
+  const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [items, setItems] = useState<InvoiceItem[]>([
     { id: 1, service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }
   ]);
@@ -28,7 +32,22 @@ export default function NuevaFacturaPage() {
 
   useEffect(() => {
     loadClients();
+    loadNextInvoiceNumber();
   }, []);
+
+  const loadNextInvoiceNumber = async () => {
+    try {
+      const res = await fetch('/api/invoices/next-number');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setInvoiceNumber(data.nextNumber);
+      } else {
+        setInvoiceNumber(`F-${Math.floor(Date.now() / 1000)}`);
+      }
+    } catch {
+      setInvoiceNumber(`F-${Math.floor(Date.now() / 1000)}`);
+    }
+  };
 
   const loadClients = async () => {
     try {
@@ -92,7 +111,8 @@ export default function NuevaFacturaPage() {
   };
 
   const subtotal = items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-  const total = subtotal; // If taxes needed, calculate here
+  const discountAmount = (subtotal * discountPercent) / 100;
+  const total = subtotal - discountAmount;
 
   const handleSaveInvoice = async () => {
     if (!selectedClientId) {
@@ -111,6 +131,7 @@ export default function NuevaFacturaPage() {
         client_id: selectedClientId,
         issue_date: issueDate,
         subtotal,
+        discount_percent: discountPercent,
         total,
         notes,
         status: 'Pendiente',
@@ -154,16 +175,42 @@ export default function NuevaFacturaPage() {
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
               {!showNewClientForm ? (
-                <div className="flex gap-2">
-                  <select 
-                    value={selectedClientId} 
-                    onChange={e => setSelectedClientId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-                  >
-                    <option value="">-- Seleccionar Cliente --</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
-                  </select>
-                  <button onClick={() => setShowNewClientForm(true)} className="p-2.5 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 rounded-xl" title="Nuevo Cliente">
+                <div className="flex gap-2 relative">
+                  <div className="relative w-full">
+                    <input 
+                      type="text"
+                      placeholder="Buscar cliente por nombre..."
+                      value={searchClientTerm}
+                      onChange={(e) => {
+                        setSearchClientTerm(e.target.value);
+                        setIsClientDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsClientDropdownOpen(true)}
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+                    />
+                    {isClientDropdownOpen && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {clients.filter(c => c.name.toLowerCase().includes(searchClientTerm.toLowerCase())).map(c => (
+                          <div 
+                            key={c.id} 
+                            onClick={() => {
+                              setSelectedClientId(c.id);
+                              setSearchClientTerm(c.name);
+                              setIsClientDropdownOpen(false);
+                            }}
+                            className={`px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 ${selectedClientId === c.id ? 'bg-brand-blue/5 font-bold text-brand-blue' : 'text-gray-700'}`}
+                          >
+                            <div className="text-sm">{c.name}</div>
+                            <div className="text-xs text-gray-400">{c.email}</div>
+                          </div>
+                        ))}
+                        {clients.filter(c => c.name.toLowerCase().includes(searchClientTerm.toLowerCase())).length === 0 && (
+                          <div className="px-4 py-3 text-sm text-gray-500 text-center">No se encontraron clientes.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => setShowNewClientForm(true)} className="p-2.5 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 rounded-xl shrink-0" title="Nuevo Cliente">
                     <UserPlus size={20} />
                   </button>
                 </div>
@@ -300,6 +347,23 @@ export default function NuevaFacturaPage() {
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600">Subtotal</span>
               <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
+                Descuento
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    min="0"
+                    max="100"
+                    value={discountPercent}
+                    onChange={e => setDiscountPercent(Number(e.target.value) || 0)}
+                    className="w-16 px-2 py-1 bg-white border border-gray-200 rounded text-center focus:outline-none focus:border-brand-blue"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
+                </div>
+              </span>
+              <span className="text-sm font-bold text-green-600">-${discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <span className="text-base font-black text-brand-blue uppercase tracking-wider">Total a Pagar</span>

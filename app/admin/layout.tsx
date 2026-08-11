@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Package, ScanBarcode, LogOut, Settings, Menu, X, Receipt } from 'lucide-react';
+import { Package, ScanBarcode, LogOut, Settings, Menu, X, Receipt, Users } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -118,6 +118,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Receipt size={20} className={pathname === '/admin/facturacion' || pathname.startsWith('/admin/facturacion/') ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
             </div>
             Facturación
+          </Link>
+          
+          <Link 
+            href="/admin/clientes" 
+            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
+              pathname === '/admin/clientes' 
+                ? 'bg-brand-yellow/10 text-brand-yellow' 
+                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
+            }`}
+          >
+            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/clientes' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
+              <Users size={20} className={pathname === '/admin/clientes' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
+            </div>
+            Clientes
           </Link>
           
           {currentUser?.role === 'admin' && (
