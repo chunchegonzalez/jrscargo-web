@@ -10,7 +10,7 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          blue: '#0F172A',      // Changed to a very dark, premium Slate for primary elements
+          blue: '#12435e',      // Reverted to the original logo blue
           accent: '#2563EB',    // A crisp modern blue for accents
           red: '#EF4444',       
           yellow: '#F59E0B',    
