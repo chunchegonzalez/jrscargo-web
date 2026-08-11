@@ -28,7 +28,6 @@ export default function EditarFacturaPage() {
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const [currency, setCurrency] = useState('USD');
-  const [exchangeRate, setExchangeRate] = useState(500);
   const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -44,21 +43,8 @@ export default function EditarFacturaPage() {
     loadClients();
     loadCatalogServices();
     loadInvoiceData();
-    loadExchangeRate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const loadExchangeRate = async () => {
-    try {
-      const res = await fetch('/api/exchange-rate');
-      const data = await res.json();
-      if (data && data.success && data.rate) {
-        setExchangeRate(data.rate);
-      }
-    } catch (err) {
-      console.error('Error fetching exchange rate:', err);
-    }
-  };
 
   const loadCatalogServices = async () => {
     try {
@@ -151,32 +137,6 @@ export default function EditarFacturaPage() {
     setItems(items.filter(item => item.id !== id));
   };
 
-  const handleCurrencyChange = (newCurrency: string) => {
-    if (newCurrency === currency) return;
-    setCurrency(newCurrency);
-    
-    setItems(items.map(item => {
-      const currentRate = Number(item.rate) || 0;
-      const currentAmount = Number(item.amount) || 0;
-      let newRate = currentRate;
-      let newAmount = currentAmount;
-      
-      if (newCurrency === 'CRC' && currency === 'USD') {
-        newRate = currentRate * exchangeRate;
-        newAmount = currentAmount * exchangeRate;
-      } else if (newCurrency === 'USD' && currency === 'CRC') {
-        newRate = currentRate / exchangeRate;
-        newAmount = currentAmount / exchangeRate;
-      }
-      
-      return { 
-        ...item, 
-        rate: newRate ? Number(newRate.toFixed(2)).toString() : '', 
-        amount: Number(newAmount.toFixed(2)) 
-      };
-    }));
-  };
-
   const handleWeightUnitChange = (newUnit: 'Lb' | 'Kg') => {
     if (newUnit === weightUnit) return;
     setWeightUnit(newUnit);
@@ -221,12 +181,11 @@ export default function EditarFacturaPage() {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         
+        // Auto-fill rate if a catalog service is selected
         if (field === 'service_name') {
            const foundService = catalogServices.find(s => s.name.toUpperCase() === value.toUpperCase());
            if (foundService) {
-             const baseRate = foundService.default_rate;
-             const finalRate = currency === 'CRC' ? baseRate * exchangeRate : baseRate;
-             updatedItem.rate = finalRate.toString();
+             updatedItem.rate = foundService.default_rate.toString();
              // recalculate amount if weight is present
              const w = Number(updatedItem.weight) || 0;
              const r = Number(updatedItem.rate) || 0;
@@ -402,7 +361,7 @@ export default function EditarFacturaPage() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Moneda</label>
                 <select 
                   value={currency}
-                  onChange={(e) => handleCurrencyChange(e.target.value)}
+                  onChange={(e) => setCurrency(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
                 >
                   <option value="USD">USD ($)</option>
@@ -534,12 +493,7 @@ export default function EditarFacturaPage() {
         {/* Totales y Guardar */}
         <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-end gap-6">
           <div className="w-full md:w-1/2">
-            <p className="text-xs text-gray-500 mb-1">Esta factura está en estado <span className="font-bold text-brand-blue">Edición</span>.</p>
-            {currency === 'CRC' && (
-              <p className="text-xs font-bold text-brand-blue bg-brand-blue/5 inline-block px-3 py-1.5 rounded-lg mt-2">
-                Tipo de Cambio aplicado: ₡{exchangeRate.toFixed(2)} (Hacienda/BCCR)
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mb-2">Los cambios se guardarán y reemplazarán la información actual de la factura.</p>
           </div>
           
           <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-2xl border border-gray-200">
