@@ -160,9 +160,10 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       
       alert('Pago registrado con éxito');
       router.push('/admin/clientes');
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      alert('Error: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      alert('Error: ' + errorMessage);
     } finally {
       setIsSaving(false);
     }
