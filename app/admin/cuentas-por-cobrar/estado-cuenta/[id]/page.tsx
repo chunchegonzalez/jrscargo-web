@@ -169,7 +169,7 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
           <div>
             <p className="text-sm font-bold text-gray-900 mb-1">PARA</p>
             <p className="text-sm text-gray-800 font-medium">{client?.name as string}</p>
-            {(client?.email as string) ? <p className="text-sm text-gray-800">{client.email as string}</p> : null}
+            {(client?.email as string) ? <p className="text-sm text-gray-800">{client?.email as string}</p> : null}
           </div>
           <div className="text-right">
             <table className="text-sm ml-auto">
