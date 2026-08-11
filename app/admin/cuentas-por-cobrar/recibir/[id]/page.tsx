@@ -281,7 +281,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Moneda</label>
-                <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-800">
+                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600">
                   Dólares (USD)
                 </div>
               </div>
