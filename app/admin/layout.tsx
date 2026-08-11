@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2 } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -91,6 +91,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <nav className="flex-1 p-4 space-y-4 overflow-y-auto scrollbar-hide relative z-10">
           
+          {/* DASHBOARD DIRECT LINK */}
+          <Link 
+            href="/admin" 
+            className={`w-full flex items-center p-2 rounded-lg transition-colors group ${pathname === '/admin' ? 'bg-white/10 text-white font-bold' : 'text-white/80 hover:text-white hover:bg-white/5'}`}
+          >
+            <div className="flex items-center gap-3">
+              <Home size={20} className={pathname === '/admin' ? 'text-brand-yellow' : 'text-white/80 group-hover:text-brand-yellow transition-colors'} />
+              <span className="font-bold text-sm tracking-wide">Página principal</span>
+            </div>
+          </Link>
+
           {/* SECCIÓN OPERACIONES */}
           <div>
             <button 
