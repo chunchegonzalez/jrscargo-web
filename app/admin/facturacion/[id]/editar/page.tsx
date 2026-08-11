@@ -326,7 +326,7 @@ export default function EditarFacturaPage() {
         <div className="space-y-4 mb-10">
           <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Productos o Servicios</h3>
           
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-xl">
             <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid">
               <div className="col-span-4">Producto/Servicio</div>
               <div className="col-span-3">Nº Rastreo</div>
