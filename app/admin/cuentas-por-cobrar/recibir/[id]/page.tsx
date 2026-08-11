@@ -26,6 +26,10 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   const [applications, setApplications] = useState<Record<string, number>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Modal States
+  const [alertModal, setAlertModal] = useState<{isOpen: boolean, title: string, message: string, type: 'success'|'error', onConfirm?: () => void} | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -60,21 +64,33 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     loadData();
   }, [clientId]);
 
-  const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.')) return;
-    try {
-      const res = await fetch(`/api/payments/${paymentId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        alert('Pago anulado exitosamente. Se recargará la página para actualizar los saldos.');
-        window.location.reload(); // Reload the whole page to refresh invoices and pending balance properly
-      } else {
-        alert('Error al anular el pago');
+  const handleDeletePayment = (paymentId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Anular Pago',
+      message: '¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const res = await fetch(`/api/payments/${paymentId}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            setAlertModal({
+              isOpen: true,
+              title: 'Éxito',
+              message: 'Pago anulado exitosamente.',
+              type: 'success',
+              onConfirm: () => window.location.reload()
+            });
+          } else {
+            setAlertModal({ isOpen: true, title: 'Error', message: 'Error al anular el pago', type: 'error' });
+          }
+        } catch {
+          setAlertModal({ isOpen: true, title: 'Error', message: 'Error de red al intentar anular el pago', type: 'error' });
+        }
       }
-    } catch {
-      alert('Error de red al intentar anular el pago');
-    }
+    });
   };
 
   // Auto-distribute payment amount across invoices
@@ -138,7 +154,10 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   };
 
   const handleSave = async () => {
-    if (amountToApply <= 0) return alert('Debes aplicar un monto mayor a 0');
+    if (amountToApply <= 0) {
+      setAlertModal({ isOpen: true, title: 'Atención', message: 'Debes aplicar un monto mayor a 0', type: 'error' });
+      return;
+    }
     
     setIsSaving(true);
     try {
@@ -167,12 +186,17 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       
       if (!res.ok) throw new Error(data.error || 'Error desconocido al guardar el pago');
       
-      alert('Pago registrado con éxito');
-      router.push('/admin/cuentas-por-cobrar');
+      setAlertModal({
+        isOpen: true,
+        title: '¡Pago Registrado!',
+        message: 'El pago ha sido registrado y aplicado a las facturas con éxito.',
+        type: 'success',
+        onConfirm: () => router.push('/admin/cuentas-por-cobrar')
+      });
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      alert('Error: ' + errorMessage);
+      setAlertModal({ isOpen: true, title: 'Error', message: errorMessage, type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -420,6 +444,65 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       
       {/* Spacer for fixed footer */}
       <div className="h-24 print:hidden"></div>
+
+      {/* Alert Modal */}
+      {alertModal?.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all">
+            <div className={`p-6 border-b ${alertModal.type === 'success' ? 'border-green-100 bg-green-50' : 'border-red-100 bg-red-50'}`}>
+              <h3 className={`font-bold text-lg ${alertModal.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                {alertModal.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 font-medium">{alertModal.message}</p>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
+              <button
+                onClick={() => {
+                  setAlertModal(null);
+                  if (alertModal.onConfirm) alertModal.onConfirm();
+                }}
+                className={`px-6 py-2 rounded-xl font-bold text-white shadow-sm transition-colors ${
+                  alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-brand-blue hover:bg-brand-blue/90'
+                }`}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmModal?.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all">
+            <div className="p-6 border-b border-orange-100 bg-orange-50">
+              <h3 className="font-bold text-lg text-orange-800 flex items-center gap-2">
+                Atención: {confirmModal.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 font-medium leading-relaxed">{confirmModal.message}</p>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className="px-5 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Sí, estoy seguro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
