@@ -31,6 +31,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ success: false, error: 'Client email not found' }, { status: 400 });
     }
 
+    let customSubject = `Factura #${invoice.invoice_number} de JRS CARGO S.A.`;
+    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu factura reciente. Por favor, revisa la información a continuación.';
+
+    try {
+      const body = await request.json();
+      if (body.subject) customSubject = body.subject;
+      if (body.message) {
+        // Convert plain text newlines to HTML breaks
+        customMessage = body.message.replace(/\n/g, '<br/>');
+      }
+    } catch {
+      // Ignorar si no hay body
+    }
+
     // Generate HTML for the email
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
@@ -40,7 +54,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         </div>
         <div style="padding: 24px;">
           <p>Hola <strong>${invoice.clients.name}</strong>,</p>
-          <p>Adjunto a este correo encontrarás los detalles de tu factura reciente. Por favor, revisa la información a continuación.</p>
+          <p>${customMessage}</p>
           
           <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 24px 0;">
             <table style="width: 100%; border-collapse: collapse;">
@@ -103,7 +117,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const info = await transporter.sendMail({
       from: `"JRS Cargo Facturación" <${smtpUser}>`,
       to: invoice.clients.email,
-      subject: `Factura #${invoice.invoice_number} de JRS CARGO S.A.`,
+      subject: customSubject,
       html: htmlContent,
     });
 

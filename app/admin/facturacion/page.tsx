@@ -32,6 +32,13 @@ export default function FacturacionDashboard() {
   const [paymentReference, setPaymentReference] = useState<string>('');
   const [isPaying, setIsPaying] = useState(false);
 
+  // Email Modal State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
   const calculateStats = useCallback((data: Invoice[]) => {
     let pending = 0;
     let paid = 0;
@@ -67,18 +74,33 @@ export default function FacturacionDashboard() {
     loadInvoices();
   }, [loadInvoices]);
 
-  const handleSendEmail = async (id: string) => {
-    if (!confirm('¿Seguro que deseas enviar la factura por correo al cliente?')) return;
+  const openEmailModal = (inv: Invoice) => {
+    setEmailInvoice(inv);
+    setEmailSubject(`Factura #${inv.invoice_number} de JRS CARGO S.A.`);
+    setEmailMessage('Adjunto a este correo encontrarás los detalles de tu factura reciente. Por favor, revisa la información a continuación.');
+    setEmailModalOpen(true);
+  };
+
+  const confirmSendEmail = async () => {
+    if (!emailInvoice) return;
+    setIsSendingEmail(true);
     try {
-      const res = await fetch(`/api/invoices/${id}/send`, { method: 'POST' });
+      const res = await fetch(`/api/invoices/${emailInvoice.id}/send`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: emailSubject, message: emailMessage })
+      });
       const data = await res.json();
       if (data.success) {
         alert('¡Correo enviado con éxito!');
+        setEmailModalOpen(false);
       } else {
         alert(`Error al enviar correo: ${data.error}`);
       }
     } catch {
       alert('Error de red');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -283,7 +305,7 @@ export default function FacturacionDashboard() {
                           <button onClick={() => handleToggleStatus(inv.id, inv.status)} className={`text-sm font-bold px-2 py-1 rounded-lg ${inv.status === 'Pagada' ? 'text-orange-600 hover:text-orange-700 bg-orange-50' : 'text-green-600 hover:text-green-700 bg-green-50'}`}>
                             {inv.status === 'Pagada' ? 'Marcar Pendiente' : 'Marcar Pagada'}
                           </button>
-                          <button onClick={() => handleSendEmail(inv.id)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
+                          <button onClick={() => openEmailModal(inv)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
                             <Mail size={18} />
                           </button>
                         </div>
@@ -345,6 +367,58 @@ export default function FacturacionDashboard() {
                   className="flex-1 py-3 font-bold bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
                   {isPaying ? 'Guardando...' : 'Confirmar Pago'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Modal */}
+      {emailModalOpen && emailInvoice && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
+                Enviar Factura por Correo
+              </h3>
+              <button onClick={() => setEmailModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                &times;
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Asunto del Correo</label>
+                <input 
+                  type="text"
+                  value={emailSubject}
+                  onChange={e => setEmailSubject(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mensaje Adicional</label>
+                <textarea 
+                  value={emailMessage}
+                  onChange={e => setEmailMessage(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-2">Este mensaje aparecerá en el cuerpo del correo. Los detalles y tabla de la factura se agregarán automáticamente debajo del mensaje.</p>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
+                <button type="button" onClick={() => setEmailModalOpen(false)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmSendEmail}
+                  disabled={isSendingEmail} 
+                  className="flex-1 py-3 font-bold bg-brand-blue text-white rounded-xl hover:bg-brand-blue/90 disabled:opacity-50 transition-colors"
+                >
+                  {isSendingEmail ? 'Enviando...' : 'Enviar Correo'}
                 </button>
               </div>
             </div>
