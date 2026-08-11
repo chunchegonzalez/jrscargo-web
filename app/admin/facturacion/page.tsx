@@ -28,12 +28,6 @@ export default function FacturacionDashboard() {
   const [totalPending, setTotalPending] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
 
-  // Payment Modal State
-  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string>('SINPE');
-  const [paymentReference, setPaymentReference] = useState<string>('');
-  const [isPaying, setIsPaying] = useState(false);
-
   // Email Modal State
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
