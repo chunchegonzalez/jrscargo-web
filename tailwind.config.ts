@@ -10,16 +10,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          blue: '#12435e',      // Reverted to the original logo blue
+          blue: '#12435e',      // Azul oscuro / petróleo
           accent: '#2563EB',    // A crisp modern blue for accents
-          red: '#EF4444',       
-          yellow: '#F59E0B',    
+          red: '#fd4e64',       // Rojo/coral
+          yellow: '#fdc151',    // Amarillo
           white: '#FFFFFF',
-          'bg-light': '#FAFAFA', // Ultra light gray for background
-          'bg-section': '#F4F4F5',
-          'text-dark': '#09090B',
-          'text-gray': '#52525B',
-          'text-light': '#A1A1AA',
+          'bg-light': '#f9fafb', // Fondo gris muy suave
+          'bg-section': '#f3f4f6',
+          'text-dark': '#0f172a',
+          'text-gray': '#475569',
+          'text-light': '#64748b',
         },
       },
       fontFamily: {

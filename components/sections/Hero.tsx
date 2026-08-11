@@ -11,7 +11,6 @@ export default function Hero() {
     <section className="relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden bg-brand-bg-section">
       {/* Abstract Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-brand-yellow/10 blur-3xl opacity-60 mix-blend-multiply animate-pulse-soft" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-blue/5 blur-3xl opacity-60 mix-blend-multiply" />
       </div>
 
