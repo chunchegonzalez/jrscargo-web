@@ -228,6 +228,41 @@ export async function deleteService(id: string) {
   return { success: true };
 }
 
+// ----------------------------------------------------
+// GASTOS (EXPENSES)
+// ----------------------------------------------------
+
+export async function getExpenses() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/expenses?order=date.desc`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Error fetching expenses');
+  return await res.json();
+}
+
+export async function createExpense(expense: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/expenses`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(expense)
+  });
+  if (!res.ok) throw new Error('Error creating expense');
+  return { success: true };
+}
+
+export async function deleteExpense(id: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/expenses?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Error deleting expense');
+  return { success: true };
+}
+
 // --- FACTURAS ---
 
 export async function getInvoices() {

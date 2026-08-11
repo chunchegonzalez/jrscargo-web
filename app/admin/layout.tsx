@@ -169,6 +169,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 >
                   Facturas a Clientes
                 </Link>
+                <Link 
+                  href="/admin/gastos" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/gastos' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Gastos y Compras
+                </Link>
               </div>
             </div>
           </div>
