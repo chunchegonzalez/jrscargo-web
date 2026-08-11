@@ -61,7 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ? pathname === path 
       : (pathname === path || pathname.startsWith(path + '/'));
       
-    return `block py-2 px-3 rounded-xl text-sm transition-all duration-200 border border-transparent ${
+    return `block py-2 px-3 rounded-xl text-sm transition-all duration-200 border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/50 focus-visible:ring-inset ${
       isActive ? activeLinkClass : inactiveLinkClass
     }`;
   };
