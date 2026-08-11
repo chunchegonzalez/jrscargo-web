@@ -299,8 +299,8 @@ export default function EditarFacturaPage() {
               <textarea 
                 value={notes} 
                 onChange={e => setNotes(e.target.value)}
-                rows={2}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue resize-none"
+                rows={4}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue resize-none"
               />
             </div>
           </div>
@@ -324,8 +324,8 @@ export default function EditarFacturaPage() {
                   onChange={(e) => setCurrency(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
                 >
-                  <option value="USD">Dólares (USD)</option>
-                  <option value="CRC">Colones (CRC)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="CRC">CRC (₡)</option>
                 </select>
               </div>
               <div>
@@ -463,12 +463,12 @@ export default function EditarFacturaPage() {
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
                 </div>
               </span>
-              <span className="text-sm font-bold text-green-600">-${discountAmount.toFixed(2)}</span>
+              <span className="text-sm font-bold text-green-600">-{currency === 'CRC' ? '₡' : '$'}{discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
               <div className="pt-4 flex items-center justify-between w-full">
                 <span className="text-gray-500 font-bold">Total Final:</span>
-                <span className="text-3xl font-black text-brand-blue">{currency === 'CRC' ? '₡' : '$'}{total.toFixed(2)} {currency}</span>
+                <span className="text-3xl font-black text-brand-blue">{currency === 'CRC' ? '₡' : '$'}{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
