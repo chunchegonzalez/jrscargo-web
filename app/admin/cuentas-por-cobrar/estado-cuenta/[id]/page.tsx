@@ -46,7 +46,7 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
 
       const entries: LedgerEntry[] = [];
       const now = new Date();
-      let newAging = { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, days90Plus: 0, total: 0 };
+      const newAging = { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, days90Plus: 0, total: 0 };
 
       // Procesar Facturas
       if (invoicesData.success && invoicesData.data) {

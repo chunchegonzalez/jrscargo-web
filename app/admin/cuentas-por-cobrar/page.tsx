@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import { Search, DollarSign, FileText, ArrowRight, Printer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
