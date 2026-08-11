@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Package, ScanBarcode, LogOut, Settings, Menu, X, Receipt, Users } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2 } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -13,6 +13,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Accordion state
+  const [openSections, setOpenSections] = useState({
+    operaciones: true,
+    contabilidad: true,
+    clientes: true,
+    ajustes: false
+  });
+
+  const toggleSection = (section: keyof typeof openSections) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -77,78 +89,116 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        <nav className="flex-1 p-5 space-y-3 overflow-y-auto scrollbar-hide relative z-10">
-          <Link 
-            href="/admin/bodega" 
-            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
-              pathname === '/admin/bodega' 
-                ? 'bg-brand-yellow/10 text-brand-yellow' 
-                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
-            }`}
-          >
-            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/bodega' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
-              <ScanBarcode size={20} className={pathname === '/admin/bodega' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
-            </div>
-            Escanear Bodega
-          </Link>
-
-          <Link 
-            href="/admin/inventario" 
-            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
-              pathname === '/admin/inventario' 
-                ? 'bg-brand-yellow/10 text-brand-yellow' 
-                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
-            }`}
-          >
-            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/inventario' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
-              <Package size={20} className={pathname === '/admin/inventario' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
-            </div>
-            Inventario CR
-          </Link>
-
-          <Link 
-            href="/admin/facturacion" 
-            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
-              pathname === '/admin/facturacion' || pathname.startsWith('/admin/facturacion/') 
-                ? 'bg-brand-yellow/10 text-brand-yellow' 
-                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
-            }`}
-          >
-            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/facturacion' || pathname.startsWith('/admin/facturacion/') ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
-              <Receipt size={20} className={pathname === '/admin/facturacion' || pathname.startsWith('/admin/facturacion/') ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
-            </div>
-            Facturación
-          </Link>
+        <nav className="flex-1 p-4 space-y-4 overflow-y-auto scrollbar-hide relative z-10">
           
-          <Link 
-            href="/admin/clientes" 
-            className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
-              pathname === '/admin/clientes' 
-                ? 'bg-brand-yellow/10 text-brand-yellow' 
-                : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
-            }`}
-          >
-            <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/clientes' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
-              <Users size={20} className={pathname === '/admin/clientes' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
-            </div>
-            Clientes
-          </Link>
-          
-          {currentUser?.role === 'admin' && (
-            <Link 
-              href="/admin/ajustes" 
-              className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
-                pathname === '/admin/ajustes' 
-                  ? 'bg-brand-yellow/10 text-brand-yellow' 
-                  : 'text-white/60 hover:bg-white/5 hover:text-white hover:translate-x-1'
-              }`}
+          {/* SECCIÓN OPERACIONES */}
+          <div>
+            <button 
+              onClick={() => toggleSection('operaciones')}
+              className="w-full flex items-center justify-between p-2 text-white/80 hover:text-white transition-colors group"
             >
-              <div className={`p-2 rounded-xl transition-colors duration-300 ${pathname === '/admin/ajustes' ? 'bg-brand-yellow/20 text-brand-yellow' : 'bg-black/20 group-hover:bg-black/40'}`}>
-                <Settings size={20} className={pathname === '/admin/ajustes' ? 'text-brand-yellow' : 'group-hover:scale-110 transition-transform duration-300'} />
+              <div className="flex items-center gap-3">
+                <Briefcase size={20} className="text-brand-yellow" />
+                <span className="font-bold text-sm tracking-wide">Operaciones</span>
               </div>
-              Ajustes
-            </Link>
+              {openSections.operaciones ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            
+            <div className={`overflow-hidden transition-all duration-300 ${openSections.operaciones ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+              <div className="flex flex-col gap-1 pl-10 border-l border-white/10 ml-5">
+                <Link 
+                  href="/admin/bodega" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/bodega' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Escanear Bodega
+                </Link>
+                <Link 
+                  href="/admin/inventario" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/inventario' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Inventario CR
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN CONTABILIDAD */}
+          <div>
+            <button 
+              onClick={() => toggleSection('contabilidad')}
+              className="w-full flex items-center justify-between p-2 text-white/80 hover:text-white transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <Calculator size={20} className="text-brand-yellow" />
+                <span className="font-bold text-sm tracking-wide">Contabilidad</span>
+              </div>
+              {openSections.contabilidad ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            
+            <div className={`overflow-hidden transition-all duration-300 ${openSections.contabilidad ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+              <div className="flex flex-col gap-1 pl-10 border-l border-white/10 ml-5">
+                <Link 
+                  href="/admin/facturacion" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${(pathname === '/admin/facturacion' || pathname.startsWith('/admin/facturacion/')) ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Facturas a Clientes
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN CLIENTES */}
+          <div>
+            <button 
+              onClick={() => toggleSection('clientes')}
+              className="w-full flex items-center justify-between p-2 text-white/80 hover:text-white transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <Building2 size={20} className="text-brand-yellow" />
+                <span className="font-bold text-sm tracking-wide">Centro de clientes</span>
+              </div>
+              {openSections.clientes ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            
+            <div className={`overflow-hidden transition-all duration-300 ${openSections.clientes ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+              <div className="flex flex-col gap-1 pl-10 border-l border-white/10 ml-5">
+                <Link 
+                  href="/admin/clientes" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/clientes' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Directorio de clientes
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN AJUSTES */}
+          {currentUser?.role === 'admin' && (
+            <div>
+              <button 
+                onClick={() => toggleSection('ajustes')}
+                className="w-full flex items-center justify-between p-2 text-white/80 hover:text-white transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <Settings size={20} className="text-brand-yellow" />
+                  <span className="font-bold text-sm tracking-wide">Administración</span>
+                </div>
+                {openSections.ajustes ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </button>
+              
+              <div className={`overflow-hidden transition-all duration-300 ${openSections.ajustes ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                <div className="flex flex-col gap-1 pl-10 border-l border-white/10 ml-5">
+                  <Link 
+                    href="/admin/ajustes" 
+                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/ajustes' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                  >
+                    Ajustes de Sistema
+                  </Link>
+                </div>
+              </div>
+            </div>
           )}
+
         </nav>
 
         <div className="p-5 border-t border-white/5 relative z-10">
