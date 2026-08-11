@@ -287,14 +287,14 @@ export async function getInvoices() {
     });
     if (payRes.ok) {
       const payments = await payRes.json();
-      invoices.forEach((inv: any) => {
-        inv.invoice_payments = payments.filter((p: any) => p.invoice_id === inv.id);
+      invoices.forEach((inv: Record<string, unknown>) => {
+        inv.invoice_payments = payments.filter((p: Record<string, unknown>) => p.invoice_id === inv.id);
       });
     } else {
-      invoices.forEach((inv: any) => inv.invoice_payments = []);
+      invoices.forEach((inv: Record<string, unknown>) => { inv.invoice_payments = []; });
     }
-  } catch (e) {
-    invoices.forEach((inv: any) => inv.invoice_payments = []);
+  } catch {
+    invoices.forEach((inv: Record<string, unknown>) => { inv.invoice_payments = []; });
   }
 
   return invoices;
