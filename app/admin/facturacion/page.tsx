@@ -227,13 +227,20 @@ export default function FacturacionDashboard() {
                         ${Number(inv.total).toFixed(2)}
                       </td>
                       <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
-                          displayStatus === 'Pagada' ? 'bg-green-100 text-green-700' :
-                          displayStatus === 'Vencida' ? 'bg-red-100 text-red-700' :
-                          'bg-orange-100 text-orange-700'
-                        }`}>
-                          {displayStatus}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
+                            displayStatus === 'Pagada' ? 'bg-green-100 text-green-700' :
+                            displayStatus === 'Vencida' ? 'bg-red-100 text-red-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>
+                            {displayStatus}
+                          </span>
+                          {stats.paid > 0 && stats.pending > 0 && (
+                            <span className="text-xs text-gray-500">
+                              Pagado parcialmente, <span className="font-bold text-gray-700">${stats.pending.toFixed(2)}</span> pendiente
+                            </span>
+                          )}
+                        </div>
                       </td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-3">
