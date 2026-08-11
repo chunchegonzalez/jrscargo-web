@@ -220,6 +220,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   >
                     Ajustes de Sistema
                   </Link>
+                  <Link 
+                    href="/admin/servicios" 
+                    className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/servicios' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                  >
+                    Servicios y Tarifas
+                  </Link>
                 </div>
               </div>
             </div>

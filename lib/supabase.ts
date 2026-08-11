@@ -184,6 +184,50 @@ export async function createClient(client: Record<string, unknown>) {
   return { success: true };
 }
 
+// --- SERVICIOS ---
+
+export async function getServices() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/services?order=name.asc`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Error fetching services');
+  return res.json();
+}
+
+export async function createService(service: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/services`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(service)
+  });
+  if (!res.ok) throw new Error('Error creating service');
+  return { success: true };
+}
+
+export async function updateService(id: string, updates: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/services?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Error updating service');
+  return { success: true };
+}
+
+export async function deleteService(id: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/services?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Error deleting service');
+  return { success: true };
+}
+
 // --- FACTURAS ---
 
 export async function getInvoices() {

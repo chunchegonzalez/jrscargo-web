@@ -7,12 +7,14 @@ import { ArrowLeft, Save, Plus, Trash2, UserPlus } from 'lucide-react';
 
 type Client = { id: string; name: string; email: string; phone?: string; address?: string };
 type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
+type ServiceType = { id: string; name: string; default_rate: number };
 
 export default function EditarFacturaPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
+  const [catalogServices, setCatalogServices] = useState<ServiceType[]>([]);
   const [loading, setLoading] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
 
@@ -34,9 +36,22 @@ export default function EditarFacturaPage() {
 
   useEffect(() => {
     loadClients();
+    loadCatalogServices();
     loadInvoiceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const loadCatalogServices = async () => {
+    try {
+      const res = await fetch('/api/services');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCatalogServices(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const loadInvoiceData = async () => {
     try {
@@ -120,6 +135,19 @@ export default function EditarFacturaPage() {
     setItems(items.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
+        
+        // Auto-fill rate if a catalog service is selected
+        if (field === 'service_name') {
+           const foundService = catalogServices.find(s => s.name.toUpperCase() === value.toUpperCase());
+           if (foundService) {
+             updatedItem.rate = foundService.default_rate.toString();
+             // recalculate amount if weight is present
+             const w = Number(updatedItem.weight) || 0;
+             const r = Number(updatedItem.rate) || 0;
+             updatedItem.amount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : 0;
+           }
+        }
+
         // Auto calculate amount if rate and weight are present
         if (field === 'weight' || field === 'rate') {
           const w = Number(field === 'weight' ? value : item.weight) || 0;
@@ -306,14 +334,21 @@ export default function EditarFacturaPage() {
               <div className="col-span-2 text-right pr-8">Importe ($)</div>
             </div>
             
+            <datalist id="services-list">
+              {catalogServices.map(s => (
+                <option key={s.id} value={s.name} />
+              ))}
+            </datalist>
+
             {items.map((item) => (
               <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 <div className="md:col-span-4">
                   <input 
+                    list="services-list"
                     placeholder="Ej. Transporte Marítimo" 
                     value={item.service_name} 
                     onChange={e => handleItemChange(item.id, 'service_name', e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue uppercase"
                   />
                 </div>
                 <div className="md:col-span-3">
