@@ -59,7 +59,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
               </tr>
             </thead>
             <tbody>
-              ${invoice.items.map((item: any) => `
+              ${invoice.items.map((item: { service_name: string; tracking_number?: string; weight?: string | number; amount: number }) => `
                 <tr style="border-bottom: 1px solid #f3f4f6;">
                   <td style="padding: 12px 8px;">
                     <div style="font-weight: 500; color: #374151; font-size: 14px;">${item.service_name}</div>

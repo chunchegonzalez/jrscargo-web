@@ -1,37 +1,27 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, AlertCircle, CheckCircle2, MoreVertical, Mail, Edit, DollarSign } from 'lucide-react';
+import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail, DollarSign } from 'lucide-react';
+
+type Invoice = {
+  id: string;
+  invoice_number: string;
+  issue_date: string;
+  total: number | string;
+  status: string;
+  clients?: { name: string; email: string };
+};
 
 export default function FacturacionDashboard() {
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Resumen stats
   const [totalPending, setTotalPending] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
 
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
-  const loadInvoices = async () => {
-    try {
-      const res = await fetch('/api/invoices');
-      const data = await res.json();
-      if (data.success) {
-        setInvoices(data.data);
-        calculateStats(data.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateStats = (data: any[]) => {
+  const calculateStats = useCallback((data: Invoice[]) => {
     let pending = 0;
     let paid = 0;
     
@@ -45,7 +35,26 @@ export default function FacturacionDashboard() {
 
     setTotalPending(pending);
     setTotalPaid(paid);
-  };
+  }, []);
+
+  const loadInvoices = useCallback(async () => {
+    try {
+      const res = await fetch('/api/invoices');
+      const data = await res.json();
+      if (data.success) {
+        setInvoices(data.data);
+        calculateStats(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [calculateStats]);
+
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
 
   const handleSendEmail = async (id: string) => {
     if (!confirm('¿Seguro que deseas enviar la factura por correo al cliente?')) return;

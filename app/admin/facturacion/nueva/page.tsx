@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, UserPlus } from 'lucide-react';
 
+type Client = { id: string; name: string; email: string; phone?: string; address?: string };
+type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
+
 export default function NuevaFacturaPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(false);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
 
@@ -15,7 +18,7 @@ export default function NuevaFacturaPage() {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState(`F-${Math.floor(Date.now() / 1000)}`);
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [items, setItems] = useState<any[]>([
+  const [items, setItems] = useState<InvoiceItem[]>([
     { id: 1, service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }
   ]);
   const [notes, setNotes] = useState('Gracias por elegir a JRS CARGO.');
@@ -108,6 +111,7 @@ export default function NuevaFacturaPage() {
         total,
         notes,
         status: 'Pendiente',
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         items: items.map(({ id, ...rest }) => rest) // remove temp id
       };
 
@@ -219,7 +223,7 @@ export default function NuevaFacturaPage() {
               <div className="col-span-2 text-right pr-8">Importe ($)</div>
             </div>
             
-            {items.map((item, index) => (
+            {items.map((item) => (
               <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
                 <div className="md:col-span-4">
                   <input 
