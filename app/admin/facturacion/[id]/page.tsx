@@ -37,7 +37,19 @@ export default function InvoiceViewPage() {
   const id = params.id as string;
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  // (Removed handleConfirmPayment and payment modal state)
+  const loadInvoice = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/invoices/${id}`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setInvoice(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   const handleVoidInvoice = async () => {
     if (!confirm('¿Estás seguro de que deseas anular esta factura?')) return;
