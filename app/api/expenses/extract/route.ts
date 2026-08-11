@@ -10,10 +10,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'No image provided' }, { status: 400 });
     }
 
-    const openAiKey = process.env.OPENAI_API_KEY;
-    if (!openAiKey) {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
       // Mock mode for when API key is missing
-      console.warn("No OPENAI_API_KEY found, returning mock data");
+      console.warn("No GEMINI_API_KEY found, returning mock data");
       return NextResponse.json({
         success: true,
         data: {
@@ -26,45 +26,42 @@ export async function POST(request: Request) {
     }
 
     const payload = {
-      model: "gpt-4o-mini",
-      messages: [
+      contents: [
         {
-          role: "user",
-          content: [
+          parts: [
             {
-              type: "text",
-              text: "Analiza esta factura o recibo de compra. Extrae la siguiente información y responde ÚNICAMENTE con un objeto JSON. Los campos deben ser: 'provider_name' (string, el nombre del negocio o proveedor), 'date' (formato YYYY-MM-DD), 'amount' (number, el monto total pagado), 'category' (string, escoge una de estas opciones que mejor se adapte: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Otros)."
+              text: "Analiza esta factura o recibo de compra. Extrae la siguiente información y responde ÚNICAMENTE con un objeto JSON. Los campos deben ser: 'provider_name' (string, el nombre del negocio o proveedor), 'date' (formato YYYY-MM-DD), 'amount' (number, el monto total pagado numérico sin símbolos de moneda), 'category' (string, escoge una de estas opciones que mejor se adapte: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Otros)."
             },
             {
-              type: "image_url",
-              image_url: {
-                url: `data:${mimeType || 'image/jpeg'};base64,${base64Image}`
+              inlineData: {
+                mimeType: mimeType || 'image/jpeg',
+                data: base64Image
               }
             }
           ]
         }
       ],
-      response_format: { type: "json_object" },
-      max_tokens: 500
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
     };
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAiKey}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("OpenAI Error:", errorData);
+      console.error("Gemini Error:", errorData);
       throw new Error("Error al analizar la imagen con la Inteligencia Artificial.");
     }
 
     const data = await response.json();
-    const resultContent = data.choices[0].message.content;
+    const resultContent = data.candidates[0].content.parts[0].text;
     const extractedData = JSON.parse(resultContent);
 
     return NextResponse.json({ success: true, data: extractedData }, { status: 200 });
