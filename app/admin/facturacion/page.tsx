@@ -17,6 +17,11 @@ export default function FacturacionDashboard() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Filtros
+  const [filterStatus, setFilterStatus] = useState<string>('Todas');
+  const [filterDate, setFilterDate] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  
   // Resumen stats
   const [totalPending, setTotalPending] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
@@ -71,13 +76,14 @@ export default function FacturacionDashboard() {
     }
   };
 
-  const handleMarkAsPaid = async (id: string) => {
-    if (!confirm('¿Marcar esta factura como PAGADA?')) return;
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'Pagada' ? 'Pendiente' : 'Pagada';
+    if (!confirm(`¿Cambiar estado de la factura a ${newStatus.toUpperCase()}?`)) return;
     try {
       const res = await fetch(`/api/invoices/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Pagada' })
+        body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
         loadInvoices();
@@ -86,6 +92,14 @@ export default function FacturacionDashboard() {
       alert('Error actualizando estado');
     }
   };
+
+  const filteredInvoices = invoices.filter(inv => {
+    const matchStatus = filterStatus === 'Todas' || inv.status === filterStatus;
+    const matchDate = filterDate === '' || new Date(inv.issue_date).toISOString().split('T')[0] === filterDate;
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch = inv.clients?.name.toLowerCase().includes(searchLower) || inv.invoice_number.toLowerCase().includes(searchLower);
+    return matchStatus && matchDate && matchSearch;
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -125,14 +139,41 @@ export default function FacturacionDashboard() {
 
       {/* Lista de Facturas */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
             <FileText className="text-brand-blue" size={24} /> 
             Últimas Facturas
           </h2>
-          <div className="relative">
-            <input type="text" placeholder="Buscar cliente o n.º..." className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue w-full sm:w-64" />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select 
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+            >
+              <option value="Todas">Todas las facturas</option>
+              <option value="Pendiente">Pendientes</option>
+              <option value="Pagada">Pagadas</option>
+              <option value="Vencida">Vencidas</option>
+            </select>
+            
+            <input 
+              type="date" 
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue text-gray-600"
+            />
+
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Buscar cliente o n.º..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue w-full sm:w-64" 
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            </div>
           </div>
         </div>
 
@@ -153,12 +194,12 @@ export default function FacturacionDashboard() {
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-500">Cargando facturas...</td>
                 </tr>
-              ) : invoices.length === 0 ? (
+              ) : filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas registradas.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">No se encontraron facturas con esos filtros.</td>
                 </tr>
               ) : (
-                invoices.map(inv => (
+                filteredInvoices.map(inv => (
                   <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-4 text-sm text-gray-600 font-medium">
                       {new Date(inv.issue_date).toLocaleDateString()}
@@ -187,11 +228,9 @@ export default function FacturacionDashboard() {
                           <Link href={`/admin/facturacion/${inv.id}`} className="text-sm font-bold text-brand-blue hover:underline">
                             Ver detalle
                           </Link>
-                          {inv.status !== 'Pagada' && (
-                            <button onClick={() => handleMarkAsPaid(inv.id)} className="text-sm font-bold text-green-600 hover:text-green-700 bg-green-50 px-2 py-1 rounded-lg">
-                              Marcar Pagada
-                            </button>
-                          )}
+                          <button onClick={() => handleToggleStatus(inv.id, inv.status)} className={`text-sm font-bold px-2 py-1 rounded-lg ${inv.status === 'Pagada' ? 'text-orange-600 hover:text-orange-700 bg-orange-50' : 'text-green-600 hover:text-green-700 bg-green-50'}`}>
+                            {inv.status === 'Pagada' ? 'Marcar Pendiente' : 'Marcar Pagada'}
+                          </button>
                           <button onClick={() => handleSendEmail(inv.id)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
                             <Mail size={18} />
                           </button>

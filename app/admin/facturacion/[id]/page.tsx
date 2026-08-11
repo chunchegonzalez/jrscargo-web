@@ -90,8 +90,8 @@ export default function InvoiceViewPage() {
               <div className="flex gap-12 text-xs text-gray-700 leading-relaxed">
                 <div>
                   <p className="font-bold text-sm mb-1">JRS CARGO S.A.</p>
-                  <p>Heredia</p>
-                  <p>Heredia, Santo Domingo 40901</p>
+                  <p>San Pablo de Heredia</p>
+                  <p>Costa Rica</p>
                 </div>
                 <div>
                   <p>info@jrscargocr.com</p>
@@ -102,21 +102,17 @@ export default function InvoiceViewPage() {
             </div>
             <div className="text-right">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="JRS Cargo" className="h-16 object-contain" />
+              <img src="/logo.png" alt="JRS Cargo" className="h-28 w-auto object-contain" />
             </div>
           </div>
 
           <div className="border-t border-gray-100 my-8"></div>
 
-          {/* Facturar A y Enviar A */}
+          {/* Facturar A */}
           <div className="flex justify-between mb-8 text-sm">
             <div className="w-1/2">
               <p className="text-gray-500 mb-1">Facturar a</p>
-              <p className="text-gray-800">{invoice.clients?.name}</p>
-            </div>
-            <div className="w-1/2">
-              <p className="text-gray-500 mb-1">Enviar a</p>
-              <p className="text-gray-800">{invoice.clients?.name}</p>
+              <p className="text-gray-800 font-medium">{invoice.clients?.name}</p>
             </div>
           </div>
 
