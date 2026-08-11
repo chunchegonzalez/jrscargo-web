@@ -270,13 +270,34 @@ export async function deleteExpense(id: string) {
 
 export async function getInvoices() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  // Fetch invoices with client data and payments
-  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(name,email),invoice_payments(amount_applied)&order=created_at.desc`, {
+  
+  // 1. Fetch invoices with client data
+  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(name,email)&order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
   if (!res.ok) throw new Error('Error fetching invoices');
-  return res.json();
+  const invoices = await res.json();
+
+  // 2. Fetch payments gracefully
+  try {
+    const payRes = await fetch(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+    if (payRes.ok) {
+      const payments = await payRes.json();
+      invoices.forEach((inv: any) => {
+        inv.invoice_payments = payments.filter((p: any) => p.invoice_id === inv.id);
+      });
+    } else {
+      invoices.forEach((inv: any) => inv.invoice_payments = []);
+    }
+  } catch (e) {
+    invoices.forEach((inv: any) => inv.invoice_payments = []);
+  }
+
+  return invoices;
 }
 
 export async function getInvoiceById(id: string) {
