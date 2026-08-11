@@ -40,13 +40,10 @@ export async function POST(request: Request) {
             }
           ]
         }
-      ],
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
+      ]
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -70,7 +67,11 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json();
-    const resultContent = data.candidates[0].content.parts[0].text;
+    let resultContent = data.candidates[0].content.parts[0].text;
+    
+    // Eliminar posibles bloques de código markdown (```json ... ```) que la IA podría devolver
+    resultContent = resultContent.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+    
     const extractedData = JSON.parse(resultContent);
 
     return NextResponse.json({ success: true, data: extractedData }, { status: 200 });
