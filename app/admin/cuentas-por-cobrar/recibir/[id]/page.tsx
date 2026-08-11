@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Printer, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, Printer, CheckSquare, Square, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -11,6 +11,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
   const [client, setClient] = useState<Record<string, unknown> | null>(null);
   const [invoices, setInvoices] = useState<Record<string, unknown>[]>([]);
+  const [clientPayments, setClientPayments] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -27,16 +28,22 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [clientRes, invoicesRes] = await Promise.all([
+        const [clientRes, invoicesRes, paymentsRes] = await Promise.all([
           fetch(`/api/clients`), 
-          fetch('/api/invoices')
+          fetch('/api/invoices'),
+          fetch(`/api/clients/${clientId}/payments`)
         ]);
 
         const clientsData = await clientRes.json();
         const invoicesData = await invoicesRes.json();
+        const paymentsData = await paymentsRes.json();
 
         const currentClient = clientsData.data?.find((c: Record<string, unknown>) => c.id === clientId);
         setClient(currentClient);
+
+        if (paymentsData.success) {
+          setClientPayments(paymentsData.data || []);
+        }
 
         // Filter invoices for this client that are not 'Pagada'
         const clientInvs = invoicesData.data.filter((inv: Record<string, unknown>) => 
@@ -67,6 +74,35 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
     loadData();
   }, [clientId]);
+
+  const loadPaymentsOnly = async () => {
+    try {
+      const res = await fetch(`/api/clients/${clientId}/payments`);
+      const data = await res.json();
+      if (data.success) {
+        setClientPayments(data.data || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.')) return;
+    try {
+      const res = await fetch(`/api/payments/${paymentId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('Pago anulado exitosamente. Se recargará la página para actualizar los saldos.');
+        window.location.reload(); // Reload the whole page to refresh invoices and pending balance properly
+      } else {
+        alert('Error al anular el pago');
+      }
+    } catch {
+      alert('Error de red al intentar anular el pago');
+    }
+  };
 
   // Auto-distribute payment amount across invoices
   useEffect(() => {
@@ -339,6 +375,57 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Monto a Aplicar: <span className="text-xl font-black text-green-600 ml-2">${amountToApply.toFixed(2)}</span></p>
           </div>
         </div>
+
+        {/* Historial de Pagos Section */}
+        <div className="mt-12">
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">Historial de Pagos</h3>
+          
+          <div className="overflow-x-auto border border-gray-200 rounded-xl print:border-none print:rounded-none">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 print:bg-transparent print:border-gray-800">
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Método</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Referencia</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Facturas Aplicadas</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center print:hidden">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {clientPayments.length === 0 ? (
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay pagos registrados.</td></tr>
+                ) : (
+                  clientPayments.map((pay: Record<string, unknown>) => (
+                    <tr key={pay.id as string} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
+                      <td className="p-4 text-sm text-gray-800 font-medium">{pay.payment_date as string}</td>
+                      <td className="p-4 text-sm text-gray-600">{(pay.payment_method as string) || '-'}</td>
+                      <td className="p-4 text-sm text-gray-600">{(pay.reference_number as string) || '-'}</td>
+                      <td className="p-4 text-sm text-gray-500">
+                        {Array.isArray(pay.invoice_payments) && pay.invoice_payments.map((ip: Record<string, unknown>) => (
+                          <div key={ip.invoice_id as string}>
+                            #{(ip.invoices as Record<string, unknown>)?.invoice_number as string} <span className="text-xs">(${Number(ip.amount_applied).toFixed(2)})</span>
+                          </div>
+                        ))}
+                      </td>
+                      <td className="p-4 text-sm font-bold text-green-700 text-right">+${Number(pay.amount).toFixed(2)}</td>
+                      <td className="p-4 text-center print:hidden">
+                        <button 
+                          onClick={() => handleDeletePayment(pay.id as string)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" 
+                          title="Anular Pago"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
 
       {/* Footer Actions */}

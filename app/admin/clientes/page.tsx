@@ -225,7 +225,7 @@ export default function ClientesPage() {
                         </Link>
                         {client.pendingBalance && client.pendingBalance > 0 ? (
                           <Link 
-                            href={`/admin/clientes/${client.id}/recibir-pago`}
+                            href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-flex"
                             title="Recibir pago"
                           >
