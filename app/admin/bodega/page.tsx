@@ -11,10 +11,11 @@ interface PackageData {
   weightUnit: string;
   provider: string;
   description: string;
+  isManual?: boolean;
 }
 
 export default function BodegaScanner() {
-  const { showAlert } = useModal();
+  const { showAlert, showConfirm } = useModal();
   const [scannedCode, setScannedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [packageData, setPackageData] = useState<PackageData | null>(null);
@@ -93,7 +94,28 @@ export default function BodegaScanner() {
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Error al buscar paquete';
-      await showAlert('Aviso', errorMsg);
+      if (errorMsg === 'Paquete no encontrado en Worldbox' || errorMsg === 'No se encontraron datos del paquete') {
+        const wantsManual = await showConfirm(
+          'Paquete no encontrado', 
+          'El paquete no existe en Worldbox. ¿Deseas ingresarlo manualmente a tu base local?'
+        );
+        if (wantsManual) {
+          setPackageData({
+            tracking: scannedCode,
+            consignatario: '',
+            weight: '',
+            weightUnit: 'lbs',
+            provider: 'Independiente',
+            description: '',
+            isManual: true
+          });
+          setLocalStatus(null);
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        await showAlert('Aviso', errorMsg);
+      }
       // Limpiamos el input para que vuelva a intentar
       setScannedCode('');
     } finally {
@@ -260,8 +282,8 @@ export default function BodegaScanner() {
                   Tracking: {packageData.tracking}
                 </h3>
               </div>
-              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus?.includes('Entregado') ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : 'bg-brand-yellow/20 text-brand-blue'}`}>
-                {localStatus || 'Encontrado en Worldbox'}
+              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus?.includes('Entregado') ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : packageData.isManual ? 'bg-orange-100 text-orange-700' : 'bg-brand-yellow/20 text-brand-blue'}`}>
+                {localStatus || (packageData.isManual ? 'Registro Manual' : 'Encontrado en Worldbox')}
               </span>
             </div>
 
@@ -283,9 +305,29 @@ export default function BodegaScanner() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Peso</p>
-                    <p className="text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100">
-                      {packageData.weight} {packageData.weightUnit}
-                    </p>
+                    {packageData.isManual ? (
+                      <div className="flex bg-gray-50 rounded-xl border border-gray-100 focus-within:border-brand-blue transition-colors overflow-hidden">
+                        <input
+                          type="number"
+                          value={packageData.weight || ''}
+                          onChange={(e) => setPackageData({ ...packageData, weight: e.target.value })}
+                          className="w-full bg-transparent p-4 font-medium text-brand-blue focus:outline-none"
+                          placeholder="Ej. 1.5"
+                        />
+                        <select
+                          value={packageData.weightUnit || 'lbs'}
+                          onChange={(e) => setPackageData({ ...packageData, weightUnit: e.target.value })}
+                          className="bg-transparent border-l border-gray-100 px-4 font-medium text-brand-blue focus:outline-none cursor-pointer"
+                        >
+                          <option value="lbs">lbs</option>
+                          <option value="kgs">kgs</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <p className="text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        {packageData.weight} {packageData.weightUnit}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Empresa</p>
@@ -303,9 +345,19 @@ export default function BodegaScanner() {
 
                 <div>
                   <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</p>
-                  <p className="text-brand-text-gray bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
-                    {packageData.description}
-                  </p>
+                  {packageData.isManual ? (
+                    <textarea
+                      value={packageData.description || ''}
+                      onChange={(e) => setPackageData({ ...packageData, description: e.target.value })}
+                      className="w-full text-brand-blue font-medium bg-gray-50 p-4 rounded-xl border border-gray-100 focus:border-brand-blue focus:outline-none focus:ring-0 transition-colors"
+                      rows={2}
+                      placeholder="Agrega una descripción o contenido del paquete..."
+                    />
+                  ) : (
+                    <p className="text-brand-text-gray bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
+                      {packageData.description}
+                    </p>
+                  )}
                 </div>
               </div>
 
