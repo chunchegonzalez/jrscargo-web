@@ -26,24 +26,46 @@ export async function POST(request: Request) {
       });
     }
 
-    const { text } = await generateText({
-      model: google('gemini-1.5-pro-latest'),
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: "Analiza esta factura o recibo de compra. Extrae la siguiente información y responde ÚNICAMENTE con un objeto JSON sin formato markdown. Los campos deben ser: 'provider_name' (string, el nombre del negocio o proveedor), 'date' (formato YYYY-MM-DD), 'amount' (number, el monto total pagado numérico sin símbolos de moneda), 'category' (string, escoge una de estas opciones que mejor se adapte: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Otros)."
-            },
-            {
-              type: 'image',
-              image: Buffer.from(base64Image, 'base64')
-            }
-          ]
-        }
-      ]
-    });
+    const messages: any = [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: "Analiza esta factura o recibo de compra. Extrae la siguiente información y responde ÚNICAMENTE con un objeto JSON sin formato markdown. Los campos deben ser: 'provider_name' (string, el nombre del negocio o proveedor), 'date' (formato YYYY-MM-DD), 'amount' (number, el monto total pagado numérico sin símbolos de moneda), 'category' (string, escoge una de estas opciones que mejor se adapte: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Otros)."
+          },
+          {
+            type: 'image',
+            image: Buffer.from(base64Image, 'base64')
+          }
+        ]
+      }
+    ];
+
+    let text = "";
+    try {
+      const res = await generateText({
+        model: google('gemini-1.5-flash'),
+        messages
+      });
+      text = res.text;
+    } catch (err1: any) {
+      console.warn("Fallo con gemini-1.5-flash:", err1.message);
+      try {
+        const res = await generateText({
+          model: google('gemini-1.5-pro'),
+          messages
+        });
+        text = res.text;
+      } catch (err2: any) {
+        console.warn("Fallo con gemini-1.5-pro:", err2.message);
+        const res = await generateText({
+          model: google('gemini-pro-vision'),
+          messages
+        });
+        text = res.text;
+      }
+    }
 
     let resultContent = text;
     
