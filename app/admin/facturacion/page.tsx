@@ -255,7 +255,7 @@ export default function FacturacionDashboard() {
                               Ver detalle
                             </Link>
                             <Link 
-                              href={`/admin/cuentas-por-cobrar/recibir/${inv.client_id}`} 
+                              href={`/admin/cuentas-por-cobrar/recibir/${inv.clients?.id || inv.client_id}`} 
                               className="text-sm font-bold px-3 py-1.5 rounded-lg text-white bg-[#0A2636] hover:bg-[#0A2636]/90 transition-colors shadow-sm"
                               title="Gestionar en Cuentas por Cobrar"
                             >

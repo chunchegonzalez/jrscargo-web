@@ -272,7 +272,7 @@ export async function getInvoices() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   
   // 1. Fetch invoices with client data
-  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(name,email)&order=created_at.desc`, {
+  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(id,name,email)&order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
