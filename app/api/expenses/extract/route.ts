@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       let parsedError;
       try {
         parsedError = JSON.parse(errorData);
-      } catch (e) {
+      } catch {
         parsedError = null;
       }
       
