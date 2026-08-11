@@ -157,6 +157,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link href="/admin/facturacion" className={getLinkClass('/admin/facturacion', true)}>
                   Facturas a Clientes
                 </Link>
+                <Link href="/admin/cuentas-por-cobrar" className={getLinkClass('/admin/cuentas-por-cobrar', false)}>
+                  Cuentas por cobrar
+                </Link>
                 <Link href="/admin/gastos" className={getLinkClass('/admin/gastos')}>
                   Gastos y Compras
                 </Link>

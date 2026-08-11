@@ -159,7 +159,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       if (!res.ok) throw new Error(data.error || 'Error desconocido al guardar el pago');
       
       alert('Pago registrado con éxito');
-      router.push('/admin/clientes');
+      router.push('/admin/cuentas-por-cobrar');
     } catch (error) {
       console.error(error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -181,7 +181,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       {/* Header Bar */}
       <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gray-50/50 print:hidden">
         <div className="flex items-center gap-4">
-          <Link href="/admin/clientes" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/admin/cuentas-por-cobrar" className="text-gray-400 hover:text-gray-600 transition-colors">
             <ArrowLeft size={24} />
           </Link>
           <h1 className="text-xl font-bold text-gray-800">Recibir pago</h1>
@@ -343,7 +343,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
       {/* Footer Actions */}
       <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 flex items-center justify-between z-40 print:hidden">
-        <button onClick={() => router.push('/admin/clientes')} className="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+        <button onClick={() => router.push('/admin/cuentas-por-cobrar')} className="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
           Cancelar
         </button>
         <button onClick={() => window.print()} className="px-6 py-2.5 rounded-xl font-bold text-brand-blue hover:bg-brand-blue/10 transition-colors">

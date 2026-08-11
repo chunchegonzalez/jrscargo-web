@@ -101,7 +101,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
         <div className="flex items-center gap-3">
           {totalPendiente > 0 && (
             <Link 
-              href={`/admin/clientes/${client.id}/recibir-pago`}
+              href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
               className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2"
             >
               <DollarSign size={18} /> Recibir Pago
