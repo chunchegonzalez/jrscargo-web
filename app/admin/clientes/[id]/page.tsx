@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 type Client = {
@@ -39,25 +39,42 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'facturas' | 'pagos'>('facturas');
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const res = await fetch(`/api/clients/${clientId}`);
-        const data = await res.json();
-        
-        if (data.success) {
-          setClient(data.client);
-          setInvoices(data.invoices || []);
-          setPayments(data.payments || []);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const loadData = async () => {
+    try {
+      const res = await fetch(`/api/clients/${clientId}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setClient(data.client);
+        setInvoices(data.invoices || []);
+        setPayments(data.payments || []);
       }
-    };
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, [clientId]);
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.')) return;
+    try {
+      const res = await fetch(`/api/payments/${paymentId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        alert('Error al anular el pago');
+      }
+    } catch {
+      alert('Error de red');
+    }
+  };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando perfil del cliente...</div>;
   if (!client) return <div className="p-8 text-center text-red-500">Cliente no encontrado</div>;
@@ -246,6 +263,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider print:text-gray-800">Referencia</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider print:text-gray-800">Facturas Aplicadas</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right print:text-gray-800">Monto</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center print:hidden">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -265,6 +283,15 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                         ))}
                       </td>
                       <td className="p-4 text-sm font-bold text-green-700 text-right">+${Number(pay.amount).toFixed(2)}</td>
+                      <td className="p-4 text-center print:hidden">
+                        <button 
+                          onClick={() => handleDeletePayment(pay.id)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" 
+                          title="Anular Pago"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
