@@ -133,7 +133,7 @@ export default function InvoiceViewPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 print:space-y-0 print:m-0 print:p-0 print:max-w-none">
       <div className="flex items-center justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/admin/facturacion" className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500">

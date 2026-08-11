@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] flex text-gray-900 selection:bg-brand-accent selection:text-white">
+    <div className="min-h-screen bg-[#FAFAFA] print:bg-white flex text-gray-900 selection:bg-brand-accent selection:text-white">
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -275,7 +275,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        <div className="p-4 md:p-8 overflow-x-hidden">
+        <div className="p-4 md:p-8 overflow-x-hidden print:p-0 print:overflow-visible">
           {children}
         </div>
       </main>
