@@ -111,13 +111,39 @@ export default function NuevaFacturaPage() {
     setItems(items.filter(item => item.id !== id));
   };
 
+  const handleWeightUnitChange = (newUnit: 'Lb' | 'Kg') => {
+    if (newUnit === weightUnit) return;
+    setWeightUnit(newUnit);
+    
+    setItems(items.map(item => {
+      if (!item.weight) return item;
+      const w = Number(item.weight);
+      const newWeight = newUnit === 'Kg' ? (w * 0.453592) : (w * 2.20462);
+      const updatedWeight = newWeight.toFixed(2).replace(/\.00$/, '');
+      
+      const r = Number(item.rate) || 0;
+      const amount = r > 0 ? Number((Number(updatedWeight) * r).toFixed(2)) : Number(item.amount);
+      
+      return { ...item, weight: updatedWeight, amount };
+    }));
+  };
+
   const handleTrackingBlur = async (itemId: number, trackingNumber: string) => {
     if (!trackingNumber) return;
     try {
       const res = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber)}`);
       const data = await res.json();
       if (data.status === 'SUCCESS' && data.rawData?.package?.weight) {
-        handleItemChange(itemId, 'weight', data.rawData.package.weight.toString());
+        let apiWeight = Number(data.rawData.package.weight);
+        const apiUnit = (data.rawData.package.weightUnit || 'lbs').toLowerCase();
+        
+        if (apiUnit.includes('lb') && weightUnit === 'Kg') {
+          apiWeight = apiWeight * 0.453592;
+        } else if ((apiUnit.includes('kg') || apiUnit.includes('kilo')) && weightUnit === 'Lb') {
+          apiWeight = apiWeight * 2.20462;
+        }
+        
+        handleItemChange(itemId, 'weight', apiWeight.toFixed(2).replace(/\.00$/, ''));
       }
     } catch (e) {
       console.error('Error fetching tracking for weight:', e);
@@ -326,7 +352,7 @@ export default function NuevaFacturaPage() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Unidad</label>
                 <select 
                   value={weightUnit}
-                  onChange={(e) => setWeightUnit(e.target.value as 'Lb' | 'Kg')}
+                  onChange={(e) => handleWeightUnitChange(e.target.value as 'Lb' | 'Kg')}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
                 >
                   <option value="Lb">Libras (Lb)</option>
