@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] print:bg-white flex text-gray-900 selection:bg-brand-accent selection:text-white">
+    <div className="min-h-screen bg-[#FAFAFA] print:bg-white print:h-auto print:min-h-0 print:block flex text-gray-900 selection:bg-brand-accent selection:text-white">
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div 
@@ -239,7 +239,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className={`flex-1 w-full flex flex-col min-h-screen transition-all duration-300 ${
         isDesktopSidebarOpen ? 'lg:ml-72' : 'lg:ml-0'
-      } print:ml-0 print:block relative`}>
+      } print:ml-0 print:block print:h-auto print:min-h-0 relative`}>
         
         {/* Top Header */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between sticky top-0 z-30 print:hidden">
