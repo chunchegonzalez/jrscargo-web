@@ -124,7 +124,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   href="/admin/bodega" 
                   className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/bodega' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                 >
-                  Escanear Bodega
+                  Escanear Individual
+                </Link>
+                <Link 
+                  href="/admin/bodega/masivo" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/bodega/masivo' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Recepción Masiva
+                </Link>
+                <Link 
+                  href="/admin/entregas/masivo" 
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${pathname === '/admin/entregas/masivo' ? 'bg-white/10 text-white font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                >
+                  Entrega Masiva
                 </Link>
                 <Link 
                   href="/admin/inventario" 
