@@ -6,6 +6,7 @@ import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calcul
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
+import GlobalSearch from '../components/GlobalSearch';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -275,14 +276,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           
           <div className="flex-1 max-w-2xl px-2 sm:px-4">
-            <div className="relative group">
-              <input 
-                type="text" 
-                placeholder="Buscar en el sistema..." 
-                className="w-full bg-gray-100 border border-transparent hover:bg-gray-50 hover:border-gray-200 focus:bg-white focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 rounded-full px-5 py-2.5 pl-11 text-sm font-medium text-gray-700 transition-all outline-none placeholder-gray-400"
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-blue transition-colors" size={18} />
-            </div>
+            <GlobalSearch />
           </div>
           
           <div className="flex items-center gap-4 shrink-0">
