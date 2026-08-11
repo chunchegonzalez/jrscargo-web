@@ -99,8 +99,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Sidebar Navigation */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
           
-          <Link href="/admin/dashboard" className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname === '/admin/dashboard' ? 'bg-white shadow-sm border border-gray-200 text-brand-blue font-bold' : 'text-gray-600 hover:bg-gray-100 font-medium'}`}>
-            <Home size={18} className={pathname === '/admin/dashboard' ? 'text-brand-accent' : 'text-gray-400'} />
+          <Link href="/admin" className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname === '/admin' ? 'bg-white shadow-sm border border-gray-200 text-brand-blue font-bold' : 'text-gray-600 hover:bg-gray-100 font-medium'}`}>
+            <Home size={18} className={pathname === '/admin' ? 'text-brand-accent' : 'text-gray-400'} />
             <span className="text-sm">Vista General</span>
           </Link>
 
@@ -122,15 +122,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link href="/admin/inventario" className={getLinkClass('/admin/inventario')}>
                   Escanear Individual
                 </Link>
-                <Link href="/admin/recepcion-masiva" className={getLinkClass('/admin/recepcion-masiva')}>
+                <Link href="/admin/bodega" className={getLinkClass('/admin/bodega')}>
                   Recepción Masiva
                 </Link>
-                <Link href="/admin/entrega-masiva" className={getLinkClass('/admin/entrega-masiva')}>
+                <Link href="/admin/entregas" className={getLinkClass('/admin/entregas')}>
                   Entrega Masiva
                 </Link>
-                <Link href="/admin/inventario-cr" className={getLinkClass('/admin/inventario-cr')}>
+                {/* <Link href="/admin/inventario-cr" className={getLinkClass('/admin/inventario-cr')}>
                   Inventario CR
-                </Link>
+                </Link> */}
               </div>
             </div>
           </div>
