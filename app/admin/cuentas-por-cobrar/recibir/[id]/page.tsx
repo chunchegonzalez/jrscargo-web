@@ -75,18 +75,6 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     loadData();
   }, [clientId]);
 
-  const loadPaymentsOnly = async () => {
-    try {
-      const res = await fetch(`/api/clients/${clientId}/payments`);
-      const data = await res.json();
-      if (data.success) {
-        setClientPayments(data.data || []);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleDeletePayment = async (paymentId: string) => {
     if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.')) return;
     try {
