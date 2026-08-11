@@ -110,8 +110,6 @@ export default function FacturacionDashboard() {
     if (!payingInvoiceId) return;
     setIsPaying(true);
     
-    // Obtener la factura actual para mantener sus notas
-    const invoiceToUpdate = invoices.find(i => i.id === payingInvoiceId);
     let currentNotes = '';
     
     try {

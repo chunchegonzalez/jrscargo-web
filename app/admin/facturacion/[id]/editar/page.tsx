@@ -35,6 +35,7 @@ export default function EditarFacturaPage() {
   useEffect(() => {
     loadClients();
     loadInvoiceData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadInvoiceData = async () => {
@@ -52,6 +53,7 @@ export default function EditarFacturaPage() {
         setNotes(inv.notes || '');
         
         if (inv.items && inv.items.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setItems(inv.items.map((it: any) => ({
             id: it.id,
             service_name: it.service_name,
