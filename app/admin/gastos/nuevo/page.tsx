@@ -100,9 +100,10 @@ export default function NuevoGastoPage() {
       } else {
         alert('Detalle del error de IA: ' + (data.error || 'Desconocido'));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      alert('Error al comunicar con la IA: ' + (err.message || 'Error de red'));
+      const errorMsg = err instanceof Error ? err.message : 'Error de red';
+      alert('Error al comunicar con la IA: ' + errorMsg);
     } finally {
       setIsAnalyzing(false);
     }
