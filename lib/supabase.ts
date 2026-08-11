@@ -249,7 +249,10 @@ export async function createExpense(expense: Record<string, unknown>) {
     headers: getHeaders(),
     body: JSON.stringify(expense)
   });
-  if (!res.ok) throw new Error('Error creating expense');
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error('Supabase Error: ' + errorText);
+  }
   return { success: true };
 }
 
