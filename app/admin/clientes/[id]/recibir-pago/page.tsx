@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Search, Save, Printer, CheckSquare, Square, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Printer, CheckSquare, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -9,8 +9,8 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   const router = useRouter();
   const clientId = params.id;
 
-  const [client, setClient] = useState<any>(null);
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [client, setClient] = useState<Record<string, unknown> | null>(null);
+  const [invoices, setInvoices] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -25,47 +25,48 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [clientRes, invoicesRes] = await Promise.all([
+          fetch(`/api/clients`), 
+          fetch('/api/invoices')
+        ]);
+
+        const clientsData = await clientRes.json();
+        const invoicesData = await invoicesRes.json();
+
+        const currentClient = clientsData.find((c: Record<string, unknown>) => c.id === clientId);
+        setClient(currentClient);
+
+        // Filter invoices for this client that are not 'Pagada'
+        const clientInvs = invoicesData.data.filter((inv: Record<string, unknown>) => 
+          inv.client_id === clientId && inv.status !== 'Pagada'
+        );
+        
+        // Calculate pending balance for each
+        const processedInvs = clientInvs.map((inv: Record<string, unknown>) => {
+          const total = Number(inv.total);
+          let paid = 0;
+          if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
+            const paymentsArray = inv.invoice_payments as Record<string, unknown>[];
+            paid = paymentsArray.reduce((acc: number, p: Record<string, unknown>) => acc + Number(p.amount_applied), 0);
+          }
+          return {
+            ...inv,
+            pendingBalance: total - paid
+          };
+        }).filter((inv: Record<string, unknown>) => (inv.pendingBalance as number) > 0);
+
+        setInvoices(processedInvs);
+      } catch (error) {
+        console.error('Error loading data', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
   }, [clientId]);
-
-  const loadData = async () => {
-    try {
-      const [clientRes, invoicesRes] = await Promise.all([
-        fetch(`/api/clients`), // Fetch all to find one (inefficient but safe for now)
-        fetch('/api/invoices')
-      ]);
-
-      const clientsData = await clientRes.json();
-      const invoicesData = await invoicesRes.json();
-
-      const currentClient = clientsData.find((c: any) => c.id === clientId);
-      setClient(currentClient);
-
-      // Filter invoices for this client that are not 'Pagada'
-      const clientInvs = invoicesData.data.filter((inv: any) => 
-        inv.client_id === clientId && inv.status !== 'Pagada'
-      );
-      
-      // Calculate pending balance for each
-      const processedInvs = clientInvs.map((inv: any) => {
-        const total = Number(inv.total);
-        let paid = 0;
-        if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-          paid = inv.invoice_payments.reduce((acc: number, p: any) => acc + Number(p.amount_applied), 0);
-        }
-        return {
-          ...inv,
-          pendingBalance: total - paid
-        };
-      }).filter((inv: any) => inv.pendingBalance > 0);
-
-      setInvoices(processedInvs);
-    } catch (error) {
-      console.error('Error loading data', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Auto-distribute payment amount across invoices
   useEffect(() => {
@@ -81,11 +82,14 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
     for (const inv of invoices) {
       if (remaining <= 0) break;
-      if (remaining >= inv.pendingBalance) {
-        newApps[inv.id] = inv.pendingBalance;
-        remaining -= inv.pendingBalance;
+      const pendingBalance = inv.pendingBalance as number;
+      const invId = inv.id as string;
+      
+      if (remaining >= pendingBalance) {
+        newApps[invId] = pendingBalance;
+        remaining -= pendingBalance;
       } else {
-        newApps[inv.id] = remaining;
+        newApps[invId] = remaining;
         remaining = 0;
       }
     }
@@ -131,7 +135,8 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     try {
       const appliedInvoices = Object.entries(applications).map(([invoice_id, amount_applied]) => {
         const inv = invoices.find(i => i.id === invoice_id);
-        const isFullyPaid = Math.abs(amount_applied - (inv?.pendingBalance || 0)) < 0.01;
+        const pendingBalance = (inv?.pendingBalance as number) || 0;
+        const isFullyPaid = Math.abs(amount_applied - pendingBalance) < 0.01;
         return { invoice_id, amount_applied, isFullyPaid };
       });
 
@@ -163,7 +168,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
   if (loading) return <div className="p-8 text-center">Cargando...</div>;
 
-  const currentBalance = invoices.reduce((acc, inv) => acc + inv.pendingBalance, 0);
+  const currentBalance = invoices.reduce((acc, inv) => acc + (inv.pendingBalance as number), 0);
+  const clientName = (client?.name as string) || 'Cliente Desconocido';
+  const clientEmail = (client?.email as string) || '-';
 
   return (
     <div className="w-full bg-white print:m-0 print:p-0 min-h-screen relative font-sans">
@@ -197,13 +204,13 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
                 <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-800">
-                  {client?.name || 'Cliente Desconocido'}
+                  {clientName}
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Correo Electrónico</label>
                 <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
-                  {client?.email || '-'}
+                  {clientEmail}
                 </div>
               </div>
             </div>
@@ -281,32 +288,37 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                   <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas pendientes.</td></tr>
                 ) : (
                   invoices.map(inv => {
-                    const isChecked = !!applications[inv.id];
-                    const appAmount = applications[inv.id] || '';
+                    const invId = inv.id as string;
+                    const pendingBalance = inv.pendingBalance as number;
+                    const issueDate = inv.issue_date as string;
+                    const invTotal = inv.total as number;
+                    const invoiceNumber = inv.invoice_number as string;
+
+                    const isChecked = !!applications[invId];
+                    const appAmount = applications[invId] || '';
                     
-                    // Simple logic to show a due date 30 days after issue (if we don't have due_date)
-                    const dueDate = new Date(inv.issue_date);
+                    const dueDate = new Date(issueDate || new Date());
                     dueDate.setDate(dueDate.getDate() + 30);
 
                     return (
-                      <tr key={inv.id} className={`border-b border-gray-100 last:border-0 transition-colors ${isChecked ? 'bg-green-50/30' : 'hover:bg-gray-50/50'}`}>
-                        <td className="p-4 text-center cursor-pointer print:hidden" onClick={() => toggleInvoice(inv.id, inv.pendingBalance)}>
+                      <tr key={invId} className={`border-b border-gray-100 last:border-0 transition-colors ${isChecked ? 'bg-green-50/30' : 'hover:bg-gray-50/50'}`}>
+                        <td className="p-4 text-center cursor-pointer print:hidden" onClick={() => toggleInvoice(invId, pendingBalance)}>
                           {isChecked ? <CheckSquare className="text-green-600 mx-auto" size={20} /> : <Square className="text-gray-300 mx-auto" size={20} />}
                         </td>
                         <td className="p-4">
-                          <p className="font-bold text-brand-blue text-sm">Factura #{inv.invoice_number}</p>
-                          <p className="text-xs text-gray-500">({inv.issue_date})</p>
+                          <p className="font-bold text-brand-blue text-sm">Factura #{invoiceNumber}</p>
+                          <p className="text-xs text-gray-500">({issueDate})</p>
                         </td>
                         <td className="p-4 text-sm text-gray-600 hidden sm:table-cell">{dueDate.toISOString().split('T')[0]}</td>
-                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">${Number(inv.total).toFixed(2)}</td>
-                        <td className="p-4 text-sm font-medium text-gray-800 text-right">${inv.pendingBalance.toFixed(2)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">${Number(invTotal).toFixed(2)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-800 text-right">${pendingBalance.toFixed(2)}</td>
                         <td className="p-4 text-right">
                           <div className={`flex items-center justify-end gap-1 ${isChecked ? 'text-green-700' : 'text-gray-400'}`}>
                             <span className="font-bold">$</span>
                             <input 
                               type="number"
                               value={appAmount}
-                              onChange={(e) => handleManualAmountChange(inv.id, e.target.value, inv.pendingBalance)}
+                              onChange={(e) => handleManualAmountChange(invId, e.target.value, pendingBalance)}
                               placeholder="0.00"
                               className={`w-20 bg-transparent text-right focus:outline-none focus:border-b focus:border-green-500 ${isChecked ? 'font-bold' : ''}`}
                             />
