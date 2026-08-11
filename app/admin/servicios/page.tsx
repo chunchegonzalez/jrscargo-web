@@ -156,7 +156,7 @@ export default function ServiciosPage() {
         {loading ? (
           <div className="p-12 text-center text-gray-400 font-medium">Cargando servicios...</div>
         ) : services.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 font-medium">No hay servicios registrados. Haz clic en "Nuevo Servicio" para agregar uno.</div>
+          <div className="p-12 text-center text-gray-400 font-medium">No hay servicios registrados. Haz clic en &quot;Nuevo Servicio&quot; para agregar uno.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
