@@ -143,7 +143,7 @@ export default function NuevoGastoPage() {
       } else {
         alert('Error al guardar el gasto: ' + (result.error || 'Desconocido'));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       alert('Error de red al guardar el gasto.');
     } finally {

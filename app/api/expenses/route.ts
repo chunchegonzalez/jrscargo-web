@@ -18,8 +18,9 @@ export async function POST(request: Request) {
     const expense = await request.json();
     const createdExpense = await createExpense(expense);
     return NextResponse.json({ success: true, data: createdExpense }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating expense:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Error creating expense' }, { status: 500 });
+  } catch (error) {
+    const err = error as Error;
+    console.error('Error creating expense:', err);
+    return NextResponse.json({ success: false, error: err.message || 'Error creating expense' }, { status: 500 });
   }
 }
