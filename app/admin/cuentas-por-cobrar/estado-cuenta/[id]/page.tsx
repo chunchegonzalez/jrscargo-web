@@ -168,8 +168,8 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
         <div className="flex justify-between items-end mb-6">
           <div>
             <p className="text-sm font-bold text-gray-900 mb-1">PARA</p>
-            <p className="text-sm text-gray-800 font-medium">{client?.name}</p>
-            {client?.email && <p className="text-sm text-gray-800">{client.email}</p>}
+            <p className="text-sm text-gray-800 font-medium">{client?.name as string}</p>
+            {client?.email && <p className="text-sm text-gray-800">{client.email as string}</p>}
           </div>
           <div className="text-right">
             <table className="text-sm ml-auto">
