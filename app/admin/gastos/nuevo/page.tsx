@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, UploadCloud, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, Sparkles, Loader2, ChevronDown, Check } from 'lucide-react';
 
 export default function NuevoGastoPage() {
   const router = useRouter();
@@ -12,12 +12,36 @@ export default function NuevoGastoPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Otros');
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  
+  const CATEGORY_OPTIONS = [
+    { value: 'Combustible', label: 'Combustible' },
+    { value: 'Mantenimiento', label: 'Mantenimiento de Vehículos' },
+    { value: 'Papelería', label: 'Papelería y Oficina' },
+    { value: 'Planillas', label: 'Planillas / Salarios' },
+    { value: 'Viáticos', label: 'Viáticos / Alimentación' },
+    { value: 'Servicios', label: 'Servicios (Agua, Luz, Internet)' },
+    { value: 'Pago de Proveedor', label: 'Pago de Proveedor' },
+    { value: 'Local San Pablo', label: 'Local San Pablo' },
+    { value: 'Otros', label: 'Otros' }
+  ];
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -258,21 +282,34 @@ export default function NuevoGastoPage() {
               </div>
             </div>
 
-            <div>
+            <div ref={dropdownRef} className="relative">
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Categoría</label>
-              <select 
-                value={category} 
-                onChange={e => setCategory(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium"
+              
+              <div 
+                onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
+                className={`w-full px-4 py-3 bg-white border rounded-xl text-sm font-medium flex items-center justify-between cursor-pointer transition-colors ${isCategoryMenuOpen ? 'border-brand-blue ring-1 ring-brand-blue/20' : 'border-gray-200 hover:border-gray-300'}`}
               >
-                <option value="Combustible">Combustible</option>
-                <option value="Mantenimiento">Mantenimiento de Vehículos</option>
-                <option value="Papelería">Papelería y Oficina</option>
-                <option value="Planillas">Planillas / Salarios</option>
-                <option value="Viáticos">Viáticos / Alimentación</option>
-                <option value="Servicios">Servicios (Agua, Luz, Internet)</option>
-                <option value="Otros">Otros</option>
-              </select>
+                <span className="text-gray-800">{CATEGORY_OPTIONS.find(c => c.value === category)?.label || 'Otros'}</span>
+                <ChevronDown size={18} className={`text-gray-400 transition-transform ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {isCategoryMenuOpen && (
+                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden py-1 max-h-60 overflow-y-auto transform origin-top transition-all animate-in fade-in slide-in-from-top-2">
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <div
+                      key={opt.value}
+                      onClick={() => {
+                        setCategory(opt.value);
+                        setIsCategoryMenuOpen(false);
+                      }}
+                      className="px-4 py-3 text-sm hover:bg-brand-blue/5 hover:text-brand-blue cursor-pointer flex items-center justify-between text-gray-700 transition-colors"
+                    >
+                      <span>{opt.label}</span>
+                      {category === opt.value && <Check size={16} className="text-brand-blue" />}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
