@@ -182,18 +182,21 @@ export default function FacturacionDashboard() {
                         {inv.status}
                       </span>
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {inv.status !== 'Pagada' && (
-                          <button onClick={() => handleMarkAsPaid(inv.id)} title="Marcar como pagada" className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
-                            <DollarSign size={18} />
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <Link href={`/admin/facturacion/${inv.id}`} className="text-sm font-bold text-brand-blue hover:underline">
+                            Ver detalle
+                          </Link>
+                          {inv.status !== 'Pagada' && (
+                            <button onClick={() => handleMarkAsPaid(inv.id)} className="text-sm font-bold text-green-600 hover:text-green-700 bg-green-50 px-2 py-1 rounded-lg">
+                              Marcar Pagada
+                            </button>
+                          )}
+                          <button onClick={() => handleSendEmail(inv.id)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
+                            <Mail size={18} />
                           </button>
-                        )}
-                        <button onClick={() => handleSendEmail(inv.id)} title="Enviar por correo" className="p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors">
-                          <Mail size={18} />
-                        </button>
-                      </div>
-                    </td>
+                        </div>
+                      </td>
                   </tr>
                 ))
               )}
