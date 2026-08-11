@@ -119,18 +119,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             
             <div className={`overflow-hidden transition-all duration-300 ${openSections.operaciones ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
               <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/inventario" className={getLinkClass('/admin/inventario')}>
+                <Link href="/admin/bodega" className={getLinkClass('/admin/bodega')}>
                   Escanear Individual
                 </Link>
-                <Link href="/admin/bodega" className={getLinkClass('/admin/bodega')}>
+                <Link href="/admin/bodega/masivo" className={getLinkClass('/admin/bodega/masivo')}>
                   Recepción Masiva
                 </Link>
-                <Link href="/admin/entregas" className={getLinkClass('/admin/entregas')}>
+                <Link href="/admin/entregas/masivo" className={getLinkClass('/admin/entregas/masivo')}>
                   Entrega Masiva
                 </Link>
-                {/* <Link href="/admin/inventario-cr" className={getLinkClass('/admin/inventario-cr')}>
+                <Link href="/admin/inventario" className={getLinkClass('/admin/inventario')}>
                   Inventario CR
-                </Link> */}
+                </Link>
               </div>
             </div>
           </div>
