@@ -6,16 +6,18 @@ export function getInvoiceStats(invoice: Record<string, unknown>) {
     paid = invoice.invoice_payments.reduce((sum: number, p: Record<string, unknown>) => sum + (Number(p.amount_applied) || 0), 0);
   }
   
-  if (invoice.status === 'Pagada' || invoice.status === 'Anulada') {
+  const invoiceStatus = String(invoice.status || 'Pendiente');
+  
+  if (invoiceStatus === 'Pagada' || invoiceStatus === 'Anulada') {
     // Si la factura está marcada manualmente como pagada o anulada, 
     // su saldo pendiente es 0. Consideramos todo el total como "cubierto" para no mostrar saldos engañosos.
     return {
       total,
-      paid: invoice.status === 'Pagada' ? total : 0, // Para anulada, pagado es 0 pero pendiente es 0
+      paid: invoiceStatus === 'Pagada' ? total : 0, // Para anulada, pagado es 0 pero pendiente es 0
       pending: 0,
-      isPagada: invoice.status === 'Pagada',
-      isAnulada: invoice.status === 'Anulada',
-      displayStatus: invoice.status // 'Pagada' o 'Anulada'
+      isPagada: invoiceStatus === 'Pagada',
+      isAnulada: invoiceStatus === 'Anulada',
+      displayStatus: invoiceStatus // 'Pagada' o 'Anulada'
     };
   } else {
     const pending = total - paid;
@@ -26,7 +28,7 @@ export function getInvoiceStats(invoice: Record<string, unknown>) {
       pending: pending > 0 ? pending : 0,
       isPagada,
       isAnulada: false,
-      displayStatus: isPagada ? 'Pagada' : invoice.status
+      displayStatus: isPagada ? 'Pagada' : invoiceStatus
     };
   }
 }
