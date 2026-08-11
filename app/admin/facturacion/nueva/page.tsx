@@ -50,13 +50,16 @@ export default function NuevaFacturaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newClient)
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         await loadClients();
         setShowNewClientForm(false);
         setNewClient({ name: '', email: '', phone: '', address: '' });
+      } else {
+        alert('Error al crear cliente: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
       }
     } catch {
-      alert('Error creando cliente');
+      alert('Error de red al crear cliente.');
     }
   };
 
@@ -122,10 +125,10 @@ export default function NuevaFacturaPage() {
       });
       
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         router.push('/admin/facturacion');
       } else {
-        alert('Error: ' + data.error);
+        alert('Error al guardar factura: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
       }
     } catch {
       alert('Error de red al guardar factura');
