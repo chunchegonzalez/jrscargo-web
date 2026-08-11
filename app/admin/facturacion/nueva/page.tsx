@@ -24,7 +24,7 @@ export default function NuevaFacturaPage() {
   const [notes, setNotes] = useState('Gracias por elegir a JRS CARGO.');
 
   // New client state
-  const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: '' });
+  const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: 'Costa Rica' });
 
   useEffect(() => {
     loadClients();
@@ -54,7 +54,7 @@ export default function NuevaFacturaPage() {
       if (res.ok && data.success) {
         await loadClients();
         setShowNewClientForm(false);
-        setNewClient({ name: '', email: '', phone: '', address: '' });
+        setNewClient({ name: '', email: '', phone: '', address: 'Costa Rica' });
       } else {
         alert('Error al crear cliente: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
       }
@@ -172,6 +172,15 @@ export default function NuevaFacturaPage() {
                   <h4 className="text-sm font-bold text-brand-blue mb-2">Crear Cliente Rápido</h4>
                   <input required placeholder="Nombre Completo" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
                   <input required type="email" placeholder="Correo Electrónico" value={newClient.email} onChange={e => setNewClient({...newClient, email: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="tel" placeholder="Nº de Teléfono" value={newClient.phone} onChange={e => setNewClient({...newClient, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                    <select value={newClient.address} onChange={e => setNewClient({...newClient, address: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                      <option value="Costa Rica">Costa Rica</option>
+                      <option value="Estados Unidos">Estados Unidos</option>
+                      <option value="Nicaragua">Nicaragua</option>
+                      <option value="Otro">Otro País</option>
+                    </select>
+                  </div>
                   <div className="flex gap-2 pt-2">
                     <button type="submit" className="flex-1 py-2 bg-brand-blue text-white rounded-lg text-sm font-bold">Guardar</button>
                     <button type="button" onClick={() => setShowNewClientForm(false)} className="py-2 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold">Cancelar</button>
