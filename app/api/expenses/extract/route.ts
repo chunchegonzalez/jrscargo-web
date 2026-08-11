@@ -33,8 +33,8 @@ export async function POST(request: Request) {
               text: "Analiza esta factura o recibo de compra. Extrae la siguiente información y responde ÚNICAMENTE con un objeto JSON. Los campos deben ser: 'provider_name' (string, el nombre del negocio o proveedor), 'date' (formato YYYY-MM-DD), 'amount' (number, el monto total pagado numérico sin símbolos de moneda), 'category' (string, escoge una de estas opciones que mejor se adapte: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Otros)."
             },
             {
-              inlineData: {
-                mimeType: mimeType || 'image/jpeg',
+              inline_data: {
+                mime_type: mimeType || 'image/jpeg',
                 data: base64Image
               }
             }
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       }
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
