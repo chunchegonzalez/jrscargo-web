@@ -28,6 +28,7 @@ export default function EditarFacturaPage() {
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const [currency, setCurrency] = useState('USD');
+  const [exchangeRate, setExchangeRate] = useState(500);
   const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -137,6 +138,57 @@ export default function EditarFacturaPage() {
     setItems(items.filter(item => item.id !== id));
   };
 
+  const handleCurrencyChange = (newCurrency: string) => {
+    if (newCurrency === currency) return;
+    setCurrency(newCurrency);
+    
+    setItems(items.map(item => {
+      const currentRate = Number(item.rate) || 0;
+      const currentAmount = Number(item.amount) || 0;
+      let newRate = currentRate;
+      let newAmount = currentAmount;
+      
+      if (newCurrency === 'CRC' && currency === 'USD') {
+        newRate = currentRate * exchangeRate;
+        newAmount = currentAmount * exchangeRate;
+      } else if (newCurrency === 'USD' && currency === 'CRC') {
+        newRate = currentRate / exchangeRate;
+        newAmount = currentAmount / exchangeRate;
+      }
+      
+      return { 
+        ...item, 
+        rate: newRate ? Number(newRate.toFixed(2)).toString() : '', 
+        amount: Number(newAmount.toFixed(2)) 
+      };
+    }));
+  };
+
+  const handleExchangeRateChange = (newValue: number) => {
+    if (newValue <= 0 || !newValue) return;
+    const oldRate = exchangeRate;
+    setExchangeRate(newValue);
+
+    if (currency === 'CRC') {
+      setItems(items.map(item => {
+        const currentRate = Number(item.rate) || 0;
+        const currentAmount = Number(item.amount) || 0;
+        
+        const baseRate = currentRate / oldRate;
+        const baseAmount = currentAmount / oldRate;
+        
+        const newRate = baseRate * newValue;
+        const newAmount = baseAmount * newValue;
+
+        return { 
+          ...item, 
+          rate: newRate ? Number(newRate.toFixed(2)).toString() : '', 
+          amount: Number(newAmount.toFixed(2)) 
+        };
+      }));
+    }
+  };
+
   const handleWeightUnitChange = (newUnit: 'Lb' | 'Kg') => {
     if (newUnit === weightUnit) return;
     setWeightUnit(newUnit);
@@ -185,7 +237,9 @@ export default function EditarFacturaPage() {
         if (field === 'service_name') {
            const foundService = catalogServices.find(s => s.name.toUpperCase() === value.toUpperCase());
            if (foundService) {
-             updatedItem.rate = foundService.default_rate.toString();
+             const baseRate = foundService.default_rate;
+             const finalRate = currency === 'CRC' ? baseRate * exchangeRate : baseRate;
+             updatedItem.rate = finalRate.toString();
              // recalculate amount if weight is present
              const w = Number(updatedItem.weight) || 0;
              const r = Number(updatedItem.rate) || 0;
@@ -346,7 +400,7 @@ export default function EditarFacturaPage() {
           </div>
 
           <div className="space-y-4 md:pl-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${currency === 'CRC' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-6`}>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">N.º Factura</label>
                 <input 
@@ -361,13 +415,26 @@ export default function EditarFacturaPage() {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Moneda</label>
                 <select 
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="CRC">CRC (₡)</option>
                 </select>
               </div>
+              {currency === 'CRC' && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">T. Cambio</label>
+                  <input 
+                    type="number"
+                    value={exchangeRate}
+                    onChange={(e) => handleExchangeRateChange(Number(e.target.value))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                    min="1"
+                    step="0.01"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Unidad</label>
                 <select 
