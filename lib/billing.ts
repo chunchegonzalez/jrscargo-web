@@ -1,9 +1,9 @@
-export function getInvoiceStats(invoice: Record<string, any>) {
+export function getInvoiceStats(invoice: Record<string, unknown>) {
   const total = Number(invoice.total) || 0;
   let paid = 0;
   
   if (invoice.invoice_payments && Array.isArray(invoice.invoice_payments)) {
-    paid = invoice.invoice_payments.reduce((sum: number, p: any) => sum + (Number(p.amount_applied) || 0), 0);
+    paid = invoice.invoice_payments.reduce((sum: number, p: Record<string, unknown>) => sum + (Number(p.amount_applied) || 0), 0);
   }
   
   if (invoice.status === 'Pagada' || invoice.status === 'Anulada') {

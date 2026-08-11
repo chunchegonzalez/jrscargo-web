@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createPayment, updateInvoiceStatus } from '@/lib/supabase';
+import { getHeaders, createPayment, updateInvoiceStatus } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const { getHeaders } = require('@/lib/supabase'); // Dynamic require to avoid circular deps if any
     
     // Fetch all payments, joining with clients for the name, and invoice_payments->invoices for the references
     const res = await fetch(`${url}/rest/v1/payments?select=*,clients(id,name,email),invoice_payments(amount_applied,invoice_id,invoices(invoice_number))&order=payment_date.desc,created_at.desc`, {
@@ -25,7 +24,6 @@ export async function GET() {
     return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
   }
 }
-
 
 export async function POST(request: Request) {
   try {
