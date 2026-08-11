@@ -1,17 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById } from '@/lib/supabase';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      return NextResponse.json({ success: false, error: 'Resend API key not configured' }, { status: 500 });
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASSWORD;
+
+    if (!smtpUser || !smtpPass) {
+      return NextResponse.json({ success: false, error: 'SMTP credentials not configured' }, { status: 500 });
     }
 
-    const resend = new Resend(resendApiKey);
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
     const invoice = await getInvoiceById(params.id);
     
     if (!invoice) {
@@ -91,20 +100,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
       </div>
     `;
 
-    const { data, error } = await resend.emails.send({
-      from: 'JRS Cargo Facturación <facturacion@jrscargocr.com>',
-      to: [invoice.clients.email],
-      subject: `Factura #${invoice.invoice_number} de JRS CARGO S.A.`,
+    const info = await transporter.sendMail({
+      from: \`"JRS Cargo Facturación" <\${smtpUser}>\`,
+      to: invoice.clients.email,
+      subject: \`Factura #\${invoice.invoice_number} de JRS CARGO S.A.\`,
       html: htmlContent,
     });
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true, data }, { status: 200 });
+    return NextResponse.json({ success: true, messageId: info.messageId }, { status: 200 });
   } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : 'Error sending email';
+    console.error('SMTP Error:', err);
+    const errorMsg = err instanceof Error ? err.message : 'Error sending email via SMTP';
     return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
   }
 }
