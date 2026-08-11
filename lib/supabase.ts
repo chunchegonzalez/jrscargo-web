@@ -270,8 +270,8 @@ export async function deleteExpense(id: string) {
 
 export async function getInvoices() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  // Fetch invoices with client data
-  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(name,email)&order=created_at.desc`, {
+  // Fetch invoices with client data and payments
+  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(name,email),invoice_payments(amount_applied)&order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });

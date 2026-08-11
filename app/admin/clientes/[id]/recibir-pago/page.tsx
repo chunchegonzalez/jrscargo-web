@@ -35,7 +35,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         const clientsData = await clientRes.json();
         const invoicesData = await invoicesRes.json();
 
-        const currentClient = clientsData.find((c: Record<string, unknown>) => c.id === clientId);
+        const currentClient = clientsData.data?.find((c: Record<string, unknown>) => c.id === clientId);
         setClient(currentClient);
 
         // Filter invoices for this client that are not 'Pagada'
