@@ -94,8 +94,9 @@ export async function POST(request: Request) {
           ]
         });
         text = res.text;
-      } catch (err: any) {
-        throw new Error("Error de Google Gemini: " + err.message);
+      } catch (err) {
+        const error = err as Error;
+        throw new Error("Error de Google Gemini: " + error.message);
       }
     }
 
