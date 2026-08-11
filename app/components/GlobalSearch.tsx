@@ -20,15 +20,34 @@ const MODULES = [
   { label: 'Servicios y Tarifas', url: '/admin/servicios' },
 ];
 
+interface ClientItem {
+  id: string;
+  name?: string;
+  email?: string;
+  cedula?: string;
+  address?: string;
+}
+
+interface InvoiceItem {
+  id: string;
+  invoice_number?: string;
+}
+
+interface InventoryItem {
+  id: string;
+  tracking_number?: string;
+  client_name?: string;
+}
+
 export default function GlobalSearch() {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   
   // Data caches
-  const [clients, setClients] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientItem[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const router = useRouter();
@@ -133,7 +152,7 @@ export default function GlobalSearch() {
           <div className="overflow-y-auto p-2">
             {!hasResults && !isFetching && (
               <div className="p-8 text-center text-gray-400 text-sm">
-                No se encontraron resultados para "{query}"
+                No se encontraron resultados para &quot;{query}&quot;
               </div>
             )}
 
