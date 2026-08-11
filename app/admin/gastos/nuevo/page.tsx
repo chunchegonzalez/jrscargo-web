@@ -111,7 +111,6 @@ export default function NuevoGastoPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!providerName || !amount) {
     if (!providerName || !date || !amount || !category) {
       alert('Por favor completa todos los campos.');
       return;
