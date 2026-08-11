@@ -43,10 +43,17 @@ export default function ClientesPage() {
       if (clientsData.success && invoicesData.success) {
         // Merge data to calculate stats
         const mergedClients = clientsData.data.map((c: Client) => {
-          const clientInvoices = invoicesData.data.filter((i: { client_id: string, status: string, total: string | number }) => i.client_id === c.id);
-          const pendingInvoices = clientInvoices.filter((i: { client_id: string, status: string, total: string | number }) => i.status === 'Pendiente' || i.status === 'Vencida');
+          const clientInvoices = invoicesData.data.filter((i: Record<string, unknown>) => i.client_id === c.id);
+          const pendingInvoices = clientInvoices.filter((i: Record<string, unknown>) => i.status !== 'Pagada');
           
-          const pendingBalance = pendingInvoices.reduce((acc: number, curr: { client_id: string, status: string, total: string | number }) => acc + Number(curr.total), 0);
+          const pendingBalance = pendingInvoices.reduce((acc: number, curr: Record<string, unknown>) => {
+            const total = Number(curr.total);
+            let paid = 0;
+            if (curr.invoice_payments && Array.isArray(curr.invoice_payments)) {
+              paid = curr.invoice_payments.reduce((sum: number, p: Record<string, unknown>) => sum + Number(p.amount_applied), 0);
+            }
+            return acc + (total - paid);
+          }, 0);
           
           return {
             ...c,
