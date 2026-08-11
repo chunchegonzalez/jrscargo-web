@@ -22,6 +22,7 @@ export default function EditarFacturaPage() {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [searchClientTerm, setSearchClientTerm] = useState('');
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [activeServiceDropdown, setActiveServiceDropdown] = useState<number | null>(null);
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -333,23 +334,43 @@ export default function EditarFacturaPage() {
               <div className="col-span-2 text-center">Tarifa</div>
               <div className="col-span-2 text-right pr-8">Importe ($)</div>
             </div>
-            
-            <datalist id="services-list">
-              {catalogServices.map(s => (
-                <option key={s.id} value={s.name} />
-              ))}
-            </datalist>
 
             {items.map((item) => (
               <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div className="md:col-span-4">
+                <div className="md:col-span-4 relative">
                   <input 
-                    list="services-list"
                     placeholder="Ej. Transporte Marítimo" 
                     value={item.service_name} 
-                    onChange={e => handleItemChange(item.id, 'service_name', e.target.value)}
+                    onChange={e => {
+                      handleItemChange(item.id, 'service_name', e.target.value);
+                      setActiveServiceDropdown(item.id);
+                    }}
+                    onFocus={() => setActiveServiceDropdown(item.id)}
+                    onBlur={() => setTimeout(() => setActiveServiceDropdown(null), 200)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue uppercase"
                   />
+                  {activeServiceDropdown === item.id && catalogServices.length > 0 && (
+                    <div className="absolute z-50 w-full min-w-[250px] mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {catalogServices
+                        .filter(s => s.name.toLowerCase().includes((item.service_name || '').toLowerCase()))
+                        .map(s => (
+                        <div 
+                          key={s.id} 
+                          onClick={() => {
+                            handleItemChange(item.id, 'service_name', s.name);
+                            setActiveServiceDropdown(null);
+                          }}
+                          className="px-4 py-2 hover:bg-brand-blue/5 cursor-pointer border-b border-gray-100 last:border-0 flex justify-between items-center"
+                        >
+                          <span className="text-xs font-bold text-gray-700">{s.name}</span>
+                          <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded">${Number(s.default_rate).toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {catalogServices.filter(s => s.name.toLowerCase().includes((item.service_name || '').toLowerCase())).length === 0 && (
+                         <div className="px-4 py-3 text-xs text-gray-500 text-center">Presiona Enter o sigue escribiendo...</div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="md:col-span-3">
                   <input 
