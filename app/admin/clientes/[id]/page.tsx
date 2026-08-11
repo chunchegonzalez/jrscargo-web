@@ -228,6 +228,8 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                   invoices.map(inv => {
                     const paid = inv.invoice_payments?.reduce((sum, p) => sum + Number(p.amount_applied), 0) || 0;
                     const pending = Number(inv.total) - paid;
+                    const isFullyPaid = pending <= 0.01;
+                    const displayStatus = isFullyPaid ? 'Pagada' : inv.status;
                     
                     return (
                       <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
@@ -235,10 +237,10 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                         <td className="p-4 text-sm text-gray-600">{inv.issue_date}</td>
                         <td className="p-4">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold print:border print:bg-transparent print:p-0
-                            ${inv.status === 'Pagada' ? 'bg-green-100 text-green-800 print:text-green-800' : 
-                              inv.status === 'Vencida' ? 'bg-red-100 text-red-800 print:text-red-800' : 
+                            ${displayStatus === 'Pagada' ? 'bg-green-100 text-green-800 print:text-green-800' : 
+                              displayStatus === 'Vencida' ? 'bg-red-100 text-red-800 print:text-red-800' : 
                               'bg-orange-100 text-orange-800 print:text-orange-800'}`}>
-                            {inv.status}
+                            {displayStatus}
                           </span>
                         </td>
                         <td className="p-4 text-sm font-medium text-gray-600 text-right">${Number(inv.total).toFixed(2)}</td>
