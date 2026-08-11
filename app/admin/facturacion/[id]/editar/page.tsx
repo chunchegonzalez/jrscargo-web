@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, UserPlus } from 'lucide-react';
 
 type Client = { id: string; name: string; email: string; phone?: string; address?: string };
