@@ -36,7 +36,8 @@ export async function POST(request: Request) {
           },
           {
             type: 'image',
-            image: Buffer.from(base64Image, 'base64')
+            image: Buffer.from(base64Image, 'base64'),
+            mimeType: 'image/jpeg'
           }
         ]
       }
