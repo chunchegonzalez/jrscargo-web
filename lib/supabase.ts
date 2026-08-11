@@ -321,7 +321,18 @@ export async function getInvoiceById(id: string) {
   if (!resItems.ok) throw new Error('Error fetching invoice items');
   const items = await resItems.json();
 
+  // 3. Fetch payments
+  const resPayments = await fetch(`${url}/rest/v1/invoice_payments?invoice_id=eq.${encodeURIComponent(id)}&select=amount_applied`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  let payments = [];
+  if (resPayments.ok) {
+    payments = await resPayments.json();
+  }
+
   invoice.items = items;
+  invoice.invoice_payments = payments;
   return invoice;
 }
 

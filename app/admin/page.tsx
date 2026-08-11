@@ -16,6 +16,7 @@ type InvoiceData = {
   status: string;
   issue_date: string;
   total: number;
+  invoice_payments?: { amount_applied: number | string }[];
 };
 
 export default function AdminDashboard() {
@@ -61,21 +62,31 @@ export default function AdminDashboard() {
   const totalIncomeThisMonth = thisMonthInvoices.reduce((acc, inv) => acc + Number(inv.total), 0);
   
   // 2. Cuentas por Cobrar (Aging)
-  const pendingInvoices = invoices.filter(inv => inv.status === 'Pendiente' || inv.status === 'Vencida');
-  const totalReceivables = pendingInvoices.reduce((acc, inv) => acc + Number(inv.total), 0);
-  
   const today = new Date();
   let age1_30 = 0, age31_60 = 0, age61_90 = 0, ageOver90 = 0;
   
-  pendingInvoices.forEach(inv => {
-    const issueDate = new Date(inv.issue_date);
-    const diffTime = Math.abs(today.getTime() - issueDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  let totalReceivables = 0;
+
+  invoices.forEach(inv => {
+    let invPaid = 0;
+    if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
+      invPaid = inv.invoice_payments.reduce((acc, p) => acc + Number(p.amount_applied), 0);
+    }
+    const invTotal = Number(inv.total);
+    const pending = invTotal - invPaid;
     
-    if (diffDays <= 30) age1_30 += Number(inv.total);
-    else if (diffDays <= 60) age31_60 += Number(inv.total);
-    else if (diffDays <= 90) age61_90 += Number(inv.total);
-    else ageOver90 += Number(inv.total);
+    if (inv.status !== 'Pagada' && pending > 0.01) {
+      totalReceivables += pending;
+      
+      const issueDate = new Date(inv.issue_date);
+      const diffTime = Math.abs(today.getTime() - issueDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 30) age1_30 += pending;
+      else if (diffDays <= 60) age31_60 += pending;
+      else if (diffDays <= 90) age61_90 += pending;
+      else ageOver90 += pending;
+    }
   });
 
   const pieData = [
@@ -101,8 +112,18 @@ export default function AdminDashboard() {
   }
 
   // 4. Total en Cuentas (Simulado - Total histórico facturado vs pagado)
-  const totalPaid = invoices.filter(inv => inv.status === 'Pagada').reduce((acc, inv) => acc + Number(inv.total), 0);
-
+  let totalPaid = 0;
+  invoices.forEach(inv => {
+    let invPaid = 0;
+    if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
+      invPaid = inv.invoice_payments.reduce((acc, p) => acc + Number(p.amount_applied), 0);
+    }
+    if (inv.status === 'Pagada') {
+      totalPaid += Number(inv.total);
+    } else {
+      totalPaid += invPaid;
+    }
+  });
   if (loading) {
     return <div className="flex h-64 items-center justify-center text-gray-400 font-bold">Cargando panel de control...</div>;
   }
