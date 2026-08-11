@@ -13,6 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   
   const [openSections, setOpenSections] = useState({
     operaciones: true,
@@ -65,7 +66,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <aside className={`w-72 bg-gradient-to-b from-brand-blue to-[#0A2636] text-white flex flex-col fixed inset-y-0 left-0 z-50 shadow-2xl overflow-hidden transition-transform duration-300 ease-in-out ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${
+        isDesktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'
       }`}>
         
         {/* Patrón de fondo sutil */}
@@ -237,12 +240,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 w-full lg:ml-72 flex flex-col min-h-screen">
+      <main className={`flex-1 w-full flex flex-col min-h-screen transition-all duration-300 ${
+        isDesktopSidebarOpen ? 'lg:ml-72' : 'lg:ml-0'
+      }`}>
         <header className="bg-white border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
+            {/* Mobile Toggle */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Menu size={24} />
+            </button>
+            {/* Desktop Toggle */}
+            <button 
+              onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
+              className="hidden lg:block p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Menu size={24} />
             </button>
