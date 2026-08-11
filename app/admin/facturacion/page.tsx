@@ -11,6 +11,7 @@ type Invoice = {
   total: number | string;
   status: string;
   clients?: { name: string; email: string };
+  invoice_payments?: { amount_applied: number | string }[];
 };
 
 export default function FacturacionDashboard() {
@@ -44,10 +45,18 @@ export default function FacturacionDashboard() {
     let paid = 0;
     
     data.forEach(inv => {
-      if (inv.status === 'Pendiente' || inv.status === 'Vencida') {
-        pending += Number(inv.total);
-      } else if (inv.status === 'Pagada') {
-        paid += Number(inv.total);
+      const invTotal = Number(inv.total);
+      let invPaid = 0;
+      
+      if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
+        invPaid = inv.invoice_payments.reduce((acc, p) => acc + Number(p.amount_applied), 0);
+      }
+      
+      if (inv.status === 'Pagada') {
+        paid += invTotal; // Se asume pagado al 100% si su estado es Pagada
+      } else {
+        paid += invPaid;
+        pending += (invTotal - invPaid);
       }
     });
 
