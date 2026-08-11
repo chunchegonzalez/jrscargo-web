@@ -94,8 +94,6 @@ export default function BodegaInventario() {
     loadInventory();
   }, []);
 
-  const activePackages = inventory.filter(p => p.status === 'En Bodega CR').length;
-
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = item.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.client.toLowerCase().includes(searchQuery.toLowerCase());
@@ -110,6 +108,8 @@ export default function BodegaInventario() {
 
     return matchesSearch && matchesCompany && matchesStatus && matchesDate;
   });
+
+  const activePackages = filteredInventory.filter(p => p.status === 'En Bodega CR').length;
 
   if (!mounted) return null;
 
