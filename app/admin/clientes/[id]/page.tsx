@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Trash2 } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
