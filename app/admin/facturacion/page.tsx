@@ -26,6 +26,12 @@ export default function FacturacionDashboard() {
   const [totalPending, setTotalPending] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
 
+  // Payment Modal State
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>('SINPE');
+  const [paymentReference, setPaymentReference] = useState<string>('');
+  const [isPaying, setIsPaying] = useState(false);
+
   const calculateStats = useCallback((data: Invoice[]) => {
     let pending = 0;
     let paid = 0;
@@ -77,19 +83,67 @@ export default function FacturacionDashboard() {
   };
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'Pagada' ? 'Pendiente' : 'Pagada';
-    if (!confirm(`¿Cambiar estado de la factura a ${newStatus.toUpperCase()}?`)) return;
+    if (currentStatus === 'Pagada') {
+      const newStatus = 'Pendiente';
+      if (!confirm(`¿Cambiar estado de la factura a ${newStatus.toUpperCase()}?`)) return;
+      try {
+        const res = await fetch(`/api/invoices/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) {
+          loadInvoices();
+        }
+      } catch {
+        alert('Error actualizando estado');
+      }
+    } else {
+      // Abrir modal de pago
+      setPayingInvoiceId(id);
+      setPaymentMethod('SINPE');
+      setPaymentReference('');
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!payingInvoiceId) return;
+    setIsPaying(true);
+    
+    // Obtener la factura actual para mantener sus notas
+    const invoiceToUpdate = invoices.find(i => i.id === payingInvoiceId);
+    let currentNotes = '';
+    
     try {
-      const res = await fetch(`/api/invoices/${id}`, {
+      // Intentamos obtener las notas actuales (idealmente deberíamos hacer un fetch para tener las más recientes, 
+      // pero para simplificar podemos hacer un fetch al detalle)
+      const resInv = await fetch(`/api/invoices/${payingInvoiceId}`);
+      if (resInv.ok) {
+        const data = await resInv.json();
+        currentNotes = data.data?.notes || '';
+      }
+      
+      const paymentInfo = `\n\n--- PAGO REGISTRADO ---\nMétodo: ${paymentMethod}\nRef: ${paymentReference || 'N/A'}\nFecha: ${new Date().toLocaleDateString()}`;
+      const newNotes = currentNotes + paymentInfo;
+
+      const res = await fetch(`/api/invoices/${payingInvoiceId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ 
+          status: 'Pagada',
+          notes: newNotes.trim()
+        })
       });
       if (res.ok) {
         loadInvoices();
+        setPayingInvoiceId(null);
+      } else {
+        alert('Error al registrar pago');
       }
     } catch {
-      alert('Error actualizando estado');
+      alert('Error de conexión');
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -243,6 +297,62 @@ export default function FacturacionDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {payingInvoiceId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
+                Registrar Pago
+              </h3>
+              <button onClick={() => setPayingInvoiceId(null)} className="text-gray-400 hover:text-gray-600">
+                &times;
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Método de Pago</label>
+                <select 
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                >
+                  <option value="SINPE">SINPE Móvil</option>
+                  <option value="Transferencia">Transferencia Bancaria</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta (Datafono/En línea)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Referencia / Comprobante (Opcional)</label>
+                <input 
+                  type="text"
+                  value={paymentReference}
+                  onChange={e => setPaymentReference(e.target.value)}
+                  placeholder="Ej: 902130219"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                />
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
+                <button type="button" onClick={() => setPayingInvoiceId(null)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleConfirmPayment}
+                  disabled={isPaying} 
+                  className="flex-1 py-3 font-bold bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {isPaying ? 'Guardando...' : 'Confirmar Pago'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

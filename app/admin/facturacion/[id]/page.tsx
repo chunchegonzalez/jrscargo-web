@@ -36,6 +36,12 @@ export default function InvoiceViewPage() {
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('SINPE');
+  const [paymentReference, setPaymentReference] = useState<string>('');
+  const [isPaying, setIsPaying] = useState(false);
+
   const loadInvoice = useCallback(async () => {
     try {
       const res = await fetch(`/api/invoices/${id}`);
@@ -49,6 +55,36 @@ export default function InvoiceViewPage() {
       setLoading(false);
     }
   }, [id]);
+
+  const handleConfirmPayment = async () => {
+    if (!invoice) return;
+    setIsPaying(true);
+    
+    try {
+      const currentNotes = invoice.notes || '';
+      const paymentInfo = `\n\n--- PAGO REGISTRADO ---\nMétodo: ${paymentMethod}\nRef: ${paymentReference || 'N/A'}\nFecha: ${new Date().toLocaleDateString()}`;
+      const newNotes = currentNotes + paymentInfo;
+
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: 'Pagada',
+          notes: newNotes.trim()
+        })
+      });
+      if (res.ok) {
+        setShowPaymentModal(false);
+        loadInvoice(); // reload to show updated status and notes
+      } else {
+        alert('Error al registrar pago');
+      }
+    } catch {
+      alert('Error de conexión');
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   useEffect(() => {
     loadInvoice();
@@ -73,6 +109,18 @@ export default function InvoiceViewPage() {
         </div>
         
         <div className="flex gap-2">
+          <Link href={`/admin/facturacion/${id}/editar`} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
+            Editar Factura
+          </Link>
+          {invoice.status !== 'Pagada' && (
+            <button onClick={() => {
+              setPaymentMethod('SINPE');
+              setPaymentReference('');
+              setShowPaymentModal(true);
+            }} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
+              Marcar Pagada
+            </button>
+          )}
           <button onClick={() => window.print()} className="px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
             <Printer size={18} /> Imprimir o descargar
           </button>
@@ -174,12 +222,68 @@ export default function InvoiceViewPage() {
           {invoice.notes && (
             <div className="mt-16 pt-8 border-t border-gray-100 text-sm text-gray-500">
               <p className="font-bold text-gray-700 mb-1">Nota para cliente</p>
-              <p>{invoice.notes}</p>
+              <p className="whitespace-pre-line">{invoice.notes}</p>
             </div>
           )}
 
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
+                Registrar Pago
+              </h3>
+              <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600">
+                &times;
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Método de Pago</label>
+                <select 
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                >
+                  <option value="SINPE">SINPE Móvil</option>
+                  <option value="Transferencia">Transferencia Bancaria</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta (Datafono/En línea)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Referencia / Comprobante (Opcional)</label>
+                <input 
+                  type="text"
+                  value={paymentReference}
+                  onChange={e => setPaymentReference(e.target.value)}
+                  placeholder="Ej: 902130219"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                />
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
+                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleConfirmPayment}
+                  disabled={isPaying} 
+                  className="flex-1 py-3 font-bold bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  {isPaying ? 'Guardando...' : 'Confirmar Pago'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

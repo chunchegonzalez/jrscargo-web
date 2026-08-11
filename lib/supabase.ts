@@ -255,13 +255,50 @@ export async function createInvoice(invoice: Record<string, unknown>, items: Rec
   return { success: true, id: newInvoiceId };
 }
 
-export async function updateInvoiceStatus(id: string, status: string) {
+export async function updateInvoice(id: string, updates: Record<string, unknown>) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const res = await fetch(`${url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: getHeaders(),
-    body: JSON.stringify({ status })
+    body: JSON.stringify(updates)
   });
-  if (!res.ok) throw new Error('Error updating invoice status');
+  if (!res.ok) throw new Error('Error updating invoice');
   return { success: true };
+}
+
+export async function updateInvoiceWithItems(id: string, updates: Record<string, unknown>, items: Record<string, unknown>[]) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  
+  // 1. Update Invoice details
+  if (Object.keys(updates).length > 0) {
+    await updateInvoice(id, updates);
+  }
+
+  // 2. Delete old items
+  const delRes = await fetch(`${url}/rest/v1/invoice_items?invoice_id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!delRes.ok) {
+    console.error('Error deleting old invoice items');
+  }
+
+  // 3. Insert new items
+  if (items && items.length > 0) {
+    const itemsToInsert = items.map(item => ({ ...item, invoice_id: id }));
+    const resItems = await fetch(`${url}/rest/v1/invoice_items`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(itemsToInsert)
+    });
+    if (!resItems.ok) {
+      console.error('Error inserting new invoice items');
+    }
+  }
+
+  return { success: true };
+}
+
+export async function updateInvoiceStatus(id: string, status: string) {
+  return updateInvoice(id, { status });
 }

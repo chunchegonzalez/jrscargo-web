@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInvoiceById, updateInvoiceStatus } from '@/lib/supabase';
+import { getInvoiceById, updateInvoice, updateInvoiceWithItems } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +16,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { status } = await request.json();
-    await updateInvoiceStatus(params.id, status);
+    const body = await request.json();
+    
+    // Si viene con items, usamos updateInvoiceWithItems
+    if (body.items && Array.isArray(body.items)) {
+      const { items, ...updates } = body;
+      await updateInvoiceWithItems(params.id, updates, items);
+    } else {
+      // Si no, simplemente actualizamos la factura
+      await updateInvoice(params.id, body);
+    }
+    
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Error updating invoice';
