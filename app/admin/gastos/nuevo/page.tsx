@@ -27,16 +27,52 @@ export default function NuevoGastoPage() {
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
 
-    // Convertir a base64
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64String = reader.result as string;
-      const base64Data = base64String.split(',')[1];
-      const mimeType = file.type;
+    try {
+      // Redimensionar la imagen para evitar errores de tamaño de Next.js (Payload Too Large) y ahorrar tokens
+      const resizedBase64 = await resizeImage(file);
+      const base64Data = resizedBase64.split(',')[1];
+      const mimeType = 'image/jpeg';
 
       analyzeReceipt(base64Data, mimeType);
-    };
+    } catch (error) {
+      console.error(error);
+      alert('Error al procesar la imagen antes de enviarla.');
+    }
+  };
+
+  const resizeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Max dimension 1200px
+        const MAX_SIZE = 1200;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Export as JPEG
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = reject;
+    });
   };
 
   const analyzeReceipt = async (base64Image: string, mimeType: string) => {
@@ -48,18 +84,25 @@ export default function NuevoGastoPage() {
         body: JSON.stringify({ base64Image, mimeType })
       });
       
-      const data = await res.json();
+      const textResponse = await res.text();
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch {
+        throw new Error('La respuesta del servidor no es válida (posiblemente la imagen era muy pesada).');
+      }
+
       if (res.ok && data.success && data.data) {
         if (data.data.provider_name) setProviderName(data.data.provider_name);
         if (data.data.date) setDate(data.data.date);
         if (data.data.amount !== undefined) setAmount(data.data.amount.toString());
         if (data.data.category) setCategory(data.data.category);
       } else {
-        alert('No se pudieron extraer los datos automáticamente. Ingresa los datos manualmente.');
+        alert('Detalle del error de IA: ' + (data.error || 'Desconocido'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Error al comunicar con la IA.');
+      alert('Error al comunicar con la IA: ' + (err.message || 'Error de red'));
     } finally {
       setIsAnalyzing(false);
     }
