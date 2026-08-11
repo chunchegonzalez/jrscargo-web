@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2 } from 'lucide-react';
+import { getInvoiceStats } from '@/lib/billing';
 
 type Client = {
   id: string;
@@ -44,16 +45,12 @@ export default function ClientesPage() {
         // Merge data to calculate stats
         const mergedClients = clientsData.data.map((c: Client) => {
           const clientInvoices = invoicesData.data.filter((i: Record<string, unknown>) => i.client_id === c.id);
-          const pendingInvoices = clientInvoices.filter((i: Record<string, unknown>) => i.status !== 'Pagada');
           
-          const pendingBalance = pendingInvoices.reduce((acc: number, curr: Record<string, unknown>) => {
-            const total = Number(curr.total);
-            let paid = 0;
-            if (curr.invoice_payments && Array.isArray(curr.invoice_payments)) {
-              paid = curr.invoice_payments.reduce((sum: number, p: Record<string, unknown>) => sum + Number(p.amount_applied), 0);
-            }
-            return acc + (total - paid);
-          }, 0);
+          let pendingBalance = 0;
+          clientInvoices.forEach((curr: Record<string, unknown>) => {
+            const stats = getInvoiceStats(curr);
+            pendingBalance += stats.pending;
+          });
           
           return {
             ...c,

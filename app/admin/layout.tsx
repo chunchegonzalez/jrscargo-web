@@ -163,6 +163,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link href="/admin/gastos" className={getLinkClass('/admin/gastos')}>
                   Gastos y Compras
                 </Link>
+                <Link href="/admin/contabilidad/pagos" className={getLinkClass('/admin/contabilidad/pagos')}>
+                  Historial de Pagos
+                </Link>
               </div>
             </div>
           </div>

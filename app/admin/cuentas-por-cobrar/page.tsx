@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Search, DollarSign, FileText, ArrowRight, Printer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getInvoiceStats } from '@/lib/billing';
 
 type ClientBalance = {
   id: string;
@@ -34,8 +35,8 @@ export default function CuentasPorCobrarPage() {
         throw new Error('Failed to load data');
       }
 
-      // Procesar facturas para calcular saldos
-      const pendingInvoices = invoicesData.data.filter((inv: Record<string, unknown>) => inv.status !== 'Pagada');
+      // Procesar todas las facturas para calcular saldos
+      const allInvoices = invoicesData.data;
       
       const balancesMap: Record<string, ClientBalance> = {};
 
@@ -51,22 +52,15 @@ export default function CuentasPorCobrarPage() {
 
       let total = 0;
 
-      pendingInvoices.forEach((inv: Record<string, unknown>) => {
+      allInvoices.forEach((inv: Record<string, unknown>) => {
         if (!inv.client_id || !balancesMap[inv.client_id as string]) return;
         
-        const invTotal = Number(inv.total);
-        let paid = 0;
+        const stats = getInvoiceStats(inv);
         
-        if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-          paid = inv.invoice_payments.reduce((acc: number, p: Record<string, unknown>) => acc + Number(p.amount_applied), 0);
-        }
-        
-        const balance = invTotal - paid;
-        
-        if (balance > 0.01) {
-          balancesMap[inv.client_id as string].totalBalance += balance;
+        if (stats.pending > 0) {
+          balancesMap[inv.client_id as string].totalBalance += stats.pending;
           balancesMap[inv.client_id as string].pendingInvoicesCount += 1;
-          total += balance;
+          total += stats.pending;
         }
       });
 

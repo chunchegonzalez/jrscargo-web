@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
+import { getInvoiceStats } from '@/lib/billing';
 
 type Invoice = {
   id: string;
@@ -40,19 +41,9 @@ export default function FacturacionDashboard() {
     let paid = 0;
     
     data.forEach(inv => {
-      const invTotal = Number(inv.total);
-      let invPaid = 0;
-      
-      if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-        invPaid = inv.invoice_payments.reduce((acc, p) => acc + Number(p.amount_applied), 0);
-      }
-      
-      if (inv.status === 'Pagada') {
-        paid += invTotal; // Se asume pagado al 100% si su estado es Pagada
-      } else {
-        paid += invPaid;
-        pending += (invTotal - invPaid);
-      }
+      const stats = getInvoiceStats(inv);
+      pending += stats.pending;
+      paid += stats.paid;
     });
 
     setTotalPending(pending);
@@ -217,13 +208,8 @@ export default function FacturacionDashboard() {
                 </tr>
               ) : (
                 filteredInvoices.map(inv => {
-                  let invPaid = 0;
-                  if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-                    invPaid = inv.invoice_payments.reduce((acc, p) => acc + Number(p.amount_applied), 0);
-                  }
-                  const pending = Number(inv.total) - invPaid;
-                  const isFullyPaid = pending <= 0.01;
-                  const displayStatus = isFullyPaid ? 'Pagada' : inv.status;
+                  const stats = getInvoiceStats(inv);
+                  const displayStatus = stats.displayStatus;
 
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
@@ -254,13 +240,15 @@ export default function FacturacionDashboard() {
                             <Link href={`/admin/facturacion/${inv.id}`} className="text-sm font-bold text-brand-blue hover:underline">
                               Ver detalle
                             </Link>
-                            <Link 
-                              href={`/admin/cuentas-por-cobrar/recibir/${inv.clients?.id || inv.client_id}`} 
-                              className="text-sm font-bold px-3 py-1.5 rounded-lg text-white bg-[#0A2636] hover:bg-[#0A2636]/90 transition-colors shadow-sm"
-                              title="Gestionar en Cuentas por Cobrar"
-                            >
-                              Cobrar
-                            </Link>
+                            {displayStatus !== 'Pagada' && displayStatus !== 'Anulada' && (inv.clients?.id || inv.client_id) && (
+                              <Link 
+                                href={`/admin/cuentas-por-cobrar/recibir/${inv.clients?.id || inv.client_id}`} 
+                                className="text-sm font-bold px-3 py-1.5 rounded-lg text-white bg-[#0A2636] hover:bg-[#0A2636]/90 transition-colors shadow-sm"
+                                title="Gestionar en Cuentas por Cobrar"
+                              >
+                                Cobrar
+                              </Link>
+                            )}
                             <button onClick={() => openEmailModal(inv)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
                               <Mail size={18} />
                             </button>

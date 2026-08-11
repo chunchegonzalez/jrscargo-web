@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { getInvoiceStats } from '@/lib/billing';
 
 type Client = {
   id: string;
@@ -83,13 +84,17 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando perfil del cliente...</div>;
   if (!client) return <div className="p-8 text-center text-red-500">Cliente no encontrado</div>;
 
-  // Calculos
-  const totalFacturado = invoices.reduce((acc, inv) => acc + Number(inv.total), 0);
-  const totalPagado = invoices.reduce((acc, inv) => {
-    const paid = inv.invoice_payments?.reduce((sum, p) => sum + Number(p.amount_applied), 0) || 0;
-    return acc + paid;
-  }, 0);
-  const totalPendiente = totalFacturado - totalPagado;
+  // Calculos unificados
+  let totalFacturado = 0;
+  let totalPagado = 0;
+  let totalPendiente = 0;
+
+  invoices.forEach(inv => {
+    const stats = getInvoiceStats(inv);
+    totalFacturado += stats.total;
+    totalPagado += stats.paid;
+    totalPendiente += stats.pending;
+  });
 
   return (
     <div className="w-full bg-white min-h-screen relative font-sans print:m-0 print:p-0">
@@ -226,10 +231,8 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                   <tr><td colSpan={5} className="p-8 text-center text-gray-500">No hay facturas registradas.</td></tr>
                 ) : (
                   invoices.map(inv => {
-                    const paid = inv.invoice_payments?.reduce((sum, p) => sum + Number(p.amount_applied), 0) || 0;
-                    const pending = Number(inv.total) - paid;
-                    const isFullyPaid = pending <= 0.01;
-                    const displayStatus = isFullyPaid ? 'Pagada' : inv.status;
+                    const stats = getInvoiceStats(inv);
+                    const displayStatus = stats.displayStatus;
                     
                     return (
                       <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
@@ -243,8 +246,8 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                             {displayStatus}
                           </span>
                         </td>
-                        <td className="p-4 text-sm font-medium text-gray-600 text-right">${Number(inv.total).toFixed(2)}</td>
-                        <td className="p-4 text-sm font-bold text-gray-900 text-right">${pending.toFixed(2)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-600 text-right">${stats.total.toFixed(2)}</td>
+                        <td className="p-4 text-sm font-bold text-gray-900 text-right">${stats.pending.toFixed(2)}</td>
                       </tr>
                     );
                   })

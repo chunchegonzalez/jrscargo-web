@@ -3,6 +3,30 @@ import { createPayment, updateInvoiceStatus } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+export async function GET() {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const { getHeaders } = require('@/lib/supabase'); // Dynamic require to avoid circular deps if any
+    
+    // Fetch all payments, joining with clients for the name, and invoice_payments->invoices for the references
+    const res = await fetch(`${url}/rest/v1/payments?select=*,clients(id,name,email),invoice_payments(amount_applied,invoice_id,invoices(invoice_number))&order=payment_date.desc,created_at.desc`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+
+    if (!res.ok) {
+      throw new Error(`Supabase error: ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    return NextResponse.json({ success: true, data }, { status: 200 });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Error fetching payments';
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  }
+}
+
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
