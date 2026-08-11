@@ -294,7 +294,7 @@ export default function NuevoGastoPage() {
               </div>
 
               {isCategoryMenuOpen && (
-                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden py-1 max-h-60 overflow-y-auto transform origin-top transition-all animate-in fade-in slide-in-from-top-2">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl overflow-hidden py-2 transform origin-top transition-all animate-in fade-in slide-in-from-top-2">
                   {CATEGORY_OPTIONS.map((opt) => (
                     <div
                       key={opt.value}
