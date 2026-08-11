@@ -475,3 +475,18 @@ export async function getClientInvoices(clientId: string) {
   if (!res.ok) throw new Error('Error fetching client invoices');
   return res.json();
 }
+
+export async function getClientPayments(clientId: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/payments?client_id=eq.${encodeURIComponent(clientId)}&select=*,invoice_payments(invoice_id,amount_applied,invoices(invoice_number))&order=payment_date.desc,created_at.desc`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  
+  if (!res.ok) {
+    // If table doesn't exist or error, gracefully return empty
+    return [];
+  }
+  
+  return res.json();
+}

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -165,7 +165,9 @@ export default function ClientesPage() {
                           {client.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-gray-800">{client.name}</p>
+                          <Link href={`/admin/clientes/${client.id}`} className="text-sm font-bold text-gray-800 hover:text-brand-blue transition-colors">
+                            {client.name}
+                          </Link>
                         </div>
                       </div>
                     </td>
@@ -195,6 +197,13 @@ export default function ClientesPage() {
                     </td>
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-2">
+                        <Link 
+                          href={`/admin/clientes/${client.id}`}
+                          className="p-2 text-gray-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors"
+                          title="Ver Perfil y Estado de Cuenta"
+                        >
+                          <Eye size={18} />
+                        </Link>
                         {client.pendingBalance && client.pendingBalance > 0 ? (
                           <Link 
                             href={`/admin/clientes/${client.id}/recibir-pago`}
@@ -209,8 +218,8 @@ export default function ClientesPage() {
                             setEditingClient(client);
                             setIsModalOpen(true);
                           }}
-                          className="p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors inline-flex"
-                          title="Editar cliente"
+                          className="p-2 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Editar"
                         >
                           <Edit size={18} />
                         </button>
