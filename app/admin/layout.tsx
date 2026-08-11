@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Search } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
@@ -254,26 +254,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       } print:ml-0 print:block print:h-auto print:min-h-0 relative`}>
         
         {/* Top Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between sticky top-0 z-30 print:hidden">
-          <div className="flex items-center gap-3">
+        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between gap-4 sticky top-0 z-30 print:hidden">
+          <div className="flex items-center gap-4 shrink-0">
             {/* Mobile Toggle */}
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+              className="lg:hidden p-2 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors"
             >
-              <Menu size={22} />
+              <Menu size={24} />
             </button>
             {/* Desktop Toggle */}
             <button 
               onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
-              className="hidden lg:block p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+              className="hidden lg:flex items-center justify-center p-2.5 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-all border border-transparent hover:border-brand-blue/20"
+              title="Alternar Menú"
             >
-              <Menu size={22} />
+              <Menu size={20} />
             </button>
-            <h2 className="text-lg md:text-xl font-bold text-brand-blue truncate ml-2 tracking-tight">Sistema de Gestión</h2>
+            <h2 className="text-xl font-black text-gray-800 tracking-tight hidden lg:block">Sistema de Gestión</h2>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex-1 max-w-2xl px-2 sm:px-4">
+            <div className="relative group">
+              <input 
+                type="text" 
+                placeholder="Buscar en el sistema..." 
+                className="w-full bg-gray-100 border border-transparent hover:bg-gray-50 hover:border-gray-200 focus:bg-white focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 rounded-full px-5 py-2.5 pl-11 text-sm font-medium text-gray-700 transition-all outline-none placeholder-gray-400"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-blue transition-colors" size={18} />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 shrink-0">
             <div className="text-right hidden sm:flex flex-col justify-center">
               <p className="text-[13px] font-black text-gray-900 uppercase tracking-wide leading-tight">{currentUser?.username || 'Cargando...'}</p>
               <div className="flex items-center justify-end gap-1.5 mt-0.5">
