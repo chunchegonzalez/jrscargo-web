@@ -408,7 +408,8 @@ export default function BodegaInventario() {
                     setDeletingItem(null);
                     setDeleteReason('');
                   } else {
-                    await showAlert('Aviso', 'Error al eliminar');
+                    const errorData = await res.json();
+                    await showAlert('Aviso', errorData.error || 'Error al eliminar');
                   }
                 } else {
                   // Request deletion for regular user

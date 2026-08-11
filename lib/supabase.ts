@@ -63,8 +63,11 @@ export async function deleteInventoryItem(id: string) {
     method: 'DELETE',
     headers: getHeaders()
   });
-  if (!res.ok) throw new Error('Error deleting item');
-  // DELETE on Supabase usually returns 204 No Content, so we don't try to parse JSON
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Delete Inventory Error:', errorText);
+    throw new Error('Error deleting item: ' + errorText);
+  }
   return { success: true };
 }
 

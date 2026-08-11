@@ -27,7 +27,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     await deleteInventoryItem(params.id);
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Error deleting item' }, { status: 500 });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Error deleting item';
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
   }
 }

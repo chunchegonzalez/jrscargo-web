@@ -61,7 +61,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
       };
       loadData();
     }
-  }, [isOpen, dataLoaded, isFetching]);
+  }, [isOpen, dataLoaded, isFetching, role]);
 
   // Handle outside click
   useEffect(() => {

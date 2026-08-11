@@ -157,7 +157,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center space-y-4">
           <Building2 size={48} className="mx-auto text-brand-blue/20" />
           <h2 className="text-xl font-black text-brand-blue">Bienvenido al Área Operativa</h2>
-          <p className="text-gray-500 max-w-md mx-auto">Selecciona "Operaciones" en el menú lateral o utiliza los accesos directos para comenzar a trabajar con los paquetes e inventario.</p>
+          <p className="text-gray-500 max-w-md mx-auto">Selecciona &quot;Operaciones&quot; en el menú lateral o utiliza los accesos directos para comenzar a trabajar con los paquetes e inventario.</p>
         </div>
       ) : (
         <>
