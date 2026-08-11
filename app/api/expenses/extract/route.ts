@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateText } from 'ai';
+import { generateText, CoreMessage } from 'ai';
 import { google } from '@ai-sdk/google';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const messages = [
+    const messages: CoreMessage[] = [
       {
         role: 'user',
         content: [
