@@ -26,6 +26,7 @@ export default function NuevaFacturaPage() {
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const [currency, setCurrency] = useState('USD');
+  const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -108,6 +109,19 @@ export default function NuevaFacturaPage() {
   const handleRemoveItem = (id: number) => {
     if (items.length === 1) return;
     setItems(items.filter(item => item.id !== id));
+  };
+
+  const handleTrackingBlur = async (itemId: number, trackingNumber: string) => {
+    if (!trackingNumber) return;
+    try {
+      const res = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber)}`);
+      const data = await res.json();
+      if (data.status === 'SUCCESS' && data.rawData?.package?.weight) {
+        handleItemChange(itemId, 'weight', data.rawData.package.weight.toString());
+      }
+    } catch (e) {
+      console.error('Error fetching tracking for weight:', e);
+    }
   };
 
   const handleItemChange = (id: number, field: string, value: string) => {
@@ -286,7 +300,7 @@ export default function NuevaFacturaPage() {
           </div>
 
           <div className="space-y-4 md:pl-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">N.º Factura</label>
                 <input 
@@ -309,7 +323,18 @@ export default function NuevaFacturaPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Fecha de Emisión</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Unidad</label>
+                <select 
+                  value={weightUnit}
+                  onChange={(e) => setWeightUnit(e.target.value as 'Lb' | 'Kg')}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                >
+                  <option value="Lb">Libras (Lb)</option>
+                  <option value="Kg">Kilos (Kg)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Emisión</label>
                 <input 
                   type="date" 
                   value={issueDate}
@@ -374,23 +399,25 @@ export default function NuevaFacturaPage() {
                 </div>
                 <div className="md:col-span-3">
                   <input 
-                    placeholder="Tracking (Opcional)" 
+                    required
+                    placeholder="Tracking (Obligatorio)" 
                     value={item.tracking_number} 
                     onChange={e => handleItemChange(item.id, 'tracking_number', e.target.value)}
+                    onBlur={() => handleTrackingBlur(item.id, item.tracking_number || '')}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue font-mono"
                   />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 col-span-1 md:col-span-3 gap-2">
                   <input 
                     type="number" 
-                    placeholder="Lb" 
+                    placeholder={weightUnit} 
                     value={item.weight} 
                     onChange={e => handleItemChange(item.id, 'weight', e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"
                   />
                   <input 
                     type="number" 
-                    placeholder="$/Lb" 
+                    placeholder={`$/${weightUnit}`} 
                     value={item.rate} 
                     onChange={e => handleItemChange(item.id, 'rate', e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center md:col-span-2"
@@ -438,9 +465,9 @@ export default function NuevaFacturaPage() {
                     max="100"
                     value={discountPercent}
                     onChange={e => setDiscountPercent(Number(e.target.value) || 0)}
-                    className="w-16 px-2 py-1 bg-white border border-gray-200 rounded text-center focus:outline-none focus:border-brand-blue"
+                    className="w-20 pl-2 pr-6 py-1 bg-white border border-gray-200 rounded text-right focus:outline-none focus:border-brand-blue [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">%</span>
                 </div>
               </span>
               <span className="text-sm font-bold text-green-600">-{currency === 'CRC' ? '₡' : '$'}{discountAmount.toFixed(2)}</span>
