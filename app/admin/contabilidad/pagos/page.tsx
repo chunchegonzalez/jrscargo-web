@@ -22,6 +22,10 @@ export default function HistorialPagosPage() {
   const [paymentStartDate, setPaymentStartDate] = useState('');
   const [paymentEndDate, setPaymentEndDate] = useState('');
 
+  // Modal States
+  const [alertModal, setAlertModal] = useState<{isOpen: boolean, title: string, message: string, type: 'success'|'error', onConfirm?: () => void} | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -41,22 +45,33 @@ export default function HistorialPagosPage() {
     loadData();
   }, [loadData]);
 
-  const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente y esta acción no se puede deshacer.')) return;
-    
-    try {
-      const res = await fetch(`/api/payments/${paymentId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        alert('Pago anulado exitosamente.');
-        loadData();
-      } else {
-        alert('Error al anular el pago. Inténtalo de nuevo.');
+  const handleDeletePayment = (paymentId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Anular Pago',
+      message: '¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente y esta acción no se puede deshacer.',
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const res = await fetch(`/api/payments/${paymentId}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            setAlertModal({
+              isOpen: true,
+              title: 'Éxito',
+              message: 'Pago anulado exitosamente.',
+              type: 'success',
+              onConfirm: () => loadData()
+            });
+          } else {
+            setAlertModal({ isOpen: true, title: 'Error', message: 'Error al anular el pago. Inténtalo de nuevo.', type: 'error' });
+          }
+        } catch {
+          setAlertModal({ isOpen: true, title: 'Error', message: 'Error de red al intentar anular el pago.', type: 'error' });
+        }
       }
-    } catch {
-      alert('Error de red al intentar anular el pago.');
-    }
+    });
   };
 
   const filteredPayments = payments.filter(pay => {
@@ -222,6 +237,64 @@ export default function HistorialPagosPage() {
           </table>
         </div>
       </div>
+      {/* Alert Modal */}
+      {alertModal?.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all">
+            <div className={`p-6 border-b ${alertModal.type === 'success' ? 'border-green-100 bg-green-50' : 'border-red-100 bg-red-50'}`}>
+              <h3 className={`font-bold text-lg ${alertModal.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                {alertModal.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 font-medium">{alertModal.message}</p>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
+              <button
+                onClick={() => {
+                  setAlertModal(null);
+                  if (alertModal.onConfirm) alertModal.onConfirm();
+                }}
+                className={`px-6 py-2 rounded-xl font-bold text-white shadow-sm transition-colors ${
+                  alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-brand-blue hover:bg-brand-blue/90'
+                }`}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+      {confirmModal?.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all">
+            <div className="p-6 border-b border-orange-100 bg-orange-50">
+              <h3 className="font-bold text-lg text-orange-800 flex items-center gap-2">
+                Atención: {confirmModal.title}
+              </h3>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 font-medium leading-relaxed">{confirmModal.message}</p>
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className="px-5 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Sí, estoy seguro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
