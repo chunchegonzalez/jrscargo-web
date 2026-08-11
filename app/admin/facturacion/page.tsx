@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
-import { getInvoiceStats } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Invoice = {
@@ -13,6 +13,7 @@ type Invoice = {
   total: number | string;
   status: string;
   client_id: string;
+  currency?: string;
   clients?: { id?: string; name: string; email: string };
   invoice_payments?: { amount_applied: number | string }[];
 };
@@ -28,8 +29,10 @@ export default function FacturacionDashboard() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   
   // Resumen stats
-  const [totalPending, setTotalPending] = useState(0);
-  const [totalPaid, setTotalPaid] = useState(0);
+  const [totalPendingUSD, setTotalPendingUSD] = useState(0);
+  const [totalPaidUSD, setTotalPaidUSD] = useState(0);
+  const [totalPendingCRC, setTotalPendingCRC] = useState(0);
+  const [totalPaidCRC, setTotalPaidCRC] = useState(0);
 
   // Email Modal State
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -39,17 +42,24 @@ export default function FacturacionDashboard() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const calculateStats = useCallback((data: Invoice[]) => {
-    let pending = 0;
-    let paid = 0;
+    let pendingUSD = 0, paidUSD = 0;
+    let pendingCRC = 0, paidCRC = 0;
     
     data.forEach(inv => {
       const stats = getInvoiceStats(inv);
-      pending += stats.pending;
-      paid += stats.paid;
+      if (stats.currency === 'CRC') {
+        pendingCRC += stats.pending;
+        paidCRC += stats.paid;
+      } else {
+        pendingUSD += stats.pending;
+        paidUSD += stats.paid;
+      }
     });
 
-    setTotalPending(pending);
-    setTotalPaid(paid);
+    setTotalPendingUSD(pendingUSD);
+    setTotalPaidUSD(paidUSD);
+    setTotalPendingCRC(pendingCRC);
+    setTotalPaidCRC(paidCRC);
   }, []);
 
   const loadInvoices = useCallback(async () => {
@@ -132,7 +142,8 @@ export default function FacturacionDashboard() {
           </div>
           <div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pendiente</p>
-            <h2 className="text-4xl font-black text-brand-blue">${totalPending.toFixed(2)} USD</h2>
+            <h2 className="text-3xl font-black text-brand-blue mb-1">{formatCurrency(totalPendingUSD, 'USD')}</h2>
+            <h3 className="text-xl font-bold text-orange-500">{formatCurrency(totalPendingCRC, 'CRC')}</h3>
           </div>
         </div>
 
@@ -142,7 +153,8 @@ export default function FacturacionDashboard() {
           </div>
           <div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pagado</p>
-            <h2 className="text-4xl font-black text-brand-blue">${totalPaid.toFixed(2)} USD</h2>
+            <h2 className="text-3xl font-black text-brand-blue mb-1">{formatCurrency(totalPaidUSD, 'USD')}</h2>
+            <h3 className="text-xl font-bold text-green-500">{formatCurrency(totalPaidCRC, 'CRC')}</h3>
           </div>
         </div>
       </div>
@@ -226,7 +238,7 @@ export default function FacturacionDashboard() {
                         <span className="block text-xs text-gray-400 font-normal">{inv.clients?.email}</span>
                       </td>
                       <td className="p-4 text-sm font-bold text-gray-800 text-right">
-                        ${Number(inv.total).toFixed(2)}
+                        {formatCurrency(Number(inv.total), stats.currency)}
                       </td>
                       <td className="p-4">
                         <div className="flex flex-col items-start gap-1">
@@ -239,7 +251,7 @@ export default function FacturacionDashboard() {
                           </span>
                           {stats.paid > 0 && stats.pending > 0 && (
                             <span className="text-xs text-gray-500">
-                              Pagado parcialmente, <span className="font-bold text-gray-700">${stats.pending.toFixed(2)}</span> pendiente
+                              Pagado parcialmente, <span className="font-bold text-gray-700">{formatCurrency(stats.pending, stats.currency)}</span> pendiente
                             </span>
                           )}
                         </div>

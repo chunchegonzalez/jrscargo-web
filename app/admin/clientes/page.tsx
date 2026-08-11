@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2 } from 'lucide-react';
-import { getInvoiceStats } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Client = {
@@ -15,7 +15,8 @@ type Client = {
   created_at?: string;
   // Computed fields
   totalInvoices?: number;
-  pendingBalance?: number;
+  pendingBalanceUSD?: number;
+  pendingBalanceCRC?: number;
 };
 
 export default function ClientesPage() {
@@ -48,16 +49,22 @@ export default function ClientesPage() {
         const mergedClients = clientsData.data.map((c: Client) => {
           const clientInvoices = invoicesData.data.filter((i: Record<string, unknown>) => i.client_id === c.id);
           
-          let pendingBalance = 0;
+          let pendingBalanceUSD = 0;
+          let pendingBalanceCRC = 0;
           clientInvoices.forEach((curr: Record<string, unknown>) => {
             const stats = getInvoiceStats(curr);
-            pendingBalance += stats.pending;
+            if (curr.currency === 'CRC') {
+              pendingBalanceCRC += stats.pending;
+            } else {
+              pendingBalanceUSD += stats.pending;
+            }
           });
           
           return {
             ...c,
             totalInvoices: clientInvoices.length,
-            pendingBalance
+            pendingBalanceUSD,
+            pendingBalanceCRC
           };
         });
 
@@ -214,8 +221,15 @@ export default function ClientesPage() {
                       {client.totalInvoices || 0}
                     </td>
                     <td className="p-4 text-right">
-                      {client.pendingBalance && client.pendingBalance > 0 ? (
-                        <span className="font-bold text-orange-500">${client.pendingBalance.toFixed(2)}</span>
+                      {((client.pendingBalanceUSD || 0) > 0 || (client.pendingBalanceCRC || 0) > 0) ? (
+                        <div className="flex flex-col items-end gap-1">
+                          {(client.pendingBalanceUSD || 0) > 0 && (
+                            <span className="font-bold text-orange-500">{formatCurrency(client.pendingBalanceUSD!, 'USD')}</span>
+                          )}
+                          {(client.pendingBalanceCRC || 0) > 0 && (
+                            <span className="font-bold text-orange-500">{formatCurrency(client.pendingBalanceCRC!, 'CRC')}</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-sm text-gray-400">Sin deudas</span>
                       )}
@@ -229,7 +243,7 @@ export default function ClientesPage() {
                         >
                           <Eye size={18} />
                         </Link>
-                        {client.pendingBalance && client.pendingBalance > 0 ? (
+                        {((client.pendingBalanceUSD || 0) > 0 || (client.pendingBalanceCRC || 0) > 0) ? (
                           <Link 
                             href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-flex"

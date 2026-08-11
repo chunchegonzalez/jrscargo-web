@@ -25,6 +25,7 @@ export default function NuevaFacturaPage() {
   const [activeServiceDropdown, setActiveServiceDropdown] = useState<number | null>(null);
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
+  const [currency, setCurrency] = useState('USD');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -157,23 +158,29 @@ export default function NuevaFacturaPage() {
 
     setLoading(true);
     try {
-      const invoiceData = {
+      const payload = {
         invoice_number: invoiceNumber,
         client_id: selectedClientId,
         issue_date: issueDate,
         subtotal,
-        discount_percent: discountPercent,
+        tax_amount: 0,
+        discount_amount: discountAmount,
         total,
         notes,
-        status: 'Pendiente',
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        items: items.map(({ id, ...rest }) => rest) // remove temp id
+        currency,
+        items: items.map(item => ({
+          service_name: item.service_name,
+          tracking_number: item.tracking_number,
+          weight: Number(item.weight) || 0,
+          rate: Number(item.rate) || 0,
+          amount: item.amount
+        }))
       };
 
       const res = await fetch('/api/invoices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(invoiceData)
+        body: JSON.stringify(payload)
       });
       
       const data = await res.json();
@@ -279,23 +286,38 @@ export default function NuevaFacturaPage() {
           </div>
 
           <div className="space-y-4 md:pl-8">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">N.º de Factura</label>
-              <input 
-                type="text" 
-                value={invoiceNumber} 
-                onChange={e => setInvoiceNumber(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-mono font-bold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Emisión</label>
-              <input 
-                type="date" 
-                value={issueDate} 
-                onChange={e => setIssueDate(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">N.º Factura</label>
+                <input 
+                  type="text" 
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue font-bold text-brand-blue" 
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Moneda</label>
+                <select 
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                >
+                  <option value="USD">Dólares (USD)</option>
+                  <option value="CRC">Colones (CRC)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Fecha de Emisión</label>
+                <input 
+                  type="date" 
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue text-gray-700 font-medium" 
+                  required 
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -310,7 +332,7 @@ export default function NuevaFacturaPage() {
               <div className="col-span-3">Nº Rastreo</div>
               <div className="col-span-1 text-center">Peso</div>
               <div className="col-span-2 text-center">Tarifa</div>
-              <div className="col-span-2 text-right pr-8">Importe ($)</div>
+              <div className="col-span-2 text-right pr-8">Importe ({currency === 'CRC' ? '₡' : '$'})</div>
             </div>
 
             {items.map((item) => (
@@ -404,7 +426,7 @@ export default function NuevaFacturaPage() {
           <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600">Subtotal</span>
-              <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
+              <span className="text-sm font-bold text-gray-800">{currency === 'CRC' ? '₡' : '$'}{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600 flex items-center gap-2">

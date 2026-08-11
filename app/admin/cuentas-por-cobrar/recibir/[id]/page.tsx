@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Printer, CheckSquare, Square, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getInvoiceStats } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 
 export default function RecibirPagoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   // Form State
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [reference, setReference] = useState('');
   const [totalPaymentAmount, setTotalPaymentAmount] = useState<string>('');
   const [amountToApply, setAmountToApply] = useState<number>(0);
@@ -173,7 +174,8 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         amount: amountToApply,
         payment_date: paymentDate,
         payment_method: paymentMethod,
-        reference_number: reference
+        reference_number: reference,
+        currency
       };
 
       const res = await fetch('/api/payments', {
@@ -204,7 +206,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
   if (loading) return <div className="p-8 text-center">Cargando...</div>;
 
-  const currentBalance = invoices.reduce((acc, inv) => acc + (inv.pendingBalance as number), 0);
+  const visibleInvoices = invoices.filter(inv => (inv.currency || 'USD') === currency);
+  
+  const currentBalance = visibleInvoices.reduce((acc, inv) => acc + (inv.pendingBalance as number), 0);
   const clientName = (client?.name as string) || 'Cliente Desconocido';
   const clientEmail = (client?.email as string) || '-';
 
@@ -275,7 +279,23 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                   <option value="Tarjeta">Tarjeta / Link</option>
                 </select>
               </div>
-              <div className="col-span-2">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Moneda</label>
+                <select 
+                  value={currency}
+                  onChange={e => {
+                    setCurrency(e.target.value);
+                    setApplications({});
+                    setTotalPaymentAmount('');
+                    setAmountToApply(0);
+                  }}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                >
+                  <option value="USD">Dólares (USD)</option>
+                  <option value="CRC">Colones (CRC)</option>
+                </select>
+              </div>
+              <div className="col-span-1">
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nº de referencia</label>
                 <input 
                   type="text" 
@@ -290,7 +310,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           <div className="md:col-span-4 bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col items-end text-right justify-center">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Importe Recibido</p>
             <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-2xl font-medium text-gray-400">$</span>
+              <span className="text-2xl font-medium text-gray-400">{currency === 'CRC' ? '₡' : '$'}</span>
               <input 
                 type="number"
                 placeholder="0.00"
@@ -299,13 +319,13 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 className="w-32 bg-transparent text-4xl font-black text-gray-900 focus:outline-none text-right placeholder-gray-300 print:text-black print:border-none"
               />
             </div>
-            <p className="text-xs font-bold text-gray-400">Cliente Saldo: <span className="text-gray-800">${currentBalance.toFixed(2)}</span></p>
+            <p className="text-xs font-bold text-gray-400">Cliente Saldo ({currency}): <span className="text-gray-800">{formatCurrency(currentBalance, currency)}</span></p>
           </div>
         </div>
 
         {/* Transactions Table */}
         <div>
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">Transacciones pendientes <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{invoices.length}</span></h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">Transacciones pendientes en {currency} <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{visibleInvoices.length}</span></h3>
           
           <div className="overflow-x-auto border border-gray-200 rounded-xl">
             <table className="w-full text-left border-collapse">
@@ -320,10 +340,10 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 </tr>
               </thead>
               <tbody>
-                {invoices.length === 0 ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas pendientes.</td></tr>
+                {visibleInvoices.length === 0 ? (
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas pendientes en {currency}.</td></tr>
                 ) : (
-                  invoices.map(inv => {
+                  visibleInvoices.map(inv => {
                     const invId = inv.id as string;
                     const pendingBalance = inv.pendingBalance as number;
                     const issueDate = inv.issue_date as string;
@@ -346,11 +366,11 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                           <p className="text-xs text-gray-500">({issueDate})</p>
                         </td>
                         <td className="p-4 text-sm text-gray-600 hidden sm:table-cell">{dueDate.toISOString().split('T')[0]}</td>
-                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">${Number(invTotal).toFixed(2)}</td>
-                        <td className="p-4 text-sm font-medium text-gray-800 text-right">${pendingBalance.toFixed(2)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">{formatCurrency(Number(invTotal), currency)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-800 text-right">{formatCurrency(pendingBalance, currency)}</td>
                         <td className="p-4 text-right">
                           <div className={`flex items-center justify-end gap-1 ${isChecked ? 'text-green-700' : 'text-gray-400'}`}>
-                            <span className="font-bold">$</span>
+                            <span className="font-bold">{currency === 'CRC' ? '₡' : '$'}</span>
                             <input 
                               type="number"
                               value={appAmount}
@@ -369,7 +389,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           </div>
           
           <div className="mt-4 flex justify-end">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Monto a Aplicar: <span className="text-xl font-black text-green-600 ml-2">${amountToApply.toFixed(2)}</span></p>
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Monto a Aplicar: <span className="text-xl font-black text-green-600 ml-2">{formatCurrency(amountToApply, currency)}</span></p>
           </div>
         </div>
 
@@ -405,7 +425,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                           </div>
                         ))}
                       </td>
-                      <td className="p-4 text-sm font-bold text-green-700 text-right">+${Number(pay.amount).toFixed(2)}</td>
+                      <td className="p-4 text-sm font-bold text-green-700 text-right">+{formatCurrency(Number(pay.amount), (pay.currency as string) || 'USD')}</td>
                       <td className="p-4 text-center print:hidden">
                         <button 
                           onClick={() => handleDeletePayment(pay.id as string)}

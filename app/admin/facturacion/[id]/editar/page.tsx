@@ -27,6 +27,7 @@ export default function EditarFacturaPage() {
   const [activeServiceDropdown, setActiveServiceDropdown] = useState<number | null>(null);
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
+  const [currency, setCurrency] = useState('USD');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -66,6 +67,7 @@ export default function EditarFacturaPage() {
         setSelectedClientId(inv.clients?.id || '');
         setSearchClientTerm(inv.clients?.name || '');
         setInvoiceNumber(inv.invoice_number);
+        setCurrency(inv.currency || 'USD');
         setIssueDate(inv.issue_date.split('T')[0]);
         setDiscountPercent(Number(inv.discount_percent) || 0);
         setNotes(inv.notes || '');
@@ -190,6 +192,7 @@ export default function EditarFacturaPage() {
         discount_percent: discountPercent,
         total,
         notes,
+        currency,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         items: items.map(({ id, ...rest }) => rest) // remove temp id
       };
@@ -303,23 +306,38 @@ export default function EditarFacturaPage() {
           </div>
 
           <div className="space-y-4 md:pl-8">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">N.º de Factura</label>
-              <input 
-                type="text" 
-                value={invoiceNumber} 
-                onChange={e => setInvoiceNumber(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-mono font-bold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Emisión</label>
-              <input 
-                type="date" 
-                value={issueDate} 
-                onChange={e => setIssueDate(e.target.value)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">N.º Factura</label>
+                <input 
+                  type="text" 
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue font-bold text-brand-blue" 
+                  required 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Moneda</label>
+                <select 
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                >
+                  <option value="USD">Dólares (USD)</option>
+                  <option value="CRC">Colones (CRC)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Fecha de Emisión</label>
+                <input 
+                  type="date" 
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue text-gray-700 font-medium" 
+                  required 
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -334,7 +352,7 @@ export default function EditarFacturaPage() {
               <div className="col-span-3">Nº Rastreo</div>
               <div className="col-span-1 text-center">Peso</div>
               <div className="col-span-2 text-center">Tarifa</div>
-              <div className="col-span-2 text-right pr-8">Importe ($)</div>
+              <div className="col-span-2 text-right pr-8">Importe ({currency === 'CRC' ? '₡' : '$'})</div>
             </div>
 
             {items.map((item) => (
@@ -428,7 +446,7 @@ export default function EditarFacturaPage() {
           <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600">Subtotal</span>
-              <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
+              <span className="text-sm font-bold text-gray-800">{currency === 'CRC' ? '₡' : '$'}{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
@@ -448,8 +466,10 @@ export default function EditarFacturaPage() {
               <span className="text-sm font-bold text-green-600">-${discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-              <span className="text-base font-black text-brand-blue uppercase tracking-wider">Total a Pagar</span>
-              <span className="text-2xl font-black text-brand-blue">${total.toFixed(2)}</span>
+              <div className="pt-4 flex items-center justify-between w-full">
+                <span className="text-gray-500 font-bold">Total Final:</span>
+                <span className="text-3xl font-black text-brand-blue">{currency === 'CRC' ? '₡' : '$'}{total.toFixed(2)} {currency}</span>
+              </div>
             </div>
           </div>
         </div>

@@ -3,15 +3,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { DollarSign, Search, Trash2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/billing';
 
 type Payment = {
   id: string;
   amount: number;
+  currency?: string;
   payment_date: string;
   payment_method: string;
   reference_number?: string;
   clients?: { id: string, name: string, email: string };
-  invoice_payments?: { amount_applied: number, invoice_id: string, invoices?: { invoice_number: string } }[];
+  invoice_payments?: { amount_applied: number, invoice_id: string, invoices?: { invoice_number: string, currency?: string } }[];
 };
 
 export default function HistorialPagosPage() {
@@ -88,7 +90,8 @@ export default function HistorialPagosPage() {
     return matchSearch && matchStartDate && matchEndDate;
   });
 
-  const totalFilteredAmount = filteredPayments.reduce((acc, pay) => acc + Number(pay.amount), 0);
+  const totalFilteredAmountUSD = filteredPayments.filter(p => p.currency !== 'CRC').reduce((acc, pay) => acc + Number(pay.amount), 0);
+  const totalFilteredAmountCRC = filteredPayments.filter(p => p.currency === 'CRC').reduce((acc, pay) => acc + Number(pay.amount), 0);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -105,11 +108,19 @@ export default function HistorialPagosPage() {
 
       <div className="bg-gradient-to-br from-[#0A2636] to-brand-blue rounded-3xl p-6 md:p-8 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-        <div className="relative z-10">
-          <p className="text-brand-blue-light font-bold uppercase tracking-wider mb-2 text-sm flex items-center gap-2">
-            <DollarSign size={18} /> Total Recaudado (Filtrado)
-          </p>
-          <h2 className="text-4xl md:text-5xl font-black">${totalFilteredAmount.toFixed(2)} <span className="text-2xl text-brand-blue-light/70">USD</span></h2>
+        <div className="relative z-10 w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <p className="text-brand-blue-light font-bold uppercase tracking-wider mb-2 text-sm flex items-center gap-2">
+              <DollarSign size={18} /> Total Recaudado (USD)
+            </p>
+            <h2 className="text-4xl md:text-5xl font-black text-white">{formatCurrency(totalFilteredAmountUSD, 'USD')}</h2>
+          </div>
+          <div>
+            <p className="text-orange-300 font-bold uppercase tracking-wider mb-2 text-sm">
+              Total Recaudado (CRC)
+            </p>
+            <h2 className="text-3xl md:text-4xl font-black text-orange-400">{formatCurrency(totalFilteredAmountCRC, 'CRC')}</h2>
+          </div>
         </div>
       </div>
 
@@ -213,13 +224,13 @@ export default function HistorialPagosPage() {
                             <Link href={`/admin/facturacion/${ip.invoice_id}`} className="font-bold text-brand-blue hover:underline">
                               #{ip.invoices?.invoice_number || 'Desc.'}
                             </Link>
-                            <span className="text-gray-500">${Number(ip.amount_applied).toFixed(2)}</span>
+                            <span className="text-gray-500">{formatCurrency(Number(ip.amount_applied), ip.invoices?.currency || pay.currency)}</span>
                           </div>
                         ))}
                       </div>
                     </td>
                     <td className="p-4 text-right">
-                      <p className="text-lg font-black text-green-600">${Number(pay.amount).toFixed(2)}</p>
+                      <p className="text-lg font-black text-green-600">+{formatCurrency(Number(pay.amount), pay.currency)}</p>
                     </td>
                     <td className="p-4 text-center">
                       <button 

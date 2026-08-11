@@ -13,6 +13,7 @@ export default function NuevoGastoPage() {
   const [providerName, setProviderName] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [category, setCategory] = useState('Otros');
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   
@@ -156,6 +157,7 @@ export default function NuevoGastoPage() {
           provider_name: providerName,
           date,
           amount: numAmount,
+          currency,
           category,
           receipt_image: null // Evitar guardar un blob URL local que no sirve
         })
@@ -259,7 +261,7 @@ export default function NuevoGastoPage() {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha</label>
                 <input 
@@ -271,7 +273,18 @@ export default function NuevoGastoPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Monto ($)</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Moneda</label>
+                <select 
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-bold text-brand-blue"
+                >
+                  <option value="USD">Dólares (USD)</option>
+                  <option value="CRC">Colones (CRC)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Monto</label>
                 <input 
                   required
                   type="number" 

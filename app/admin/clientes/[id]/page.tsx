@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { getInvoiceStats } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Client = {
@@ -20,6 +20,7 @@ type Invoice = {
   invoice_number: string;
   status: string;
   total: number;
+  currency?: string;
   issue_date: string;
   invoice_payments: { amount_applied: number }[];
 };
@@ -29,8 +30,9 @@ type Payment = {
   amount: number;
   payment_date: string;
   payment_method: string;
+  currency?: string;
   reference_number?: string;
-  invoice_payments: { invoice_id: string, amount_applied: number, invoices: { invoice_number: string } }[];
+  invoice_payments: { invoice_id: string, amount_applied: number, invoices: { invoice_number: string, currency?: string } }[];
 };
 
 export default function ClientProfilePage({ params }: { params: { id: string } }) {
@@ -86,16 +88,21 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando perfil del cliente...</div>;
   if (!client) return <div className="p-8 text-center text-red-500">Cliente no encontrado</div>;
 
-  // Calculos unificados
-  let totalFacturado = 0;
-  let totalPagado = 0;
-  let totalPendiente = 0;
+  let totalFacturadoUSD = 0, totalFacturadoCRC = 0;
+  let totalPagadoUSD = 0, totalPagadoCRC = 0;
+  let totalPendienteUSD = 0, totalPendienteCRC = 0;
 
   invoices.forEach(inv => {
     const stats = getInvoiceStats(inv);
-    totalFacturado += stats.total;
-    totalPagado += stats.paid;
-    totalPendiente += stats.pending;
+    if (inv.currency === 'CRC') {
+      totalFacturadoCRC += stats.total;
+      totalPagadoCRC += stats.paid;
+      totalPendienteCRC += stats.pending;
+    } else {
+      totalFacturadoUSD += stats.total;
+      totalPagadoUSD += stats.paid;
+      totalPendienteUSD += stats.pending;
+    }
   });
 
   return (
@@ -110,7 +117,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
           <h1 className="text-xl font-bold text-gray-800">Perfil del Cliente</h1>
         </div>
         <div className="flex items-center gap-3">
-          {totalPendiente > 0 && (
+          {(totalPendienteUSD > 0 || totalPendienteCRC > 0) && (
             <Link 
               href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
               className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2"
@@ -180,16 +187,21 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
           <div className="flex flex-col gap-4">
             <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 flex items-center justify-between print:border-none print:p-2">
               <span className="text-sm font-bold text-orange-800 uppercase tracking-wider">Saldo Pendiente</span>
-              <span className="text-2xl font-black text-orange-600">${totalPendiente.toFixed(2)}</span>
+              <div className="text-right">
+                <span className="block text-2xl font-black text-orange-600">{formatCurrency(totalPendienteUSD, 'USD')}</span>
+                <span className="block text-lg font-bold text-orange-500">{formatCurrency(totalPendienteCRC, 'CRC')}</span>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 print:border-none print:p-2">
                 <p className="text-xs font-bold text-gray-500 mb-1">Total Facturado</p>
-                <p className="text-lg font-bold text-gray-900">${totalFacturado.toFixed(2)}</p>
+                <p className="text-sm font-bold text-gray-900">{formatCurrency(totalFacturadoUSD, 'USD')}</p>
+                <p className="text-sm font-bold text-gray-600">{formatCurrency(totalFacturadoCRC, 'CRC')}</p>
               </div>
               <div className="bg-green-50 p-4 rounded-xl border border-green-100 print:border-none print:p-2">
                 <p className="text-xs font-bold text-green-700 mb-1">Total Pagado</p>
-                <p className="text-lg font-bold text-green-700">${totalPagado.toFixed(2)}</p>
+                <p className="text-sm font-bold text-green-700">{formatCurrency(totalPagadoUSD, 'USD')}</p>
+                <p className="text-sm font-bold text-green-600">{formatCurrency(totalPagadoCRC, 'CRC')}</p>
               </div>
             </div>
           </div>
@@ -248,8 +260,8 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                             {displayStatus}
                           </span>
                         </td>
-                        <td className="p-4 text-sm font-medium text-gray-600 text-right">${stats.total.toFixed(2)}</td>
-                        <td className="p-4 text-sm font-bold text-gray-900 text-right">${stats.pending.toFixed(2)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-600 text-right">{formatCurrency(stats.total, inv.currency)}</td>
+                        <td className="p-4 text-sm font-bold text-gray-900 text-right">{formatCurrency(stats.pending, inv.currency)}</td>
                       </tr>
                     );
                   })
@@ -326,11 +338,11 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                       <td className="p-4 text-sm text-gray-500">
                         {pay.invoice_payments?.map(ip => (
                           <div key={ip.invoice_id}>
-                            #{ip.invoices?.invoice_number} <span className="text-xs">(${Number(ip.amount_applied).toFixed(2)})</span>
+                            #{ip.invoices?.invoice_number} <span className="text-xs">({formatCurrency(Number(ip.amount_applied), ip.invoices?.currency || pay.currency)})</span>
                           </div>
                         ))}
                       </td>
-                      <td className="p-4 text-sm font-bold text-green-700 text-right">+${Number(pay.amount).toFixed(2)}</td>
+                      <td className="p-4 text-sm font-bold text-green-700 text-right">+{formatCurrency(Number(pay.amount), pay.currency)}</td>
                       <td className="p-4 text-center print:hidden">
                         <button 
                           onClick={() => handleDeletePayment(pay.id)}

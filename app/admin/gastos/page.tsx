@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Search, Receipt } from 'lucide-react';
+import { formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Expense = {
@@ -10,6 +11,7 @@ type Expense = {
   provider_name: string;
   date: string;
   amount: number | string;
+  currency?: string;
   category: string;
   receipt_url?: string;
 };
@@ -60,7 +62,8 @@ export default function GastosPage() {
     return matchesSearch && matchesMonth;
   });
 
-  const totalAmount = filteredExpenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
+  const totalAmountUSD = filteredExpenses.filter(e => e.currency !== 'CRC').reduce((acc, exp) => acc + Number(exp.amount), 0);
+  const totalAmountCRC = filteredExpenses.filter(e => e.currency === 'CRC').reduce((acc, exp) => acc + Number(exp.amount), 0);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -145,7 +148,7 @@ export default function GastosPage() {
                         </span>
                       </td>
                       <td className="py-4 text-sm font-bold text-brand-blue text-right">
-                        ${Number(expense.amount).toFixed(2)}
+                        {formatCurrency(Number(expense.amount), expense.currency)}
                       </td>
                       <td className="py-4 text-center">
                         <button onClick={() => handleDelete(expense.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" title="Eliminar Gasto">
@@ -163,7 +166,8 @@ export default function GastosPage() {
         <div className="md:col-span-1">
           <div className="bg-brand-blue rounded-3xl p-6 shadow-sm text-white sticky top-6">
             <h3 className="text-sm font-bold text-white/70 uppercase tracking-wider mb-2">Total de Gastos</h3>
-            <p className="text-4xl font-black">${totalAmount.toFixed(2)}</p>
+            <p className="text-3xl font-black mb-1">{formatCurrency(totalAmountUSD, 'USD')}</p>
+            <p className="text-xl font-bold text-orange-300">{formatCurrency(totalAmountCRC, 'CRC')}</p>
             <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
               <p className="text-xs text-white/70">
                 Este monto refleja el total gastado según los filtros aplicados en la tabla principal.
