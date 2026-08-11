@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Mail, Printer, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 
 export default function InvoiceViewPage() {
   const params = useParams();
@@ -11,11 +11,7 @@ export default function InvoiceViewPage() {
   const [invoice, setInvoice] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadInvoice();
-  }, [id]);
-
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       const res = await fetch(`/api/invoices/${id}`);
       const data = await res.json();
@@ -27,7 +23,11 @@ export default function InvoiceViewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadInvoice();
+  }, [loadInvoice]);
 
   if (loading) {
     return <div className="text-center p-20 text-gray-500 font-bold">Cargando factura...</div>;

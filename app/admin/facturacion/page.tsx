@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail, DollarSign } from 'lucide-react';
+import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 
 type Invoice = {
   id: string;
