@@ -95,17 +95,21 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     e.preventDefault();
     setIsSaving(true);
     try {
+      // Repurpose 'address' column for cedula to avoid DB schema errors
+      const payload = { ...editForm, address: editForm.cedula };
+      delete payload.cedula; // Ensure we don't send the cedula column
+      
       const res = await fetch(`/api/clients/${clientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setIsEditing(false);
         loadData();
       } else {
-        await showAlert('Aviso', 'Error: ' + (data.error || 'Ocurrió un error al guardar. Verifica si la columna cedula existe en Supabase si actualizaste la cédula.'));
+        await showAlert('Aviso', 'Error: ' + (data.error || 'Ocurrió un error al guardar.'));
       }
     } catch {
       await showAlert('Aviso', 'Error de red al actualizar');
@@ -152,7 +156,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                 name: client.name, 
                 email: client.email, 
                 phone: client.phone || '', 
-                cedula: client.cedula || '',
+                cedula: client.cedula || client.address || '',
                 created_at: new Date(client.created_at).toISOString().split('T')[0] 
               });
               setIsEditing(true);
@@ -222,16 +226,10 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                   <span>-</span>
                 )}
               </div>
-              {client.cedula && (
+              { (client.cedula || client.address) && (
                 <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
                   <FileText size={16} className="text-gray-400" />
-                  <span>Cédula: {client.cedula}</span>
-                </div>
-              )}
-              {client.address && (
-                <div className="flex items-center gap-3 text-sm text-gray-600 sm:col-span-2">
-                  <MapPin size={16} className="text-gray-400" />
-                  <span>{client.address}</span>
+                  <span>Cédula: {client.cedula || client.address}</span>
                 </div>
               )}
             </div>
