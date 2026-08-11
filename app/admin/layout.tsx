@@ -143,6 +143,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           {/* SECCIÓN CONTABILIDAD */}
+          {currentUser?.role === 'admin' && (
           <div>
             <button 
               onClick={() => toggleSection('contabilidad')}
@@ -172,8 +173,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
           </div>
+          )}
 
           {/* SECCIÓN CLIENTES */}
+          {currentUser?.role === 'admin' && (
           <div>
             <button 
               onClick={() => toggleSection('clientes')}
@@ -194,6 +197,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </div>
           </div>
+          )}
 
           {/* SECCIÓN AJUSTES */}
           {currentUser?.role === 'admin' && (
@@ -276,7 +280,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           
           <div className="flex-1 max-w-2xl px-2 sm:px-4">
-            <GlobalSearch />
+            <GlobalSearch role={currentUser?.role} />
           </div>
           
           <div className="flex items-center gap-4 shrink-0">

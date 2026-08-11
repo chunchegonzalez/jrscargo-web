@@ -11,35 +11,20 @@ const MODULES = [
   { label: 'Recepción Masiva', url: '/admin/bodega/masivo' },
   { label: 'Entrega Masiva', url: '/admin/entregas/masivo' },
   { label: 'Inventario CR', url: '/admin/inventario' },
-  { label: 'Facturas a Clientes', url: '/admin/facturacion' },
-  { label: 'Cuentas por cobrar', url: '/admin/cuentas-por-cobrar' },
-  { label: 'Gastos y Compras', url: '/admin/gastos' },
-  { label: 'Historial de Pagos', url: '/admin/contabilidad/pagos' },
-  { label: 'Directorio de Clientes', url: '/admin/clientes' },
-  { label: 'Ajustes de Sistema', url: '/admin/ajustes' },
-  { label: 'Servicios y Tarifas', url: '/admin/servicios' },
+  { label: 'Facturas a Clientes', url: '/admin/facturacion', adminOnly: true },
+  { label: 'Cuentas por cobrar', url: '/admin/cuentas-por-cobrar', adminOnly: true },
+  { label: 'Gastos y Compras', url: '/admin/gastos', adminOnly: true },
+  { label: 'Historial de Pagos', url: '/admin/contabilidad/pagos', adminOnly: true },
+  { label: 'Directorio de Clientes', url: '/admin/clientes', adminOnly: true },
+  { label: 'Ajustes de Sistema', url: '/admin/ajustes', adminOnly: true },
+  { label: 'Servicios y Tarifas', url: '/admin/servicios', adminOnly: true },
 ];
 
-interface ClientItem {
-  id: string;
-  name?: string;
-  email?: string;
-  cedula?: string;
-  address?: string;
+interface GlobalSearchProps {
+  role?: string;
 }
 
-interface InvoiceItem {
-  id: string;
-  invoice_number?: string;
-}
-
-interface InventoryItem {
-  id: string;
-  tracking_number?: string;
-  client_name?: string;
-}
-
-export default function GlobalSearch() {
+export default function GlobalSearch({ role }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -60,8 +45,8 @@ export default function GlobalSearch() {
         setIsFetching(true);
         try {
           const [clientsRes, invoicesRes, invRes] = await Promise.all([
-            fetch('/api/clients').then(r => r.json()),
-            fetch('/api/invoices').then(r => r.json()),
+            role === 'admin' ? fetch('/api/clients').then(r => r.json()) : Promise.resolve({ success: true, data: [] }),
+            role === 'admin' ? fetch('/api/invoices').then(r => r.json()) : Promise.resolve({ success: true, data: [] }),
             fetch('/api/inventory').then(r => r.json())
           ]);
           if (clientsRes.success) setClients(clientsRes.data || []);
@@ -108,7 +93,10 @@ export default function GlobalSearch() {
 
   const q = query.toLowerCase();
 
-  const filteredModules = MODULES.filter(m => m.label.toLowerCase().includes(q));
+  const filteredModules = MODULES.filter(m => 
+    (!m.adminOnly || role === 'admin') && 
+    m.label.toLowerCase().includes(q)
+  );
   const filteredClients = clients.filter(c => 
     (c.name && c.name.toLowerCase().includes(q)) || 
     (c.email && c.email.toLowerCase().includes(q)) || 
