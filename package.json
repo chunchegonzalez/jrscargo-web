@@ -10,16 +10,17 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^0.0.52",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^3.2.14",
     "framer-motion": "^13.0.0",
     "lucide-react": "^1.30.0",
     "next": "14.2.35",
     "next-sitemap": "^4.2.3",
     "react": "^18",
-    "recharts": "^2.12.7",
-    "resend": "^3.5.0",
     "react-dom": "^18",
-    "react-icons": "^5.7.0"
+    "react-icons": "^5.7.0",
+    "recharts": "^2.12.7",
+    "resend": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^20",
