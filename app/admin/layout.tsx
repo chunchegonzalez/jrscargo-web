@@ -14,12 +14,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Accordion state
   const [openSections, setOpenSections] = useState({
     operaciones: true,
     contabilidad: true,
     clientes: true,
-    ajustes: false
+    ajustes: false,
+    perfil: false
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
@@ -212,13 +212,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         </nav>
 
-        <div className="p-5 border-t border-white/5 relative z-10">
-          <button onClick={handleLogout} className="group flex items-center gap-3 px-4 py-3 rounded-2xl text-brand-red font-bold hover:bg-brand-red/10 transition-all duration-300 w-full text-left">
-            <div className="p-2 rounded-xl bg-brand-red/10 group-hover:bg-brand-red/20 transition-colors">
-              <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
+        <div className="p-4 border-t border-white/5 relative z-10">
+          <button 
+            onClick={() => toggleSection('perfil')}
+            className="w-full flex items-center justify-between p-2 text-white/80 hover:text-white transition-colors group"
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-brand-yellow/20 text-brand-yellow flex items-center justify-center font-bold text-xs border border-brand-yellow/30">
+                {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'US'}
+              </div>
+              <span className="font-bold text-sm tracking-wide truncate">{currentUser?.username || 'Mi Perfil'}</span>
             </div>
-            Cerrar sesión
+            {openSections.perfil ? <ChevronDown size={16} className="shrink-0" /> : <ChevronRight size={16} className="shrink-0" />}
           </button>
+          
+          <div className={`overflow-hidden transition-all duration-300 ${openSections.perfil ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+            <div className="flex flex-col gap-1 pl-12 border-l border-white/10 ml-6">
+              <button onClick={handleLogout} className="w-full text-left py-2 px-3 rounded-lg text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors flex items-center gap-2">
+                <LogOut size={16} /> Cerrar sesión
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
