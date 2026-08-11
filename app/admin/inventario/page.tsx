@@ -97,11 +97,11 @@ export default function BodegaInventario() {
   }, []);
 
   const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.client.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (item.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (item.client || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
     // Note: Since 'Entregado' might be saved as 'Entregado al Cliente' or 'Entregado', we check includes just in case
-    const matchesStatus = filterStatus === 'Todos' || item.status.includes(filterStatus.replace(' al Cliente', ''));
+    const matchesStatus = filterStatus === 'Todos' || (item.status || '').includes(filterStatus.replace(' al Cliente', ''));
     
     // Compare YYYY-MM-DD
     const itemDate = new Date(item.createdAt);
