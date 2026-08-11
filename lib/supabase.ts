@@ -400,3 +400,57 @@ export async function updateInvoiceWithItems(id: string, updates: Record<string,
 export async function updateInvoiceStatus(id: string, status: string) {
   return updateInvoice(id, { status });
 }
+
+// ----------------------------------------------------
+// PAGOS (PAYMENTS)
+// ----------------------------------------------------
+
+export async function createPayment(payment: Record<string, unknown>, appliedInvoices: Record<string, unknown>[]) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  
+  // 1. Create Payment
+  const resPayment = await fetch(`${url}/rest/v1/payments`, {
+    method: 'POST',
+    headers: { ...getHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(payment)
+  });
+  
+  if (!resPayment.ok) {
+    const errText = await resPayment.text();
+    throw new Error('Error creating payment: ' + errText);
+  }
+  
+  const paymentData = await resPayment.json();
+  const newPaymentId = paymentData[0].id;
+
+  // 2. Apply to invoices
+  if (appliedInvoices && appliedInvoices.length > 0) {
+    const links = appliedInvoices.map(inv => ({
+      payment_id: newPaymentId,
+      invoice_id: inv.invoice_id,
+      amount_applied: inv.amount_applied
+    }));
+    
+    const resLinks = await fetch(`${url}/rest/v1/invoice_payments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(links)
+    });
+    
+    if (!resLinks.ok) {
+      console.error('Error applying payment to invoices');
+    }
+  }
+
+  return { success: true, id: newPaymentId };
+}
+
+export async function getClientInvoices(clientId: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/invoices?client_id=eq.${encodeURIComponent(clientId)}&select=*,invoice_payments(amount_applied)&order=created_at.desc`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Error fetching client invoices');
+  return res.json();
+}

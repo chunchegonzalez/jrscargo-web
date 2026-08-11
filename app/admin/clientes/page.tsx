@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Users, Search, Mail, Phone, Edit, Plus, X } from 'lucide-react';
+import Link from 'next/link';
+import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -193,16 +194,27 @@ export default function ClientesPage() {
                       )}
                     </td>
                     <td className="p-4 text-center">
-                      <button 
-                        onClick={() => {
-                          setEditingClient(client);
-                          setIsModalOpen(true);
-                        }}
-                        className="p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors inline-flex"
-                        title="Editar cliente"
-                      >
-                        <Edit size={18} />
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        {client.pendingBalance && client.pendingBalance > 0 ? (
+                          <Link 
+                            href={`/admin/clientes/${client.id}/recibir-pago`}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors inline-flex"
+                            title="Recibir pago"
+                          >
+                            <DollarSign size={18} />
+                          </Link>
+                        ) : null}
+                        <button 
+                          onClick={() => {
+                            setEditingClient(client);
+                            setIsModalOpen(true);
+                          }}
+                          className="p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors inline-flex"
+                          title="Editar cliente"
+                        >
+                          <Edit size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
