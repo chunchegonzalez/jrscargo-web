@@ -89,7 +89,7 @@ export default function BodegaMasivo() {
         } else {
           newResults.push({ tracking, status: 'error', message: 'Error al guardar en Base de Datos' });
         }
-      } catch (err: unknown) {
+      } catch {
         newResults.push({ tracking, status: 'error', message: 'Error de red o sistema' });
       }
       

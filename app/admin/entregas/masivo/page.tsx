@@ -38,7 +38,7 @@ export default function EntregasMasivo() {
         const now = new Date();
         const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
         
-        const res = await fetch(`/api/inventory/${tracking}`, {
+        await fetch(`/api/inventory/${tracking}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -89,7 +89,7 @@ export default function EntregasMasivo() {
         } else {
           newResults.push({ tracking, status: 'error', message: 'Error al actualizar base de datos' });
         }
-      } catch (err: unknown) {
+      } catch {
         newResults.push({ tracking, status: 'error', message: 'Error de red' });
       }
       
