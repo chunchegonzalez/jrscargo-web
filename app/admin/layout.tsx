@@ -56,9 +56,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const activeLinkClass = "bg-brand-blue/10 text-brand-blue font-bold";
   const inactiveLinkClass = "text-gray-500 hover:text-gray-900 hover:bg-gray-100/50 border border-transparent";
-  const getLinkClass = (path: string) => {
+  const getLinkClass = (path: string, exact = false) => {
+    const isActive = exact 
+      ? pathname === path 
+      : (pathname === path || pathname.startsWith(path + '/'));
+      
     return `block py-2 px-3 rounded-xl text-sm transition-all duration-200 border border-transparent ${
-      (pathname === path || pathname.startsWith(path + '/')) ? activeLinkClass : inactiveLinkClass
+      isActive ? activeLinkClass : inactiveLinkClass
     }`;
   };
 
@@ -119,7 +123,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             
             <div className={`overflow-hidden transition-all duration-300 ${openSections.operaciones ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
               <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/bodega" className={getLinkClass('/admin/bodega')}>
+                <Link href="/admin/bodega" className={getLinkClass('/admin/bodega', true)}>
                   Escanear Individual
                 </Link>
                 <Link href="/admin/bodega/masivo" className={getLinkClass('/admin/bodega/masivo')}>
@@ -150,7 +154,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             
             <div className={`overflow-hidden transition-all duration-300 ${openSections.contabilidad ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
               <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/facturacion" className={getLinkClass('/admin/facturacion')}>
+                <Link href="/admin/facturacion" className={getLinkClass('/admin/facturacion', true)}>
                   Facturas a Clientes
                 </Link>
                 <Link href="/admin/gastos" className={getLinkClass('/admin/gastos')}>
@@ -175,7 +179,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             
             <div className={`overflow-hidden transition-all duration-300 ${openSections.clientes ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
               <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/clientes" className={getLinkClass('/admin/clientes')}>
+                <Link href="/admin/clientes" className={getLinkClass('/admin/clientes', true)}>
                   Directorio de clientes
                 </Link>
               </div>
