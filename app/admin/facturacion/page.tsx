@@ -10,6 +10,7 @@ type Invoice = {
   issue_date: string;
   total: number | string;
   status: string;
+  client_id: string;
   clients?: { name: string; email: string };
   invoice_payments?: { amount_applied: number | string }[];
 };
@@ -113,68 +114,7 @@ export default function FacturacionDashboard() {
     }
   };
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
-    if (currentStatus === 'Pagada') {
-      const newStatus = 'Pendiente';
-      if (!confirm(`¿Cambiar estado de la factura a ${newStatus.toUpperCase()}?`)) return;
-      try {
-        const res = await fetch(`/api/invoices/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus })
-        });
-        if (res.ok) {
-          loadInvoices();
-        }
-      } catch {
-        alert('Error actualizando estado');
-      }
-    } else {
-      // Abrir modal de pago
-      setPayingInvoiceId(id);
-      setPaymentMethod('SINPE');
-      setPaymentReference('');
-    }
-  };
-
-  const handleConfirmPayment = async () => {
-    if (!payingInvoiceId) return;
-    setIsPaying(true);
-    
-    let currentNotes = '';
-    
-    try {
-      // Intentamos obtener las notas actuales (idealmente deberíamos hacer un fetch para tener las más recientes, 
-      // pero para simplificar podemos hacer un fetch al detalle)
-      const resInv = await fetch(`/api/invoices/${payingInvoiceId}`);
-      if (resInv.ok) {
-        const data = await resInv.json();
-        currentNotes = data.data?.notes || '';
-      }
-      
-      const paymentInfo = `\n\n--- PAGO REGISTRADO ---\nMétodo: ${paymentMethod}\nRef: ${paymentReference || 'N/A'}\nFecha: ${new Date().toLocaleDateString()}`;
-      const newNotes = currentNotes + paymentInfo;
-
-      const res = await fetch(`/api/invoices/${payingInvoiceId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          status: 'Pagada',
-          notes: newNotes.trim()
-        })
-      });
-      if (res.ok) {
-        loadInvoices();
-        setPayingInvoiceId(null);
-      } else {
-        alert('Error al registrar pago');
-      }
-    } catch {
-      alert('Error de conexión');
-    } finally {
-      setIsPaying(false);
-    }
-  };
+  // (Removed handleToggleStatus and handleConfirmPayment)
 
   const filteredInvoices = invoices.filter(inv => {
     const matchStatus = filterStatus === 'Todas' || inv.status === filterStatus;
@@ -282,106 +222,66 @@ export default function FacturacionDashboard() {
                   <td colSpan={6} className="p-8 text-center text-gray-500">No se encontraron facturas con esos filtros.</td>
                 </tr>
               ) : (
-                filteredInvoices.map(inv => (
-                  <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="p-4 text-sm text-gray-600 font-medium">
-                      {new Date(inv.issue_date).toLocaleDateString()}
-                    </td>
-                    <td className="p-4 text-sm font-bold text-brand-blue">
-                      {inv.invoice_number}
-                    </td>
-                    <td className="p-4 text-sm text-gray-800 font-medium">
-                      {inv.clients?.name}
-                      <span className="block text-xs text-gray-400 font-normal">{inv.clients?.email}</span>
-                    </td>
-                    <td className="p-4 text-sm font-bold text-gray-800 text-right">
-                      ${Number(inv.total).toFixed(2)}
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
-                        inv.status === 'Pagada' ? 'bg-green-100 text-green-700' :
-                        inv.status === 'Vencida' ? 'bg-red-100 text-red-700' :
-                        'bg-orange-100 text-orange-700'
-                      }`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <Link href={`/admin/facturacion/${inv.id}`} className="text-sm font-bold text-brand-blue hover:underline">
-                            Ver detalle
-                          </Link>
-                          <button onClick={() => handleToggleStatus(inv.id, inv.status)} className={`text-sm font-bold px-2 py-1 rounded-lg ${inv.status === 'Pagada' ? 'text-orange-600 hover:text-orange-700 bg-orange-50' : 'text-green-600 hover:text-green-700 bg-green-50'}`}>
-                            {inv.status === 'Pagada' ? 'Marcar Pendiente' : 'Marcar Pagada'}
-                          </button>
-                          <button onClick={() => openEmailModal(inv)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
-                            <Mail size={18} />
-                          </button>
-                        </div>
+                filteredInvoices.map(inv => {
+                  let invPaid = 0;
+                  if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
+                    invPaid = inv.invoice_payments.reduce((acc, p) => acc + Number(p.amount_applied), 0);
+                  }
+                  const pending = Number(inv.total) - invPaid;
+                  const isFullyPaid = pending <= 0.01;
+                  const displayStatus = isFullyPaid ? 'Pagada' : inv.status;
+
+                  return (
+                    <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="p-4 text-sm text-gray-600 font-medium">
+                        {new Date(inv.issue_date).toLocaleDateString()}
                       </td>
-                  </tr>
-                ))
+                      <td className="p-4 text-sm font-bold text-brand-blue">
+                        {inv.invoice_number}
+                      </td>
+                      <td className="p-4 text-sm text-gray-800 font-medium">
+                        {inv.clients?.name}
+                        <span className="block text-xs text-gray-400 font-normal">{inv.clients?.email}</span>
+                      </td>
+                      <td className="p-4 text-sm font-bold text-gray-800 text-right">
+                        ${Number(inv.total).toFixed(2)}
+                      </td>
+                      <td className="p-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${
+                          displayStatus === 'Pagada' ? 'bg-green-100 text-green-700' :
+                          displayStatus === 'Vencida' ? 'bg-red-100 text-red-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {displayStatus}
+                        </span>
+                      </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <Link href={`/admin/facturacion/${inv.id}`} className="text-sm font-bold text-brand-blue hover:underline">
+                              Ver detalle
+                            </Link>
+                            <Link 
+                              href={`/admin/cuentas-por-cobrar/recibir/${inv.client_id}`} 
+                              className="text-sm font-bold px-3 py-1.5 rounded-lg text-white bg-[#0A2636] hover:bg-[#0A2636]/90 transition-colors shadow-sm"
+                              title="Gestionar en Cuentas por Cobrar"
+                            >
+                              Cobrar
+                            </Link>
+                            <button onClick={() => openEmailModal(inv)} className="p-2 text-gray-400 hover:text-brand-blue transition-colors rounded-lg hover:bg-gray-50" title="Enviar al cliente">
+                              <Mail size={18} />
+                            </button>
+                          </div>
+                        </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Payment Modal */}
-      {payingInvoiceId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
-                Registrar Pago
-              </h3>
-              <button onClick={() => setPayingInvoiceId(null)} className="text-gray-400 hover:text-gray-600">
-                &times;
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Método de Pago</label>
-                <select 
-                  value={paymentMethod}
-                  onChange={e => setPaymentMethod(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
-                >
-                  <option value="SINPE">SINPE Móvil</option>
-                  <option value="Transferencia">Transferencia Bancaria</option>
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Tarjeta">Tarjeta (Datafono/En línea)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Referencia / Comprobante (Opcional)</label>
-                <input 
-                  type="text"
-                  value={paymentReference}
-                  onChange={e => setPaymentReference(e.target.value)}
-                  placeholder="Ej: 902130219"
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
-                />
-              </div>
-
-              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
-                <button type="button" onClick={() => setPayingInvoiceId(null)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleConfirmPayment}
-                  disabled={isPaying} 
-                  className="flex-1 py-3 font-bold bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {isPaying ? 'Guardando...' : 'Confirmar Pago'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* (Removed Payment Modal) */}
 
       {/* Email Modal */}
       {emailModalOpen && emailInvoice && (
