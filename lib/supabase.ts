@@ -348,7 +348,7 @@ export async function createInvoice(invoice: Record<string, unknown>, items: Rec
   if (!resInv.ok) {
     const errorText = await resInv.text();
     console.error('Create Invoice Error:', resInv.status, errorText);
-    throw new Error('Error creating invoice');
+    throw new Error(`DB Error: ${errorText}`);
   }
   const invData = await resInv.json();
   const newInvoiceId = invData[0].id;
