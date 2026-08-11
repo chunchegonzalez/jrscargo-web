@@ -202,3 +202,15 @@
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+@media print {
+  @page {
+    margin: 0;
+  }
+  body {
+    margin: 1.5cm;
+  }
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+}
