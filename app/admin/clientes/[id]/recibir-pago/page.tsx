@@ -154,13 +154,15 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         body: JSON.stringify({ payment, appliedInvoices })
       });
 
-      if (!res.ok) throw new Error('Error al guardar el pago');
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Error desconocido al guardar el pago');
       
       alert('Pago registrado con éxito');
       router.push('/admin/clientes');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert('Error al guardar el pago');
+      alert('Error: ' + error.message);
     } finally {
       setIsSaving(false);
     }
