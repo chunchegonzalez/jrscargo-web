@@ -16,7 +16,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     let invoiceIds: string[] = [];
     if (ipRes.ok) {
       const ips = await ipRes.json();
-      invoiceIds = ips.map((ip: any) => ip.invoice_id);
+      invoiceIds = ips.map((ip: { invoice_id: string }) => ip.invoice_id);
     }
 
     // 2. Delete the payment (this should cascade to invoice_payments if configured, but let's be safe)

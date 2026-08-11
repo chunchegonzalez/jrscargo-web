@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,7 +39,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'facturas' | 'pagos'>('facturas');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const res = await fetch(`/api/clients/${clientId}`);
       const data = await res.json();
@@ -54,11 +54,11 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     } finally {
       setLoading(false);
     }
-  };
+  }, [clientId]);
 
   useEffect(() => {
     loadData();
-  }, [clientId]);
+  }, [loadData]);
 
   const handleDeletePayment = async (paymentId: string) => {
     if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.')) return;
