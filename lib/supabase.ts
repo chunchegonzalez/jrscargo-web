@@ -160,3 +160,108 @@ export async function updateDeletionRequest(id: string, updates: Record<string, 
   if (!res.ok) throw new Error('Error updating request');
   return res.json();
 }
+
+// --- CLIENTES ---
+
+export async function getClients() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/clients?order=name.asc`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Error fetching clients');
+  return res.json();
+}
+
+export async function createClient(client: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/clients`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(client)
+  });
+  if (!res.ok) throw new Error('Error creating client');
+  return { success: true };
+}
+
+// --- FACTURAS ---
+
+export async function getInvoices() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  // Fetch invoices with client data
+  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(name,email)&order=created_at.desc`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Error fetching invoices');
+  return res.json();
+}
+
+export async function getInvoiceById(id: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  
+  // 1. Fetch invoice + client
+  const resInv = await fetch(`${url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}&select=*,clients(*)`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!resInv.ok) throw new Error('Error fetching invoice');
+  const invData = await resInv.json();
+  if (!invData.length) return null;
+  const invoice = invData[0];
+
+  // 2. Fetch items
+  const resItems = await fetch(`${url}/rest/v1/invoice_items?invoice_id=eq.${encodeURIComponent(id)}`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!resItems.ok) throw new Error('Error fetching invoice items');
+  const items = await resItems.json();
+
+  invoice.items = items;
+  return invoice;
+}
+
+export async function createInvoice(invoice: Record<string, unknown>, items: Record<string, unknown>[]) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  
+  // 1. Create Invoice
+  const resInv = await fetch(`${url}/rest/v1/invoices`, {
+    method: 'POST',
+    headers: { ...getHeaders(), 'Prefer': 'return=representation' },
+    body: JSON.stringify(invoice)
+  });
+  if (!resInv.ok) {
+    const errorText = await resInv.text();
+    console.error('Create Invoice Error:', resInv.status, errorText);
+    throw new Error('Error creating invoice');
+  }
+  const invData = await resInv.json();
+  const newInvoiceId = invData[0].id;
+
+  // 2. Create Items
+  if (items && items.length > 0) {
+    const itemsToInsert = items.map(item => ({ ...item, invoice_id: newInvoiceId }));
+    const resItems = await fetch(`${url}/rest/v1/invoice_items`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(itemsToInsert) // PostgREST supports bulk insert with an array
+    });
+    if (!resItems.ok) {
+      console.error('Error creating invoice items');
+    }
+  }
+
+  return { success: true, id: newInvoiceId };
+}
+
+export async function updateInvoiceStatus(id: string, status: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify({ status })
+  });
+  if (!res.ok) throw new Error('Error updating invoice status');
+  return { success: true };
+}
