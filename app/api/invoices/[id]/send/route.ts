@@ -101,9 +101,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     `;
 
     const info = await transporter.sendMail({
-      from: \`"JRS Cargo Facturación" <\${smtpUser}>\`,
+      from: `"JRS Cargo Facturación" <${smtpUser}>`,
       to: invoice.clients.email,
-      subject: \`Factura #\${invoice.invoice_number} de JRS CARGO S.A.\`,
+      subject: `Factura #${invoice.invoice_number} de JRS CARGO S.A.`,
       html: htmlContent,
     });
 
