@@ -112,33 +112,41 @@ export default function NuevoGastoPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!providerName || !amount) {
-      alert('El proveedor y el monto son requeridos.');
+    if (!providerName || !date || !amount || !category) {
+      alert('Por favor completa todos los campos.');
       return;
     }
 
     setIsSaving(true);
     try {
-      const expenseData = {
-        provider_name: providerName,
-        date: date,
-        amount: Number(amount),
-        category: category
-      };
+      const normalizedAmount = amount.replace(',', '.');
+      const numAmount = parseFloat(normalizedAmount);
 
       const res = await fetch('/api/expenses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(expenseData)
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider_name: providerName,
+          date,
+          amount: numAmount,
+          category,
+          receipt_image: null // Evitar guardar un blob URL local que no sirve
+        })
       });
-      
-      const data = await res.json();
-      if (res.ok && data.success) {
+
+      const result = await res.json();
+
+      if (res.ok) {
+        alert('Gasto guardado correctamente.');
         router.push('/admin/gastos');
       } else {
-        alert('Error al guardar el gasto: ' + (data.error || 'Asegúrate de haber creado la tabla expenses.'));
+        alert('Error al guardar el gasto: ' + (result.error || 'Desconocido'));
       }
-    } catch {
-      alert('Error de red.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Error de red al guardar el gasto.');
     } finally {
       setIsSaving(false);
     }

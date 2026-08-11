@@ -15,11 +15,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    await createExpense(body);
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : 'Error creating expense';
-    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+    const expense = await request.json();
+    const createdExpense = await createExpense(expense);
+    return NextResponse.json({ success: true, data: createdExpense }, { status: 201 });
+  } catch (error: any) {
+    console.error('Error creating expense:', error);
+    return NextResponse.json({ success: false, error: error.message || 'Error creating expense' }, { status: 500 });
   }
 }
