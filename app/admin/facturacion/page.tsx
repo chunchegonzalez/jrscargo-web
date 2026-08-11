@@ -11,7 +11,7 @@ type Invoice = {
   total: number | string;
   status: string;
   client_id: string;
-  clients?: { name: string; email: string };
+  clients?: { id?: string; name: string; email: string };
   invoice_payments?: { amount_applied: number | string }[];
 };
 
