@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2 } from 'lucide-react';
 import { getInvoiceStats } from '@/lib/billing';
+import { useModal } from '@/app/components/ModalProvider';
 
 type Client = {
   id: string;
@@ -18,6 +19,7 @@ type Client = {
 };
 
 export default function ClientesPage() {
+  const { showAlert, showConfirm } = useModal();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,15 +91,15 @@ export default function ClientesPage() {
         setEditingClient(null);
         await loadData();
       } else {
-        alert('Error: ' + (data.error || 'Ocurrió un error al guardar.'));
+        await showAlert('Aviso', 'Error: ' + (data.error || 'Ocurrió un error al guardar.'));
       }
     } catch {
-      alert('Error de red al guardar cliente.');
+      await showAlert('Aviso', 'Error de red al guardar cliente.');
     }
   };
 
   const handleDeleteClient = async (id: string, name: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al cliente ${name}?`)) return;
+    if (!(await showConfirm('Confirmación', `¿Estás seguro de que deseas eliminar al cliente ${name}?`))) return;
     
     try {
       const res = await fetch(`/api/clients/${id}`, {
@@ -108,10 +110,10 @@ export default function ClientesPage() {
       if (res.ok && data.success) {
         await loadData();
       } else {
-        alert('Error: ' + (data.error || 'No se pudo eliminar el cliente.'));
+        await showAlert('Aviso', 'Error: ' + (data.error || 'No se pudo eliminar el cliente.'));
       }
     } catch {
-      alert('Error de red al intentar eliminar.');
+      await showAlert('Aviso', 'Error de red al intentar eliminar.');
     }
   };
 

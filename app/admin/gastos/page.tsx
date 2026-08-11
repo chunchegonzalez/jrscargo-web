@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Search, Receipt } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 type Expense = {
   id: string;
@@ -14,6 +15,7 @@ type Expense = {
 };
 
 export default function GastosPage() {
+  const { showAlert, showConfirm } = useModal();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,16 +40,16 @@ export default function GastosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este gasto?')) return;
+    if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas eliminar este gasto?'))) return;
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
       if (res.ok) {
         loadExpenses();
       } else {
-        alert('Error al eliminar');
+        await showAlert('Aviso', 'Error al eliminar');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 

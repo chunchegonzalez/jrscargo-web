@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { getInvoiceStats } from '@/lib/billing';
+import { useModal } from '@/app/components/ModalProvider';
 
 type Client = {
   id: string;
@@ -33,6 +34,7 @@ type Payment = {
 };
 
 export default function ClientProfilePage({ params }: { params: { id: string } }) {
+  const { showAlert, showConfirm } = useModal();
   const clientId = params.id;
   const [client, setClient] = useState<Client | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -66,7 +68,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   }, [loadData]);
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.')) return;
+    if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.'))) return;
     try {
       const res = await fetch(`/api/payments/${paymentId}`, {
         method: 'DELETE'
@@ -74,10 +76,10 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
       if (res.ok) {
         loadData();
       } else {
-        alert('Error al anular el pago');
+        await showAlert('Aviso', 'Error al anular el pago');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 

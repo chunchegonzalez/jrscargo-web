@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Edit2, Check, X, Tag } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 type Service = {
   id: string;
@@ -10,6 +11,7 @@ type Service = {
 };
 
 export default function ServiciosPage() {
+  const { showAlert, showConfirm } = useModal();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,22 +59,22 @@ export default function ServiciosPage() {
         setShowNewForm(false);
         loadServices();
       } else {
-        alert('Asegúrate de haber creado la tabla en Supabase.');
+        await showAlert('Aviso', 'Asegúrate de haber creado la tabla en Supabase.');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este servicio?')) return;
+    if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas eliminar este servicio?'))) return;
     try {
       const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
       if (res.ok) {
         loadServices();
       }
     } catch {
-      alert('Error al eliminar');
+      await showAlert('Aviso', 'Error al eliminar');
     }
   };
 
@@ -95,7 +97,7 @@ export default function ServiciosPage() {
         loadServices();
       }
     } catch {
-      alert('Error al actualizar');
+      await showAlert('Aviso', 'Error al actualizar');
     }
   };
 

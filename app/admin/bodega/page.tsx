@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ScanBarcode, Package, User, CheckCircle2, ArrowRight } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 interface PackageData {
   tracking: string;
@@ -13,6 +14,7 @@ interface PackageData {
 }
 
 export default function BodegaScanner() {
+  const { showAlert, showConfirm } = useModal();
   const [scannedCode, setScannedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [packageData, setPackageData] = useState<PackageData | null>(null);
@@ -91,7 +93,7 @@ export default function BodegaScanner() {
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Error al buscar paquete';
-      alert(errorMsg);
+      await showAlert('Aviso', errorMsg);
       // Limpiamos el input para que vuelva a intentar
       setScannedCode('');
     } finally {
@@ -128,12 +130,12 @@ export default function BodegaScanner() {
         })
       });
       if (!res.ok) {
-        alert('Error: No se pudo guardar el paquete en la base de datos.');
+        await showAlert('Aviso', 'Error: No se pudo guardar el paquete en la base de datos.');
         setLocalStatus(null);
       }
     } catch (e) {
       console.error('Error guardando en BD', e);
-      alert('Error de conexión al guardar el paquete.');
+      await showAlert('Aviso', 'Error de conexión al guardar el paquete.');
       setLocalStatus(null);
     }
   };

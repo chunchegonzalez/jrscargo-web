@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
 import { getInvoiceStats } from '@/lib/billing';
+import { useModal } from '@/app/components/ModalProvider';
 
 type Invoice = {
   id: string;
@@ -17,6 +18,7 @@ type Invoice = {
 };
 
 export default function FacturacionDashboard() {
+  const { showAlert } = useModal();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -87,13 +89,13 @@ export default function FacturacionDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        alert('¡Correo enviado con éxito!');
+        showAlert('Éxito', '¡Correo enviado con éxito!', 'success');
         setEmailModalOpen(false);
       } else {
-        alert(`Error al enviar correo: ${data.error}`);
+        showAlert('Error', `Error al enviar correo: ${data.error}`, 'error');
       }
     } catch {
-      alert('Error de red');
+      showAlert('Error', 'Error de red al enviar el correo.', 'error');
     } finally {
       setIsSendingEmail(false);
     }

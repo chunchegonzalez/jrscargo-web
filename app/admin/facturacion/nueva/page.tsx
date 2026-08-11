@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, UserPlus } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 type Client = { id: string; name: string; email: string; phone?: string; address?: string };
 type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
 type ServiceType = { id: string; name: string; default_rate: number };
 
 export default function NuevaFacturaPage() {
+  const { showAlert, showConfirm } = useModal();
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [catalogServices, setCatalogServices] = useState<ServiceType[]>([]);
@@ -91,10 +93,10 @@ export default function NuevaFacturaPage() {
         setShowNewClientForm(false);
         setNewClient({ name: '', email: '', phone: '', address: 'Costa Rica' });
       } else {
-        alert('Error al crear cliente: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
+        await showAlert('Aviso', 'Error al crear cliente: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
       }
     } catch {
-      alert('Error de red al crear cliente.');
+      await showAlert('Aviso', 'Error de red al crear cliente.');
     }
   };
 
@@ -145,11 +147,11 @@ export default function NuevaFacturaPage() {
 
   const handleSaveInvoice = async () => {
     if (!selectedClientId) {
-      alert('Debes seleccionar un cliente');
+      await showAlert('Aviso', 'Debes seleccionar un cliente');
       return;
     }
     if (items.some(i => !i.service_name || !i.amount)) {
-      alert('Todos los ítems deben tener un nombre de servicio y un importe válido.');
+      await showAlert('Aviso', 'Todos los ítems deben tener un nombre de servicio y un importe válido.');
       return;
     }
 
@@ -178,10 +180,10 @@ export default function NuevaFacturaPage() {
       if (res.ok && data.success) {
         router.push('/admin/facturacion');
       } else {
-        alert('Error al guardar factura: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
+        await showAlert('Aviso', 'Error al guardar factura: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
       }
     } catch {
-      alert('Error de red al guardar factura');
+      await showAlert('Aviso', 'Error de red al guardar factura');
     } finally {
       setLoading(false);
     }

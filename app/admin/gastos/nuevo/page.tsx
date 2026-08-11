@@ -4,8 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, UploadCloud, Sparkles, Loader2, ChevronDown, Check } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 export default function NuevoGastoPage() {
+  const { showAlert, showConfirm } = useModal();
   const router = useRouter();
   
   const [providerName, setProviderName] = useState('');
@@ -60,7 +62,7 @@ export default function NuevoGastoPage() {
       analyzeReceipt(base64Data, mimeType);
     } catch (error) {
       console.error(error);
-      alert('Error al procesar la imagen antes de enviarla.');
+      await showAlert('Aviso', 'Error al procesar la imagen antes de enviarla.');
     }
   };
 
@@ -122,12 +124,12 @@ export default function NuevoGastoPage() {
         if (data.data.amount !== undefined) setAmount(data.data.amount.toString());
         if (data.data.category) setCategory(data.data.category);
       } else {
-        alert('Detalle del error de IA: ' + (data.error || 'Desconocido'));
+        await showAlert('Aviso', 'Detalle del error de IA: ' + (data.error || 'Desconocido'));
       }
     } catch (err) {
       console.error(err);
       const errorMsg = err instanceof Error ? err.message : 'Error de red';
-      alert('Error al comunicar con la IA: ' + errorMsg);
+      await showAlert('Aviso', 'Error al comunicar con la IA: ' + errorMsg);
     } finally {
       setIsAnalyzing(false);
     }
@@ -136,7 +138,7 @@ export default function NuevoGastoPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!providerName || !date || !amount || !category) {
-      alert('Por favor completa todos los campos.');
+      await showAlert('Aviso', 'Por favor completa todos los campos.');
       return;
     }
 
@@ -162,14 +164,14 @@ export default function NuevoGastoPage() {
       const result = await res.json();
 
       if (res.ok) {
-        alert('Gasto guardado correctamente.');
+        await showAlert('Aviso', 'Gasto guardado correctamente.');
         router.push('/admin/gastos');
       } else {
-        alert('Error al guardar el gasto: ' + (result.error || 'Desconocido'));
+        await showAlert('Aviso', 'Error al guardar el gasto: ' + (result.error || 'Desconocido'));
       }
     } catch (err) {
       console.error(err);
-      alert('Error de red al guardar el gasto.');
+      await showAlert('Aviso', 'Error de red al guardar el gasto.');
     } finally {
       setIsSaving(false);
     }

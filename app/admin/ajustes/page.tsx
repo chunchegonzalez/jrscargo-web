@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Users, Trash2, CheckCircle, XCircle, ShieldAlert, Eye, EyeOff, Edit2, Save } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 export default function AjustesPage() {
+  const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState<{id: string, username: string, role: string, password?: string}[]>([]);
   const [requests, setRequests] = useState<{id: string, package_id: string, requested_by: string, reason: string, status: string}[]>([]);
   
@@ -51,25 +53,25 @@ export default function AjustesPage() {
         loadData();
       } else {
         const errorData = await res.json();
-        alert(`Error al crear usuario: ${errorData.error}`);
+        await showAlert('Aviso', `Error al crear usuario: ${errorData.error}`);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      alert(`Error de red: ${errorMessage}`);
+      await showAlert('Aviso', `Error de red: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este usuario?')) return;
+    if (!(await showConfirm('Confirmación', '¿Estás seguro de eliminar este usuario?'))) return;
     try {
       const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
         loadData();
       }
     } catch {
-      alert('Error eliminando usuario');
+      await showAlert('Aviso', 'Error eliminando usuario');
     }
   };
 
@@ -86,15 +88,15 @@ export default function AjustesPage() {
         setEditPasswordValue('');
         loadData();
       } else {
-        alert('Error actualizando contraseña');
+        await showAlert('Aviso', 'Error actualizando contraseña');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 
   const handleRequestStatus = async (id: string, packageId: string, status: 'approved' | 'rejected') => {
-    if (!confirm(`¿Estás seguro de ${status === 'approved' ? 'aprobar' : 'rechazar'} esta solicitud?`)) return;
+    if (!(await showConfirm('Confirmación', `¿Estás seguro de ${status === 'approved' ? 'aprobar' : 'rechazar'} esta solicitud?`))) return;
     
     try {
       const res = await fetch(`/api/deletion-requests/${id}`, {
@@ -105,10 +107,10 @@ export default function AjustesPage() {
       if (res.ok) {
         loadData();
       } else {
-        alert('Error procesando solicitud');
+        await showAlert('Aviso', 'Error procesando solicitud');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 

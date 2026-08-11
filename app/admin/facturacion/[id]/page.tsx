@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Printer, Ban, Trash2 } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 type InvoiceItem = {
   id: string;
@@ -34,6 +35,7 @@ type InvoiceDetail = {
 };
 
 export default function InvoiceViewPage() {
+  const { showAlert, showConfirm } = useModal();
   const params = useParams();
   const id = params.id as string;
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
@@ -53,7 +55,7 @@ export default function InvoiceViewPage() {
   }, [id]);
 
   const handleVoidInvoice = async () => {
-    if (!confirm('¿Estás seguro de que deseas anular esta factura?')) return;
+    if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas anular esta factura?'))) return;
     try {
       const res = await fetch(`/api/invoices/${id}`, {
         method: 'PATCH',
@@ -63,15 +65,15 @@ export default function InvoiceViewPage() {
       if (res.ok) {
         loadInvoice();
       } else {
-        alert('Error al anular la factura');
+        await showAlert('Aviso', 'Error al anular la factura');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 
   const handleDeleteInvoice = async () => {
-    if (!confirm('¿Estás seguro de que deseas ELIMINAR esta factura permanentemente? Esta acción no se puede deshacer.')) return;
+    if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas ELIMINAR esta factura permanentemente? Esta acción no se puede deshacer.'))) return;
     try {
       const res = await fetch(`/api/invoices/${id}`, {
         method: 'DELETE'
@@ -79,10 +81,10 @@ export default function InvoiceViewPage() {
       if (res.ok) {
         window.location.href = '/admin/facturacion';
       } else {
-        alert('Error al eliminar la factura');
+        await showAlert('Aviso', 'Error al eliminar la factura');
       }
     } catch {
-      alert('Error de red');
+      await showAlert('Aviso', 'Error de red');
     }
   };
 

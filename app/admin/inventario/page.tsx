@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { useModal } from '@/app/components/ModalProvider';
 
 interface InventoryItem {
   id: string;
@@ -14,6 +15,7 @@ interface InventoryItem {
 }
 
 export default function BodegaInventario() {
+  const { showAlert, showConfirm } = useModal();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -48,10 +50,10 @@ export default function BodegaInventario() {
         const photos = rawData?.package?.fotos || [];
         setViewingPhotos({ id: trackingId, photos });
       } else {
-        alert('Error al cargar fotos desde el API');
+        await showAlert('Aviso', 'Error al cargar fotos desde el API');
       }
     } catch {
-      alert('Error de conexión al cargar fotos');
+      await showAlert('Aviso', 'Error de conexión al cargar fotos');
     } finally {
       setLoadingPhotosFor(null);
     }
@@ -286,10 +288,10 @@ export default function BodegaInventario() {
                   setInventory(prev => prev.map(p => p.id === originalTracking ? editingItem : p));
                   setEditingItem(null);
                 } else {
-                  alert('Error al guardar los cambios');
+                  await showAlert('Aviso', 'Error al guardar los cambios');
                 }
               } catch {
-                alert('Error de conexión al guardar');
+                await showAlert('Aviso', 'Error de conexión al guardar');
               } finally {
                 setIsSaving(false);
               }
@@ -406,7 +408,7 @@ export default function BodegaInventario() {
                     setDeletingItem(null);
                     setDeleteReason('');
                   } else {
-                    alert('Error al eliminar');
+                    await showAlert('Aviso', 'Error al eliminar');
                   }
                 } else {
                   // Request deletion for regular user
@@ -420,15 +422,15 @@ export default function BodegaInventario() {
                     })
                   });
                   if (res.ok) {
-                    alert('Solicitud enviada al Administrador Principal para su aprobación.');
+                    await showAlert('Aviso', 'Solicitud enviada al Administrador Principal para su aprobación.');
                     setDeletingItem(null);
                     setDeleteReason('');
                   } else {
-                    alert('Error al enviar la solicitud');
+                    await showAlert('Aviso', 'Error al enviar la solicitud');
                   }
                 }
               } catch {
-                alert('Error de conexión');
+                await showAlert('Aviso', 'Error de conexión');
               } finally {
                 setIsSaving(false);
               }
