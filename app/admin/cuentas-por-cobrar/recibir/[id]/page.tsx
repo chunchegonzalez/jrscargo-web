@@ -281,19 +281,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Moneda</label>
-                <select 
-                  value={currency}
-                  onChange={e => {
-                    setCurrency(e.target.value);
-                    setApplications({});
-                    setTotalPaymentAmount('');
-                    setAmountToApply(0);
-                  }}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
-                >
-                  <option value="USD">Dólares (USD)</option>
-                  <option value="CRC">Colones (CRC)</option>
-                </select>
+                <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-800">
+                  Dólares (USD)
+                </div>
               </div>
               <div className="col-span-1">
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nº de referencia</label>
