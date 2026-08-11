@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getHeaders } from '@/lib/supabase'; // We'll need to export getHeaders from supabase or implement it directly
 
 export const dynamic = 'force-dynamic';
 
