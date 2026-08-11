@@ -5,10 +5,35 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Printer } from 'lucide-react';
 
+type InvoiceItem = {
+  id: string;
+  service_name: string;
+  tracking_number?: string;
+  weight?: string | number;
+  rate?: string | number;
+  amount: string | number;
+};
+
+type InvoiceDetail = {
+  invoice_number: string;
+  status: string;
+  issue_date: string;
+  notes?: string;
+  subtotal: string | number;
+  discount_percent: string | number;
+  total: string | number;
+  clients?: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  items?: InvoiceItem[];
+};
+
 export default function InvoiceViewPage() {
   const params = useParams();
   const id = params.id as string;
-  const [invoice, setInvoice] = useState<Record<string, unknown> | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadInvoice = useCallback(async () => {
@@ -79,9 +104,9 @@ export default function InvoiceViewPage() {
         {/* Cliente Info */}
         <div className="mb-10 p-6 bg-gray-50 rounded-2xl border border-gray-100">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Facturado A</h3>
-          <p className="text-lg font-bold text-gray-800">{(invoice.clients as Record<string, string>)?.name}</p>
-          <p className="text-sm text-gray-600 mt-1">{(invoice.clients as Record<string, string>)?.email}</p>
-          {(invoice.clients as Record<string, string>)?.phone && <p className="text-sm text-gray-600 mt-1">{(invoice.clients as Record<string, string>)?.phone}</p>}
+          <p className="text-lg font-bold text-gray-800">{invoice.clients?.name}</p>
+          <p className="text-sm text-gray-600 mt-1">{invoice.clients?.email}</p>
+          {invoice.clients?.phone && <p className="text-sm text-gray-600 mt-1">{invoice.clients?.phone}</p>}
         </div>
 
         {/* Items Table */}
@@ -95,14 +120,14 @@ export default function InvoiceViewPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {(invoice.items as Record<string, unknown>[])?.map((item: Record<string, unknown>) => (
-                  <tr key={item.id as string}>
+                {invoice.items?.map((item) => (
+                  <tr key={item.id}>
                     <td className="py-4">
-                      <p className="font-bold text-gray-800">{item.service_name as string}</p>
+                      <p className="font-bold text-gray-800">{item.service_name}</p>
                       <div className="text-xs text-gray-500 flex gap-4 mt-1">
-                        {item.tracking_number && <span>Tracking: {item.tracking_number as string}</span>}
-                        {Number(item.weight) > 0 && <span>Peso: {item.weight as string} Lb</span>}
-                        {Number(item.rate) > 0 && <span>Tarifa: ${item.rate as string}/Lb</span>}
+                        {item.tracking_number && <span>Tracking: {item.tracking_number}</span>}
+                        {Number(item.weight) > 0 && <span>Peso: {item.weight} Lb</span>}
+                        {Number(item.rate) > 0 && <span>Tarifa: ${item.rate}/Lb</span>}
                       </div>
                     </td>
                     <td className="py-4 text-right font-bold text-gray-800">
