@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 type Client = {
