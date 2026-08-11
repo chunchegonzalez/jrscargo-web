@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const messages: any = [
+    const messages = [
       {
         role: 'user',
         content: [
@@ -49,16 +49,18 @@ export async function POST(request: Request) {
         messages
       });
       text = res.text;
-    } catch (err1: any) {
-      console.warn("Fallo con gemini-1.5-flash:", err1.message);
+    } catch (err1) {
+      const e1 = err1 as Error;
+      console.warn("Fallo con gemini-1.5-flash:", e1.message);
       try {
         const res = await generateText({
           model: google('gemini-1.5-pro'),
           messages
         });
         text = res.text;
-      } catch (err2: any) {
-        console.warn("Fallo con gemini-1.5-pro:", err2.message);
+      } catch (err2) {
+        const e2 = err2 as Error;
+        console.warn("Fallo con gemini-1.5-pro:", e2.message);
         const res = await generateText({
           model: google('gemini-pro-vision'),
           messages
