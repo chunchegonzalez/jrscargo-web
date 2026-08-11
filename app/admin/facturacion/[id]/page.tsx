@@ -21,6 +21,7 @@ type InvoiceDetail = {
   notes?: string;
   subtotal: string | number;
   discount_percent: string | number;
+  total: string | number;
   clients?: {
     id?: string;
     name: string;
