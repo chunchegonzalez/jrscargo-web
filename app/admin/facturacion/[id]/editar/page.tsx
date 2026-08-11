@@ -285,6 +285,7 @@ export default function EditarFacturaPage() {
                         setIsClientDropdownOpen(true);
                       }}
                       onFocus={() => setIsClientDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setIsClientDropdownOpen(false), 150)}
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
                     />
                     {isClientDropdownOpen && (
