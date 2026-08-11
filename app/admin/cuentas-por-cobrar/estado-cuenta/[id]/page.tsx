@@ -19,6 +19,8 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Record<string, unknown> | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [aging, setAging] = useState({
     current: 0,
     days1to30: 0,
@@ -143,6 +145,34 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
         </div>
       </div>
 
+      {/* Date Filters (Hidden in print) */}
+      <div className="max-w-4xl mx-auto px-8 py-4 print:hidden flex flex-col sm:flex-row items-center gap-4 bg-gray-50/50 border-x border-b border-gray-200 rounded-b-xl mb-4">
+        <span className="text-sm font-bold text-gray-700">Filtrar transacciones:</span>
+        <div className="flex items-center gap-2">
+          <input 
+            type="date" 
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-brand-blue"
+          />
+          <span className="text-gray-500 font-medium">hasta</span>
+          <input 
+            type="date" 
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-brand-blue"
+          />
+          {(startDate || endDate) && (
+            <button 
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              className="ml-2 text-sm text-brand-blue hover:underline font-medium"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* A4 Print Area */}
       <div className="max-w-4xl mx-auto p-8 print:p-0 bg-white">
         
@@ -198,27 +228,62 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {ledger.map((entry, index) => (
-              <tr key={index} className="border-b border-transparent hover:bg-gray-50/30 print:hover:bg-transparent">
-                <td className="py-2 px-3 text-gray-800 align-top whitespace-nowrap">
-                  {new Date(entry.date).toLocaleDateString('es-CR')}
-                </td>
-                <td className="py-2 px-3 text-gray-800 align-top">
-                  {entry.description}
-                </td>
-                <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
-                  {entry.amount < 0 ? entry.amount.toFixed(2) : entry.amount.toFixed(2)}
-                </td>
-                <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
-                  {entry.balance?.toFixed(2)}
-                </td>
-              </tr>
-            ))}
-            {ledger.length === 0 && (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500 italic">No hay movimientos registrados.</td>
-              </tr>
-            )}
+            {(() => {
+              let previousBalance = 0;
+              let hasPreviousEntries = false;
+
+              const filteredLedger = ledger.filter(entry => {
+                if (startDate && entry.date < startDate) {
+                  previousBalance = entry.balance || 0;
+                  hasPreviousEntries = true;
+                  return false;
+                }
+                if (endDate && entry.date > endDate) return false;
+                return true;
+              });
+
+              return (
+                <>
+                  {hasPreviousEntries && startDate && (
+                    <tr className="bg-gray-50/50 print:bg-transparent">
+                      <td className="py-2 px-3 text-gray-800 align-top whitespace-nowrap italic">
+                        {new Date(startDate).toLocaleDateString('es-CR')}
+                      </td>
+                      <td className="py-2 px-3 text-gray-800 align-top font-bold italic">
+                        Saldo Anterior
+                      </td>
+                      <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
+                        -
+                      </td>
+                      <td className="py-2 px-3 text-gray-900 font-bold align-top text-right whitespace-nowrap">
+                        {previousBalance.toFixed(2)}
+                      </td>
+                    </tr>
+                  )}
+                  {filteredLedger.map((entry, index) => (
+                    <tr key={index} className="border-b border-transparent hover:bg-gray-50/30 print:hover:bg-transparent">
+                      <td className="py-2 px-3 text-gray-800 align-top whitespace-nowrap">
+                        {new Date(entry.date).toLocaleDateString('es-CR')}
+                      </td>
+                      <td className="py-2 px-3 text-gray-800 align-top">
+                        {entry.description}
+                      </td>
+                      <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
+                        {entry.amount < 0 ? entry.amount.toFixed(2) : entry.amount.toFixed(2)}
+                      </td>
+                      <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
+                        {entry.balance?.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredLedger.length === 0 && !hasPreviousEntries && (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-gray-500 italic">No hay movimientos registrados.</td>
+                    </tr>
+                  )}
+                </>
+              );
+            })()}
           </tbody>
         </table>
 

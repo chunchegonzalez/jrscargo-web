@@ -39,6 +39,10 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'facturas' | 'pagos'>('facturas');
 
+  // Filtros de fecha para historial de pagos
+  const [paymentStartDate, setPaymentStartDate] = useState('');
+  const [paymentEndDate, setPaymentEndDate] = useState('');
+
   const loadData = useCallback(async () => {
     try {
       const res = await fetch(`/api/clients/${clientId}`);
@@ -250,6 +254,35 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
 
         {/* Tab Content: Historial de Pagos (Hidden in print for state of account, or we can show it below) */}
         <div className={`${activeTab === 'pagos' ? 'block' : 'hidden'} print:block print:mt-12`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4 print:hidden">
+            <h3 className="text-lg font-bold text-gray-800">Historial de Pagos</h3>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-500 uppercase">Desde:</span>
+              <input 
+                type="date" 
+                value={paymentStartDate}
+                onChange={(e) => setPaymentStartDate(e.target.value)}
+                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-brand-blue"
+              />
+              <span className="text-sm font-bold text-gray-500 uppercase ml-2">Hasta:</span>
+              <input 
+                type="date" 
+                value={paymentEndDate}
+                onChange={(e) => setPaymentEndDate(e.target.value)}
+                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-brand-blue"
+              />
+              {(paymentStartDate || paymentEndDate) && (
+                <button 
+                  onClick={() => { setPaymentStartDate(''); setPaymentEndDate(''); }}
+                  className="ml-2 text-sm text-brand-blue hover:underline"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+          </div>
+          
           <div className="hidden print:block mb-4">
             <h3 className="text-lg font-bold text-gray-800 border-b border-gray-300 pb-2">Historial de Pagos</h3>
           </div>
@@ -267,10 +300,18 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {payments.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-gray-500">No hay pagos registrados.</td></tr>
-                ) : (
-                  payments.map(pay => (
+                {(() => {
+                  const filteredPayments = payments.filter(pay => {
+                    if (paymentStartDate && pay.payment_date < paymentStartDate) return false;
+                    if (paymentEndDate && pay.payment_date > paymentEndDate) return false;
+                    return true;
+                  });
+
+                  if (filteredPayments.length === 0) {
+                    return <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay pagos en este rango de fechas.</td></tr>;
+                  }
+
+                  return filteredPayments.map(pay => (
                     <tr key={pay.id} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
                       <td className="p-4 text-sm text-gray-800 font-medium">{pay.payment_date}</td>
                       <td className="p-4 text-sm text-gray-600">{pay.payment_method || '-'}</td>
@@ -293,8 +334,8 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                         </button>
                       </td>
                     </tr>
-                  ))
-                )}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
