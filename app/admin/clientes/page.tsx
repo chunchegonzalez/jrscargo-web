@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2 } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -92,6 +92,25 @@ export default function ClientesPage() {
     }
   };
 
+  const handleDeleteClient = async (id: string, name: string) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar al cliente ${name}?`)) return;
+    
+    try {
+      const res = await fetch(`/api/clients/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        await loadData();
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo eliminar el cliente.'));
+      }
+    } catch {
+      alert('Error de red al intentar eliminar.');
+    }
+  };
+
   const filteredClients = clients.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -108,7 +127,7 @@ export default function ClientesPage() {
         </div>
         <button 
           onClick={() => {
-            setEditingClient({ name: '', email: '', phone: '', address: 'Costa Rica' });
+            setEditingClient({ name: '', email: '', phone: '' });
             setIsModalOpen(true);
           }}
           className="btn-primary"
@@ -223,6 +242,13 @@ export default function ClientesPage() {
                         >
                           <Edit size={18} />
                         </button>
+                        <button 
+                          onClick={() => handleDeleteClient(client.id, client.name)}
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -265,29 +291,14 @@ export default function ClientesPage() {
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
-                  <input 
-                    type="tel"
-                    value={editingClient.phone || ''} 
-                    onChange={e => setEditingClient({...editingClient, phone: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">País</label>
-                  <select 
-                    value={editingClient.address || 'Costa Rica'} 
-                    onChange={e => setEditingClient({...editingClient, address: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
-                  >
-                    <option value="Costa Rica">Costa Rica</option>
-                    <option value="Estados Unidos">Estados Unidos</option>
-                    <option value="Nicaragua">Nicaragua</option>
-                    <option value="Otro">Otro País</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
+                <input 
+                  type="tel"
+                  value={editingClient.phone || ''} 
+                  onChange={e => setEditingClient({...editingClient, phone: e.target.value})}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
+                />
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="submit" className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold hover:bg-brand-blue/90 transition-colors">

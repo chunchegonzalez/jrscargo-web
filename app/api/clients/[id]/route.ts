@@ -54,3 +54,27 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const id = params.id;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const res = await fetch(`${url}/rest/v1/clients?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.code === '23503') {
+        throw new Error('No se puede eliminar el cliente porque tiene facturas o pagos asociados. Elimine primero los registros contables.');
+      }
+      throw new Error('Error al eliminar el cliente');
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Error eliminando cliente';
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  }
+}
