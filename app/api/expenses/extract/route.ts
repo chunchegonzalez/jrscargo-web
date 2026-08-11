@@ -57,7 +57,16 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorData = await response.text();
       console.error("Gemini Error:", errorData);
-      throw new Error("Error al analizar la imagen con la Inteligencia Artificial.");
+      
+      let parsedError;
+      try {
+        parsedError = JSON.parse(errorData);
+      } catch (e) {
+        parsedError = null;
+      }
+      
+      const errorMessage = parsedError?.error?.message || errorData || "Error desconocido";
+      throw new Error("Error de Google Gemini: " + errorMessage);
     }
 
     const data = await response.json();
