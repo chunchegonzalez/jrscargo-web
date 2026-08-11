@@ -15,7 +15,7 @@ interface InventoryItem {
 }
 
 export default function BodegaInventario() {
-  const { showAlert, showConfirm } = useModal();
+  const { showAlert } = useModal();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);

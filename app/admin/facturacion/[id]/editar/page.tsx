@@ -11,7 +11,7 @@ type InvoiceItem = { id: number; service_name: string; tracking_number: string; 
 type ServiceType = { id: string; name: string; default_rate: number };
 
 export default function EditarFacturaPage() {
-  const { showAlert, showConfirm } = useModal();
+  const { showAlert } = useModal();
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();

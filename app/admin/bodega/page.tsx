@@ -14,7 +14,7 @@ interface PackageData {
 }
 
 export default function BodegaScanner() {
-  const { showAlert, showConfirm } = useModal();
+  const { showAlert } = useModal();
   const [scannedCode, setScannedCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [packageData, setPackageData] = useState<PackageData | null>(null);

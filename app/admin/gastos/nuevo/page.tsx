@@ -7,7 +7,7 @@ import { ArrowLeft, Save, UploadCloud, Sparkles, Loader2, ChevronDown, Check } f
 import { useModal } from '@/app/components/ModalProvider';
 
 export default function NuevoGastoPage() {
-  const { showAlert, showConfirm } = useModal();
+  const { showAlert } = useModal();
   const router = useRouter();
   
   const [providerName, setProviderName] = useState('');

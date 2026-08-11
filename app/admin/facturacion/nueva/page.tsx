@@ -11,7 +11,7 @@ type InvoiceItem = { id: number; service_name: string; tracking_number: string; 
 type ServiceType = { id: string; name: string; default_rate: number };
 
 export default function NuevaFacturaPage() {
-  const { showAlert, showConfirm } = useModal();
+  const { showAlert } = useModal();
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
   const [catalogServices, setCatalogServices] = useState<ServiceType[]>([]);
