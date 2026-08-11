@@ -26,6 +26,7 @@ export default function NuevaFacturaPage() {
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const [currency, setCurrency] = useState('USD');
+  const [exchangeRate, setExchangeRate] = useState(500);
   const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -326,7 +327,7 @@ export default function NuevaFacturaPage() {
           </div>
 
           <div className="space-y-4 md:pl-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">N.º Factura</label>
                 <input 
@@ -347,6 +348,17 @@ export default function NuevaFacturaPage() {
                   <option value="USD">USD ($)</option>
                   <option value="CRC">CRC (₡)</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">T. Cambio</label>
+                <input 
+                  type="number"
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                  min="1"
+                  step="1"
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Unidad</label>
@@ -498,9 +510,19 @@ export default function NuevaFacturaPage() {
               </span>
               <span className="text-sm font-bold text-green-600">-{currency === 'CRC' ? '₡' : '$'}{discountAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-              <span className="text-base font-black text-brand-blue uppercase tracking-wider">Total a Pagar</span>
-              <span className="text-2xl font-black text-brand-blue">{currency === 'CRC' ? '₡' : '$'}{total.toFixed(2)}</span>
+            <div className="flex justify-between items-center pt-4 border-t border-gray-200 mb-2">
+              <span className="text-sm font-black text-brand-blue uppercase tracking-wider">Total ({currency})</span>
+              <span className="text-xl font-black text-brand-blue">{currency === 'CRC' ? '₡' : '$'}{total.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-brand-blue/5 rounded-xl border border-brand-blue/10">
+              <span className="text-xs font-bold text-gray-600 flex flex-col">
+                <span>Total Ref. ({currency === 'USD' ? 'CRC' : 'USD'})</span>
+                <span className="text-[10px] font-normal opacity-70">T.C. {exchangeRate}</span>
+              </span>
+              <span className="text-lg font-black text-brand-blue">
+                {currency === 'USD' ? '₡' : '$'}
+                {currency === 'USD' ? (total * exchangeRate).toFixed(2) : (total / exchangeRate).toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
