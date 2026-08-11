@@ -310,6 +310,22 @@ export async function updateInvoice(id: string, updates: Record<string, unknown>
   return { success: true };
 }
 
+export async function deleteInvoice(id: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  // Primero eliminamos los items
+  await fetch(`${url}/rest/v1/invoice_items?invoice_id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  // Luego eliminamos la factura
+  const res = await fetch(`${url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders()
+  });
+  if (!res.ok) throw new Error('Error deleting invoice');
+  return { success: true };
+}
+
 export async function updateInvoiceWithItems(id: string, updates: Record<string, unknown>, items: Record<string, unknown>[]) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   

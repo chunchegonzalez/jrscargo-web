@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInvoiceById, updateInvoice, updateInvoiceWithItems } from '@/lib/supabase';
+import { getInvoiceById, updateInvoice, updateInvoiceWithItems, deleteInvoice } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +30,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Error updating invoice';
+    return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    await deleteInvoice(params.id);
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Error deleting invoice';
     return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
   }
 }

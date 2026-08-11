@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, Ban, Trash2 } from 'lucide-react';
 
 type InvoiceItem = {
   id: string;
@@ -86,6 +86,40 @@ export default function InvoiceViewPage() {
     }
   };
 
+  const handleVoidInvoice = async () => {
+    if (!confirm('¿Estás seguro de que deseas anular esta factura?')) return;
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Anulada' })
+      });
+      if (res.ok) {
+        loadInvoice();
+      } else {
+        alert('Error al anular la factura');
+      }
+    } catch {
+      alert('Error de red');
+    }
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!confirm('¿Estás seguro de que deseas ELIMINAR esta factura permanentemente? Esta acción no se puede deshacer.')) return;
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        window.location.href = '/admin/facturacion';
+      } else {
+        alert('Error al eliminar la factura');
+      }
+    } catch {
+      alert('Error de red');
+    }
+  };
+
   useEffect(() => {
     loadInvoice();
   }, [loadInvoice]);
@@ -109,10 +143,18 @@ export default function InvoiceViewPage() {
         </div>
         
         <div className="flex gap-2">
+          {invoice.status !== 'Anulada' && (
+            <button onClick={handleVoidInvoice} className="px-4 py-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all" title="Anular Factura">
+              <Ban size={18} /> Anular
+            </button>
+          )}
+          <button onClick={handleDeleteInvoice} className="px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all" title="Eliminar Factura">
+            <Trash2 size={18} /> Eliminar
+          </button>
           <Link href={`/admin/facturacion/${id}/editar`} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
             Editar Factura
           </Link>
-          {invoice.status !== 'Pagada' && (
+          {invoice.status !== 'Pagada' && invoice.status !== 'Anulada' && (
             <button onClick={() => {
               setPaymentMethod('SINPE');
               setPaymentReference('');
@@ -166,7 +208,14 @@ export default function InvoiceViewPage() {
 
           {/* Detalles de Factura */}
           <div className="mb-12 text-sm space-y-1">
-            <p className="font-bold text-gray-700 mb-2">Detalles de Factura</p>
+            <p className="font-bold text-gray-700 mb-2 flex items-center gap-3">
+              Detalles de Factura 
+              {invoice.status === 'Anulada' && (
+                <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                  Factura Anulada
+                </span>
+              )}
+            </p>
             <p className="text-gray-600">N.º de Factura: <span className="text-gray-800">{invoice.invoice_number}</span></p>
             <p className="text-gray-600">Fecha de Factura: <span className="text-gray-800">{new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></p>
           </div>
