@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Printer, CheckSquare, Square, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getInvoiceStats } from '@/lib/billing';
 
 export default function RecibirPagoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         const invoicesData = await invoicesRes.json();
         const paymentsData = await paymentsRes.json();
 
-        const currentClient = clientsData.data?.find((c: Record<string, unknown>) => c.id === clientId);
+        const currentClient = clientsData.data?.find((c: Record<string, unknown>) => String(c.id) === String(clientId));
         setClient(currentClient);
 
         if (paymentsData.success) {
@@ -47,20 +48,16 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
         // Filter invoices for this client that are not 'Pagada'
         const clientInvs = invoicesData.data.filter((inv: Record<string, unknown>) => 
-          inv.client_id === clientId && inv.status !== 'Pagada'
+          String(inv.client_id) === String(clientId)
         );
         
         // Calculate pending balance for each
         const processedInvs = clientInvs.map((inv: Record<string, unknown>) => {
-          const total = Number(inv.total);
-          let paid = 0;
-          if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-            const paymentsArray = inv.invoice_payments as Record<string, unknown>[];
-            paid = paymentsArray.reduce((acc: number, p: Record<string, unknown>) => acc + Number(p.amount_applied), 0);
-          }
+          const stats = getInvoiceStats(inv);
           return {
             ...inv,
-            pendingBalance: total - paid
+            pendingBalance: stats.pending,
+            displayStatus: stats.displayStatus
           };
         }).filter((inv: Record<string, unknown>) => (inv.pendingBalance as number) > 0);
 
