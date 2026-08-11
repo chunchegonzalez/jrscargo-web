@@ -54,10 +54,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">{children}</div>;
   }
 
-  const activeLinkClass = "bg-white shadow-sm border border-gray-200 text-brand-blue font-bold";
-  const inactiveLinkClass = "text-gray-500 hover:text-gray-900 hover:bg-gray-100 border border-transparent";
+  const activeLinkClass = "bg-brand-blue/10 text-brand-blue font-bold";
+  const inactiveLinkClass = "text-gray-500 hover:text-gray-900 hover:bg-gray-100/50 border border-transparent";
   const getLinkClass = (path: string) => {
-    return `block py-2 px-3 rounded-xl text-sm transition-all duration-200 ${
+    return `block py-2 px-3 rounded-xl text-sm transition-all duration-200 border border-transparent ${
       (pathname === path || pathname.startsWith(path + '/')) ? activeLinkClass : inactiveLinkClass
     }`;
   };
