@@ -10,15 +10,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          blue: '#12435e',      // Azul oscuro / petróleo
-          red: '#fd4e64',       // Rojo/coral
-          yellow: '#fdc151',    // Amarillo
+          blue: '#0F172A',      // Changed to a very dark, premium Slate for primary elements
+          accent: '#2563EB',    // A crisp modern blue for accents
+          red: '#EF4444',       
+          yellow: '#F59E0B',    
           white: '#FFFFFF',
-          'bg-light': '#f9fafb', // Fondo gris muy suave
-          'bg-section': '#f3f4f6',
-          'text-dark': '#0f172a',
-          'text-gray': '#475569',
-          'text-light': '#64748b',
+          'bg-light': '#FAFAFA', // Ultra light gray for background
+          'bg-section': '#F4F4F5',
+          'text-dark': '#09090B',
+          'text-gray': '#52525B',
+          'text-light': '#A1A1AA',
         },
       },
       fontFamily: {
@@ -29,9 +30,10 @@ const config: Config = {
         '3xl': '1.5rem',
       },
       boxShadow: {
-        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        'soft': '0 4px 20px 0 rgba(0, 0, 0, 0.05)',
+        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+        'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
       },
       backgroundImage: {
         'hero-gradient': 'linear-gradient(135deg, #12435e 0%, #1c6289 100%)',

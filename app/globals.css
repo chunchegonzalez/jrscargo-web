@@ -6,11 +6,11 @@
 
 @layer base {
   :root {
-    --brand-blue: #12435e;
-    --brand-red: #fd4e64;
-    --brand-yellow: #fdc151;
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 249, 250, 251;
+    --brand-blue: #0F172A;
+    --brand-red: #EF4444;
+    --brand-yellow: #F59E0B;
+    --foreground-rgb: 9, 9, 11;
+    --background-start-rgb: 250, 250, 250;
     --background-end-rgb: 255, 255, 255;
   }
 
@@ -20,8 +20,8 @@
 
   body {
     font-family: 'Inter', system-ui, sans-serif;
-    color: #0f172a;
-    background: #f9fafb;
+    color: #09090B;
+    background: #FAFAFA;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -89,11 +89,11 @@
 
   /* Cards */
   .card {
-    @apply bg-white rounded-2xl transition-all duration-300;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    @apply bg-white rounded-2xl transition-all duration-300 border border-gray-200/60;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   }
   .card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
   }
 
