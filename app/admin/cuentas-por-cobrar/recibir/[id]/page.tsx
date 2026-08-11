@@ -18,7 +18,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   // Form State
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency] = useState('USD');
   const [reference, setReference] = useState('');
   const [totalPaymentAmount, setTotalPaymentAmount] = useState<string>('');
   const [amountToApply, setAmountToApply] = useState<number>(0);
