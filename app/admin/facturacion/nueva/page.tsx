@@ -75,12 +75,12 @@ export default function NuevaFacturaPage() {
         const updatedItem = { ...item, [field]: value };
         // Auto calculate amount if rate and weight are present
         if (field === 'weight' || field === 'rate') {
-          const w = parseFloat(field === 'weight' ? value : item.weight) || 0;
-          const r = parseFloat(field === 'rate' ? value : item.rate) || 0;
-          updatedItem.amount = w > 0 && r > 0 ? parseFloat((w * r).toFixed(2)) : parseFloat(updatedItem.amount);
+          const w = Number(field === 'weight' ? value : item.weight) || 0;
+          const r = Number(field === 'rate' ? value : item.rate) || 0;
+          updatedItem.amount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : Number(updatedItem.amount);
         }
         if (field === 'amount') {
-           updatedItem.amount = parseFloat(value) || 0;
+           updatedItem.amount = Number(value) || 0;
         }
         return updatedItem;
       }
@@ -88,7 +88,7 @@ export default function NuevaFacturaPage() {
     }));
   };
 
-  const subtotal = items.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+  const subtotal = items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
   const total = subtotal; // If taxes needed, calculate here
 
   const handleSaveInvoice = async () => {
