@@ -231,15 +231,13 @@ export default function BodegaInventario() {
                     </span>
                   </td>
                   <td className="p-4 pr-6 text-right">
-                    <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-1">
                       <button onClick={() => openEditModal(item)} className="p-2 text-brand-blue hover:bg-brand-blue/10 rounded-lg transition-colors" title="Editar">
                         <Pencil size={18} />
                       </button>
-                      {currentUser?.role === 'admin' && (
-                        <button onClick={() => setDeletingItem(item)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
-                          <Trash2 size={18} />
-                        </button>
-                      )}
+                      <button onClick={() => setDeletingItem(item)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
                 </tr>
