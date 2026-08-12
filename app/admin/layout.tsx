@@ -15,7 +15,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar_open');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_open', String(isDesktopSidebarOpen));
+  }, [isDesktopSidebarOpen]);
   
   const [openSections, setOpenSections] = useState({
     operaciones: true,
