@@ -301,7 +301,7 @@ export default function ChatBotWidget() {
                   );
                 })}
                 
-                {error && (
+                {error && !messages.some(m => m.toolInvocations?.some((t: { state: string; result?: unknown }) => t.state === 'result' && t.result && typeof t.result === 'object' && 'success' in (t.result as Record<string, unknown>))) && (
                   <div className="flex gap-3 justify-start">
                     <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
                       <Bot size={16} />
