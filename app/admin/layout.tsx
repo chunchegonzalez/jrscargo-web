@@ -69,9 +69,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0B1D2B] flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
+      {/* Collapsed sidebar strip - desktop only */}
+      {!isDesktopSidebarOpen && (
+        <div className="fixed inset-y-0 left-0 w-14 bg-[#0B1D2B] z-50 hidden lg:flex flex-col items-center py-4 print:hidden">
+          <button
+            onClick={() => setIsDesktopSidebarOpen(true)}
+            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-brand-yellow/20 flex items-center justify-center text-gray-400 hover:text-brand-yellow transition-all duration-200 group"
+          >
+            <Menu size={18} className="group-hover:scale-110 transition-transform" />
+          </button>
+        </div>
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0B1D2B] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } ${!isDesktopSidebarOpen ? 'lg:hidden' : ''} print:hidden`}>
+      } ${!isDesktopSidebarOpen ? 'lg:-translate-x-full' : ''} print:hidden`}>
         
         {/* Sidebar Header */}
         <div className="h-20 flex items-center justify-between px-5 border-b border-white/5">
@@ -84,12 +96,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="text-[9px] font-bold text-brand-yellow uppercase tracking-[0.2em] leading-none">Panel Admin</span>
             </div>
           </div>
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="lg:hidden p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Desktop collapse button */}
+            <button 
+              onClick={() => setIsDesktopSidebarOpen(false)}
+              className="hidden lg:flex w-8 h-8 items-center justify-center text-gray-500 hover:text-brand-yellow hover:bg-white/10 rounded-lg transition-all duration-200 group"
+              title="Colapsar menú"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform">
+                <path d="M11 17l-5-5 5-5" />
+                <path d="M18 17l-5-5 5-5" />
+              </svg>
+            </button>
+            {/* Mobile close button */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Sidebar Navigation */}
@@ -280,7 +306,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content */}
       <main className={`flex-1 w-full flex flex-col min-h-screen transition-all duration-300 ${
-        isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
+        isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-14'
       } print:ml-0 print:block print:h-auto print:min-h-0 relative`}>
         
         {/* Top Header */}
@@ -292,14 +318,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               className="lg:hidden p-2 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors"
             >
               <Menu size={24} />
-            </button>
-            {/* Desktop Toggle */}
-            <button 
-              onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
-              className="hidden lg:flex items-center justify-center p-2.5 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-all border border-transparent hover:border-brand-blue/20"
-              title="Alternar Menú"
-            >
-              <Menu size={20} />
             </button>
             <h2 className="text-xl font-black text-gray-800 tracking-tight hidden lg:block">Sistema de Gestión</h2>
           </div>
