@@ -6,23 +6,27 @@ import { isRateLimited, recordFailedAttempt, resetAttempts } from '@/lib/rate-li
 
 export async function POST(request: Request) {
   try {
-    // Get client IP for rate limiting
+    const { username, password } = await request.json();
+
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Usuario y contraseña requeridos' }, { status: 400 });
+    }
+
+    // Get client IP for rate limiting (Vercel uses x-real-ip)
+    const realIp = request.headers.get('x-real-ip');
     const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+    const ip = realIp || (forwarded ? forwarded.split(',')[0].trim() : 'unknown');
+    
+    // Rate limit key: IP + username to avoid cross-blocking
+    const rateLimitKey = ip + ':' + username.toLowerCase();
 
     // Check rate limit
-    const rateCheck = isRateLimited(ip);
+    const rateCheck = isRateLimited(rateLimitKey);
     if (rateCheck.limited) {
       return NextResponse.json(
         { error: 'Demasiados intentos fallidos. Intente de nuevo en ' + rateCheck.retryAfterSeconds + ' segundos.' },
         { status: 429 }
       );
-    }
-
-    const { username, password } = await request.json();
-
-    if (!username || !password) {
-      return NextResponse.json({ error: 'Usuario y contraseña requeridos' }, { status: 400 });
     }
 
     let validUser = null;
@@ -67,7 +71,7 @@ export async function POST(request: Request) {
 
     if (validUser) {
       // Reset rate limit on successful login
-      resetAttempts(ip);
+      resetAttempts(rateLimitKey);
 
       const response = NextResponse.json({ success: true, user: validUser }, { status: 200 });
       
@@ -87,7 +91,7 @@ export async function POST(request: Request) {
     }
 
     // Record failed attempt
-    recordFailedAttempt(ip);
+    recordFailedAttempt(rateLimitKey);
 
     return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
   } catch {
