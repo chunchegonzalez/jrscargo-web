@@ -92,8 +92,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0B1D2B] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } ${!isDesktopSidebarOpen ? 'lg:-translate-x-full' : ''} print:hidden`}>
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${isDesktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'} print:hidden`}>
         
         {/* Sidebar Header */}
         <div className="h-20 flex items-center justify-between px-5 border-b border-white/5">
