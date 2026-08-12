@@ -18,7 +18,7 @@ interface TrackingPackage {
   weight?: number;
   weightUnit?: string;
   statusLabel?: string;
-  fotos?: string[];
+  fotos?: { id?: number | string; url: string }[];
   dimensions?: string;
   origin?: string;
   destination?: string;
@@ -130,6 +130,7 @@ export default function TrackingPage() {
   };
 
   const fotos = pkg?.fotos || [];
+  const fotoUrls = fotos.map(f => typeof f === 'string' ? f : f.url).filter(Boolean);
   const consignatario = pkg?.consignatario || pkg?.consignee || pkg?.client || pkg?.name || '';
   const statusLabel = pkg?.statusLabel || localItem?.status || '';
   const statusStyle = statusLabel ? getStatusStyle(statusLabel) : null;
@@ -275,11 +276,11 @@ export default function TrackingPage() {
           </div>
 
           {/* Photos */}
-          {fotos.length > 0 && (
+          {fotoUrls.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-sm font-bold text-gray-700 mb-4">Fotos del Paquete ({fotos.length})</h3>
+              <h3 className="text-sm font-bold text-gray-700 mb-4">Fotos del Paquete ({fotoUrls.length})</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {fotos.map((url: string, idx: number) => (
+                {fotoUrls.map((url: string, idx: number) => (
                   <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="bg-gray-100 rounded-xl overflow-hidden aspect-square border border-gray-200 hover:shadow-md transition-shadow block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
