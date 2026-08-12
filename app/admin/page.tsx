@@ -57,7 +57,6 @@ function formatShortDay(d: Date): string {
   return `${days[d.getDay()]} ${d.getDate()}`;
 }
 
-const COLORS = ['#12435E', '#F5A623', '#2ecc71', '#E5E7EB'];
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
