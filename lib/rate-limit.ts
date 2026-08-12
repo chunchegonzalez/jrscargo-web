@@ -16,11 +16,13 @@ const BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes block
 // Cleanup old entries every 10 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of attempts.entries()) {
+  const keysToDelete: string[] = [];
+  attempts.forEach((entry, key) => {
     if (now - entry.firstAttempt > WINDOW_MS && now > entry.blockedUntil) {
-      attempts.delete(key);
+      keysToDelete.push(key);
     }
-  }
+  });
+  keysToDelete.forEach(k => attempts.delete(k));
 }, 10 * 60 * 1000);
 
 export function isRateLimited(ip: string): { limited: boolean; retryAfterSeconds: number } {
