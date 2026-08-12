@@ -249,17 +249,12 @@ export default function InvoiceViewPage() {
             </div>
           </div>
 
-          {/* Notas / Información de pago */}
-          <div className="border-t border-gray-100 pt-6">
-            <p className="text-xs text-gray-500 leading-relaxed">
-              Agradecemos su pago en un plazo de 15 días naturales a partir de la fecha de emisión de esta factura.
-            </p>
-            {invoice.notes && (
-              <p className="text-xs text-gray-500 mt-2 whitespace-pre-line">{invoice.notes}</p>
-            )}
-            <p className="text-xs text-gray-400 italic mt-3">Si tiene alguna consulta, no dude en contactarnos.</p>
-            <p className="text-sm font-black text-brand-blue mt-1">¡Gracias por su preferencia!</p>
-          </div>
+          {/* Notas */}
+          {invoice.notes && (
+            <div className="border-t border-gray-100 pt-6">
+              <p className="text-xs text-gray-500 whitespace-pre-line">{invoice.notes}</p>
+            </div>
+          )}
 
         </div>
 
