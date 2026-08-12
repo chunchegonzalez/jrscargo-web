@@ -78,7 +78,9 @@ export default function BodegaInventario() {
         if (res.ok) {
           const { data } = await res.json();
           // Transform from DB format
-          const formatted = data.map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => ({
+          const formatted = data
+            .filter((item: { status: string }) => item.status !== 'Eliminado')
+            .map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => ({
             id: item.id,
             client: item.client,
             company: item.company || 'N/A',
@@ -397,17 +399,20 @@ export default function BodegaInventario() {
               setIsSaving(true);
               try {
                 if (currentUser?.role === 'admin') {
-                  // Direct deletion for admin
+                  // Soft-delete: mark as "Eliminado" using PATCH (more reliable with Supabase RLS)
                   const res = await fetch(`/api/inventory/${deletingItem.id}`, {
-                    method: 'DELETE',
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'Eliminado', delete_reason: deleteReason })
                   });
                   if (res.ok) {
                     setInventory(prev => prev.filter(p => p.id !== deletingItem.id));
                     setDeletingItem(null);
                     setDeleteReason('');
+                    await showAlert('Éxito', 'Paquete eliminado correctamente.');
                   } else {
-                    const errorData = await res.json();
-                    await showAlert('Aviso', errorData.error || 'Error al eliminar');
+                    const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+                    await showAlert('Error', errorData.error || 'No se pudo eliminar el paquete.');
                   }
                 } else {
                   // Request deletion for regular user
