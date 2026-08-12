@@ -128,6 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { href: '/admin/bodega/masivo', label: 'Recepción Masiva' },
                 { href: '/admin/entregas/masivo', label: 'Entrega Masiva' },
                 { href: '/admin/inventario', label: 'Inventario CR' },
+                { href: '/admin/tracking', label: 'Tracking de Paquetes' },
               ].map(link => {
                 const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
                 return (
