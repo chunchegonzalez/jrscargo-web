@@ -194,8 +194,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
         contentType: 'text/html'
       }]
     });
+    const sentAt = new Date().toISOString();
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      await fetch(supabaseUrl + '/rest/v1/invoices?id=eq.' + params.id, {
+        method: 'PATCH',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': 'Bearer ' + supabaseKey,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ email_sent_at: sentAt })
+      });
+    } catch {
+      // Non-critical
+    }
 
-    return NextResponse.json({ success: true, messageId: info.messageId }, { status: 200 });
+    return NextResponse.json({ success: true, messageId: info.messageId, email_sent_at: sentAt }, { status: 200 });
   } catch (err) {
     console.error('SMTP Error:', err);
     const errorMsg = err instanceof Error ? err.message : 'Error sending email via SMTP';
