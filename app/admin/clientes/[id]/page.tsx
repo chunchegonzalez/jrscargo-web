@@ -173,15 +173,12 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               <DollarSign size={18} /> Recibir Pago
             </Link>
           )}
-          <button 
-            onClick={() => {
-              setActiveTab('facturas');
-              setTimeout(() => window.print(), 100);
-            }} 
+          <Link 
+            href={`/admin/cuentas-por-cobrar/estado-cuenta/${client.id}`}
             className="px-4 py-2 bg-[#0A2636] text-white font-bold rounded-lg hover:bg-[#0A2636]/90 transition-colors flex items-center gap-2 shadow-lg shadow-[#0A2636]/20"
           >
             <Printer size={18} /> Estado de Cuenta
-          </button>
+          </Link>
         </div>
       </div>
 
