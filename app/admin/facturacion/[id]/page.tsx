@@ -113,8 +113,13 @@ export default function InvoiceViewPage() {
     }
   }
 
+  const exchangeRate = invoice.exchange_rate || 530;
+  const totalColones = (Number(invoice.total) * exchangeRate).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const issueDate = new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' });
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 print:space-y-0 print:m-0 print:p-0 print:max-w-none">
+      {/* Action bar - hidden on print */}
       <div className="flex items-center justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/admin/facturacion" className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500">
@@ -125,15 +130,15 @@ export default function InvoiceViewPage() {
         
         <div className="flex gap-2">
           {invoice.status !== 'Anulada' && (
-            <button onClick={handleVoidInvoice} className="px-4 py-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all" title="Anular Factura">
+            <button onClick={handleVoidInvoice} className="px-4 py-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
               <Ban size={18} /> Anular
             </button>
           )}
-          <button onClick={handleDeleteInvoice} className="px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all" title="Eliminar Factura">
+          <button onClick={handleDeleteInvoice} className="px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
             <Trash2 size={18} /> Eliminar
           </button>
           <Link href={`/admin/facturacion/${id}/editar`} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
-            Editar Factura
+            Editar
           </Link>
           {displayStatus !== 'Pagada' && displayStatus !== 'Anulada' && (invoice.clients?.id || invoice.client_id) && (
             <Link href={`/admin/cuentas-por-cobrar/recibir/${invoice.clients?.id || invoice.client_id}`} className="px-4 py-2 bg-[#0A2636] text-white rounded-lg hover:bg-[#0A2636]/90 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
@@ -146,105 +151,147 @@ export default function InvoiceViewPage() {
         </div>
       </div>
 
-      {/* Clean Invoice PDF */}
-      <div className="bg-white rounded-md shadow-lg print:shadow-none mx-auto overflow-hidden text-gray-800 flex flex-col" style={{ maxWidth: '210mm', minHeight: '297mm' }}>
+      {/* ======================== INVOICE DOCUMENT ======================== */}
+      <div className="bg-white shadow-lg print:shadow-none mx-auto flex flex-col" style={{ maxWidth: '210mm', minHeight: '297mm' }}>
         
-        {/* Header */}
-        <div className="px-10 pt-10 pb-6 flex justify-between items-start">
-          <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="JRS Cargo" className="h-12 w-auto object-contain mb-3" />
-            <div className="text-[11px] text-gray-400 leading-relaxed">
-              <p>JRS CARGO S.A.</p>
-              <p>San Pablo de Heredia, Costa Rica</p>
-              <p>info@jrscargocr.com &bull; +506 7260-1238</p>
+        {/* Top accent line */}
+        <div className="h-1.5 bg-brand-blue"></div>
+
+        <div className="px-12 pt-8 pb-10 flex-1 flex flex-col">
+          
+          {/* ---- HEADER ROW: Logo + Invoice info ---- */}
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="JRS Cargo" className="h-14 w-auto object-contain mb-3" />
+              <p className="text-xs font-bold text-brand-blue tracking-wide">JRS CARGO S.A.</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">San Pablo de Heredia, Costa Rica</p>
+              <p className="text-[10px] text-gray-400">Tel: +506 7260-1238</p>
+              <p className="text-[10px] text-gray-400">info@jrscargocr.com</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-brand-blue font-bold uppercase tracking-widest">Factura</p>
+              <p className="text-3xl font-black text-brand-blue mt-1">{invoice.invoice_number}</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Factura</p>
-            <p className="text-2xl font-black text-brand-blue">{invoice.invoice_number}</p>
-            <p className="text-xs text-gray-400 mt-2">{new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-            {displayStatus === 'Anulada' && <span className="inline-block mt-2 text-red-500 text-[10px] font-bold uppercase tracking-wider">Anulada</span>}
-            {displayStatus === 'Pagada' && <span className="inline-block mt-2 text-green-600 text-[10px] font-bold uppercase tracking-wider">Pagada</span>}
-            {displayStatus !== 'Anulada' && displayStatus !== 'Pagada' && <span className="inline-block mt-2 text-amber-500 text-[10px] font-bold uppercase tracking-wider">Pendiente</span>}
-          </div>
-        </div>
 
-        <div className="h-px bg-gray-200 mx-10"></div>
+          {/* ---- INFO TABLE: Client + Invoice details ---- */}
+          <table className="w-full text-xs mb-8 border border-gray-200">
+            <tbody>
+              <tr>
+                <td className="bg-gray-50 px-3 py-2 font-bold text-brand-blue border border-gray-200 w-28">Cliente:</td>
+                <td className="px-3 py-2 border border-gray-200">{invoice.clients?.name}</td>
+                <td className="bg-gray-50 px-3 py-2 font-bold text-brand-blue border border-gray-200 w-32">Fecha Emisión:</td>
+                <td className="px-3 py-2 border border-gray-200">{issueDate}</td>
+              </tr>
+              <tr>
+                <td className="bg-gray-50 px-3 py-2 font-bold text-brand-blue border border-gray-200">Email:</td>
+                <td className="px-3 py-2 border border-gray-200">{invoice.clients?.email}</td>
+                <td className="bg-gray-50 px-3 py-2 font-bold text-brand-blue border border-gray-200">Condición:</td>
+                <td className="px-3 py-2 border border-gray-200">
+                  {displayStatus === 'Pagada' && <span className="text-green-600 font-bold">Pagada</span>}
+                  {displayStatus === 'Anulada' && <span className="text-red-500 font-bold">Anulada</span>}
+                  {displayStatus !== 'Pagada' && displayStatus !== 'Anulada' && <span className="text-amber-600 font-bold">Pendiente</span>}
+                </td>
+              </tr>
+              <tr>
+                <td className="bg-gray-50 px-3 py-2 font-bold text-brand-blue border border-gray-200">Teléfono:</td>
+                <td className="px-3 py-2 border border-gray-200">{invoice.clients?.phone || '-'}</td>
+                <td className="bg-gray-50 px-3 py-2 font-bold text-brand-blue border border-gray-200">Moneda:</td>
+                <td className="px-3 py-2 border border-gray-200">Dólar US</td>
+              </tr>
+            </tbody>
+          </table>
 
-        <div className="px-10 py-8 flex-1">
-          {/* Bill to */}
-          <div className="mb-8">
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Facturar a</p>
-            <p className="text-sm font-bold text-gray-800">{invoice.clients?.name}</p>
-            {invoice.clients?.email && <p className="text-xs text-gray-400">{invoice.clients.email}</p>}
-            {invoice.clients?.phone && <p className="text-xs text-gray-400">{invoice.clients.phone}</p>}
-          </div>
-
-          {/* Items */}
-          <table className="w-full text-left text-xs mb-8">
+          {/* ---- ITEMS TABLE ---- */}
+          <table className="w-full text-xs mb-6 border-collapse">
             <thead>
-              <tr className="border-b border-gray-200 text-[10px] text-gray-400 uppercase tracking-wider">
-                <th className="py-2.5 pr-2 font-medium">Servicio</th>
-                <th className="py-2.5 px-2 font-medium">Tracking</th>
-                <th className="py-2.5 px-2 text-center font-medium">Peso</th>
-                <th className="py-2.5 px-2 text-right font-medium">Tarifa</th>
-                <th className="py-2.5 pl-2 text-right font-medium">Importe</th>
+              <tr className="bg-brand-blue text-white">
+                <th className="py-2.5 px-3 text-left font-bold text-[10px] uppercase tracking-wider border border-brand-blue">N.º</th>
+                <th className="py-2.5 px-3 text-left font-bold text-[10px] uppercase tracking-wider border border-brand-blue">Servicio</th>
+                <th className="py-2.5 px-3 text-left font-bold text-[10px] uppercase tracking-wider border border-brand-blue">Tracking</th>
+                <th className="py-2.5 px-3 text-center font-bold text-[10px] uppercase tracking-wider border border-brand-blue">Peso</th>
+                <th className="py-2.5 px-3 text-right font-bold text-[10px] uppercase tracking-wider border border-brand-blue">Tarifa</th>
+                <th className="py-2.5 px-3 text-right font-bold text-[10px] uppercase tracking-wider border border-brand-blue">Total</th>
               </tr>
             </thead>
             <tbody>
-              {invoice.items?.map((item) => (
-                <tr key={item.id} className="border-b border-gray-100">
-                  <td className="py-3 pr-2 text-gray-700">{item.service_name}</td>
-                  <td className="py-3 px-2 font-mono text-gray-400">{item.tracking_number || '-'}</td>
-                  <td className="py-3 px-2 text-center text-gray-400">{item.weight ? `${item.weight} lb` : '-'}</td>
-                  <td className="py-3 px-2 text-right text-gray-400">{item.rate ? `$${Number(item.rate).toFixed(2)}` : '-'}</td>
-                  <td className="py-3 pl-2 text-right font-bold text-gray-700">${Number(item.amount).toFixed(2)}</td>
+              {invoice.items?.map((item, index) => (
+                <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                  <td className="py-2.5 px-3 border border-gray-200 text-gray-400 text-center">{String(index + 1).padStart(2, '0')}</td>
+                  <td className="py-2.5 px-3 border border-gray-200 text-gray-800 font-medium">{item.service_name}</td>
+                  <td className="py-2.5 px-3 border border-gray-200 font-mono text-gray-500">{item.tracking_number || '-'}</td>
+                  <td className="py-2.5 px-3 border border-gray-200 text-center text-gray-500">{item.weight ? item.weight + ' lb' : '-'}</td>
+                  <td className="py-2.5 px-3 border border-gray-200 text-right text-gray-500">{item.rate ? '$' + Number(item.rate).toFixed(2) : '-'}</td>
+                  <td className="py-2.5 px-3 border border-gray-200 text-right font-bold text-gray-800">${Number(item.amount).toFixed(2)}</td>
+                </tr>
+              ))}
+              {/* Empty rows to fill space if few items */}
+              {(invoice.items?.length || 0) < 3 && Array.from({ length: 3 - (invoice.items?.length || 0) }).map((_, i) => (
+                <tr key={'empty-' + i}>
+                  <td className="py-2.5 px-3 border border-gray-200">&nbsp;</td>
+                  <td className="py-2.5 px-3 border border-gray-200"></td>
+                  <td className="py-2.5 px-3 border border-gray-200"></td>
+                  <td className="py-2.5 px-3 border border-gray-200"></td>
+                  <td className="py-2.5 px-3 border border-gray-200"></td>
+                  <td className="py-2.5 px-3 border border-gray-200"></td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Totals */}
-          <div className="flex justify-end mb-8">
-            <div className="w-64">
-              <div className="flex justify-between items-center py-2 text-xs text-gray-400 border-b border-gray-100">
-                <span>Subtotal</span>
-                <span className="text-gray-700">${Number(invoice.subtotal).toFixed(2)}</span>
-              </div>
-              {Number(invoice.discount_percent) > 0 && (
-                <div className="flex justify-between items-center py-2 text-xs text-gray-400 border-b border-gray-100">
-                  <span>Descuento {invoice.discount_percent}%</span>
-                  <span className="text-green-600">-${((Number(invoice.subtotal) * Number(invoice.discount_percent)) / 100).toFixed(2)}</span>
+          {/* ---- NOTES + TOTALS ROW ---- */}
+          <div className="flex gap-8 mb-8">
+            {/* Notes - left side */}
+            <div className="flex-1">
+              {invoice.notes && (
+                <div className="border border-gray-200 rounded p-3 h-full">
+                  <p className="text-[10px] text-brand-blue font-bold uppercase tracking-wider mb-1">Observaciones</p>
+                  <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">{invoice.notes}</p>
                 </div>
               )}
-              <div className="flex justify-between items-center pt-3 mt-1 border-t-2 border-brand-blue">
-                <span className="text-xs font-bold text-brand-blue uppercase">Total USD</span>
-                <span className="text-xl font-black text-brand-blue">${Number(invoice.total).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center pt-1">
-                <span className="text-[11px] text-gray-400">Total Colones</span>
-                <span className="text-sm font-bold text-gray-600">₡{(Number(invoice.total) * (invoice.exchange_rate || 530)).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <p className="text-[9px] text-gray-300 text-right mt-1">
-                T.C. ₡{(invoice.exchange_rate || 530).toLocaleString('es-CR')} por $1 USD
+            </div>
+
+            {/* Totals - right side */}
+            <div className="w-72">
+              <table className="w-full text-xs border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="py-2 px-3 border border-gray-200 bg-gray-50 font-bold text-gray-600">Sub-Total:</td>
+                    <td className="py-2 px-3 border border-gray-200 text-right font-medium text-gray-800">${Number(invoice.subtotal).toFixed(2)}</td>
+                  </tr>
+                  {Number(invoice.discount_percent) > 0 && (
+                    <tr>
+                      <td className="py-2 px-3 border border-gray-200 bg-gray-50 font-bold text-gray-600">Descuento ({invoice.discount_percent}%):</td>
+                      <td className="py-2 px-3 border border-gray-200 text-right font-medium text-green-600">-${((Number(invoice.subtotal) * Number(invoice.discount_percent)) / 100).toFixed(2)}</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td className="py-2.5 px-3 border border-brand-blue bg-brand-blue font-bold text-white text-sm">Total USD:</td>
+                    <td className="py-2.5 px-3 border border-brand-blue bg-brand-blue text-right font-black text-white text-lg">${Number(invoice.total).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 border border-gray-200 bg-gray-50 font-bold text-gray-600">Total Colones:</td>
+                    <td className="py-2 px-3 border border-gray-200 text-right font-bold text-gray-700">₡{totalColones}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="text-[9px] text-gray-400 text-right mt-1.5">
+                Tipo de cambio: ₡{exchangeRate.toLocaleString('es-CR')} por $1 USD
               </p>
             </div>
           </div>
 
-          {/* Notes */}
-          {invoice.notes && (
-            <div className="border-t border-gray-100 pt-5">
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Notas</p>
-              <p className="text-xs text-gray-500 whitespace-pre-line leading-relaxed">{invoice.notes}</p>
-            </div>
-          )}
-        </div>
+          {/* Spacer to push footer down */}
+          <div className="flex-1"></div>
 
-        {/* Footer */}
-        <div className="px-10 py-4 border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-300 mt-auto">
-          <span>JRS CARGO S.A.</span>
-          <span>info@jrscargocr.com &bull; +506 7260-1238 &bull; jrscargocr.com</span>
+          {/* ---- FOOTER ---- */}
+          <div className="border-t border-gray-200 pt-4 text-center">
+            <p className="text-[10px] font-bold text-brand-blue">JRS CARGO S.A.</p>
+            <p className="text-[9px] text-gray-400 mt-0.5">info@jrscargocr.com | +506 7260-1238 | www.jrscargocr.com</p>
+            <p className="text-[9px] text-gray-400">San Pablo de Heredia, Costa Rica</p>
+          </div>
+
         </div>
       </div>
     </div>
