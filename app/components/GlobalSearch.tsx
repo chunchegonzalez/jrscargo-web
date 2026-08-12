@@ -20,6 +20,25 @@ const MODULES = [
   { label: 'Servicios y Tarifas', url: '/admin/servicios', adminOnly: true },
 ];
 
+interface ClientItem {
+  id: string;
+  name?: string;
+  email?: string;
+  cedula?: string;
+  address?: string;
+}
+
+interface InvoiceItem {
+  id: string;
+  invoice_number?: string;
+}
+
+interface InventoryItem {
+  id: string;
+  tracking_number?: string;
+  client_name?: string;
+}
+
 interface GlobalSearchProps {
   role?: string;
 }
