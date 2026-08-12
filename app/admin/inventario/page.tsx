@@ -403,7 +403,7 @@ export default function BodegaInventario() {
                   const res = await fetch(`/api/inventory/${deletingItem.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'Eliminado', delete_reason: deleteReason })
+                    body: JSON.stringify({ status: 'Eliminado' })
                   });
                   if (res.ok) {
                     setInventory(prev => prev.filter(p => p.id !== deletingItem.id));
