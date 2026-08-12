@@ -32,13 +32,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     let customSubject = `Factura #${invoice.invoice_number} de JRS CARGO S.A.`;
-    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu factura reciente. Por favor, revisa la información a continuación.';
+    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu factura reciente.';
 
     try {
       const body = await request.json();
       if (body.subject) customSubject = body.subject;
       if (body.message) {
-        // Convert plain text newlines to HTML breaks
         customMessage = body.message.replace(/\n/g, '<br/>');
       }
     } catch {
@@ -47,136 +46,105 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const exchangeRate = invoice.exchange_rate || 530;
     const totalColones = (invoice.total * exchangeRate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const issueDate = new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    // Generate HTML for the email
+    const itemsHtml = invoice.items.map((item: { service_name: string; tracking_number?: string; weight?: string | number; rate?: string | number; amount: number }) => `
+      <tr>
+        <td style="padding:10px 0;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">${item.service_name}</td>
+        <td style="padding:10px 0;font-size:11px;color:#999;font-family:monospace;border-bottom:1px solid #f0f0f0;">${item.tracking_number || '-'}</td>
+        <td style="padding:10px 0;font-size:12px;color:#999;text-align:center;border-bottom:1px solid #f0f0f0;">${item.weight || '-'} lb</td>
+        <td style="padding:10px 0;font-size:13px;color:#333;font-weight:600;text-align:right;border-bottom:1px solid #f0f0f0;">$${item.amount.toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const discountHtml = invoice.discount_percent > 0 ? `
+      <tr>
+        <td style="padding:6px 0;font-size:12px;color:#999;">Descuento (${invoice.discount_percent}%)</td>
+        <td style="padding:6px 0;font-size:13px;color:#10b981;text-align:right;">-$${((invoice.subtotal * invoice.discount_percent) / 100).toFixed(2)}</td>
+      </tr>
+    ` : '';
+
+    const notesHtml = invoice.notes ? `
+      <div style="margin-top:24px;padding:14px;background:#fafafa;border-radius:6px;">
+        <p style="margin:0;font-size:12px;color:#888;line-height:1.5;">${invoice.notes.replace(/\n/g, '<br/>')}</p>
+      </div>
+    ` : '';
+
     const htmlContent = `
-      <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+      <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;color:#333;">
         
-        <!-- Header -->
-        <div style="background-color: #12435e; padding: 32px 32px 24px 32px;">
-          <table style="width: 100%;">
+        <div style="padding:32px 32px 0;">
+          <table style="width:100%;">
             <tr>
               <td>
-                <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">FACTURA</h1>
-                <p style="margin: 4px 0 0 0; font-size: 13px; color: rgba(255,255,255,0.7);">${invoice.invoice_number}</p>
+                <img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:36px;width:auto;" />
               </td>
-              <td style="text-align: right;">
-                <img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height: 50px; width: auto;" />
+              <td style="text-align:right;">
+                <p style="margin:0;font-size:10px;color:#bbb;text-transform:uppercase;letter-spacing:1px;">Factura</p>
+                <p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#12435E;">${invoice.invoice_number}</p>
               </td>
             </tr>
           </table>
         </div>
+
+        <div style="height:1px;background:#eee;margin:20px 32px;"></div>
         
-        <!-- Franja amarilla -->
-        <div style="height: 4px; background: linear-gradient(90deg, #F5A623, #F5A623 60%, transparent);"></div>
-        
-        <!-- Cuerpo -->
-        <div style="padding: 32px;">
-          
-          <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 8px 0;">
+        <div style="padding:0 32px;">
+          <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 4px;">
             Hola <strong>${invoice.clients.name}</strong>,
           </p>
-          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0 0 24px 0;">
+          <p style="font-size:13px;color:#999;line-height:1.6;margin:0 0 28px;">
             ${customMessage}
           </p>
-          
-          <!-- Resumen de factura -->
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 28px;">
-            <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Factura</td>
-                  <td style="text-align: right; font-size: 14px; font-weight: 700; color: #1e293b;">${invoice.invoice_number}</td>
-                </tr>
-              </table>
-            </div>
-            <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Fecha de Emisión</td>
-                  <td style="text-align: right; font-size: 14px; font-weight: 500; color: #1e293b;">${new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                </tr>
-              </table>
-            </div>
-            <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Subtotal</td>
-                  <td style="text-align: right; font-size: 14px; font-weight: 500; color: #1e293b;">$${invoice.subtotal.toFixed(2)} USD</td>
-                </tr>
-              </table>
-            </div>
-            ${invoice.discount_percent > 0 ? `
-            <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-size: 12px; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Descuento (${invoice.discount_percent}%)</td>
-                  <td style="text-align: right; font-size: 14px; font-weight: 500; color: #10b981;">-$${((invoice.subtotal * invoice.discount_percent) / 100).toFixed(2)} USD</td>
-                </tr>
-              </table>
-            </div>
-            ` : ''}
-            <div style="padding: 18px 20px; background-color: #12435e;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-size: 12px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Total USD</td>
-                  <td style="text-align: right; font-size: 22px; font-weight: 800; color: #ffffff;">$${invoice.total.toFixed(2)}</td>
-                </tr>
-              </table>
-            </div>
-            <div style="padding: 16px 20px; background-color: #fffbeb; border-top: 1px solid #fde68a;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Total Colones</td>
-                  <td style="text-align: right; font-size: 18px; font-weight: 800; color: #92400e;">₡${totalColones}</td>
-                </tr>
-              </table>
-              <p style="margin: 4px 0 0 0; font-size: 10px; color: #b45309; text-align: right;">T.C. ₡${exchangeRate} por $1 USD</p>
-            </div>
-          </div>
 
-          <!-- Detalle de servicios -->
-          <p style="font-size: 13px; font-weight: 700; color: #12435e; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">Detalle de Servicios</p>
-          <table style="width: 100%; border-collapse: collapse;">
+          <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px;color:#bbb;">Fecha</td>
+              <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;text-align:right;">${issueDate}</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px;color:#bbb;">Cliente</td>
+              <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;text-align:right;">${invoice.clients.name}</td>
+            </tr>
+          </table>
+          
+          <p style="font-size:10px;font-weight:700;color:#12435E;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Detalle</p>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
             <thead>
-              <tr style="border-bottom: 2px solid #12435e;">
-                <th style="text-align: left; padding: 10px 8px; color: #12435e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Servicio</th>
-                <th style="text-align: left; padding: 10px 8px; color: #12435e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Tracking</th>
-                <th style="text-align: center; padding: 10px 8px; color: #12435e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Peso</th>
-                <th style="text-align: right; padding: 10px 8px; color: #12435e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Tarifa</th>
-                <th style="text-align: right; padding: 10px 8px; color: #12435e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Importe</th>
+              <tr>
+                <th style="text-align:left;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eee;font-weight:600;">Servicio</th>
+                <th style="text-align:left;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eee;font-weight:600;">Tracking</th>
+                <th style="text-align:center;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eee;font-weight:600;">Peso</th>
+                <th style="text-align:right;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #eee;font-weight:600;">Monto</th>
               </tr>
             </thead>
-            <tbody>
-              ${invoice.items.map((item: { service_name: string; tracking_number?: string; weight?: string | number; rate?: string | number; amount: number }) => `
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 12px 8px; font-size: 13px; color: #374151; font-weight: 500;">${item.service_name}</td>
-                  <td style="padding: 12px 8px; font-size: 12px; color: #6b7280; font-family: monospace;">${item.tracking_number || '-'}</td>
-                  <td style="padding: 12px 8px; font-size: 12px; color: #6b7280; text-align: center;">${item.weight || '-'} lb</td>
-                  <td style="padding: 12px 8px; font-size: 12px; color: #6b7280; text-align: right;">$${item.rate ? Number(item.rate).toFixed(2) : '0.00'}</td>
-                  <td style="padding: 12px 8px; font-size: 13px; color: #1e293b; font-weight: 700; text-align: right;">$${item.amount.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
+            <tbody>${itemsHtml}</tbody>
           </table>
 
-          ${invoice.notes ? `
-          <div style="margin-top: 24px; padding: 16px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <p style="margin: 0; font-size: 12px; color: #6b7280;">${invoice.notes.replace(/\n/g, '<br/>')}</p>
+          <div style="border-top:2px solid #12435E;padding-top:14px;margin-top:4px;">
+            <table style="width:100%;border-collapse:collapse;">
+              ${discountHtml}
+              <tr>
+                <td style="padding:4px 0;font-size:14px;font-weight:700;color:#12435E;">Total USD</td>
+                <td style="padding:4px 0;font-size:20px;font-weight:800;color:#12435E;text-align:right;">$${invoice.total.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding:2px 0;font-size:12px;color:#999;">Total Colones</td>
+                <td style="padding:2px 0;font-size:14px;font-weight:600;color:#666;text-align:right;">&#8353;${totalColones}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding:2px 0 0;font-size:10px;color:#ccc;text-align:right;">T.C. &#8353;${exchangeRate} por $1 USD</td>
+              </tr>
+            </table>
           </div>
-          ` : ''}
 
+          ${notesHtml}
         </div>
         
-        <!-- Footer -->
-        <div style="background-color: #12435e; padding: 24px 32px; text-align: center;">
-          <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #ffffff;">JRS CARGO S.A.</p>
-          <p style="margin: 0 0 12px 0; font-size: 11px; color: rgba(255,255,255,0.6);">San Pablo de Heredia, Costa Rica</p>
-          <p style="margin: 0; font-size: 11px; color: rgba(255,255,255,0.5);">
-            info@jrscargocr.com &nbsp;|&nbsp; +506 72601238 &nbsp;|&nbsp; www.jrscargocr.com
-          </p>
+        <div style="padding:24px 32px;margin-top:32px;border-top:1px solid #eee;text-align:center;">
+          <p style="margin:0 0 2px;font-size:12px;font-weight:700;color:#12435E;">JRS CARGO S.A.</p>
+          <p style="margin:0;font-size:10px;color:#ccc;">info@jrscargocr.com &nbsp;|&nbsp; +506 7260-1238 &nbsp;|&nbsp; jrscargocr.com</p>
         </div>
-        
       </div>
     `;
 
