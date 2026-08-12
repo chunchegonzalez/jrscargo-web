@@ -222,21 +222,213 @@ export default function AdminDashboard() {
   }
 
   if (currentUser?.role !== 'admin') {
+    // --- Operator-specific stats ---
+    const enBodega = inventory.filter(p => p.status === 'En Bodega CR' || p.status === 'Recibido').length;
+    const entregados = inventory.filter(p => p.status === 'Entregado').length;
+    const pendEntrega = inventory.filter(p => p.status !== 'Entregado' && p.status !== 'Eliminado').length;
+    const enTransito = inventory.filter(p => p.status === 'En Tránsito').length;
+
+    // Packages by provider (client_name)
+    const providerMap = new Map<string, number>();
+    inventory.forEach(p => {
+      const name = p.client_name || 'Sin asignar';
+      providerMap.set(name, (providerMap.get(name) || 0) + 1);
+    });
+    const providerData = Array.from(providerMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, Paquetes: count }));
+
+    // Packages by status pie
+    const statusMap = new Map<string, number>();
+    inventory.forEach(p => {
+      statusMap.set(p.status, (statusMap.get(p.status) || 0) + 1);
+    });
+    const statusColors: Record<string, string> = {
+      'Recibido': '#3b82f6',
+      'En Bodega CR': '#12435E',
+      'En Tránsito': '#F5A623',
+      'Entregado': '#22c55e',
+      'Listo para Entrega': '#8b5cf6',
+    };
+    const statusPieData = Array.from(statusMap.entries())
+      .filter(([, v]) => v > 0)
+      .map(([name, value]) => ({ name, value, color: statusColors[name] || '#94a3b8' }));
+
+    // Recent packages (last 10)
+    const recentPackages = [...inventory]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 10);
+
+    // Packages per day (last 7 days)
+    const opPkgPorDia = last7.map(day => ({
+      name: day.label,
+      Recibidos: inventory.filter(p => isSameDay(new Date(p.received_date || p.created_at), day.date)).length,
+      Entregados: inventory.filter(p => p.status === 'Entregado' && isSameDay(new Date(p.updated_at || p.created_at), day.date)).length,
+    }));
+
     return (
-      <div className="space-y-8 animate-fade-in">
-        <h1 className="text-2xl font-light text-gray-600">
-          {greeting}, <strong className="font-black text-brand-blue">{currentUser?.username || 'Usuario'}</strong>
-        </h1>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span className="font-bold text-gray-800">Crear acciones</span>
-          <Link href="/admin/bodega" className="px-4 py-2 bg-white border border-gray-200 rounded-full hover:bg-gray-50 hover:border-gray-300 transition-colors text-brand-blue font-medium">
-            Escanear paquete
-          </Link>
+      <div className="space-y-6 animate-fade-in text-sm">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-light text-gray-600">
+              {greeting}, <strong className="font-black text-brand-blue">{currentUser?.username || 'Operador'}</strong>
+            </h1>
+            <p className="text-gray-400 text-xs mt-1">Panel operativo — resumen de paquetes e inventario</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/admin/bodega" className="flex items-center px-4 py-2 bg-brand-yellow text-white rounded-full text-xs font-medium hover:bg-brand-yellow/90 transition-colors">
+              <Plus className="w-3 h-3 mr-1.5" /> Escanear Paquete
+            </Link>
+            <Link href="/admin/entregas/masivo" className="flex items-center px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-brand-blue hover:bg-gray-50 transition-colors">
+              <Package className="w-3 h-3 mr-1.5" /> Entrega Masiva
+            </Link>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center space-y-4">
-          <Building2 size={48} className="mx-auto text-brand-blue/20" />
-          <h2 className="text-xl font-black text-brand-blue">Bienvenido al Área Operativa</h2>
-          <p className="text-gray-500 max-w-md mx-auto">Selecciona &quot;Operaciones&quot; en el menú lateral o utiliza los accesos directos para comenzar a trabajar.</p>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+            <div className="p-3 bg-blue-50 text-brand-blue rounded-xl shrink-0">
+              <Package className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Total Paquetes</p>
+              <p className="text-2xl font-black text-gray-800">{inventory.length}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">En Bodega</p>
+              <p className="text-2xl font-black text-gray-800">{enBodega}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+            <div className="p-3 bg-green-50 text-green-600 rounded-xl shrink-0">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Entregados</p>
+              <p className="text-2xl font-black text-gray-800">{entregados}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl shrink-0">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">En Tránsito</p>
+              <p className="text-2xl font-black text-gray-800">{enTransito}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Packages per day */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-4">Paquetes últimos 7 días</h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={opPkgPorDia}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <RechartsTooltip />
+                <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="Recibidos" fill="#12435E" radius={[4,4,0,0]} />
+                <Bar dataKey="Entregados" fill="#22c55e" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Status Pie */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-4">Paquetes por Estado</h3>
+            {statusPieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, value }) => name + ' (' + value + ')'} labelLine={false}>
+                    {statusPieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-gray-400 py-10">Sin datos</p>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Clients */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-4">Paquetes por Cliente (Top 8)</h3>
+            {providerData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={providerData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
+                  <RechartsTooltip />
+                  <Bar dataKey="Paquetes" fill="#F5A623" radius={[0,4,4,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-center text-gray-400 py-10">Sin datos</p>
+            )}
+          </div>
+
+          {/* Recent Packages Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-sm font-bold text-gray-700 mb-4">Últimos Paquetes Recibidos</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 font-bold text-gray-500">Tracking</th>
+                    <th className="text-left py-2 font-bold text-gray-500">Cliente</th>
+                    <th className="text-left py-2 font-bold text-gray-500">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPackages.map(pkg => (
+                    <tr key={pkg.id} className="border-b border-gray-50">
+                      <td className="py-2 font-mono text-brand-blue font-bold">{pkg.tracking_number}</td>
+                      <td className="py-2 text-gray-600 truncate max-w-[120px]">{pkg.client_name || '—'}</td>
+                      <td className="py-2">
+                        <span className={'px-2 py-0.5 rounded-full text-[10px] font-bold ' + (
+                          pkg.status === 'Entregado' ? 'bg-green-100 text-green-700' :
+                          pkg.status === 'En Tránsito' ? 'bg-amber-100 text-amber-700' :
+                          'bg-blue-100 text-brand-blue'
+                        )}>{pkg.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentPackages.length === 0 && (
+                    <tr><td colSpan={3} className="py-6 text-center text-gray-400">Sin paquetes</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary bar */}
+        <div className="bg-gradient-to-r from-brand-blue to-[#0A2636] rounded-2xl p-6 text-white flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-white/60 uppercase tracking-wider font-bold">Pendientes de Entrega</p>
+            <p className="text-3xl font-black">{pendEntrega}</p>
+          </div>
+          <Link href="/admin/inventario" className="px-5 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold transition-colors border border-white/10">
+            Ver Inventario Completo →
+          </Link>
         </div>
       </div>
     );

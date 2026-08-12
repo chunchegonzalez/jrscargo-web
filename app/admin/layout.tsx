@@ -178,9 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
 
-          {/* CONTABILIDAD */}
-          {currentUser?.role === 'admin' && (
-            <>
+          {/* CONTABILIDAD - visible to all, but some links admin-only */}
               <div className="pt-4 pb-1 px-3">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Finanzas</p>
               </div>
@@ -199,11 +197,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div className={`overflow-hidden transition-all duration-300 ${openSections.contabilidad ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
                   {[
-                    { href: '/admin/facturacion', label: 'Facturas a Clientes', exact: true },
-                    { href: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar' },
-                    { href: '/admin/gastos', label: 'Gastos y Compras' },
-                    { href: '/admin/contabilidad/pagos', label: 'Historial de Pagos' },
-                  ].map(link => {
+                    { href: '/admin/facturacion', label: 'Facturas a Clientes', exact: true, adminOnly: false },
+                    { href: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar', exact: false, adminOnly: false },
+                    { href: '/admin/gastos', label: 'Gastos y Compras', exact: false, adminOnly: true },
+                    { href: '/admin/contabilidad/pagos', label: 'Historial de Pagos', exact: false, adminOnly: false },
+                  ].filter(link => !link.adminOnly || currentUser?.role === 'admin').map(link => {
                     const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
                     return (
                       <Link key={link.href} href={link.href} className={`block py-2 px-3 rounded-md text-[12px] transition-all ${
@@ -216,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </div>
 
-              {/* CLIENTES */}
+              {/* CLIENTES & WHATSAPP - visible to all */}
               <div className="pt-4 pb-1 px-3">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Gestión</p>
               </div>
@@ -228,15 +226,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               }`}>
                 <Building2 size={17} className={pathname.startsWith('/admin/clientes') ? 'text-brand-yellow' : ''} />
                 Clientes
-              </Link>
-
-              <Link href="/admin/monitor" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
-                pathname.startsWith('/admin/monitor')
-                  ? 'bg-brand-yellow/15 text-brand-yellow font-bold shadow-[0_0_12px_-3px_rgba(245,166,35,0.3)]'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
-              }`}>
-                <Activity size={17} className={pathname.startsWith('/admin/monitor') ? 'text-brand-yellow' : ''} />
-                Monitoreo Web
               </Link>
 
               <a 
@@ -254,37 +243,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </svg>
               </a>
 
-              {/* ADMIN */}
-              <button 
-                onClick={() => toggleSection('ajustes')}
-                className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-[13px] font-medium"
-              >
-                <div className="flex items-center gap-3">
-                  <Settings size={17} className={openSections.ajustes ? 'text-brand-yellow' : ''} />
-                  <span>Configuración</span>
-                </div>
-                {openSections.ajustes ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              </button>
-              
-              <div className={`overflow-hidden transition-all duration-300 ${openSections.ajustes ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
-                  {[
-                    { href: '/admin/ajustes', label: 'Ajustes de Sistema' },
-                    { href: '/admin/servicios', label: 'Servicios y Tarifas' },
-                  ].map(link => {
-                    const isActive = pathname.startsWith(link.href);
-                    return (
-                      <Link key={link.href} href={link.href} className={`block py-2 px-3 rounded-md text-[12px] transition-all ${
-                        isActive ? 'text-brand-yellow font-bold bg-brand-yellow/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                      }`}>
-                        {link.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
+              {/* ADMIN-ONLY sections */}
+              {currentUser?.role === 'admin' && (
+                <>
+                  <Link href="/admin/monitor" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
+                    pathname.startsWith('/admin/monitor')
+                      ? 'bg-brand-yellow/15 text-brand-yellow font-bold shadow-[0_0_12px_-3px_rgba(245,166,35,0.3)]'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
+                  }`}>
+                    <Activity size={17} className={pathname.startsWith('/admin/monitor') ? 'text-brand-yellow' : ''} />
+                    Monitoreo Web
+                  </Link>
+
+                  <button 
+                    onClick={() => toggleSection('ajustes')}
+                    className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-[13px] font-medium"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Settings size={17} className={openSections.ajustes ? 'text-brand-yellow' : ''} />
+                      <span>Configuración</span>
+                    </div>
+                    {openSections.ajustes ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                  </button>
+                  
+                  <div className={`overflow-hidden transition-all duration-300 ${openSections.ajustes ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
+                      {[
+                        { href: '/admin/ajustes', label: 'Ajustes de Sistema' },
+                        { href: '/admin/servicios', label: 'Servicios y Tarifas' },
+                      ].map(link => {
+                        const isActive = pathname.startsWith(link.href);
+                        return (
+                          <Link key={link.href} href={link.href} className={`block py-2 px-3 rounded-md text-[12px] transition-all ${
+                            isActive ? 'text-brand-yellow font-bold bg-brand-yellow/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                          }`}>
+                            {link.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
 
         </nav>
 
