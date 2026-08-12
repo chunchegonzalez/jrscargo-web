@@ -1,18 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Package, Search, Eye, MapPin, Truck, CheckCircle2, Clock, X, Loader2 } from 'lucide-react';
-
-interface LocalInventoryItem {
-  id: string;
-  tracking_number: string;
-  client_name: string;
-  status: string;
-  weight: number | null;
-  received_date: string | null;
-  created_at: string;
-  updated_at: string | null;
-}
+import React, { useState } from 'react';
+import { Search, Package, MapPin, Truck, CheckCircle2, Clock, Loader2, AlertTriangle } from 'lucide-react';
 
 interface TrackingEvent {
   date: string;
@@ -30,332 +19,309 @@ interface TrackingPackage {
   weightUnit?: string;
   statusLabel?: string;
   fotos?: string[];
+  dimensions?: string;
+  origin?: string;
+  destination?: string;
+  description?: string;
+  pieces?: number;
+  volumetricWeight?: number;
+  declaredValue?: number;
+  currency?: string;
+  carrier?: string;
+  service?: string;
+  createdAt?: string;
+  receivedAt?: string;
 }
 
-interface TrackingData {
-  trackingNumber: string;
+interface LocalItem {
+  id: string;
+  tracking_number: string;
+  client_name: string;
   status: string;
-  rawData?: {
-    package?: TrackingPackage;
-    timeline?: TrackingEvent[];
-  };
+  weight: number | null;
+  received_date: string | null;
+  created_at: string;
 }
 
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'En Bodega MIA': return 'bg-blue-100 text-blue-700';
-    case 'En Tránsito': return 'bg-orange-100 text-orange-700';
-    case 'En Bodega CR': return 'bg-blue-50 text-[#12435E]';
-    case 'Entregado': return 'bg-green-100 text-green-700';
-    default: return 'bg-gray-100 text-gray-700';
-  }
-}
-
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return 'N/A';
+function formatDate(ds: string | null | undefined): string {
+  if (!ds) return 'N/A';
   try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
-    return d.toLocaleDateString('es-CR', { year: 'numeric', month: 'short', day: 'numeric' });
+    const d = new Date(ds);
+    if (isNaN(d.getTime())) return ds;
+    return d.toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch {
     return 'N/A';
   }
 }
 
-function getTimelineIcon(status?: string) {
-  const s = (status || '').toLowerCase();
-  if (s.includes('transit') || s.includes('camino')) return <Truck className="w-4 h-4" />;
-  if (s.includes('bodega') || s.includes('warehouse')) return <MapPin className="w-4 h-4" />;
-  if (s.includes('entregado') || s.includes('delivered')) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-  return <Package className="w-4 h-4" />;
+function getStatusStyle(status: string): { bg: string; text: string; border: string } {
+  const s = status.toLowerCase();
+  if (s.includes('entregado') || s.includes('delivered')) return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' };
+  if (s.includes('tránsito') || s.includes('transit') || s.includes('camino')) return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' };
+  if (s.includes('bodega') || s.includes('warehouse') || s.includes('miami') || s.includes('mia')) return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
+  return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
 }
 
-const STATUS_FILTERS = ['Todos', 'En Bodega MIA', 'En Tránsito', 'En Bodega CR', 'Entregado'];
+function getTimelineIcon(status?: string) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('entregado') || s.includes('delivered')) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+  if (s.includes('transit') || s.includes('camino') || s.includes('tránsito')) return <Truck className="w-4 h-4 text-orange-500" />;
+  if (s.includes('bodega') || s.includes('warehouse') || s.includes('recib')) return <MapPin className="w-4 h-4 text-blue-500" />;
+  return <Package className="w-4 h-4 text-gray-400" />;
+}
 
 export default function TrackingPage() {
-  const [inventory, setInventory] = useState<LocalInventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [trackingInput, setTrackingInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [searched, setSearched] = useState(false);
 
-  const [selectedItem, setSelectedItem] = useState<LocalInventoryItem | null>(null);
-  const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
-  const [trackingLoading, setTrackingLoading] = useState(false);
-  const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [pkg, setPkg] = useState<TrackingPackage | null>(null);
+  const [timeline, setTimeline] = useState<TrackingEvent[]>([]);
+  const [localItem, setLocalItem] = useState<LocalItem | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/inventory');
-        if (!res.ok) throw new Error('Error al cargar inventario');
-        const result = await res.json();
-        if (result.success && Array.isArray(result.data)) {
-          setInventory(result.data.filter((item: LocalInventoryItem) => item.status !== 'Eliminado'));
-        } else {
-          setInventory([]);
-        }
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Error desconocido');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const handleSearch = async () => {
+    const num = trackingInput.trim();
+    if (!num) return;
 
-  const handleOpenDetails = async (item: LocalInventoryItem) => {
-    setSelectedItem(item);
-    setTrackingData(null);
-    setTrackingError(null);
-    setTrackingLoading(true);
+    setLoading(true);
+    setError(null);
+    setPkg(null);
+    setTimeline([]);
+    setLocalItem(null);
+    setSearched(true);
 
     try {
-      const res = await fetch(`/api/tracking?number=${encodeURIComponent(item.tracking_number)}`);
-      if (!res.ok) throw new Error('Error al obtener datos de tracking');
+      // Fetch from tracking API
+      const res = await fetch(`/api/tracking?number=${encodeURIComponent(num)}`);
+      if (!res.ok) {
+        throw new Error('No se encontraron datos para este tracking');
+      }
       const data = await res.json();
-      if (data && data.status === 'SUCCESS') {
-        setTrackingData(data);
+
+      if (data.status === 'SUCCESS' && data.rawData) {
+        setPkg(data.rawData.package || null);
+        setTimeline(data.rawData.timeline || []);
       } else {
-        throw new Error('No se encontraron datos de tracking');
+        throw new Error('No se encontraron datos para este tracking');
+      }
+
+      // Also check local inventory
+      try {
+        const localRes = await fetch(`/api/inventory/${encodeURIComponent(num)}`);
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          if (localData.success && localData.data) {
+            setLocalItem(localData.data);
+          }
+        }
+      } catch {
+        // Local lookup is optional
       }
     } catch (err: unknown) {
-      setTrackingError(err instanceof Error ? err.message : 'Error desconocido');
+      setError(err instanceof Error ? err.message : 'Error al buscar tracking');
     } finally {
-      setTrackingLoading(false);
+      setLoading(false);
     }
   };
 
-  const filteredInventory = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return inventory.filter(item => {
-      const tracking = (item.tracking_number || '').toLowerCase();
-      const client = (item.client_name || '').toLowerCase();
-      const matchesSearch = !q || tracking.includes(q) || client.includes(q);
-      const matchesStatus = statusFilter === 'Todos' || item.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [inventory, searchQuery, statusFilter]);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
+  };
 
-  const pkg = trackingData?.rawData?.package;
-  const timeline = trackingData?.rawData?.timeline;
   const fotos = pkg?.fotos || [];
-  const consignatario = pkg?.consignatario || pkg?.consignee || pkg?.client || pkg?.name || 'N/A';
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="bg-red-50 text-red-600 p-6 rounded-xl text-center">{error}</div>
-      </div>
-    );
-  }
+  const consignatario = pkg?.consignatario || pkg?.consignee || pkg?.client || pkg?.name || '';
+  const statusLabel = pkg?.statusLabel || localItem?.status || '';
+  const statusStyle = statusLabel ? getStatusStyle(statusLabel) : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-light text-gray-600">
-          Tracking de <strong className="font-black text-brand-blue">Paquetes</strong>
+          Rastrear <strong className="font-black text-brand-blue">Paquete</strong>
         </h1>
-        <p className="text-gray-400 text-xs mt-1">{filteredInventory.length} paquetes encontrados</p>
+        <p className="text-gray-400 text-xs mt-1">Consulta el estado de cualquier envío en tiempo real</p>
       </div>
 
-      {/* Search & Filters */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Buscar por tracking o cliente..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:border-transparent"
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                statusFilter === f ? 'bg-brand-blue text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+      {/* Search Bar */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ingresa tu número de tracking..."
+              className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={loading || !trackingInput.trim()}
+            className="px-8 py-3.5 bg-brand-blue text-white rounded-xl font-bold text-sm hover:bg-brand-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            Rastrear
+          </button>
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredInventory.map(item => (
-          <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-            <div className="p-5">
-              <div className="flex justify-between items-start mb-3">
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(item.status)}`}>
-                  {item.status}
-                </span>
-                <span className="text-gray-400 text-[11px] flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {formatDate(item.received_date || item.created_at)}
-                </span>
-              </div>
-              <h3 className="font-bold text-gray-800 mb-0.5 flex items-center gap-2 font-mono text-sm">
-                <Package className="w-4 h-4 text-gray-400 shrink-0" />
-                {item.tracking_number}
-              </h3>
-              <p className="text-gray-500 text-sm ml-6">{item.client_name || 'Sin asignar'}</p>
-              {item.weight ? <p className="text-xs text-gray-400 mt-1 ml-6">{item.weight} lbs</p> : null}
-            </div>
-            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5">
-              <button
-                onClick={() => handleOpenDetails(item)}
-                className="w-full flex items-center justify-center gap-2 text-brand-blue text-xs font-bold hover:text-brand-yellow transition-colors"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                Ver Detalles del API
-              </button>
-            </div>
-          </div>
-        ))}
-        {filteredInventory.length === 0 && (
-          <div className="col-span-full py-16 text-center text-gray-400 text-sm">
-            No se encontraron paquetes.
-          </div>
-        )}
-      </div>
+      {/* Loading */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
+          <p className="text-gray-400 text-sm">Consultando información del paquete...</p>
+        </div>
+      )}
 
-      {/* Slide-over panel */}
-      {selectedItem && (
-        <>
-          <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setSelectedItem(null)} />
-          <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white shadow-2xl z-50 flex flex-col">
-            {/* Panel header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
-              <h2 className="text-lg font-bold text-brand-blue">Detalle de Tracking</h2>
-              <button onClick={() => setSelectedItem(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Error */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex items-start gap-4">
+          <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-red-700 text-sm">No se encontró el paquete</p>
+            <p className="text-red-600 text-xs mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
-            {/* Panel content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
-              {/* Local info */}
+      {/* Results */}
+      {!loading && searched && pkg && (
+        <div className="space-y-6">
+          {/* Status + Tracking header */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
-                <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase mb-3 ${getStatusColor(selectedItem.status)}`}>
-                  {selectedItem.status}
-                </span>
-                <h3 className="text-2xl font-black text-gray-800 font-mono break-all">{selectedItem.tracking_number}</h3>
+                <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Número de Tracking</p>
+                <h2 className="text-2xl font-black text-gray-800 font-mono">{pkg.tracking || trackingInput}</h2>
               </div>
+              {statusLabel && statusStyle && (
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border}`}>
+                  {getTimelineIcon(statusLabel)}
+                  {statusLabel}
+                </div>
+              )}
+            </div>
 
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Cliente:</span>
-                  <span className="font-bold text-gray-800">{selectedItem.client_name || 'Sin asignar'}</span>
+            {/* Package details grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {consignatario && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Consignatario</p>
+                  <p className="text-sm font-bold text-gray-800">{consignatario}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Peso:</span>
-                  <span className="font-bold text-gray-800">{selectedItem.weight || 0} lbs</span>
+              )}
+              {pkg.weight && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Peso</p>
+                  <p className="text-sm font-bold text-gray-800">{pkg.weight} {pkg.weightUnit || 'lbs'}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Fecha:</span>
-                  <span className="font-bold text-gray-800">{formatDate(selectedItem.received_date || selectedItem.created_at)}</span>
+              )}
+              {pkg.volumetricWeight && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Peso Volumétrico</p>
+                  <p className="text-sm font-bold text-gray-800">{pkg.volumetricWeight} {pkg.weightUnit || 'lbs'}</p>
+                </div>
+              )}
+              {pkg.dimensions && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Dimensiones</p>
+                  <p className="text-sm font-bold text-gray-800">{pkg.dimensions}</p>
+                </div>
+              )}
+              {pkg.pieces && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Piezas</p>
+                  <p className="text-sm font-bold text-gray-800">{pkg.pieces}</p>
+                </div>
+              )}
+              {pkg.declaredValue && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Valor Declarado</p>
+                  <p className="text-sm font-bold text-gray-800">${pkg.declaredValue} {pkg.currency || 'USD'}</p>
+                </div>
+              )}
+              {pkg.carrier && (
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Carrier</p>
+                  <p className="text-sm font-bold text-gray-800">{pkg.carrier}</p>
+                </div>
+              )}
+              {pkg.description && (
+                <div className="bg-gray-50 rounded-xl p-3 col-span-2">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Descripción</p>
+                  <p className="text-sm font-bold text-gray-800">{pkg.description}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Local inventory badge */}
+            {localItem && (
+              <div className="mt-4 p-3 bg-brand-blue/5 border border-brand-blue/10 rounded-xl flex items-center gap-3">
+                <div className="w-8 h-8 bg-brand-blue/10 rounded-full flex items-center justify-center">
+                  <Package className="w-4 h-4 text-brand-blue" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-brand-blue">En nuestro inventario local</p>
+                  <p className="text-[11px] text-gray-500">
+                    Estado: {localItem.status} • Cliente: {localItem.client_name} • Recibido: {formatDate(localItem.received_date || localItem.created_at)}
+                  </p>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* API data */}
-              <div className="border-t border-gray-100 pt-5">
-                <h4 className="font-bold text-gray-700 text-sm mb-4">Datos del API (Worldbox)</h4>
-
-                {trackingLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2 text-gray-400">
-                    <Loader2 className="w-6 h-6 animate-spin text-brand-blue" />
-                    <span className="text-xs">Consultando API...</span>
-                  </div>
-                ) : trackingError ? (
-                  <div className="bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-xl text-xs">
-                    <p className="font-bold mb-1">No se pudo obtener tracking externo</p>
-                    <p>{trackingError}</p>
-                  </div>
-                ) : trackingData?.rawData ? (
-                  <div className="space-y-6">
-                    {/* API package info */}
-                    {pkg && (
-                      <div className="bg-blue-50/60 rounded-xl p-4 text-xs space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Estado API:</span>
-                          <span className="font-bold">{pkg.statusLabel || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Consignatario:</span>
-                          <span className="font-bold">{consignatario}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Peso API:</span>
-                          <span className="font-bold">{pkg.weight ? `${pkg.weight} ${pkg.weightUnit || 'lbs'}` : 'N/A'}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Photos */}
-                    {fotos.length > 0 && (
-                      <div>
-                        <h5 className="font-bold text-gray-700 text-xs mb-3">Fotos ({fotos.length})</h5>
-                        <div className="grid grid-cols-2 gap-2">
-                          {fotos.map((url: string, idx: number) => (
-                            <div key={idx} className="bg-gray-100 rounded-lg overflow-hidden aspect-square border border-gray-200">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Timeline */}
-                    {timeline && timeline.length > 0 && (
-                      <div>
-                        <h5 className="font-bold text-gray-700 text-xs mb-3">Historial de Eventos</h5>
-                        <div className="relative pl-6 space-y-4">
-                          <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-200" />
-                          {timeline.map((event: TrackingEvent, idx: number) => (
-                            <div key={idx} className="relative">
-                              <div className="absolute -left-6 bg-white p-0.5 rounded-full border border-gray-200 text-gray-400">
-                                {getTimelineIcon(event.status)}
-                              </div>
-                              <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-                                <p className="font-bold text-gray-800 text-xs">{event.status}</p>
-                                {event.description && <p className="text-gray-500 text-[11px] mt-0.5">{event.description}</p>}
-                                <p className="text-gray-400 text-[10px] mt-1 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {formatDate(event.date)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-400 text-xs">
-                    No hay datos adicionales disponibles.
-                  </div>
-                )}
+          {/* Photos */}
+          {fotos.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-sm font-bold text-gray-700 mb-4">Fotos del Paquete ({fotos.length})</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {fotos.map((url: string, idx: number) => (
+                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="bg-gray-100 rounded-xl overflow-hidden aspect-square border border-gray-200 hover:shadow-md transition-shadow block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                  </a>
+                ))}
               </div>
             </div>
-          </div>
-        </>
+          )}
+
+          {/* Timeline */}
+          {timeline.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-sm font-bold text-gray-700 mb-6">Historial de Eventos</h3>
+              <div className="relative pl-8 space-y-6">
+                <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-200" />
+                {timeline.map((event: TrackingEvent, idx: number) => (
+                  <div key={idx} className="relative">
+                    <div className="absolute -left-8 bg-white p-1 rounded-full border border-gray-200">
+                      {getTimelineIcon(event.status)}
+                    </div>
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                      <p className="font-bold text-gray-800 text-sm">{event.status}</p>
+                      {event.description && <p className="text-gray-500 text-xs mt-1">{event.description}</p>}
+                      <p className="text-gray-400 text-[11px] mt-2 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(event.date)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !searched && (
+        <div className="text-center py-16">
+          <Package className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+          <p className="text-gray-400 text-sm">Ingresa un número de tracking para consultar su estado</p>
+        </div>
       )}
     </div>
   );
