@@ -13,6 +13,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // Save to Supabase for monitoring
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      await fetch(supabaseUrl + '/rest/v1/contact_submissions', {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': 'Bearer ' + supabaseKey,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          company_name: companyName,
+          contact_name: contactName,
+          email: email,
+          phone: phone,
+          volume: volume,
+          message: message || '',
+          status: 'nuevo'
+        })
+      });
+    } catch {
+      // Non-critical, continue with email
+    }
+
     const apiKey = process.env.RESEND_API_KEY || "re_GPTpJMRG_4eQ7dUT89kjXmBqKsjhZCvhy";
 
     // Si no hay API key configurada, solo registramos en consola (útil para desarrollo)
