@@ -1,27 +1,29 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { verifySignedCookie, AUTH_COOKIE_NAME } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const cookieStore = cookies();
-    const authCookie = cookieStore.get('jrs_admin_auth');
+    const authCookie = cookieStore.get(AUTH_COOKIE_NAME);
     
-    if (!authCookie) {
+    if (!authCookie || !authCookie.value) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
     
-    let data;
-    try {
-      const dataStr = Buffer.from(authCookie.value, 'base64').toString('utf-8');
-      data = JSON.parse(dataStr);
-    } catch {
-      // Fallback for old cookie 'authenticated' string during transition
-      data = { username: 'AdminJRS', role: 'admin' };
+    // Verify HMAC signature
+    const user = await verifySignedCookie(authCookie.value);
+    
+    if (!user) {
+      // Invalid or tampered cookie - clear it
+      const response = NextResponse.json({ authenticated: false }, { status: 401 });
+      response.cookies.delete(AUTH_COOKIE_NAME);
+      return response;
     }
     
-    return NextResponse.json({ authenticated: true, user: data }, { status: 200 });
+    return NextResponse.json({ authenticated: true, user }, { status: 200 });
   } catch {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
