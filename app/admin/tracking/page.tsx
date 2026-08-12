@@ -155,7 +155,7 @@ export default function TrackingPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#12435E]">Tracking de Paquetes</h1>
-          <p className="text-gray-500 mt-1">Gesti&oacute;n y rastreo de inventario ({filteredInventory.length} paquetes)</p>
+          <p className="text-gray-500 mt-1">Gestión y rastreo de inventario ({filteredInventory.length} paquetes)</p>
         </div>
       </div>
 
@@ -208,7 +208,7 @@ export default function TrackingPage() {
                   </span>
                   <span className="text-gray-400 text-xs flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {formatDate(item.received_date)}
+                    {formatDate(item.received_date || item.created_at)}
                   </span>
                 </div>
                 
@@ -232,7 +232,7 @@ export default function TrackingPage() {
           ))}
           {filteredInventory.length === 0 && (
             <div className="col-span-full py-12 text-center text-gray-500">
-              No se encontraron paquetes que coincidan con la b&uacute;squeda.
+              No se encontraron paquetes que coincidan con la búsqueda.
             </div>
           )}
         </div>
@@ -268,8 +268,8 @@ export default function TrackingPage() {
                     <span className="font-medium text-gray-900">{selectedItem.weight} lbs</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Fecha Recepci&oacute;n:</span>
-                    <span className="font-medium text-gray-900">{formatDate(selectedItem.received_date)}</span>
+                    <span className="text-gray-500">Fecha Recepción:</span>
+                    <span className="font-medium text-gray-900">{formatDate(selectedItem.received_date || selectedItem.created_at)}</span>
                   </div>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export default function TrackingPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500 text-sm">
-                    No hay informaci&oacute;n adicional disponible.
+                    No hay información adicional disponible.
                   </div>
                 )}
               </div>
