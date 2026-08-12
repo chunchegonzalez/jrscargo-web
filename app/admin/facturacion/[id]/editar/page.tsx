@@ -70,6 +70,7 @@ export default function EditarFacturaPage() {
         setSearchClientTerm(inv.clients?.name || '');
         setInvoiceNumber(inv.invoice_number);
         setCurrency(inv.currency || 'USD');
+        setExchangeRate(inv.exchange_rate || 500);
         setIssueDate(inv.issue_date.split('T')[0]);
         setDiscountPercent(Number(inv.discount_percent) || 0);
         setNotes(inv.notes || '');
@@ -234,6 +235,7 @@ export default function EditarFacturaPage() {
         total,
         notes,
         currency,
+        exchange_rate: exchangeRate,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         items: items.map(({ id, ...rest }) => rest) // remove temp id
       };

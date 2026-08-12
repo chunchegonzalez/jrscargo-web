@@ -209,6 +209,7 @@ export default function NuevaFacturaPage() {
         total,
         notes,
         currency,
+        exchange_rate: exchangeRate,
         items: items.map(item => ({
           service_name: item.service_name,
           tracking_number: item.tracking_number,
