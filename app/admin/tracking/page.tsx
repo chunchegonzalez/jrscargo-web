@@ -31,7 +31,6 @@ interface TrackingPackage {
   weightUnit?: string;
   statusLabel?: string;
   fotos?: string[];
-  [key: string]: any;
 }
 
 interface TrackingData {
@@ -69,8 +68,8 @@ export default function TrackingPage() {
       } else {
         throw new Error('Formato de datos inv\u00e1lido');
       }
-    } catch (err: any) {
-      setError(err.message || 'Error desconocido');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
     }
@@ -95,8 +94,8 @@ export default function TrackingPage() {
       } else {
         throw new Error('No se encontraron datos de tracking o la API fall\u00f3');
       }
-    } catch (err: any) {
-      setTrackingError(err.message || 'Error desconocido');
+    } catch (err: unknown) {
+      setTrackingError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setTrackingLoading(false);
     }
