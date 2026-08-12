@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Printer } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 type LedgerEntry = {
   id: string;
@@ -13,68 +13,65 @@ type LedgerEntry = {
   balance?: number;
 };
 
-export default function EstadoDeCuentaPage({ params }: { params: { id: string } }) {
+export default function EstadoDeCuentaPage() {
   const router = useRouter();
-  const clientId = params.id;
+  const params = useParams();
+  const clientId = params.id as string;
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState<Record<string, unknown> | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [aging, setAging] = useState({
-    current: 0,
-    days1to30: 0,
-    days31to60: 0,
-    days61to90: 0,
-    days90Plus: 0,
-    total: 0
+    current: 0, days1to30: 0, days31to60: 0, days61to90: 0, days90Plus: 0, total: 0
   });
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [clientsRes, invoicesRes, paymentsRes] = await Promise.all([
-        fetch('/api/clients'),
-        fetch(`/api/clients/${clientId}/invoices`),
-        fetch(`/api/clients/${clientId}/payments`)
-      ]);
+      
+      // Use the single client endpoint that returns client, invoices, and payments
+      const res = await fetch('/api/clients/' + clientId);
+      const data = await res.json();
+      
+      if (!data.success) {
+        console.error('Error loading client data');
+        return;
+      }
 
-      const clientsData = await clientsRes.json();
-      const invoicesData = await invoicesRes.json();
-      const paymentsData = await paymentsRes.json();
-
-      const currentClient = clientsData.data?.find((c: Record<string, unknown>) => c.id === clientId);
-      setClient(currentClient || { name: 'Cliente Desconocido', email: '' });
+      setClient(data.client || { name: 'Cliente Desconocido', email: '' });
 
       const entries: LedgerEntry[] = [];
       const now = new Date();
       const newAging = { current: 0, days1to30: 0, days31to60: 0, days61to90: 0, days90Plus: 0, total: 0 };
 
-      // Procesar Facturas
-      if (invoicesData.success && invoicesData.data) {
-        invoicesData.data.forEach((inv: Record<string, unknown>) => {
+      // Process Invoices
+      const invoices = data.invoices || [];
+      if (Array.isArray(invoices)) {
+        invoices.forEach((inv: Record<string, unknown>) => {
+          if (inv.status === 'Anulada') return;
           entries.push({
-            id: `inv-${inv.id}`,
+            id: 'inv-' + String(inv.id),
             date: inv.issue_date as string,
-            description: `Factura A Clientes N.º ${inv.invoice_number}`,
+            description: 'Factura N.º ' + String(inv.invoice_number),
             amount: Number(inv.total)
           });
 
-          // Calcular Aging para facturas pendientes
+          // Calculate aging for pending invoices
           const total = Number(inv.total);
           let paid = 0;
           if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-            paid = inv.invoice_payments.reduce((acc: number, p: Record<string, unknown>) => acc + Number(p.amount_applied), 0);
+            paid = (inv.invoice_payments as Record<string, unknown>[]).reduce(
+              (acc: number, p: Record<string, unknown>) => acc + Number(p.amount_applied), 0
+            );
           }
           const pending = total - paid;
 
           if (pending > 0.01) {
             newAging.total += pending;
             const dueDate = new Date(inv.issue_date as string);
-            dueDate.setDate(dueDate.getDate() + 30); // Vencimiento estándar 30 días
-            
-            const diffTime = now.getTime() - dueDate.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            dueDate.setDate(dueDate.getDate() + 30);
+            const diffDays = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays <= 0) newAging.current += pending;
             else if (diffDays <= 30) newAging.days1to30 += pending;
@@ -85,22 +82,23 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
         });
       }
 
-      // Procesar Pagos
-      if (paymentsData.success && paymentsData.data) {
-        paymentsData.data.forEach((pay: Record<string, unknown>) => {
+      // Process Payments
+      const payments = data.payments || [];
+      if (Array.isArray(payments)) {
+        payments.forEach((pay: Record<string, unknown>) => {
           entries.push({
-            id: `pay-${pay.id}`,
+            id: 'pay-' + String(pay.id),
             date: pay.payment_date as string,
-            description: pay.reference_number ? `Pago - Ref: ${pay.reference_number}` : 'Pago',
-            amount: -Number(pay.amount) // Los pagos restan al saldo
+            description: pay.reference_number ? 'Pago - Ref: ' + String(pay.reference_number) : 'Pago Recibido',
+            amount: -Number(pay.amount)
           });
         });
       }
 
-      // Ordenar cronológicamente
+      // Sort chronologically
       entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Calcular saldo arrastrado
+      // Calculate running balance
       let currentBalance = 0;
       entries.forEach(entry => {
         currentBalance += entry.amount;
@@ -120,197 +118,163 @@ export default function EstadoDeCuentaPage({ params }: { params: { id: string } 
     loadData();
   }, [loadData]);
 
-  if (loading) return <div className="p-8 text-center text-gray-500 font-medium">Cargando estado de cuenta...</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500">Cargando estado de cuenta...</div>;
 
-  const todayStr = new Date().toLocaleDateString('es-CR');
+  const todayStr = new Date().toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const clientName = String(client?.name || 'Cliente');
+  const clientEmail = String(client?.email || '');
+  const clientPhone = String(client?.phone || '');
+
+  // Filter ledger by date
+  let filteredLedger = ledger;
+  let previousBalance = 0;
+  let hasPreviousEntries = false;
+
+  if (startDate || endDate) {
+    filteredLedger = [];
+    ledger.forEach(entry => {
+      if (startDate && entry.date < startDate) {
+        previousBalance = entry.balance || 0;
+        hasPreviousEntries = true;
+        return;
+      }
+      if (endDate && entry.date > endDate) return;
+      filteredLedger.push(entry);
+    });
+  }
 
   return (
-    <div className="w-full bg-white print:m-0 print:p-0 min-h-screen relative font-sans">
+    <div className="w-full bg-white print:m-0 print:p-0 min-h-screen">
       
-      {/* Header Bar para la vista web */}
+      {/* Header Bar */}
       <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gray-50/50 print:hidden">
         <div className="flex items-center gap-4">
-          <Link href="/admin/cuentas-por-cobrar" className="text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/admin/cuentas-por-cobrar" className="text-gray-400 hover:text-gray-600">
             <ArrowLeft size={24} />
           </Link>
           <h1 className="text-xl font-bold text-gray-800">Estado de Cuenta</h1>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => router.push(`/admin/cuentas-por-cobrar/recibir/${clientId}`)} className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold rounded-lg text-sm transition-colors shadow-sm">
+          <button onClick={() => router.push('/admin/cuentas-por-cobrar/recibir/' + clientId)} className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold rounded-lg text-sm shadow-sm">
             Recibir Pago
           </button>
-          <button onClick={() => window.print()} className="px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={() => window.print()} className="px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold rounded-lg text-sm shadow-sm flex items-center gap-2">
             <Printer size={16} /> Imprimir PDF
           </button>
         </div>
       </div>
 
-      {/* Date Filters (Hidden in print) */}
-      <div className="max-w-4xl mx-auto px-8 py-4 print:hidden flex flex-col sm:flex-row items-center gap-4 bg-gray-50/50 border-x border-b border-gray-200 rounded-b-xl mb-4">
-        <span className="text-sm font-bold text-gray-700">Filtrar transacciones:</span>
-        <div className="flex items-center gap-2">
-          <input 
-            type="date" 
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-brand-blue"
-          />
-          <span className="text-gray-500 font-medium">hasta</span>
-          <input 
-            type="date" 
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-brand-blue"
-          />
-          {(startDate || endDate) && (
-            <button 
-              onClick={() => { setStartDate(''); setEndDate(''); }}
-              className="ml-2 text-sm text-brand-blue hover:underline font-medium"
-            >
-              Limpiar
-            </button>
-          )}
-        </div>
+      {/* Date Filters */}
+      <div className="max-w-4xl mx-auto px-8 py-4 print:hidden flex items-center gap-4 border-b border-gray-100 mb-4">
+        <span className="text-sm font-bold text-gray-600">Filtrar:</span>
+        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue" />
+        <span className="text-gray-400">—</span>
+        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue" />
+        {(startDate || endDate) && (
+          <button onClick={() => { setStartDate(''); setEndDate(''); }} className="text-sm text-brand-blue hover:underline font-medium">Limpiar</button>
+        )}
       </div>
 
-      {/* A4 Print Area */}
-      <div className="max-w-4xl mx-auto p-8 print:p-0 bg-white">
+      {/* ========== PRINTABLE DOCUMENT ========== */}
+      <div className="max-w-4xl mx-auto px-8 pb-12 print:px-0 bg-white">
         
-        {/* Header del Reporte */}
-        <div className="flex justify-between items-start mb-8">
+        {/* Header */}
+        <div className="flex justify-between items-start pt-8 mb-2">
           <div>
-            <h2 className="text-xl font-black text-gray-900 leading-tight">JRS CARGO S.A.</h2>
-            <p className="text-sm text-gray-800">Heredia</p>
-            <p className="text-sm text-gray-800">Heredia, Santo Domingo 40901</p>
-            <p className="text-sm text-gray-800">info@jrscargocr.com</p>
-            <p className="text-sm text-gray-800">www.jrscargocr.com</p>
-            <h1 className="text-4xl font-light text-[#2F4770] mt-6">Extracto</h1>
+            <p className="text-lg tracking-wide text-gray-600 uppercase">Estado de Cuenta</p>
+            <p className="text-sm font-bold text-gray-700 mt-1">JRS CARGO S.A.</p>
+            <p className="text-xs text-gray-400">San Pablo de Heredia, Costa Rica</p>
+            <p className="text-xs text-gray-400">+506 7260-1238</p>
+            <p className="text-xs text-gray-400">info@jrscargocr.com</p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="JRS Cargo" className="h-14 w-auto object-contain" />
+        </div>
+
+        <div className="h-px bg-gray-200 my-6"></div>
+
+        {/* Client + Summary */}
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <p className="text-sm font-bold text-gray-800">{clientName}</p>
+            {clientEmail && <p className="text-xs text-gray-400">{clientEmail}</p>}
+            {clientPhone && <p className="text-xs text-gray-400">{clientPhone}</p>}
           </div>
           <div className="text-right">
-            <div className="flex justify-end mb-4">
-              <span className="text-4xl font-black italic text-[#D32F2F] tracking-tighter pr-1">JRS</span>
-              <span className="text-4xl font-black italic text-[#1A365D] tracking-tighter">CARGO</span>
-            </div>
+            <p className="text-xs text-gray-400">Fecha: {todayStr}</p>
+            <p className="text-sm font-bold text-gray-800 mt-1">Saldo Pendiente</p>
+            <p className="text-2xl font-black text-brand-blue">${aging.total.toFixed(2)}</p>
           </div>
         </div>
 
-        {/* Info del Cliente y Resumen */}
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <p className="text-sm font-bold text-gray-900 mb-1">PARA</p>
-            <p className="text-sm text-gray-800 font-medium">{client?.name as string}</p>
-            {(client?.email as string) ? <p className="text-sm text-gray-800">{client?.email as string}</p> : null}
-          </div>
-          <div className="text-right">
-            <table className="text-sm ml-auto">
-              <tbody>
-                <tr>
-                  <td className="font-bold pr-4 text-gray-900 uppercase text-right">Fecha</td>
-                  <td className="text-gray-800 text-right">{todayStr}</td>
-                </tr>
-                <tr>
-                  <td className="font-bold pr-4 text-gray-900 uppercase text-right">Total A Pagar</td>
-                  <td className="text-gray-800 text-right">USD {aging.total.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <div className="h-px bg-gray-200 my-6"></div>
 
-        {/* Tabla Libro Mayor (Ledger) */}
-        <table className="w-full text-sm mb-12">
+        {/* Ledger Table */}
+        <p className="text-sm font-bold text-gray-700 mb-3">Movimientos</p>
+        <table className="w-full text-xs mb-10">
           <thead>
-            <tr className="bg-[#DDE2EB] text-[#2F4770]">
-              <th className="py-2 px-3 text-left font-bold">FECHA</th>
-              <th className="py-2 px-3 text-left font-bold">DESCRIPCIÓN</th>
-              <th className="py-2 px-3 text-right font-bold w-28">TOTAL</th>
-              <th className="py-2 px-3 text-right font-bold w-28">SALDO</th>
+            <tr className="border-b border-gray-300">
+              <th className="py-2 text-left font-bold text-gray-600 w-24">Fecha</th>
+              <th className="py-2 text-left font-bold text-gray-600">Descripción</th>
+              <th className="py-2 text-right font-bold text-gray-600 w-24">Monto</th>
+              <th className="py-2 text-right font-bold text-gray-600 w-24">Saldo</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {(() => {
-              let previousBalance = 0;
-              let hasPreviousEntries = false;
-
-              const filteredLedger = ledger.filter(entry => {
-                if (startDate && entry.date < startDate) {
-                  previousBalance = entry.balance || 0;
-                  hasPreviousEntries = true;
-                  return false;
-                }
-                if (endDate && entry.date > endDate) return false;
-                return true;
-              });
-
-              return (
-                <>
-                  {hasPreviousEntries && startDate && (
-                    <tr className="bg-gray-50/50 print:bg-transparent">
-                      <td className="py-2 px-3 text-gray-800 align-top whitespace-nowrap italic">
-                        {new Date(startDate).toLocaleDateString('es-CR')}
-                      </td>
-                      <td className="py-2 px-3 text-gray-800 align-top font-bold italic">
-                        Saldo Anterior
-                      </td>
-                      <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
-                        -
-                      </td>
-                      <td className="py-2 px-3 text-gray-900 font-bold align-top text-right whitespace-nowrap">
-                        {previousBalance.toFixed(2)}
-                      </td>
-                    </tr>
-                  )}
-                  {filteredLedger.map((entry, index) => (
-                    <tr key={index} className="border-b border-transparent hover:bg-gray-50/30 print:hover:bg-transparent">
-                      <td className="py-2 px-3 text-gray-800 align-top whitespace-nowrap">
-                        {new Date(entry.date).toLocaleDateString('es-CR')}
-                      </td>
-                      <td className="py-2 px-3 text-gray-800 align-top">
-                        {entry.description}
-                      </td>
-                      <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
-                        {entry.amount < 0 ? entry.amount.toFixed(2) : entry.amount.toFixed(2)}
-                      </td>
-                      <td className="py-2 px-3 text-gray-800 align-top text-right whitespace-nowrap">
-                        {entry.balance?.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredLedger.length === 0 && !hasPreviousEntries && (
-                    <tr>
-                      <td colSpan={4} className="py-8 text-center text-gray-500 italic">No hay movimientos registrados.</td>
-                    </tr>
-                  )}
-                </>
-              );
-            })()}
+          <tbody>
+            {hasPreviousEntries && startDate && (
+              <tr className="border-b border-gray-100 bg-gray-50">
+                <td className="py-2.5 text-gray-500 italic">{new Date(startDate).toLocaleDateString('es-CR')}</td>
+                <td className="py-2.5 text-gray-600 italic font-medium">Saldo Anterior</td>
+                <td className="py-2.5 text-right text-gray-400">—</td>
+                <td className="py-2.5 text-right font-bold text-gray-800">${previousBalance.toFixed(2)}</td>
+              </tr>
+            )}
+            {filteredLedger.map((entry) => (
+              <tr key={entry.id} className="border-b border-gray-100">
+                <td className="py-2.5 text-gray-500">{new Date(entry.date).toLocaleDateString('es-CR')}</td>
+                <td className="py-2.5 text-gray-700">{entry.description}</td>
+                <td className={'py-2.5 text-right font-medium ' + (entry.amount < 0 ? 'text-green-600' : 'text-gray-700')}>
+                  {entry.amount < 0 ? '-' : ''}${Math.abs(entry.amount).toFixed(2)}
+                </td>
+                <td className="py-2.5 text-right font-bold text-gray-800">${(entry.balance || 0).toFixed(2)}</td>
+              </tr>
+            ))}
+            {filteredLedger.length === 0 && !hasPreviousEntries && (
+              <tr>
+                <td colSpan={4} className="py-8 text-center text-gray-400 italic">No hay movimientos registrados.</td>
+              </tr>
+            )}
           </tbody>
         </table>
 
-        {/* Footer Aging Buckets */}
-        <div className="mt-8 pt-4 border-t border-gray-100">
-          <table className="w-full text-sm text-center border-collapse">
-            <thead>
-              <tr className="bg-[#DDE2EB] text-[#2F4770]">
-                <th className="py-3 px-2 font-bold border-r border-white/50">Deuda Actual</th>
-                <th className="py-3 px-2 font-bold border-r border-white/50">1 a 30 días<br/>de retraso</th>
-                <th className="py-3 px-2 font-bold border-r border-white/50">31 a 60 días<br/>de retraso</th>
-                <th className="py-3 px-2 font-bold border-r border-white/50">61 a 90 días<br/>de retraso</th>
-                <th className="py-3 px-2 font-bold border-r border-white/50">Más de 90 días<br/>de retraso</th>
-                <th className="py-3 px-2 font-bold text-right bg-[#C3C9D6]">Importe<br/>pendiente</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="bg-gray-50/50 print:bg-transparent">
-                <td className="py-3 px-2 text-gray-800 border-r border-gray-200">{aging.current.toFixed(2)}</td>
-                <td className="py-3 px-2 text-gray-800 border-r border-gray-200">{aging.days1to30.toFixed(2)}</td>
-                <td className="py-3 px-2 text-gray-800 border-r border-gray-200">{aging.days31to60.toFixed(2)}</td>
-                <td className="py-3 px-2 text-gray-800 border-r border-gray-200">{aging.days61to90.toFixed(2)}</td>
-                <td className="py-3 px-2 text-gray-800 border-r border-gray-200">{aging.days90Plus.toFixed(2)}</td>
-                <td className="py-3 px-2 font-bold text-gray-900 text-right bg-gray-100/80">USD {aging.total.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Aging Summary */}
+        <p className="text-sm font-bold text-gray-700 mb-3">Antigüedad de Saldo</p>
+        <table className="w-full text-xs border-collapse mb-6">
+          <thead>
+            <tr className="border-b border-gray-300">
+              <th className="py-2 font-bold text-gray-600 text-center">Al día</th>
+              <th className="py-2 font-bold text-gray-600 text-center">1–30 días</th>
+              <th className="py-2 font-bold text-gray-600 text-center">31–60 días</th>
+              <th className="py-2 font-bold text-gray-600 text-center">61–90 días</th>
+              <th className="py-2 font-bold text-gray-600 text-center">+90 días</th>
+              <th className="py-2 font-bold text-gray-800 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="py-3 text-center text-gray-600">${aging.current.toFixed(2)}</td>
+              <td className="py-3 text-center text-gray-600">${aging.days1to30.toFixed(2)}</td>
+              <td className="py-3 text-center text-gray-600">${aging.days31to60.toFixed(2)}</td>
+              <td className={'py-3 text-center ' + (aging.days61to90 > 0 ? 'text-amber-600 font-bold' : 'text-gray-600')}>${aging.days61to90.toFixed(2)}</td>
+              <td className={'py-3 text-center ' + (aging.days90Plus > 0 ? 'text-red-600 font-bold' : 'text-gray-600')}>${aging.days90Plus.toFixed(2)}</td>
+              <td className="py-3 text-right font-black text-gray-900 text-sm">${aging.total.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Footer */}
+        <div className="border-t border-gray-100 pt-4 text-center text-[10px] text-gray-300 mt-8">
+          <p>JRS CARGO S.A. | info@jrscargocr.com | +506 7260-1238 | www.jrscargocr.com</p>
         </div>
 
       </div>
