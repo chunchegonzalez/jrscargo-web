@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Activity, Globe, Server, Clock, CheckCircle2, XCircle, 
+  Activity, Globe, Server, Clock, CheckCircle2, 
   AlertTriangle, RefreshCw, Loader2, Mail, Phone, Building2,
   ExternalLink, Wifi, WifiOff
 } from 'lucide-react';

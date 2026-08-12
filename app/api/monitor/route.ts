@@ -17,7 +17,7 @@ async function checkSite(url: string) {
       statusCode: res.status,
       ssl: 'Valid'
     };
-  } catch (error: unknown) {
+  } catch {
     clearTimeout(timeoutId);
     return {
       status: 'offline',
@@ -52,7 +52,7 @@ export async function GET() {
     if (quotesRes.ok) {
       quotes = await quotesRes.json() as Record<string, unknown>[];
     }
-  } catch (error: unknown) {
+  } catch {
     // ignore
   }
 

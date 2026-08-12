@@ -21,7 +21,7 @@ export async function GET() {
     const res = await fetch(url, { headers: getHeaders() });
     const data = await res.json() as Record<string, unknown>[];
     return NextResponse.json(data);
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
   }
 }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     });
     const data = await res.json() as Record<string, unknown>[];
     return NextResponse.json(data);
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create' }, { status: 500 });
   }
 }
@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
     });
     const data = await res.json() as Record<string, unknown>[];
     return NextResponse.json(data);
-  } catch (error: unknown) {
+  } catch {
     return NextResponse.json({ error: 'Failed to update' }, { status: 500 });
   }
 }
