@@ -56,17 +56,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">{children}</div>;
   }
 
-  const activeLinkClass = "bg-brand-blue/10 text-brand-blue font-bold";
-  const inactiveLinkClass = "text-gray-500 hover:text-gray-900 hover:bg-gray-100/50 border border-transparent";
-  const getLinkClass = (path: string, exact = false) => {
-    const isActive = exact 
-      ? pathname === path 
-      : (pathname === path || pathname.startsWith(path + '/'));
-      
-    return `block py-2 px-3 rounded-xl text-sm transition-all duration-200 border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/50 focus-visible:ring-inset ${
-      isActive ? activeLinkClass : inactiveLinkClass
-    }`;
-  };
 
   return (
     <ModalProvider>
@@ -80,182 +69,193 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 w-72 bg-[#F9FAFB] border-r border-gray-200 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0B1D2B] flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       } ${!isDesktopSidebarOpen ? 'lg:hidden' : ''} print:hidden`}>
         
         {/* Sidebar Header */}
-        <div className="h-20 flex items-center justify-between px-6 border-b border-gray-200 bg-white/50 backdrop-blur-xl">
+        <div className="h-20 flex items-center justify-between px-5 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-center">
-              <Image src="/logo.png" alt="JRS Cargo Logo" width={32} height={32} className="object-contain" />
+            <div className="bg-white/10 p-1.5 rounded-lg flex items-center justify-center">
+              <Image src="/logo.png" alt="JRS Cargo Logo" width={28} height={28} className="object-contain" />
             </div>
             <div className="flex flex-col">
-              <span className="font-black text-brand-blue text-sm tracking-tight leading-none mb-0.5">JRS CARGO</span>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Admin Space</span>
+              <span className="font-black text-white text-sm tracking-tight leading-none mb-0.5">JRS CARGO</span>
+              <span className="text-[9px] font-bold text-brand-yellow uppercase tracking-[0.2em] leading-none">Panel Admin</span>
             </div>
           </div>
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
-            className="lg:hidden p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Sidebar Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 scrollbar-hide">
           
-          <Link href="/admin" className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${pathname === '/admin' ? 'bg-white shadow-sm border border-gray-200 text-brand-blue font-bold' : 'text-gray-600 hover:bg-gray-100 font-medium'}`}>
-            <Home size={18} className={pathname === '/admin' ? 'text-brand-accent' : 'text-gray-400'} />
-            <span className="text-sm">Vista General</span>
+          {/* Vista General */}
+          <Link href="/admin" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
+            pathname === '/admin' 
+              ? 'bg-brand-yellow/15 text-brand-yellow font-bold shadow-[0_0_12px_-3px_rgba(245,166,35,0.3)]' 
+              : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
+          }`}>
+            <Home size={17} className={pathname === '/admin' ? 'text-brand-yellow' : ''} />
+            Vista General
           </Link>
 
-          {/* SECCIÓN OPERACIONES */}
-          <div>
-            <button 
-              onClick={() => toggleSection('operaciones')}
-              className="w-full flex items-center justify-between px-2 py-1.5 text-gray-400 hover:text-gray-900 transition-colors group mb-1"
-            >
-              <div className="flex items-center gap-2">
-                <Briefcase size={16} className={openSections.operaciones ? "text-brand-accent" : "text-gray-400"} />
-                <span className="font-bold text-xs uppercase tracking-wider">Operaciones</span>
-              </div>
-              {openSections.operaciones ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            
-            <div className={`overflow-hidden transition-all duration-300 ${openSections.operaciones ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-              <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/bodega" className={getLinkClass('/admin/bodega', true)}>
-                  Escanear Individual
-                </Link>
-                <Link href="/admin/bodega/masivo" className={getLinkClass('/admin/bodega/masivo')}>
-                  Recepción Masiva
-                </Link>
-                <Link href="/admin/entregas/masivo" className={getLinkClass('/admin/entregas/masivo')}>
-                  Entrega Masiva
-                </Link>
-                <Link href="/admin/inventario" className={getLinkClass('/admin/inventario')}>
-                  Inventario CR
-                </Link>
-              </div>
+          {/* Separador */}
+          <div className="pt-3 pb-1 px-3">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Operaciones</p>
+          </div>
+
+          <button 
+            onClick={() => toggleSection('operaciones')}
+            className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-[13px] font-medium"
+          >
+            <div className="flex items-center gap-3">
+              <Briefcase size={17} className={openSections.operaciones ? 'text-brand-yellow' : ''} />
+              <span>Bodega</span>
+            </div>
+            {openSections.operaciones ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </button>
+          
+          <div className={`overflow-hidden transition-all duration-300 ${openSections.operaciones ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
+              {[
+                { href: '/admin/bodega', label: 'Escanear Individual', exact: true },
+                { href: '/admin/bodega/masivo', label: 'Recepción Masiva' },
+                { href: '/admin/entregas/masivo', label: 'Entrega Masiva' },
+                { href: '/admin/inventario', label: 'Inventario CR' },
+              ].map(link => {
+                const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
+                return (
+                  <Link key={link.href} href={link.href} className={`block py-2 px-3 rounded-md text-[12px] transition-all ${
+                    isActive ? 'text-brand-yellow font-bold bg-brand-yellow/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                  }`}>
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
-          {/* SECCIÓN CONTABILIDAD */}
+          {/* CONTABILIDAD */}
           {currentUser?.role === 'admin' && (
-          <div>
-            <button 
-              onClick={() => toggleSection('contabilidad')}
-              className="w-full flex items-center justify-between px-2 py-1.5 text-gray-400 hover:text-gray-900 transition-colors group mb-1"
-            >
-              <div className="flex items-center gap-2">
-                <Calculator size={16} className={openSections.contabilidad ? "text-brand-accent" : "text-gray-400"} />
-                <span className="font-bold text-xs uppercase tracking-wider">Contabilidad</span>
+            <>
+              <div className="pt-4 pb-1 px-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Finanzas</p>
               </div>
-              {openSections.contabilidad ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            
-            <div className={`overflow-hidden transition-all duration-300 ${openSections.contabilidad ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-              <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/facturacion" className={getLinkClass('/admin/facturacion', true)}>
-                  Facturas a Clientes
-                </Link>
-                <Link href="/admin/cuentas-por-cobrar" className={getLinkClass('/admin/cuentas-por-cobrar', false)}>
-                  Cuentas por cobrar
-                </Link>
-                <Link href="/admin/gastos" className={getLinkClass('/admin/gastos')}>
-                  Gastos y Compras
-                </Link>
-                <Link href="/admin/contabilidad/pagos" className={getLinkClass('/admin/contabilidad/pagos')}>
-                  Historial de Pagos
-                </Link>
-              </div>
-            </div>
-          </div>
-          )}
 
-          {/* SECCIÓN CLIENTES */}
-          {currentUser?.role === 'admin' && (
-          <div>
-            <button 
-              onClick={() => toggleSection('clientes')}
-              className="w-full flex items-center justify-between px-2 py-1.5 text-gray-400 hover:text-gray-900 transition-colors group mb-1"
-            >
-              <div className="flex items-center gap-2">
-                <Building2 size={16} className={openSections.clientes ? "text-brand-accent" : "text-gray-400"} />
-                <span className="font-bold text-xs uppercase tracking-wider">Clientes</span>
-              </div>
-              {openSections.clientes ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            </button>
-            
-            <div className={`overflow-hidden transition-all duration-300 ${openSections.clientes ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-              <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                <Link href="/admin/clientes" className={getLinkClass('/admin/clientes', true)}>
-                  Directorio de clientes
-                </Link>
-              </div>
-            </div>
-          </div>
-          )}
-
-          {/* SECCIÓN AJUSTES */}
-          {currentUser?.role === 'admin' && (
-            <div>
               <button 
-                onClick={() => toggleSection('ajustes')}
-                className="w-full flex items-center justify-between px-2 py-1.5 text-gray-400 hover:text-gray-900 transition-colors group mb-1"
+                onClick={() => toggleSection('contabilidad')}
+                className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-[13px] font-medium"
               >
-                <div className="flex items-center gap-2">
-                  <Settings size={16} className={openSections.ajustes ? "text-brand-accent" : "text-gray-400"} />
-                  <span className="font-bold text-xs uppercase tracking-wider">Administración</span>
+                <div className="flex items-center gap-3">
+                  <Calculator size={17} className={openSections.contabilidad ? 'text-brand-yellow' : ''} />
+                  <span>Contabilidad</span>
                 </div>
-                {openSections.ajustes ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {openSections.contabilidad ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               </button>
               
-              <div className={`overflow-hidden transition-all duration-300 ${openSections.ajustes ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                <div className="flex flex-col gap-1 pl-4 ml-2 border-l-2 border-gray-100">
-                  <Link href="/admin/ajustes" className={getLinkClass('/admin/ajustes')}>
-                    Ajustes de Sistema
-                  </Link>
-                  <Link href="/admin/servicios" className={getLinkClass('/admin/servicios')}>
-                    Servicios y Tarifas
-                  </Link>
+              <div className={`overflow-hidden transition-all duration-300 ${openSections.contabilidad ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
+                  {[
+                    { href: '/admin/facturacion', label: 'Facturas a Clientes', exact: true },
+                    { href: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar' },
+                    { href: '/admin/gastos', label: 'Gastos y Compras' },
+                    { href: '/admin/contabilidad/pagos', label: 'Historial de Pagos' },
+                  ].map(link => {
+                    const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
+                    return (
+                      <Link key={link.href} href={link.href} className={`block py-2 px-3 rounded-md text-[12px] transition-all ${
+                        isActive ? 'text-brand-yellow font-bold bg-brand-yellow/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                      }`}>
+                        {link.label}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+
+              {/* CLIENTES */}
+              <div className="pt-4 pb-1 px-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Gestión</p>
+              </div>
+
+              <Link href="/admin/clientes" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
+                pathname.startsWith('/admin/clientes')
+                  ? 'bg-brand-yellow/15 text-brand-yellow font-bold shadow-[0_0_12px_-3px_rgba(245,166,35,0.3)]'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
+              }`}>
+                <Building2 size={17} className={pathname.startsWith('/admin/clientes') ? 'text-brand-yellow' : ''} />
+                Clientes
+              </Link>
+
+              {/* ADMIN */}
+              <button 
+                onClick={() => toggleSection('ajustes')}
+                className="w-full flex items-center justify-between px-3 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-[13px] font-medium"
+              >
+                <div className="flex items-center gap-3">
+                  <Settings size={17} className={openSections.ajustes ? 'text-brand-yellow' : ''} />
+                  <span>Configuración</span>
+                </div>
+                {openSections.ajustes ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              </button>
+              
+              <div className={`overflow-hidden transition-all duration-300 ${openSections.ajustes ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
+                  {[
+                    { href: '/admin/ajustes', label: 'Ajustes de Sistema' },
+                    { href: '/admin/servicios', label: 'Servicios y Tarifas' },
+                  ].map(link => {
+                    const isActive = pathname.startsWith(link.href);
+                    return (
+                      <Link key={link.href} href={link.href} className={`block py-2 px-3 rounded-md text-[12px] transition-all ${
+                        isActive ? 'text-brand-yellow font-bold bg-brand-yellow/10' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                      }`}>
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
 
         </nav>
 
-        {/* User Profile / Logout Section */}
-        <div className="p-4 border-t border-gray-200 bg-white">
+        {/* User Profile */}
+        <div className="p-3 border-t border-white/5">
           <button 
             onClick={() => toggleSection('perfil')}
-            className="w-full flex items-center justify-between p-2 text-gray-600 hover:text-brand-blue transition-colors group rounded-xl hover:bg-gray-50"
+            className="w-full flex items-center justify-between p-2.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-8 h-8 shrink-0 rounded-full bg-brand-blue/5 text-brand-blue flex items-center justify-center font-black text-xs border border-brand-blue/10">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-tr from-brand-yellow to-brand-yellow/60 flex items-center justify-center text-[#0B1D2B] font-black text-[10px]">
                 {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'US'}
               </div>
-              <span className="font-bold text-sm tracking-wide truncate">{currentUser?.username || 'Mi Perfil'}</span>
+              <div className="text-left truncate">
+                <p className="text-[12px] font-bold text-white truncate leading-tight">{currentUser?.username || 'Mi Perfil'}</p>
+                <p className="text-[10px] text-gray-500 truncate">{currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}</p>
+              </div>
             </div>
-            {openSections.perfil ? <ChevronDown size={14} className="shrink-0 text-gray-400" /> : <ChevronRight size={14} className="shrink-0 text-gray-400" />}
+            {openSections.perfil ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}
           </button>
           
-          <div className={`overflow-hidden transition-all duration-300 ${openSections.perfil ? 'max-h-40 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
-            <div className="flex flex-col gap-1 px-2">
-              <button onClick={handleLogout} className="w-full text-left py-2 px-3 rounded-lg text-sm font-bold text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
-                <LogOut size={16} /> Cerrar sesión
-              </button>
-            </div>
+          <div className={`overflow-hidden transition-all duration-300 ${openSections.perfil ? 'max-h-20 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+            <button onClick={handleLogout} className="w-full text-left py-2 px-3 rounded-lg text-[12px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-2">
+              <LogOut size={14} /> Cerrar sesión
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className={`flex-1 w-full flex flex-col min-h-screen transition-all duration-300 ${
-        isDesktopSidebarOpen ? 'lg:ml-72' : 'lg:ml-0'
+        isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
       } print:ml-0 print:block print:h-auto print:min-h-0 relative`}>
         
         {/* Top Header */}
