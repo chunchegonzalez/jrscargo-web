@@ -216,6 +216,56 @@ export default function ChatBotWidget() {
                 
                 {messages.map(m => {
                   if (!m.content && m.toolInvocations && m.toolInvocations.length > 0) {
+                    // Check if any tool has completed with a result
+                    const completedTool = m.toolInvocations.find(
+                      (t: { state: string }) => t.state === 'result'
+                    );
+                    
+                    if (completedTool && 'result' in completedTool) {
+                      const result = completedTool.result as { success?: boolean; trackingInfo?: { package?: { tracking?: string; statusLabel?: string; weight?: number; description?: string; provider?: string; consignatario?: string }; timeline?: { date?: string; status?: string }[] }; error?: string };
+                      
+                      if (result.success && result.trackingInfo) {
+                        const pkg = result.trackingInfo.package;
+                        const timeline = result.trackingInfo.timeline;
+                        return (
+                          <div key={m.id} className="flex gap-3 justify-start">
+                            <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
+                              <Bot size={16} />
+                            </div>
+                            <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm p-4 text-sm shadow-sm max-w-[90%] text-left space-y-2">
+                              <p className="font-bold text-brand-blue">📦 Tracking: {pkg?.tracking}</p>
+                              <p>Estado: <span className="font-semibold">{pkg?.statusLabel || 'Desconocido'}</span></p>
+                              {pkg?.weight && <p>Peso: {pkg.weight} lbs</p>}
+                              {pkg?.provider && <p>Proveedor: {pkg.provider}</p>}
+                              {pkg?.description && <p>Descripción: {pkg.description}</p>}
+                              {timeline && timeline.length > 0 && (
+                                <div className="pt-2 border-t border-gray-100">
+                                  <p className="font-semibold text-xs text-gray-500 mb-1">Últimos eventos:</p>
+                                  {timeline.slice(0, 3).map((evt, i) => (
+                                    <p key={i} className="text-xs text-gray-600">
+                                      • {evt.status} {evt.date ? '(' + new Date(evt.date).toLocaleDateString('es-CR') + ')' : ''}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } else if (result.error) {
+                        return (
+                          <div key={m.id} className="flex gap-3 justify-start">
+                            <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
+                              <Bot size={16} />
+                            </div>
+                            <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm p-4 text-sm shadow-sm max-w-[90%] text-center">
+                              <p>{result.error}</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                    }
+                    
+                    // Still loading
                     return (
                       <div key={m.id} className="flex gap-3 justify-start">
                         <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
