@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2 } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2, Filter, ArrowUpDown } from 'lucide-react';
 import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -24,6 +24,8 @@ export default function ClientesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'todos' | 'con_saldo' | 'sin_facturas' | 'nuevos'>('todos');
+  const [sortBy, setSortBy] = useState<'nombre' | 'saldo' | 'facturas' | 'reciente'>('nombre');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,11 +126,44 @@ export default function ClientesPage() {
     }
   };
 
-  const filteredClients = clients.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.phone && c.phone.includes(searchTerm))
-  );
+  const filteredClients = clients
+    .filter(c => {
+      // Text search
+      const matchesSearch = !searchTerm || 
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.phone && c.phone.includes(searchTerm));
+      
+      if (!matchesSearch) return false;
+
+      // Status filter
+      switch (statusFilter) {
+        case 'con_saldo':
+          return (c.pendingBalanceUSD || 0) > 0 || (c.pendingBalanceCRC || 0) > 0;
+        case 'sin_facturas':
+          return (c.totalInvoices || 0) === 0;
+        case 'nuevos': {
+          if (!c.created_at) return false;
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          return new Date(c.created_at) >= thirtyDaysAgo;
+        }
+        default:
+          return true;
+      }
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'saldo':
+          return ((b.pendingBalanceUSD || 0) + (b.pendingBalanceCRC || 0)) - ((a.pendingBalanceUSD || 0) + (a.pendingBalanceCRC || 0));
+        case 'facturas':
+          return (b.totalInvoices || 0) - (a.totalInvoices || 0);
+        case 'reciente':
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -165,6 +200,45 @@ export default function ClientesPage() {
               className="pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue w-full sm:w-80" 
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          </div>
+        </div>
+
+        {/* Filters Row */}
+        <div className="px-6 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter size={14} className="text-gray-400" />
+            {[
+              { key: 'todos' as const, label: 'Todos', count: clients.length },
+              { key: 'con_saldo' as const, label: 'Con Saldo', count: clients.filter(c => (c.pendingBalanceUSD || 0) > 0 || (c.pendingBalanceCRC || 0) > 0).length },
+              { key: 'sin_facturas' as const, label: 'Sin Facturas', count: clients.filter(c => (c.totalInvoices || 0) === 0).length },
+              { key: 'nuevos' as const, label: 'Nuevos (30d)', count: clients.filter(c => { if (!c.created_at) return false; const d = new Date(); d.setDate(d.getDate() - 30); return new Date(c.created_at) >= d; }).length },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={'px-3 py-1.5 rounded-lg text-xs font-bold transition-all ' + (
+                  statusFilter === f.key
+                    ? 'bg-brand-blue text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                )}
+              >
+                {f.label} <span className="ml-1 opacity-70">{f.count}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={14} className="text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 font-medium text-gray-600 focus:outline-none focus:border-brand-blue"
+            >
+              <option value="nombre">Nombre A-Z</option>
+              <option value="saldo">Mayor Saldo</option>
+              <option value="facturas">Más Facturas</option>
+              <option value="reciente">Más Reciente</option>
+            </select>
+            <span className="text-xs text-gray-400">{filteredClients.length} resultados</span>
           </div>
         </div>
 
