@@ -317,7 +317,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className={`flex-1 w-full flex flex-col min-h-screen transition-all duration-300 ${
         isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-14'
-      } print:ml-0 print:block print:h-auto print:min-h-0 relative`}>
+      } print:ml-0 print:block print:h-auto print:min-h-0`}>
         
         {/* Top Header */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between gap-4 sticky top-0 z-30 print:hidden">
