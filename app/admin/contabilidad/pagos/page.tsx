@@ -116,7 +116,6 @@ export default function HistorialPagosPage() {
             <h2 className="text-4xl md:text-5xl font-black text-white">{formatCurrency(totalFilteredAmountUSD, 'USD')}</h2>
           </div>
         </div>
-        </div>
       </div>
 
       {/* Lista de Pagos */}
