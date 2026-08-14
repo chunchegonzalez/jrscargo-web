@@ -128,19 +128,33 @@ export default function BodegaInventario() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-r from-brand-blue to-[#0A2636] px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(18,67,94,0.3)] border border-brand-blue/20 flex items-center gap-3 hover:scale-105 transition-transform cursor-default select-none">
+          <button 
+            onClick={() => setFilterStatus(filterStatus === 'En Bodega CR' ? 'Todos' : 'En Bodega CR')}
+            className={'px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(18,67,94,0.3)] border flex items-center gap-3 hover:scale-105 transition-all select-none ' + (
+              filterStatus === 'En Bodega CR'
+                ? 'bg-gradient-to-r from-brand-blue to-[#0A2636] border-brand-yellow/50 ring-2 ring-brand-yellow/30'
+                : 'bg-gradient-to-r from-brand-blue to-[#0A2636] border-brand-blue/20'
+            )}
+          >
             <div className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-yellow opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-yellow"></span>
             </div>
             <span className="font-black text-white uppercase tracking-wider text-sm">{activePackages} En Bodega</span>
-          </div>
-          <div className="bg-gradient-to-r from-green-600 to-green-700 px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(22,163,74,0.3)] border border-green-500/20 flex items-center gap-3 hover:scale-105 transition-transform cursor-default select-none">
+          </button>
+          <button 
+            onClick={() => setFilterStatus(filterStatus === 'Entregado' ? 'Todos' : 'Entregado')}
+            className={'px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(22,163,74,0.3)] border flex items-center gap-3 hover:scale-105 transition-all select-none ' + (
+              filterStatus === 'Entregado'
+                ? 'bg-gradient-to-r from-green-600 to-green-700 border-green-300/50 ring-2 ring-green-300/30'
+                : 'bg-gradient-to-r from-green-600 to-green-700 border-green-500/20'
+            )}
+          >
             <div className="relative flex h-3 w-3">
               <span className="relative inline-flex rounded-full h-3 w-3 bg-green-300"></span>
             </div>
             <span className="font-black text-white uppercase tracking-wider text-sm">{deliveredPackages} Entregados</span>
-          </div>
+          </button>
         </div>
       </div>
 

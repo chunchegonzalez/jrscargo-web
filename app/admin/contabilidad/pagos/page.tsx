@@ -115,12 +115,7 @@ export default function HistorialPagosPage() {
             </p>
             <h2 className="text-4xl md:text-5xl font-black text-white">{formatCurrency(totalFilteredAmountUSD, 'USD')}</h2>
           </div>
-          <div>
-            <p className="text-orange-300 font-bold uppercase tracking-wider mb-2 text-sm">
-              Total Recaudado (CRC)
-            </p>
-            <h2 className="text-3xl md:text-4xl font-black text-orange-400">{formatCurrency(totalFilteredAmountCRC, 'CRC')}</h2>
-          </div>
+        </div>
         </div>
       </div>
 
