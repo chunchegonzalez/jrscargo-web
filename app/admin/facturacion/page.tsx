@@ -30,8 +30,7 @@ export default function FacturacionDashboard() {
   
   const [totalPendingUSD, setTotalPendingUSD] = useState(0);
   const [totalPaidUSD, setTotalPaidUSD] = useState(0);
-  const [totalPendingCRC, setTotalPendingCRC] = useState(0);
-  const [totalPaidCRC, setTotalPaidCRC] = useState(0);
+
 
   // Email Modal State
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -42,14 +41,11 @@ export default function FacturacionDashboard() {
 
   const calculateStats = useCallback((data: Invoice[]) => {
     let pendingUSD = 0, paidUSD = 0;
-    let pendingCRC = 0, paidCRC = 0;
+
     
     data.forEach(inv => {
       const stats = getInvoiceStats(inv);
-      if (stats.currency === 'CRC') {
-        pendingCRC += stats.pending;
-        paidCRC += stats.paid;
-      } else {
+      if (stats.currency !== 'CRC') {
         pendingUSD += stats.pending;
         paidUSD += stats.paid;
       }
@@ -57,8 +53,7 @@ export default function FacturacionDashboard() {
 
     setTotalPendingUSD(pendingUSD);
     setTotalPaidUSD(paidUSD);
-    setTotalPendingCRC(pendingCRC);
-    setTotalPaidCRC(paidCRC);
+
   }, []);
 
   const loadInvoices = useCallback(async () => {
@@ -149,8 +144,7 @@ export default function FacturacionDashboard() {
           </div>
           <div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pendiente</p>
-            <h2 className="text-3xl font-black text-brand-blue mb-1">{formatCurrency(totalPendingUSD, 'USD')}</h2>
-            <h3 className="text-xl font-bold text-orange-500">{formatCurrency(totalPendingCRC, 'CRC')}</h3>
+            <h2 className="text-3xl font-black text-brand-blue">{formatCurrency(totalPendingUSD, 'USD')}</h2>
           </div>
         </div>
 
@@ -160,8 +154,7 @@ export default function FacturacionDashboard() {
           </div>
           <div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pagado</p>
-            <h2 className="text-3xl font-black text-brand-blue mb-1">{formatCurrency(totalPaidUSD, 'USD')}</h2>
-            <h3 className="text-xl font-bold text-green-500">{formatCurrency(totalPaidCRC, 'CRC')}</h3>
+            <h2 className="text-3xl font-black text-brand-blue">{formatCurrency(totalPaidUSD, 'USD')}</h2>
           </div>
         </div>
       </div>
