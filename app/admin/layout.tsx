@@ -315,7 +315,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className={`flex-1 w-full flex flex-col min-h-screen transition-all duration-300 ${
+      <main className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${
         isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-14'
       } print:ml-0 print:block print:h-auto print:min-h-0`}>
         
@@ -350,7 +350,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        <div className="p-4 md:p-8 overflow-x-hidden print:p-0 print:overflow-visible">
+        <div className="p-4 md:p-8 min-w-0 print:p-0 print:overflow-visible">
           {children}
         </div>
       </main>
