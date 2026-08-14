@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { HeaderWrapper, FooterWrapper, ChatBotWrapper, MainWrapper } from '@/components/ui/LayoutWrapper'
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -82,6 +83,7 @@ export default function RootLayout({
         <FooterWrapper />
         <ChatBotWrapper />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
