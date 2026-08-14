@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText } from 'lucide-react';
+import Link from 'next/link';
 import { useModal } from '@/app/components/ModalProvider';
 
 interface InventoryItem {
@@ -40,6 +41,9 @@ export default function BodegaInventario() {
   
   const [viewingPhotos, setViewingPhotos] = useState<{ id: string, photos: { id?: number | string, url: string }[] } | null>(null);
   const [loadingPhotosFor, setLoadingPhotosFor] = useState<string | null>(null);
+
+  // Invoice mapping: tracking_number -> { invoice_number, invoice_id }
+  const [invoiceMap, setInvoiceMap] = useState<Map<string, { number: string; id: string }>>(new Map());
 
   const handleViewPhotos = async (trackingId: string) => {
     setLoadingPhotosFor(trackingId);
@@ -90,6 +94,23 @@ export default function BodegaInventario() {
             createdAt: item.created_at
           }));
           setInventory(formatted);
+        }
+
+        // Fetch invoices to build tracking -> invoice map
+        const invRes = await fetch('/api/invoices');
+        if (invRes.ok) {
+          const invData = await invRes.json();
+          const map = new Map<string, { number: string; id: string }>();
+          (invData.data || []).forEach((inv: { id: string; invoice_number: string; invoice_items?: { tracking_number?: string }[] }) => {
+            if (inv.invoice_items) {
+              inv.invoice_items.forEach(item => {
+                if (item.tracking_number) {
+                  map.set(item.tracking_number.trim().toUpperCase(), { number: inv.invoice_number, id: inv.id });
+                }
+              });
+            }
+          });
+          setInvoiceMap(map);
         }
       } catch (error) {
         console.error('Error fetching inventory', error);
@@ -211,6 +232,7 @@ export default function BodegaInventario() {
                 <th className="p-4">Cliente</th>
                 <th className="p-4">Empresa</th>
                 <th className="p-4">Peso</th>
+                <th className="p-4">Factura</th>
                 <th className="p-4">Fecha de Ingreso</th>
                 <th className="p-4">Estado Interno</th>
                 <th className="p-4 pr-6 text-right">Acciones</th>
@@ -219,7 +241,7 @@ export default function BodegaInventario() {
             <tbody className="divide-y divide-gray-50 text-sm">
               {filteredInventory.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">No hay paquetes que coincidan con la búsqueda.</td>
+                  <td colSpan={8} className="p-8 text-center text-gray-500">No hay paquetes que coincidan con la búsqueda.</td>
                 </tr>
               )}
               {filteredInventory.map((item) => (
@@ -243,6 +265,20 @@ export default function BodegaInventario() {
                   <td className="p-4 text-gray-500">{item.company}</td>
                   <td className="p-4 text-gray-500 whitespace-nowrap">
                     {item.weight} {item.weight && !item.weight.includes('kg') ? `/ ${(parseFloat(item.weight) * 0.453592).toFixed(2)} kg` : ''}
+                  </td>
+                  <td className="p-4 whitespace-nowrap">
+                    {(() => {
+                      const inv = invoiceMap.get(item.id.trim().toUpperCase());
+                      if (inv) {
+                        return (
+                          <Link href={'/admin/facturacion/' + inv.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-brand-blue rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors">
+                            <FileText size={12} />
+                            {inv.number}
+                          </Link>
+                        );
+                      }
+                      return <span className="text-gray-300 text-xs">—</span>;
+                    })()}
                   </td>
                   <td className="p-4 text-gray-500 whitespace-nowrap">{item.date}</td>
                   <td className="p-4 whitespace-nowrap">

@@ -300,6 +300,22 @@ export async function getInvoices() {
     invoices.forEach((inv: Record<string, unknown>) => { inv.invoice_payments = []; });
   }
 
+  // 3. Fetch invoice items (for tracking mapping)
+  try {
+    const itemsRes = await fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+    if (itemsRes.ok) {
+      const items = await itemsRes.json();
+      invoices.forEach((inv: Record<string, unknown>) => {
+        inv.invoice_items = items.filter((it: Record<string, unknown>) => it.invoice_id === inv.id);
+      });
+    }
+  } catch {
+    // Non-critical
+  }
+
   return invoices;
 }
 
