@@ -91,7 +91,6 @@ export default function HistorialPagosPage() {
   });
 
   const totalFilteredAmountUSD = filteredPayments.filter(p => p.currency !== 'CRC').reduce((acc, pay) => acc + Number(pay.amount), 0);
-  const totalFilteredAmountCRC = filteredPayments.filter(p => p.currency === 'CRC').reduce((acc, pay) => acc + Number(pay.amount), 0);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
