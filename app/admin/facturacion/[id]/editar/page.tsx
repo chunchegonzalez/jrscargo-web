@@ -410,20 +410,32 @@ export default function EditarFacturaPage() {
 
         {/* Productos / Servicios */}
         <div className="space-y-4 mb-10">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Productos o Servicios</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Productos o Servicios</h3>
+            <span className="px-3 py-1 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-full">
+              {items.length} {items.length === 1 ? 'línea' : 'líneas'}
+            </span>
+          </div>
           
-          <div className="border border-gray-200 rounded-xl">
-            <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid">
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid items-center">
+              <div className="col-span-1 text-center">#</div>
               <div className="col-span-4">Producto/Servicio</div>
               <div className="col-span-3">Nº Rastreo</div>
               <div className="col-span-1 text-center">Peso</div>
-              <div className="col-span-2 text-center">Tarifa</div>
+              <div className="col-span-1 text-center">Tarifa</div>
               <div className="col-span-2 text-right pr-8">Importe ({currency === 'CRC' ? '₡' : '$'})</div>
             </div>
 
-            {items.map((item) => (
-              <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            {items.map((item, index) => (
+              <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                <div className="hidden md:flex justify-center items-center">
+                  <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 font-bold text-xs flex items-center justify-center">
+                    {index + 1}
+                  </span>
+                </div>
                 <div className="md:col-span-4 relative">
+                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Línea #{index + 1} - Producto / Servicio</div>
                   <input 
                     placeholder="Ej. Transporte Marítimo" 
                     value={item.service_name} 
@@ -459,6 +471,7 @@ export default function EditarFacturaPage() {
                   )}
                 </div>
                 <div className="md:col-span-3">
+                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Nº Rastreo</div>
                   <input 
                     required
                     placeholder="Tracking (Obligatorio)" 
@@ -468,7 +481,8 @@ export default function EditarFacturaPage() {
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue font-mono"
                   />
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 col-span-1 md:col-span-3 gap-2">
+                <div className="md:col-span-1">
+                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Peso ({weightUnit})</div>
                   <input 
                     type="number" 
                     placeholder={weightUnit} 
@@ -476,23 +490,29 @@ export default function EditarFacturaPage() {
                     onChange={e => handleItemChange(item.id, 'weight', e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"
                   />
+                </div>
+                <div className="md:col-span-1">
+                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Tarifa ($/{weightUnit})</div>
                   <input 
                     type="number" 
                     placeholder={`$/${weightUnit}`} 
                     value={item.rate} 
                     onChange={e => handleItemChange(item.id, 'rate', e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center md:col-span-2"
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"
                   />
                 </div>
                 <div className="md:col-span-2 flex items-center gap-2">
-                  <input 
-                    type="number" 
-                    placeholder="0.00" 
-                    value={item.amount || ''} 
-                    onChange={e => handleItemChange(item.id, 'amount', e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-brand-blue focus:outline-none focus:border-brand-blue text-right"
-                  />
-                  <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <div className="flex-1">
+                    <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Importe ({currency === 'CRC' ? '₡' : '$'})</div>
+                    <input 
+                      type="number" 
+                      placeholder="0.00" 
+                      value={item.amount || ''} 
+                      onChange={e => handleItemChange(item.id, 'amount', e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-brand-blue focus:outline-none focus:border-brand-blue text-right"
+                    />
+                  </div>
+                  <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-auto md:mt-0">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -500,9 +520,14 @@ export default function EditarFacturaPage() {
             ))}
           </div>
 
-          <button onClick={handleAddItem} className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-blue/80 px-2 py-1 rounded-lg hover:bg-brand-blue/5 transition-colors">
-            <Plus size={16} /> Agregar línea
-          </button>
+          <div className="flex items-center justify-between pt-1">
+            <button onClick={handleAddItem} className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-blue/80 px-2 py-1 rounded-lg hover:bg-brand-blue/5 transition-colors">
+              <Plus size={16} /> Agregar línea
+            </button>
+            <span className="text-xs font-bold text-gray-500">
+              Total de líneas: <span className="text-brand-blue font-black">{items.length}</span>
+            </span>
+          </div>
         </div>
 
         {/* Totales y Guardar */}
