@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, FileText, User, Box, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, User, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
 
 // Static Modules for quick navigation
 const MODULES = [
