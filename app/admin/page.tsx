@@ -224,10 +224,9 @@ export default function AdminDashboard() {
 
   if (currentUser?.role !== 'admin') {
     // --- Operator-specific stats ---
-    const enBodega = inventory.filter(p => p.status === 'En Bodega CR' || p.status === 'Recibido').length;
-    const entregados = inventory.filter(p => p.status === 'Entregado').length;
-    const pendEntrega = inventory.filter(p => p.status !== 'Entregado' && p.status !== 'Eliminado').length;
-    const enTransito = inventory.filter(p => p.status === 'En Tránsito').length;
+    const enBodega = inventory.filter(p => !p.status?.toLowerCase().includes('entregad')).length;
+    const entregados = inventory.filter(p => p.status?.toLowerCase().includes('entregad')).length;
+    const pendEntrega = enBodega;
 
     // Packages by provider (client_name)
     const providerMap = new Map<string, number>();
@@ -240,21 +239,11 @@ export default function AdminDashboard() {
       .slice(0, 8)
       .map(([name, count]) => ({ name: name.length > 15 ? name.substring(0, 15) + '...' : name, Paquetes: count }));
 
-    // Packages by status pie
-    const statusMap = new Map<string, number>();
-    inventory.forEach(p => {
-      statusMap.set(p.status, (statusMap.get(p.status) || 0) + 1);
-    });
-    const statusColors: Record<string, string> = {
-      'Recibido': '#3b82f6',
-      'En Bodega CR': '#12435E',
-      'En Tránsito': '#F5A623',
-      'Entregado': '#22c55e',
-      'Listo para Entrega': '#8b5cf6',
-    };
-    const statusPieData = Array.from(statusMap.entries())
-      .filter(([, v]) => v > 0)
-      .map(([name, value]) => ({ name, value, color: statusColors[name] || '#94a3b8' }));
+    // Packages by status pie (Only En Bodega and Entregado)
+    const statusPieData = [
+      { name: 'En Bodega', value: enBodega, color: '#12435E' },
+      { name: 'Entregado', value: entregados, color: '#22c55e' }
+    ].filter(d => d.value > 0);
 
     // Recent packages (last 10)
     const recentPackages = [...inventory]

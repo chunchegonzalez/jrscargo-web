@@ -42,7 +42,7 @@ export default function EntregasMasivo() {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: 'Entregado al Cliente',
+            status: 'Entregado',
             history: [{
               date: formattedDate,
               action: 'Paquete Entregado al Cliente (Proceso Masivo)',

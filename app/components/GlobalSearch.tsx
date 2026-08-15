@@ -47,11 +47,12 @@ interface GlobalSearchProps {
   role?: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  'En Bodega MIA': { label: 'En Bodega Miami', color: 'text-blue-700', bg: 'bg-blue-100', icon: MapPin },
-  'En Tránsito': { label: 'En Tránsito', color: 'text-orange-700', bg: 'bg-orange-100', icon: Truck },
-  'En Bodega CR': { label: 'En Bodega CR', color: 'text-brand-blue', bg: 'bg-blue-50', icon: Package },
-  'Entregado': { label: 'Entregado', color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle2 },
+const getStatusConfig = (status?: string) => {
+  const isDelivered = (status || '').toLowerCase().includes('entregad');
+  if (isDelivered) {
+    return { label: 'Entregado', color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle2 };
+  }
+  return { label: 'En Bodega', color: 'text-brand-blue', bg: 'bg-brand-blue/10', icon: Package };
 };
 
 export default function GlobalSearch({ role }: GlobalSearchProps) {

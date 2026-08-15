@@ -126,7 +126,7 @@ export default function BodegaScanner() {
 
     const newHistory = [newEvent, ...history];
 
-    setLocalStatus('En Bodega CR');
+    setLocalStatus('En Bodega');
     setHistory(newHistory);
 
     try {
@@ -138,7 +138,7 @@ export default function BodegaScanner() {
           client: packageData?.consignatario || 'Desconocido',
           company: packageData?.provider || 'N/A',
           weight: `${packageData?.weight || '0'} ${packageData?.weightUnit || 'lbs'}`,
-          status: 'En Bodega CR',
+          status: 'En Bodega',
           history: newHistory
         })
       });
@@ -164,7 +164,7 @@ export default function BodegaScanner() {
 
     const newHistory = [newEvent, ...history];
 
-    setLocalStatus('Entregado al Cliente');
+    setLocalStatus('Entregado');
     setHistory(newHistory);
 
     try {
@@ -172,7 +172,7 @@ export default function BodegaScanner() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'Entregado al Cliente',
+          status: 'Entregado',
           history: newHistory
         })
       });
@@ -192,7 +192,7 @@ export default function BodegaScanner() {
 
     const newHistory = [newEvent, ...history];
 
-    setLocalStatus('En Bodega CR');
+    setLocalStatus('En Bodega');
     setHistory(newHistory);
 
     try {
@@ -200,7 +200,7 @@ export default function BodegaScanner() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: 'En Bodega CR',
+          status: 'En Bodega',
           history: newHistory
         })
       });
@@ -271,8 +271,8 @@ export default function BodegaScanner() {
                   Tracking: {packageData.tracking}
                 </h3>
               </div>
-              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus?.includes('Entregado') ? 'bg-green-100 text-green-700' : localStatus === 'En Bodega CR' ? 'bg-brand-blue text-white' : packageData.isManual ? 'bg-orange-100 text-orange-700' : 'bg-brand-yellow/20 text-brand-blue'}`}>
-                {localStatus || (packageData.isManual ? 'Registro Manual' : 'Encontrado en Worldbox')}
+              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus?.toLowerCase().includes('entregad') ? 'bg-green-100 text-green-700' : localStatus ? 'bg-brand-blue text-white' : packageData.isManual ? 'bg-orange-100 text-orange-700' : 'bg-brand-yellow/20 text-brand-blue'}`}>
+                {localStatus?.toLowerCase().includes('entregad') ? 'Entregado' : localStatus ? 'En Bodega' : (packageData.isManual ? 'Registro Manual' : 'Encontrado en Worldbox')}
               </span>
             </div>
 
@@ -370,7 +370,7 @@ export default function BodegaScanner() {
                   </div>
                 )}
 
-                {localStatus === 'En Bodega CR' && (
+                {localStatus && !localStatus.toLowerCase().includes('entregad') && (
                   <div className="bg-green-50 rounded-2xl p-6 border border-green-100 flex-1 flex flex-col justify-center text-center">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                       <CheckCircle2 size={32} className="text-green-500" />

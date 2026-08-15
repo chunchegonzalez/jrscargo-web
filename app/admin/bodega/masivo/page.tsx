@@ -68,7 +68,7 @@ export default function BodegaMasivo() {
             client: client,
             company: company,
             weight: weightStr,
-            status: 'En Bodega CR',
+            status: 'En Bodega',
             history: [{
               date: formattedDate,
               action: 'Paquete Recibido en Bodega Costa Rica (Proceso Masivo)',

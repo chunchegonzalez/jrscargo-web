@@ -131,8 +131,11 @@ export default function BodegaInventario() {
     const matchesSearch = (item.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
                           (item.client || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
-    // Note: Since 'Entregado' might be saved as 'Entregado al Cliente' or 'Entregado', we check includes just in case
-    const matchesStatus = filterStatus === 'Todos' || (item.status || '').includes(filterStatus.replace(' al Cliente', ''));
+    
+    const isDelivered = (item.status || '').toLowerCase().includes('entregad');
+    const matchesStatus = filterStatus === 'Todos' ||
+      (filterStatus === 'En Bodega' && !isDelivered) ||
+      (filterStatus === 'Entregado' && isDelivered);
     
     // Compare YYYY-MM-DD
     const itemDateString = formatCostaRicaISO(item.createdAt);
@@ -141,9 +144,9 @@ export default function BodegaInventario() {
     return matchesSearch && matchesCompany && matchesStatus && matchesDate;
   });
 
-  const activePackages = filteredInventory.filter(p => p.status === 'En Bodega CR').length;
+  const activePackages = filteredInventory.filter(p => !(p.status || '').toLowerCase().includes('entregad')).length;
 
-  const deliveredPackages = filteredInventory.filter(p => p.status === 'Entregado').length;
+  const deliveredPackages = filteredInventory.filter(p => (p.status || '').toLowerCase().includes('entregad')).length;
 
   if (!mounted) return null;
 
@@ -157,9 +160,9 @@ export default function BodegaInventario() {
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setFilterStatus(filterStatus === 'En Bodega CR' ? 'Todos' : 'En Bodega CR')}
+            onClick={() => setFilterStatus(filterStatus === 'En Bodega' ? 'Todos' : 'En Bodega')}
             className={'px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(18,67,94,0.3)] border flex items-center gap-3 hover:scale-105 transition-all select-none ' + (
-              filterStatus === 'En Bodega CR'
+              filterStatus === 'En Bodega'
                 ? 'bg-gradient-to-r from-brand-blue to-[#0A2636] border-brand-yellow/50 ring-2 ring-brand-yellow/30'
                 : 'bg-gradient-to-r from-brand-blue to-[#0A2636] border-brand-blue/20'
             )}
@@ -214,7 +217,7 @@ export default function BodegaInventario() {
               className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
             >
               <option value="Todos">Todos los Estados</option>
-              <option value="En Bodega CR">En Bodega CR</option>
+              <option value="En Bodega">En Bodega</option>
               <option value="Entregado">Entregados</option>
             </select>
 
@@ -290,11 +293,11 @@ export default function BodegaInventario() {
                   <td className="p-4 text-gray-500 whitespace-nowrap">{item.date}</td>
                   <td className="p-4 whitespace-nowrap">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold inline-block ${
-                      item.status === 'En Bodega CR' 
-                        ? 'bg-brand-blue/10 text-brand-blue'
-                        : 'bg-green-100 text-green-700'
+                      (item.status || '').toLowerCase().includes('entregad')
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-brand-blue/10 text-brand-blue'
                     }`}>
-                      {item.status}
+                      {(item.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'En Bodega'}
                     </span>
                   </td>
                   <td className="p-4 pr-6 text-right">
@@ -422,11 +425,11 @@ export default function BodegaInventario() {
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estado</label>
                   <select 
-                    value={editingItem.status} 
+                    value={(editingItem.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'En Bodega'} 
                     onChange={e => setEditingItem({...editingItem, status: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
                   >
-                    <option value="En Bodega CR">En Bodega CR</option>
+                    <option value="En Bodega">En Bodega</option>
                     <option value="Entregado">Entregado</option>
                   </select>
                 </div>
