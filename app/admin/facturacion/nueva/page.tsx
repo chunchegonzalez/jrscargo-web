@@ -403,7 +403,7 @@ export default function NuevaFacturaPage() {
               <div className="col-span-3">Nº Rastreo</div>
               <div className="col-span-1 text-center">Peso</div>
               <div className="col-span-1 text-center">Tarifa</div>
-              <div className="col-span-2 text-right pr-8">Importe ({currency === 'CRC' ? '₡' : '$'})</div>
+              <div className="col-span-2 text-right pr-8">Importe ($)</div>
             </div>
 
             {items.map((item, index) => (
@@ -482,7 +482,7 @@ export default function NuevaFacturaPage() {
                 </div>
                 <div className="md:col-span-2 flex items-center gap-2">
                   <div className="flex-1">
-                    <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Importe ({currency === 'CRC' ? '₡' : '$'})</div>
+                    <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Importe ($)</div>
                     <input 
                       type="number" 
                       placeholder="0.00" 
@@ -518,7 +518,7 @@ export default function NuevaFacturaPage() {
           <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600">Subtotal</span>
-              <span className="text-sm font-bold text-gray-800">{currency === 'CRC' ? '₡' : '$'}{subtotal.toFixed(2)}</span>
+              <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
@@ -535,20 +535,19 @@ export default function NuevaFacturaPage() {
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">%</span>
                 </div>
               </span>
-              <span className="text-sm font-bold text-green-600">-{currency === 'CRC' ? '₡' : '$'}{discountAmount.toFixed(2)}</span>
+              <span className="text-sm font-bold text-green-600">-${discountAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center pt-4 border-t border-gray-200 mb-2">
-              <span className="text-sm font-black text-brand-blue uppercase tracking-wider">Total ({currency})</span>
-              <span className="text-xl font-black text-brand-blue">{currency === 'CRC' ? '₡' : '$'}{total.toFixed(2)}</span>
+              <span className="text-sm font-black text-brand-blue uppercase tracking-wider">Total (USD)</span>
+              <span className="text-xl font-black text-brand-blue">${total.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-brand-blue/5 rounded-xl border border-brand-blue/10">
               <span className="text-xs font-bold text-gray-600 flex flex-col">
-                <span>Total Ref. ({currency === 'USD' ? 'CRC' : 'USD'})</span>
+                <span>Total Ref. (CRC)</span>
                 <span className="text-[10px] font-normal opacity-70">T.C. {exchangeRate}</span>
               </span>
               <span className="text-lg font-black text-brand-blue">
-                {currency === 'USD' ? '₡' : '$'}
-                {currency === 'USD' ? (total * exchangeRate).toFixed(2) : (total / exchangeRate).toFixed(2)}
+                ₡{(total * exchangeRate).toFixed(2)}
               </span>
             </div>
           </div>
