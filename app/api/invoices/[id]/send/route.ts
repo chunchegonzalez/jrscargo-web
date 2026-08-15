@@ -69,7 +69,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const exchangeRate = invoice.exchange_rate || 530;
     const totalColones = (invoice.total * exchangeRate).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    const issueDate = new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const [y, m, d] = (invoice.issue_date || '').split('T')[0].split('-').map(Number);
+    const dateObj = y && m && d ? new Date(y, m - 1, d) : new Date();
+    const issueDate = dateObj.toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' });
 
     const itemsHtml = invoice.items.map((item: InvoiceItem) => buildItemRow(item)).join('');
 

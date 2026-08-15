@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import { Package, TrendingUp, DollarSign, CheckCircle, AlertCircle, Plus, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import { parseLocalDate } from '@/lib/billing';
 
 interface UserData {
   username: string;
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
 
   const inRange = (ds: string | undefined | null) => {
     if (!ds) return false;
-    const d = new Date(ds);
+    const d = parseLocalDate(ds);
     return d >= filterStart && d <= filterEnd;
   };
 
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
   const todayE = endOfDay(new Date());
   const ventaDiaria = invoices
     .filter(inv => {
-      const d = new Date(inv.issue_date);
+      const d = parseLocalDate(inv.issue_date);
       return d >= todayS && d <= todayE && inv.status !== 'Anulada';
     })
     .reduce((s, inv) => s + Number(inv.total), 0);
@@ -165,7 +166,7 @@ export default function AdminDashboard() {
     } else if (inv.status !== 'Anulada' && pending > 0.01) {
       totalReceivables += pending;
       totalPaid += invPaid;
-      const issueDate = new Date(inv.issue_date);
+      const issueDate = parseLocalDate(inv.issue_date);
       const diffDays = Math.ceil(Math.abs(today.getTime() - issueDate.getTime()) / (1000*60*60*24));
       if (diffDays <= 30) age1_30 += pending;
       else if (diffDays <= 60) age31_60 += pending;
@@ -190,7 +191,7 @@ export default function AdminDashboard() {
   const ventasPorDia = last7.map(day => ({
     name: day.label,
     Total: invoices
-      .filter(inv => inv.status !== 'Anulada' && isSameDay(new Date(inv.issue_date), day.date))
+      .filter(inv => inv.status !== 'Anulada' && isSameDay(parseLocalDate(inv.issue_date), day.date))
       .reduce((s, inv) => s + Number(inv.total), 0)
   }));
 
@@ -207,7 +208,7 @@ export default function AdminDashboard() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const mName = d.toLocaleString('es-CR', { month: 'short' }).toUpperCase();
     const mInv = invoices.filter(inv => {
-      const id = new Date(inv.issue_date);
+      const id = parseLocalDate(inv.issue_date);
       return id.getMonth() === d.getMonth() && id.getFullYear() === d.getFullYear() && inv.status !== 'Anulada';
     });
     monthlyData.push({ name: mName, Total: mInv.reduce((s, inv) => s + Number(inv.total), 0) });

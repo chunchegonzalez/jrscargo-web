@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { getInvoiceStats, formatCurrency } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Client = {
@@ -300,7 +300,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                     return (
                       <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
                         <td className="p-4 font-bold text-brand-blue print:text-black text-sm">#{inv.invoice_number}</td>
-                        <td className="p-4 text-sm text-gray-600">{inv.issue_date}</td>
+                        <td className="p-4 text-sm text-gray-600">{formatDisplayDate(inv.issue_date)}</td>
                         <td className="p-4">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold print:border print:bg-transparent print:p-0
                             ${displayStatus === 'Pagada' ? 'bg-green-100 text-green-800 print:text-green-800' : 

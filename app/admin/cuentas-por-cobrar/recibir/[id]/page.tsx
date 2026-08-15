@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Printer, CheckSquare, Square, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getInvoiceStats, formatCurrency } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency, formatDisplayDate, parseLocalDate, getLocalTodayDate } from '@/lib/billing';
 
 export default function RecibirPagoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true);
 
   // Form State
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState(getLocalTodayDate());
   const [paymentMethod, setPaymentMethod] = useState('');
   const [currency] = useState('USD');
   const [reference, setReference] = useState('');
@@ -343,7 +343,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     const isChecked = !!applications[invId];
                     const appAmount = applications[invId] || '';
                     
-                    const dueDate = new Date(issueDate || new Date());
+                    const dueDate = parseLocalDate(issueDate);
                     dueDate.setDate(dueDate.getDate() + 30);
 
                     return (
@@ -353,9 +353,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                         </td>
                         <td className="p-4">
                           <p className="font-bold text-brand-blue text-sm">Factura #{invoiceNumber}</p>
-                          <p className="text-xs text-gray-500">({issueDate})</p>
+                          <p className="text-xs text-gray-500">({formatDisplayDate(issueDate)})</p>
                         </td>
-                        <td className="p-4 text-sm text-gray-600 hidden sm:table-cell">{dueDate.toISOString().split('T')[0]}</td>
+                        <td className="p-4 text-sm text-gray-600 hidden sm:table-cell">{formatDisplayDate(dueDate.toISOString().split('T')[0])}</td>
                         <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">{formatCurrency(Number(invTotal), currency)}</td>
                         <td className="p-4 text-sm font-medium text-gray-800 text-right">{formatCurrency(pendingBalance, currency)}</td>
                         <td className="p-4 text-right">

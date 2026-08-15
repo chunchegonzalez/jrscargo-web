@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { formatDisplayDate, parseLocalDate } from '@/lib/billing';
 
 type LedgerEntry = {
   id: string;
@@ -69,7 +70,7 @@ export default function EstadoDeCuentaPage() {
 
           if (pending > 0.01) {
             newAging.total += pending;
-            const dueDate = new Date(inv.issue_date as string);
+            const dueDate = parseLocalDate(inv.issue_date as string);
             dueDate.setDate(dueDate.getDate() + 30);
             const diffDays = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -223,7 +224,7 @@ export default function EstadoDeCuentaPage() {
           <tbody>
             {hasPreviousEntries && startDate && (
               <tr className="border-b border-gray-100 bg-gray-50">
-                <td className="py-2.5 text-gray-500 italic">{new Date(startDate).toLocaleDateString('es-CR')}</td>
+                <td className="py-2.5 text-gray-500 italic">{formatDisplayDate(startDate)}</td>
                 <td className="py-2.5 text-gray-600 italic font-medium">Saldo Anterior</td>
                 <td className="py-2.5 text-right text-gray-400">—</td>
                 <td className="py-2.5 text-right font-bold text-gray-800">${previousBalance.toFixed(2)}</td>
@@ -231,7 +232,7 @@ export default function EstadoDeCuentaPage() {
             )}
             {filteredLedger.map((entry) => (
               <tr key={entry.id} className="border-b border-gray-100">
-                <td className="py-2.5 text-gray-500">{new Date(entry.date).toLocaleDateString('es-CR')}</td>
+                <td className="py-2.5 text-gray-500">{formatDisplayDate(entry.date)}</td>
                 <td className="py-2.5 text-gray-700">{entry.description}</td>
                 <td className={'py-2.5 text-right font-medium ' + (entry.amount < 0 ? 'text-green-600' : 'text-gray-700')}>
                   {entry.amount < 0 ? '-' : ''}${Math.abs(entry.amount).toFixed(2)}

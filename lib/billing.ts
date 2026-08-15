@@ -40,3 +40,42 @@ export function formatCurrency(amount: number, currency: string = 'USD') {
   }
   return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
 }
+
+/**
+ * Formats a date string (YYYY-MM-DD or ISO) to "DD/MM/YYYY" without UTC timezone conversion offset.
+ */
+export function formatDisplayDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return '';
+  const clean = String(dateStr).split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+  return String(dateStr);
+}
+
+/**
+ * Returns today's date in local time as "YYYY-MM-DD"
+ */
+export function getLocalTodayDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parses a "YYYY-MM-DD" or ISO string into a local Date object (local midnight, not UTC midnight)
+ */
+export function parseLocalDate(dateStr: string | undefined | null): Date {
+  if (!dateStr) return new Date();
+  const clean = String(dateStr).split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts.map(Number);
+    return new Date(year, month - 1, day);
+  }
+  return new Date(dateStr);
+}

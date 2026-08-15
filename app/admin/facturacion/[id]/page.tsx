@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Printer, Ban, Trash2 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
+import { formatDisplayDate } from '@/lib/billing';
 
 type InvoiceItem = {
   id: string;
@@ -187,7 +188,7 @@ export default function InvoiceViewPage() {
           <div className="mb-8">
             <p className="text-sm font-bold text-gray-700 mb-1">Detalles de Factura</p>
             <p className="text-xs text-gray-500">N.º de Factura: {invoice.invoice_number}</p>
-            <p className="text-xs text-gray-500">Fecha de Factura: {new Date(invoice.issue_date).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+            <p className="text-xs text-gray-500">Fecha de Factura: {formatDisplayDate(invoice.issue_date)}</p>
           </div>
 
           {/* Items Table - simple, no colored header */}

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail, MailCheck, RefreshCw } from 'lucide-react';
-import { getInvoiceStats, formatCurrency } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Invoice = {
@@ -111,7 +111,8 @@ export default function FacturacionDashboard() {
 
   const filteredInvoices = invoices.filter(inv => {
     const matchStatus = filterStatus === 'Todas' || inv.status === filterStatus;
-    const matchDate = filterDate === '' || new Date(inv.issue_date).toISOString().split('T')[0] === filterDate;
+    const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
+    const matchDate = filterDate === '' || invDate === filterDate;
     const searchLower = searchTerm.toLowerCase();
     const matchSearch = inv.clients?.name.toLowerCase().includes(searchLower) || inv.invoice_number.toLowerCase().includes(searchLower);
     return matchStatus && matchDate && matchSearch;
@@ -229,7 +230,7 @@ export default function FacturacionDashboard() {
                   return (
                     <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="p-4 text-sm text-gray-600 font-medium">
-                        {new Date(inv.issue_date).toLocaleDateString()}
+                        {formatDisplayDate(inv.issue_date)}
                       </td>
                       <td className="p-4 text-sm font-bold text-brand-blue">
                         {inv.invoice_number}
