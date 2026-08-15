@@ -139,10 +139,6 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
 
   const hasResults = filteredModules.length > 0 || filteredClients.length > 0 || filteredInvoices.length > 0 || filteredInventory.length > 0;
 
-  const getStatusConfig = (status: string | undefined) => {
-    if (!status) return { label: 'Desconocido', color: 'text-gray-600', bg: 'bg-gray-100', icon: Box };
-    return STATUS_CONFIG[status] || { label: status, color: 'text-gray-600', bg: 'bg-gray-100', icon: Box };
-  };
 
   return (
     <div ref={wrapperRef} className="relative w-full max-w-2xl mx-auto">
