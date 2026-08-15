@@ -27,7 +27,7 @@ export default function EditarFacturaPage() {
   const [activeServiceDropdown, setActiveServiceDropdown] = useState<number | null>(null);
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
-  const [currency, setCurrency] = useState('USD');
+  const currency = 'USD';
   const [exchangeRate, setExchangeRate] = useState(500);
   const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -69,7 +69,6 @@ export default function EditarFacturaPage() {
         setSelectedClientId(inv.clients?.id || '');
         setSearchClientTerm(inv.clients?.name || '');
         setInvoiceNumber(inv.invoice_number);
-        setCurrency(inv.currency || 'USD');
         setExchangeRate(inv.exchange_rate || 500);
         setIssueDate(inv.issue_date.split('T')[0]);
         setDiscountPercent(Number(inv.discount_percent) || 0);

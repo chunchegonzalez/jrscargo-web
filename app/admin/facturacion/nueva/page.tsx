@@ -26,7 +26,7 @@ export default function NuevaFacturaPage() {
   const [activeServiceDropdown, setActiveServiceDropdown] = useState<number | null>(null);
   
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
-  const [currency, setCurrency] = useState('USD');
+  const currency = 'USD';
   const [exchangeRate, setExchangeRate] = useState(500);
   const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
   const [issueDate, setIssueDate] = useState(getLocalTodayDate());
