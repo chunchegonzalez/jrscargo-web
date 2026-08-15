@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ScanBarcode, Package, User, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
+import { formatCostaRicaDateTime } from '@/lib/billing';
 
 interface PackageData {
   tracking: string;
@@ -124,8 +125,7 @@ export default function BodegaScanner() {
   };
 
   const handleRegisterLocal = async () => {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
+    const formattedDate = formatCostaRicaDateTime();
     
     const newEvent = {
       date: formattedDate,
@@ -163,8 +163,7 @@ export default function BodegaScanner() {
   };
 
   const handleDeliver = async () => {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
+    const formattedDate = formatCostaRicaDateTime();
     
     const newEvent = {
       date: formattedDate,
@@ -192,8 +191,7 @@ export default function BodegaScanner() {
   };
 
   const handleRevertDeliver = async () => {
-    const now = new Date();
-    const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
+    const formattedDate = formatCostaRicaDateTime();
     
     const newEvent = {
       date: formattedDate,

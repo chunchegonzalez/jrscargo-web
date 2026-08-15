@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layers, Play, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { formatCostaRicaDateTime } from '@/lib/billing';
 
 interface Result {
   tracking: string;
@@ -64,8 +65,7 @@ export default function BodegaMasivo() {
           continue;
         }
 
-        const now = new Date();
-        const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
+        const formattedDate = formatCostaRicaDateTime();
         
         const res = await fetch('/api/inventory', {
           method: 'POST',

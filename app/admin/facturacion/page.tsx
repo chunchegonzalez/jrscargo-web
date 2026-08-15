@@ -120,8 +120,8 @@ export default function FacturacionDashboard() {
 
   const formatEmailDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 
-      ' ' + d.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: '2-digit', month: '2-digit', year: 'numeric' }) + 
+      ' ' + d.toLocaleTimeString('es-CR', { timeZone: 'America/Costa_Rica', hour: '2-digit', minute: '2-digit' });
   };
 
   return (

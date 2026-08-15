@@ -177,7 +177,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                   const sc = getStatusConfig(item.status);
                   const StatusIcon = sc.icon;
                   const rd = item.received_date || item.created_at;
-                  const dateStr = rd ? new Date(rd).toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+                  const dateStr = rd ? new Date(rd).toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: '2-digit', month: 'short', year: 'numeric' }) : '';
                   
                   return (
                     <button 

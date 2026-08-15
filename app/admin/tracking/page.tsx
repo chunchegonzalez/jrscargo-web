@@ -48,7 +48,7 @@ function formatDate(ds: string | null | undefined): string {
   try {
     const d = new Date(ds);
     if (isNaN(d.getTime())) return ds;
-    return d.toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch {
     return 'N/A';
   }

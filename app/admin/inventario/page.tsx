@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useModal } from '@/app/components/ModalProvider';
+import { formatCostaRicaDate, formatCostaRicaISO } from '@/lib/billing';
 
 interface InventoryItem {
   id: string;
@@ -90,7 +91,7 @@ export default function BodegaInventario() {
             company: item.company || 'N/A',
             weight: item.weight,
             status: item.status,
-            date: new Date(item.created_at).toLocaleDateString('es-CR'),
+            date: formatCostaRicaDate(item.created_at),
             createdAt: item.created_at
           }));
           setInventory(formatted);
@@ -127,8 +128,7 @@ export default function BodegaInventario() {
     const matchesStatus = filterStatus === 'Todos' || (item.status || '').includes(filterStatus.replace(' al Cliente', ''));
     
     // Compare YYYY-MM-DD
-    const itemDate = new Date(item.createdAt);
-    const itemDateString = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}-${String(itemDate.getDate()).padStart(2, '0')}`;
+    const itemDateString = formatCostaRicaISO(item.createdAt);
     const matchesDate = !filterDate || itemDateString === filterDate;
 
     return matchesSearch && matchesCompany && matchesStatus && matchesDate;

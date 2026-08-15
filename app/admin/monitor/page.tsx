@@ -41,7 +41,7 @@ function formatMs(ms: number): string {
 function formatDate(ds: string): string {
   try {
     const d = new Date(ds);
-    return d.toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch {
     return ds;
   }
@@ -80,7 +80,7 @@ export default function MonitorPage() {
       if (res.ok) {
         const result = await res.json();
         setData(result);
-        setLastCheck(new Date().toLocaleTimeString('es-CR'));
+        setLastCheck(new Date().toLocaleTimeString('es-CR', { timeZone: 'America/Costa_Rica' }));
       }
     } catch (err: unknown) {
       console.error('Monitor fetch error:', err);

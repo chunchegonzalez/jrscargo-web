@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layers, Play, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { formatCostaRicaDateTime } from '@/lib/billing';
 
 interface Result {
   tracking: string;
@@ -35,8 +36,7 @@ export default function EntregasMasivo() {
     
     for (const tracking of trackings) {
       try {
-        const now = new Date();
-        const formattedDate = now.toLocaleDateString('es-CR') + ' ' + now.toLocaleTimeString('es-CR');
+        const formattedDate = formatCostaRicaDateTime();
         
         await fetch(`/api/inventory/${tracking}`, {
           method: 'PATCH',

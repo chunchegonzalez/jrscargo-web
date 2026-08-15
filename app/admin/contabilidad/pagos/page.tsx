@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { DollarSign, Search, Trash2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { formatCurrency } from '@/lib/billing';
+import { formatCurrency, formatDisplayDate } from '@/lib/billing';
 
 type Payment = {
   id: string;
@@ -191,7 +191,7 @@ export default function HistorialPagosPage() {
                 filteredPayments.map(pay => (
                   <tr key={pay.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="p-4 text-sm font-medium text-gray-600">
-                      {new Date(pay.payment_date).toLocaleDateString()}
+                      {formatDisplayDate(pay.payment_date)}
                     </td>
                     <td className="p-4">
                       {pay.clients ? (

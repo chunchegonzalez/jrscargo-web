@@ -79,3 +79,54 @@ export function parseLocalDate(dateStr: string | undefined | null): Date {
   }
   return new Date(dateStr);
 }
+
+/**
+ * Formats a Date or date string to Costa Rica local date & time: "DD/MM/YYYY, h:mm:ss a"
+ * Guaranteed to evaluate in America/Costa_Rica timezone.
+ */
+export function formatCostaRicaDateTime(date: Date | string | number = new Date()): string {
+  if (!date) return '';
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return String(date);
+  return d.toLocaleString('es-CR', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+}
+
+/**
+ * Formats a Date or date string to Costa Rica local date: "DD/MM/YYYY"
+ */
+export function formatCostaRicaDate(date: Date | string | number = new Date()): string {
+  if (!date) return '';
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return String(date);
+  return d.toLocaleDateString('es-CR', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  });
+}
+
+/**
+ * Formats a Date or date string to Costa Rica local date ISO string: "YYYY-MM-DD"
+ */
+export function formatCostaRicaISO(date: Date | string | number = new Date()): string {
+  if (!date) return '';
+  const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return String(date);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  return formatter.format(d);
+}

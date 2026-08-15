@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Search, Receipt } from 'lucide-react';
-import { formatCurrency } from '@/lib/billing';
+import { formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Expense = {
@@ -139,7 +139,7 @@ export default function GastosPage() {
                   {filteredExpenses.map((expense) => (
                     <tr key={expense.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="py-4 text-sm text-gray-600">
-                        {new Date(expense.date).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {formatDisplayDate(expense.date)}
                       </td>
                       <td className="py-4 text-sm font-bold text-gray-800 uppercase">{expense.provider_name}</td>
                       <td className="py-4">
