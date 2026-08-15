@@ -364,12 +364,11 @@ export default function EditarFacturaPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Moneda</label>
                 <select 
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                  value="USD"
+                  disabled
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-gray-50 font-bold text-brand-blue cursor-not-allowed"
                 >
                   <option value="USD">USD ($)</option>
-                  <option value="CRC">CRC (₡)</option>
                 </select>
               </div>
               <div>
