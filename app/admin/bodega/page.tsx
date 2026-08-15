@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ScanBarcode, Package, User, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
-import { formatCostaRicaDateTime } from '@/lib/billing';
+import { formatCostaRicaDateTime, extractCompanyAndClient } from '@/lib/billing';
 
 interface PackageData {
   tracking: string;
@@ -58,16 +58,7 @@ export default function BodegaScanner() {
       if (data.status === 'SUCCESS' && data.rawData?.package) {
         const pkg = data.rawData.package;
         const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
-        let extractedCompany = 'Independiente';
-        let cleanClient = fullConsignee;
-
-        if (/\bJRS(\s*CARGO)?\b/i.test(fullConsignee)) {
-          extractedCompany = 'JRS CARGO';
-          cleanClient = fullConsignee.replace(/\bJRS(\s*CARGO)?\b/i, '').replace(/-/g, '').trim();
-        } else if (/\b(AT(\s*IMPORTS?)?|ATLANTIC\s*IMPORTS?|AT-\d+)\b/i.test(fullConsignee)) {
-          extractedCompany = 'ATLANTIC IMPORTS';
-          cleanClient = fullConsignee.replace(/\b(AT(\s*IMPORTS?)?|ATLANTIC\s*IMPORTS?|AT-\d+)\b/i, '').replace(/-/g, '').trim();
-        }
+        const { company: extractedCompany, cleanClient } = extractCompanyAndClient(fullConsignee);
 
         const newPackageData = {
           ...pkg,

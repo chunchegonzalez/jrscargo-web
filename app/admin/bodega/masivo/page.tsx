@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Layers, Play, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { formatCostaRicaDateTime } from '@/lib/billing';
+import { formatCostaRicaDateTime, extractCompanyAndClient } from '@/lib/billing';
 
 interface Result {
   tracking: string;
@@ -46,16 +46,9 @@ export default function BodegaMasivo() {
         if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
           const pkg = wbData.rawData.package;
           const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
-          
-          if (/\bJRS(\s*CARGO)?\b/i.test(fullConsignee)) {
-            company = 'JRS CARGO';
-            client = fullConsignee.replace(/\bJRS(\s*CARGO)?\b/i, '').replace(/-/g, '').trim();
-          } else if (/\b(AT(\s*IMPORTS?)?|ATLANTIC\s*IMPORTS?|AT-\d+)\b/i.test(fullConsignee)) {
-            company = 'ATLANTIC IMPORTS';
-            client = fullConsignee.replace(/\b(AT(\s*IMPORTS?)?|ATLANTIC\s*IMPORTS?|AT-\d+)\b/i, '').replace(/-/g, '').trim();
-          } else {
-            client = fullConsignee;
-          }
+          const extracted = extractCompanyAndClient(fullConsignee);
+          company = extracted.company;
+          client = extracted.cleanClient;
           weightStr = `${pkg.weight || '0'} ${pkg.weightUnit || 'lbs'}`;
         }
 

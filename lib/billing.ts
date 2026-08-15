@@ -130,3 +130,48 @@ export function formatCostaRicaISO(date: Date | string | number = new Date()): s
   });
   return formatter.format(d);
 }
+
+/**
+ * Extracts company ('JRS CARGO' or 'ATLANTIC IMPORTS') and cleaned client name
+ * from API raw consignee / client string.
+ */
+export function extractCompanyAndClient(rawConsignee: string | null | undefined): { 
+  company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'Independiente'; 
+  cleanClient: string 
+} {
+  if (!rawConsignee) return { company: 'Independiente', cleanClient: 'Desconocido' };
+  
+  const text = rawConsignee.trim();
+  let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'Independiente' = 'Independiente';
+
+  // 1. Check for JRS Cargo signatures
+  if (/\bJRS(\s*CARGO)?\b/i.test(text) || /\bJRS[-\s]*\d+/i.test(text)) {
+    company = 'JRS CARGO';
+  }
+  // 2. Check for Atlantic Imports signatures (AT-, ATLANTIC, or 1900-2999 locker codes)
+  else if (
+    /\b(AT(\s*IMPORTS?)?|ATLANTIC(\s*IMPORTS?)?)\b/i.test(text) ||
+    /\bAT[-\s]*\d+/i.test(text) ||
+    /-\s*(19\d{2}|2\d{3})\b/.test(text) ||
+    /\b(19\d{2}|2\d{3})\b/.test(text)
+  ) {
+    company = 'ATLANTIC IMPORTS';
+  }
+  // 3. 1000-1899 locker numbers -> JRS
+  else if (/\b1[0-8]\d{2}\b/.test(text)) {
+    company = 'JRS CARGO';
+  }
+
+  // Clean client name by removing company tags and locker codes
+  let cleanClient = text
+    .replace(/\b(JRS(\s*CARGO)?|ATLANTIC(\s*IMPORTS?)?|AT)\b/gi, '')
+    .replace(/-\s*\d+/g, '')
+    .replace(/\b(1\d{3}|2\d{3})\b/g, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanClient) cleanClient = text;
+
+  return { company, cleanClient };
+}

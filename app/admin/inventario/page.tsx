@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useModal } from '@/app/components/ModalProvider';
-import { formatCostaRicaDate, formatCostaRicaISO } from '@/lib/billing';
+import { formatCostaRicaDate, formatCostaRicaISO, extractCompanyAndClient } from '@/lib/billing';
 
 interface InventoryItem {
   id: string;
@@ -85,15 +85,22 @@ export default function BodegaInventario() {
           // Transform from DB format
           const formatted = data
             .filter((item: { status: string }) => item.status !== 'Eliminado')
-            .map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => ({
-            id: item.id,
-            client: item.client,
-            company: item.company || 'N/A',
-            weight: item.weight,
-            status: item.status,
-            date: formatCostaRicaDate(item.created_at),
-            createdAt: item.created_at
-          }));
+            .map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => {
+              let comp = item.company;
+              if (!comp || comp === 'N/A' || comp === 'Independiente' || comp === 'OTRO') {
+                const extracted = extractCompanyAndClient(item.client);
+                comp = extracted.company !== 'Independiente' ? extracted.company : (comp || 'JRS CARGO');
+              }
+              return {
+                id: item.id,
+                client: item.client,
+                company: comp,
+                weight: item.weight,
+                status: item.status,
+                date: formatCostaRicaDate(item.created_at),
+                createdAt: item.created_at
+              };
+            });
           setInventory(formatted);
         }
 
