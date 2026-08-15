@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, FileText, User, Box, ArrowRight, Loader2, Link as LinkIcon, MapPin, Truck, Package, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, User, Box, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
 
 // Static Modules for quick navigation
 const MODULES = [
@@ -47,13 +47,13 @@ interface GlobalSearchProps {
   role?: string;
 }
 
-const getStatusConfig = (status?: string) => {
+function getStatusConfig(status?: string) {
   const isDelivered = (status || '').toLowerCase().includes('entregad');
   if (isDelivered) {
     return { label: 'Entregado', color: 'text-green-700', bg: 'bg-green-100', icon: CheckCircle2 };
   }
   return { label: 'En Bodega', color: 'text-brand-blue', bg: 'bg-brand-blue/10', icon: Package };
-};
+}
 
 export default function GlobalSearch({ role }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
