@@ -311,8 +311,10 @@ export default function AdminDashboard() {
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">En Tránsito</p>
-              <p className="text-2xl font-black text-gray-800">{enTransito}</p>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Tasa de Entrega</p>
+              <p className="text-2xl font-black text-gray-800">
+                {inventory.length > 0 ? Math.round((entregados / inventory.length) * 100) : 0}%
+              </p>
             </div>
           </div>
         </div>
