@@ -120,8 +120,26 @@ export default function ChatBotWidget() {
         {lines.map((line, idx) => {
           if (!line.trim()) return <div key={idx} className="h-1" />;
 
-          // Parse markdown-like bold *text*
-          const formattedLine = line.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+          // Render Tracking CTA Button
+          const trackingLinkMatch = line.match(/(?:https?:\/\/)?(?:www\.)?jrscargocr\.com\/tracking\?number=([A-Za-z0-9_-]+)/i) ||
+                                    line.match(/\/tracking\?number=([A-Za-z0-9_-]+)/i);
+          if (trackingLinkMatch) {
+            const trkNumber = trackingLinkMatch[1];
+            return (
+              <div key={idx} className="my-2.5">
+                <a
+                  href={`/tracking?number=${encodeURIComponent(trkNumber)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-blue text-white font-bold rounded-xl text-xs hover:bg-brand-blue/90 hover:shadow-md transition-all active:scale-95"
+                >
+                  <Package size={15} className="text-brand-yellow" />
+                  <span>Ver Seguimiento en Vivo ({trkNumber})</span>
+                  <ExternalLink size={13} className="opacity-80" />
+                </a>
+              </div>
+            );
+          }
 
           // Highlight specific CTA links
           if (line.includes('worldboxcr.com/jrscargo/register')) {
@@ -131,7 +149,7 @@ export default function ChatBotWidget() {
                   href="https://worldboxcr.com/jrscargo/register"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-yellow text-brand-blue font-bold rounded-xl text-xs hover:bg-brand-yellow/90 transition-transform active:scale-95 shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-yellow text-brand-blue font-bold rounded-xl text-xs hover:bg-brand-yellow/90 transition-transform active:scale-95 shadow-sm"
                 >
                   <ExternalLink size={14} /> Abrir Casillero Gratis
                 </a>
@@ -153,6 +171,10 @@ export default function ChatBotWidget() {
               </div>
             );
           }
+
+          // Parse markdown-like bold *text* and auto-link standard URLs
+          let formattedLine = line.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+          formattedLine = formattedLine.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-brand-blue underline font-bold hover:text-brand-yellow transition-colors">$1</a>');
 
           return (
             <p 

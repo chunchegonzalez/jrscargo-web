@@ -96,7 +96,7 @@ async function getTrackingMessage(trackingNumber: string): Promise<string> {
       msg += `\n`;
     }
 
-    msg += `👉 Ver detalles completos en: jrscargocr.com/tracking?number=${encodeURIComponent(trackingNumber)}`;
+    msg += `👉 Ver detalles completos en: https://www.jrscargocr.com/tracking?number=${encodeURIComponent(trackingNumber)}`;
     return msg;
   }
 
