@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById } from '@/lib/supabase';
+import { generateInvoicePdf } from '@/lib/invoice-pdf';
 import nodemailer from 'nodemailer';
 
 export const dynamic = 'force-dynamic';
@@ -185,15 +186,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
       '</body></html>'
     ].join('\n');
 
+    // Generate PDF document buffer
+    const pdfBuffer = await generateInvoicePdf(invoice);
+
     const info = await transporter.sendMail({
       from: '"JRS Cargo Facturación" <' + smtpUser + '>',
       to: invoice.clients.email,
       subject: customSubject,
       html: htmlContent,
       attachments: [{
-        filename: 'Factura-' + invoice.invoice_number + '.html',
-        content: invoiceHtml,
-        contentType: 'text/html'
+        filename: 'Factura-' + invoice.invoice_number + '.pdf',
+        content: pdfBuffer,
+        contentType: 'application/pdf'
       }]
     });
     const sentAt = new Date().toISOString();
