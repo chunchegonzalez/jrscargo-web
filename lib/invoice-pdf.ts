@@ -55,57 +55,55 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   // Colors
   const brandBlue = rgb(0.07, 0.26, 0.37); // #12435E
   const brandNavy = rgb(0.04, 0.15, 0.21); // #0A2636
-  const textDark = rgb(0.15, 0.15, 0.15);
-  const textGray = rgb(0.45, 0.45, 0.45);
-  const textLight = rgb(0.65, 0.65, 0.65);
-  const borderGray = rgb(0.88, 0.88, 0.88);
-  const bgLight = rgb(0.96, 0.97, 0.98);
+  const textDark = rgb(0.12, 0.14, 0.17);
+  const textGray = rgb(0.42, 0.46, 0.52);
+  const textLight = rgb(0.60, 0.64, 0.70);
+  const borderGray = rgb(0.88, 0.90, 0.92);
+  const bgLight = rgb(0.97, 0.98, 0.99);
   const successGreen = rgb(0.06, 0.65, 0.40);
   const amberColor = rgb(0.90, 0.55, 0.05);
 
-  const margin = 40;
+  const margin = 44;
   const pageTop = height - margin;
 
   // ==========================================
-  // 1. HEADER (Top Left: Text, Top Right: Logo)
+  // 1. HEADER (Top Left: Text, Top Right: Large Logo)
   // ==========================================
-  let headerBottom = pageTop - 65;
+  const logoTargetHeight = 62; // Increased logo size for clear branding
+  let logoBottom = pageTop - logoTargetHeight;
 
-  // Draw Logo in top right corner (proportional scaling to height = 46pt)
   try {
     const logoPath = path.join(process.cwd(), 'public', 'logo.png');
     if (fs.existsSync(logoPath)) {
       const logoBytes = fs.readFileSync(logoPath);
       const logoImg = await pdfDoc.embedPng(logoBytes);
-      const targetLogoHeight = 46;
-      const logoScale = targetLogoHeight / logoImg.height;
+      const logoScale = logoTargetHeight / logoImg.height;
       const logoWidth = logoImg.width * logoScale;
-      const logoHeight = targetLogoHeight;
       
       page.drawImage(logoImg, {
         x: width - margin - logoWidth,
-        y: pageTop - logoHeight + 4,
+        y: pageTop - logoTargetHeight + 6,
         width: logoWidth,
-        height: logoHeight,
+        height: logoTargetHeight,
       });
-      headerBottom = Math.min(headerBottom, pageTop - logoHeight - 12);
+      logoBottom = pageTop - logoTargetHeight;
     }
   } catch (e) {
-    console.warn('Could not embed PNG logo in PDF, rendering vector text header', e);
+    console.warn('Could not embed PNG logo in PDF', e);
   }
 
-  // Header Text (Top Left)
+  // Header Text (Left)
   page.drawText('FACTURA', {
     x: margin,
-    y: pageTop - 5,
-    size: 22,
+    y: pageTop - 6,
+    size: 24,
     font: fontBold,
     color: brandBlue,
   });
 
   page.drawText('JRS CARGO S.A.', {
     x: margin,
-    y: pageTop - 25,
+    y: pageTop - 28,
     size: 11,
     font: fontBold,
     color: textDark,
@@ -113,29 +111,29 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   page.drawText('San Pablo de Heredia, Costa Rica', {
     x: margin,
-    y: pageTop - 38,
-    size: 8.5,
+    y: pageTop - 42,
+    size: 9,
     font: fontRegular,
     color: textGray,
   });
 
   page.drawText('Tel: +506 7260-1238  |  info@jrscargocr.com  |  www.jrscargocr.com', {
     x: margin,
-    y: pageTop - 50,
-    size: 8,
+    y: pageTop - 56,
+    size: 8.5,
     font: fontRegular,
-    color: textGray,
+    color: textLight,
   });
 
-  // Divider Line (strictly below header)
-  let y = headerBottom;
+  // Divider Line (Clean, strictly below header)
+  let y = Math.min(pageTop - 74, logoBottom - 14);
   page.drawLine({
     start: { x: margin, y },
     end: { x: width - margin, y },
     thickness: 1,
     color: borderGray,
   });
-  y -= 16;
+  y -= 20;
 
   // ==========================================
   // 2. CLIENT & INVOICE METADATA SECTION
@@ -159,8 +157,8 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   page.drawText(clientName, {
     x: margin,
-    y: metaStartY - 13,
-    size: 12,
+    y: metaStartY - 15,
+    size: 13,
     font: fontBold,
     color: textDark,
   });
@@ -168,8 +166,8 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   if (clientEmail) {
     page.drawText(clientEmail, {
       x: margin,
-      y: metaStartY - 25,
-      size: 8.5,
+      y: metaStartY - 28,
+      size: 9,
       font: fontRegular,
       color: textGray,
     });
@@ -178,38 +176,38 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   if (clientPhone) {
     page.drawText(clientPhone, {
       x: margin,
-      y: metaStartY - (clientEmail ? 36 : 25),
-      size: 8.5,
+      y: metaStartY - (clientEmail ? 40 : 28),
+      size: 9,
       font: fontRegular,
       color: textGray,
     });
   }
 
-  // Right: Invoice Meta (Cleanly positioned on the right)
+  // Right: Invoice Meta (Aligned to right edge)
   const metaLabelX = width - margin - 170;
-  const metaValueX = width - margin - 65;
+  const metaValueX = width - margin - 60;
 
-  page.drawText('No. de Factura:', { x: metaLabelX, y: metaStartY, size: 8.5, font: fontRegular, color: textGray });
-  page.drawText(clean(invoice.invoice_number), { x: metaValueX, y: metaStartY, size: 10, font: fontBold, color: brandBlue });
+  page.drawText('No. de Factura:', { x: metaLabelX, y: metaStartY, size: 9, font: fontRegular, color: textGray });
+  page.drawText(clean(invoice.invoice_number), { x: metaValueX, y: metaStartY, size: 10.5, font: fontBold, color: brandBlue });
 
-  page.drawText('Fecha de Emision:', { x: metaLabelX, y: metaStartY - 14, size: 8.5, font: fontRegular, color: textGray });
-  page.drawText(clean(formattedDate), { x: metaValueX, y: metaStartY - 14, size: 8.5, font: fontRegular, color: textDark });
+  page.drawText('Fecha de Emision:', { x: metaLabelX, y: metaStartY - 15, size: 9, font: fontRegular, color: textGray });
+  page.drawText(clean(formattedDate), { x: metaValueX, y: metaStartY - 15, size: 9, font: fontRegular, color: textDark });
 
   const statusText = clean((invoice.status || 'PENDIENTE').toUpperCase());
   const statusColor = statusText === 'PAGADA' ? successGreen : (statusText === 'ANULADA' ? rgb(0.8, 0.2, 0.2) : amberColor);
-  page.drawText('Estado:', { x: metaLabelX, y: metaStartY - 28, size: 8.5, font: fontBold, color: textGray });
-  page.drawText(statusText, { x: metaValueX, y: metaStartY - 28, size: 8.5, font: fontBold, color: statusColor });
+  page.drawText('Estado:', { x: metaLabelX, y: metaStartY - 30, size: 9, font: fontBold, color: textGray });
+  page.drawText(statusText, { x: metaValueX, y: metaStartY - 30, size: 9, font: fontBold, color: statusColor });
 
-  y = metaStartY - 52;
+  y = metaStartY - 56;
 
   // ==========================================
   // 3. TABLE HEADER
   // ==========================================
   const colX = {
-    service: margin + 8,
-    tracking: margin + 175,
-    weight: margin + 325,
-    rate: margin + 385,
+    service: margin + 10,
+    tracking: margin + 185,
+    weight: margin + 335,
+    rate: margin + 395,
     amount: width - margin - 10,
   };
 
@@ -236,7 +234,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const items = invoice.items || [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const rowHeight = 22;
+    const rowHeight = 24;
     const isEven = i % 2 === 0;
 
     if (isEven) {
@@ -249,30 +247,30 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
       });
     }
 
-    // Clean service name so it doesn't overlap tracking
+    // Clean service name
     let rawService = item.service_name || 'Transporte Internacional';
     if (rawService.includes(' - ') && item.tracking_number) {
       rawService = rawService.split(' - ')[0];
     }
-    const serviceName = clean(rawService.substring(0, 28));
-    page.drawText(serviceName, { x: colX.service, y: y - 8, size: 8.5, font: fontRegular, color: textDark });
+    const serviceName = clean(rawService.substring(0, 32));
+    page.drawText(serviceName, { x: colX.service, y: y - 9, size: 8.5, font: fontRegular, color: textDark });
 
     // Tracking
     const tracking = clean((item.tracking_number || '-').substring(0, 24));
-    page.drawText(tracking, { x: colX.tracking, y: y - 8, size: 8, font: fontMono, color: brandNavy });
+    page.drawText(tracking, { x: colX.tracking, y: y - 9, size: 8, font: fontMono, color: brandNavy });
 
     // Weight
     const weightStr = item.weight !== undefined && item.weight !== null && item.weight !== '' ? `${item.weight} lb` : '-';
-    page.drawText(clean(weightStr), { x: colX.weight, y: y - 8, size: 8.5, font: fontRegular, color: textGray });
+    page.drawText(clean(weightStr), { x: colX.weight, y: y - 9, size: 8.5, font: fontRegular, color: textGray });
 
     // Rate
     const rateStr = item.rate !== undefined && item.rate !== null && item.rate !== '' ? `$${Number(item.rate).toFixed(2)}` : '-';
-    page.drawText(clean(rateStr), { x: colX.rate, y: y - 8, size: 8.5, font: fontRegular, color: textGray });
+    page.drawText(clean(rateStr), { x: colX.rate, y: y - 9, size: 8.5, font: fontRegular, color: textGray });
 
     // Amount
     const amountStr = `$${Number(item.amount || 0).toFixed(2)}`;
     const amtWidth = fontBold.widthOfTextAtSize(amountStr, 9);
-    page.drawText(amountStr, { x: colX.amount - amtWidth, y: y - 8, size: 9, font: fontBold, color: textDark });
+    page.drawText(amountStr, { x: colX.amount - amtWidth, y: y - 9, size: 9, font: fontBold, color: textDark });
 
     // Bottom row border
     page.drawLine({
@@ -285,7 +283,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     y -= rowHeight;
   }
 
-  y -= 15;
+  y -= 18;
 
   // ==========================================
   // 5. TOTALS SECTION
@@ -301,7 +299,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   page.drawText('Subtotal:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
   const subStr = `$${Number(invoice.subtotal || invoice.total).toFixed(2)}`;
   page.drawText(subStr, { x: width - margin - fontRegular.widthOfTextAtSize(subStr, 9), y, size: 9, font: fontRegular, color: textDark });
-  y -= 14;
+  y -= 15;
 
   // Discount (if any)
   if (invoice.discount_percent && invoice.discount_percent > 0) {
@@ -309,41 +307,41 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     page.drawText(`Descuento (${invoice.discount_percent}%):`, { x: totalsX, y, size: 9, font: fontRegular, color: successGreen });
     const discStr = `-$${discAmt}`;
     page.drawText(discStr, { x: width - margin - fontRegular.widthOfTextAtSize(discStr, 9), y, size: 9, font: fontRegular, color: successGreen });
-    y -= 14;
+    y -= 15;
   }
 
-  // Total USD (Clean, without rectangle border)
-  page.drawText('Total USD:', { x: totalsX, y, size: 11, font: fontBold, color: brandBlue });
+  // Total USD (Clean, Large, Brand Blue)
+  page.drawText('Total USD:', { x: totalsX, y, size: 12, font: fontBold, color: brandBlue });
   const totalStr = `$${totalUSD.toFixed(2)}`;
-  const totalWidth = fontBold.widthOfTextAtSize(totalStr, 13);
-  page.drawText(totalStr, { x: width - margin - totalWidth, y, size: 13, font: fontBold, color: brandBlue });
-  y -= 16;
+  const totalWidth = fontBold.widthOfTextAtSize(totalStr, 14);
+  page.drawText(totalStr, { x: width - margin - totalWidth, y, size: 14, font: fontBold, color: brandBlue });
+  y -= 18;
 
   // Total Colones
   page.drawText('Total Colones:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
   const crcStr = clean(`CRC ${formattedColones}`);
-  page.drawText(crcStr, { x: width - margin - fontBold.widthOfTextAtSize(crcStr, 9), y, size: 9, font: fontBold, color: textDark });
-  y -= 12;
+  page.drawText(crcStr, { x: width - margin - fontBold.widthOfTextAtSize(crcStr, 9.5), y, size: 9.5, font: fontBold, color: textDark });
+  y -= 13;
 
   const tcText = clean(`T.C. CRC ${exchangeRate} por $1 USD`);
-  page.drawText(tcText, { x: width - margin - fontRegular.widthOfTextAtSize(tcText, 7.5), y, size: 7.5, font: fontRegular, color: textLight });
+  page.drawText(tcText, { x: width - margin - fontRegular.widthOfTextAtSize(tcText, 8), y, size: 8, font: fontRegular, color: textLight });
 
   // 6. Notes / Mensaje de Cliente (Left Side)
-  const notesY = y + 38;
+  const notesY = y + 42;
   const notesText = clean(invoice.notes || 'Gracias por elegir a JRS CARGO');
   page.drawRectangle({
     x: margin,
-    y: notesY - 35,
-    width: 280,
+    y: notesY - 36,
+    width: 270,
     height: 48,
     color: bgLight,
     borderColor: borderGray,
     borderWidth: 0.5,
   });
 
-  page.drawText('NOTAS & CONDICIONES:', { x: margin + 8, y: notesY - 2, size: 7.5, font: fontBold, color: brandBlue });
-  page.drawText(notesText.substring(0, 75), { x: margin + 8, y: notesY - 14, size: 8, font: fontRegular, color: textGray });
-  page.drawText('Servicio de Casillero y Envios Internacionales.', { x: margin + 8, y: notesY - 26, size: 7.5, font: fontRegular, color: textLight });
+  page.drawText('NOTAS & CONDICIONES:', { x: margin + 10, y: notesY - 2, size: 7.5, font: fontBold, color: brandBlue });
+  page.drawText(notesText.substring(0, 75), { x: margin + 10, y: notesY - 14, size: 8, font: fontRegular, color: textGray });
+  page.drawText('Servicio de Casillero y Envios Internacionales.', { x: margin + 10, y: notesY - 26, size: 7.5, font: fontRegular, color: textLight });
 
   // 7. Footer
   const footerY = 35;
