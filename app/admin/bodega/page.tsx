@@ -58,11 +58,12 @@ export default function BodegaScanner() {
       
       if (data.status === 'SUCCESS' && data.rawData?.package) {
         const pkg = data.rawData.package;
-        const fullConsignee = pkg.clientName || pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+        const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
         const { company: extractedCompany, cleanClient } = extractCompanyAndClient(
-          fullConsignee,
+          pkg.consignatario || fullConsignee,
           pkg.tenantName || pkg.company,
-          pkg.clientCode
+          pkg.clientCode,
+          pkg.clientName
         );
 
         const newPackageData = {

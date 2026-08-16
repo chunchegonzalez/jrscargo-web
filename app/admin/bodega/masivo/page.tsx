@@ -50,11 +50,12 @@ export default function BodegaMasivo() {
           
           if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
             const pkg = wbData.rawData.package;
-            const fullConsignee = pkg.clientName || pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+            const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
             const extracted = extractCompanyAndClient(
-              fullConsignee,
+              pkg.consignatario || fullConsignee,
               pkg.tenantName || pkg.company,
-              pkg.clientCode
+              pkg.clientCode,
+              pkg.clientName
             );
             company = pkg.company || extracted.company;
             client = extracted.cleanClient;
@@ -128,11 +129,12 @@ export default function BodegaMasivo() {
             
             if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
               const pkg = wbData.rawData.package;
-              const fullConsignee = pkg.clientName || pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+              const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
               const extracted = extractCompanyAndClient(
-                fullConsignee,
+                pkg.consignatario || fullConsignee,
                 pkg.tenantName || pkg.company,
-                pkg.clientCode
+                pkg.clientCode,
+                pkg.clientName
               );
 
               const createRes = await fetch('/api/inventory', {

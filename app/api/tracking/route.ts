@@ -94,8 +94,14 @@ export async function GET(request: Request) {
           data.package.company = 'JRS CARGO';
         }
 
-        if (matched.clientName) {
-          data.package.consignatario = matched.clientName;
+        const genericCompanies = ['JRS CARGO', 'ATLANTIC IMPORTS', 'JR LOGISTICS'];
+        const isGenericClientName = genericCompanies.includes((matched.clientName || '').trim().toUpperCase());
+        
+        if (matched.clientName && (!data.package.consignatario || !isGenericClientName)) {
+          // If we had no consignatario or matched clientName is a real person name, use it
+          if (!data.package.consignatario) {
+            data.package.consignatario = matched.clientName;
+          }
         }
       }
     }
