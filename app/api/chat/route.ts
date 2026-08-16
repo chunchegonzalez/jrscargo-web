@@ -41,32 +41,89 @@ async function fetchTrackingData(trackingNumber: string) {
   }
 }
 
+function extractTrackingNumber(text: string): string | null {
+  const blacklist = new Set([
+    'casillero', 'casilleros', 'direccion', 'dirección', 'costarica', 'informacion', 'información',
+    'cotizacion', 'cotización', 'registrarse', 'registrado', 'bienvenido', 'paquetes',
+    'maritimo', 'marítimo', 'seguimiento', 'rastrear', 'rastreo', 'costarricense',
+    'telefono', 'teléfono', 'whatsapp', 'preguntas', 'servicios', 'consulta'
+  ]);
+
+  const clean = text.replace(/[,;?!()"'`]/g, ' ');
+  const words = clean.split(/\s+/);
+
+  for (const word of words) {
+    const trimmed = word.trim();
+    if (!trimmed || blacklist.has(trimmed.toLowerCase())) continue;
+
+    // Formats: TBA..., 1Z..., 9400..., 12-22 digits, JRS-XXXX, AT-XXXX, etc.
+    if (/^(TBA\w+|1Z\w+|9\d{15,25}|\d{10,25}|JRS-\w+|AT-\w+|[A-Z]{2}\d{9}[A-Z]{2})/i.test(trimmed)) {
+      return trimmed.toUpperCase();
+    }
+    // Fallback: strings with at least 3 digits and length between 7 and 35
+    if (trimmed.length >= 7 && trimmed.length <= 35 && /\d{3,}/.test(trimmed) && !blacklist.has(trimmed.toLowerCase())) {
+      return trimmed.toUpperCase();
+    }
+  }
+
+  return null;
+}
+
+async function getTrackingMessage(trackingNumber: string): Promise<string> {
+  const data = await fetchTrackingData(trackingNumber);
+  
+  if (data && data.package && (data.package as Record<string, unknown>).tracking) {
+    const pkg = data.package as Record<string, unknown>;
+    const status = String(pkg.statusLabel || pkg.status || 'En Tránsito hacia Costa Rica');
+    const weight = pkg.weight ? `${pkg.weight} lbs` : 'Por registrar';
+    const consignee = String(pkg.consignatario || pkg.consignee || pkg.client || 'Cliente JRS');
+    const provider = String(pkg.provider || 'JRS CARGO');
+    const timeline = (data.timeline as Array<{ date?: string; status?: string; description?: string }>) || [];
+
+    let msg = `📦 *INFORMACIÓN DE RASTREO EN TIEMPO REAL*\n\n` +
+      `🏷️ *Número de Guía:* *${trackingNumber}*\n` +
+      `📍 *Estado Actual:* *${status}*\n` +
+      `👤 *Consignatario:* ${consignee}\n` +
+      `⚖️ *Peso:* ${weight}\n` +
+      `🏢 *Empresa:* ${provider}\n\n`;
+
+    if (timeline.length > 0) {
+      msg += `📜 *Últimos Movimientos:*\n`;
+      timeline.slice(0, 3).forEach(evt => {
+        const dateStr = evt.date ? new Date(evt.date).toLocaleDateString('es-CR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        msg += `• ${evt.status || evt.description} ${dateStr ? `(${dateStr})` : ''}\n`;
+      });
+      msg += `\n`;
+    }
+
+    msg += `👉 Ver detalles completos en: jrscargocr.com/tracking?number=${encodeURIComponent(trackingNumber)}`;
+    return msg;
+  }
+
+  return `🔍 *Consulta de Guía:* *${trackingNumber}*\n\n` +
+    `No encontramos este número de tracking registrado en nuestro sistema en este momento.\n\n` +
+    `💡 *Posibles motivos:*\n` +
+    `• El paquete aún viene en camino hacia nuestra bodega en Miami y no ha sido recibido físicamente.\n` +
+    `• El número de tracking tiene algún dígito o letra faltante.\n\n` +
+    `📲 Si necesitas ayuda para rastrearlo manualmente, escríbenos a nuestro WhatsApp oficial: *+506 7260 1238* (wa.me/50672601238).`;
+}
+
 // Smart Local Knowledge Engine for instant answers without API failure
-function getSmartLocalResponse(lastMessage: string): string {
+async function getSmartLocalResponse(lastMessage: string): Promise<string> {
   const msg = lastMessage.toLowerCase().trim();
 
-  // 1. Rastreo directo si es un tracking o contiene palabras de rastreo
-  const trackingMatch = lastMessage.match(/[A-Za-z0-9]{8,35}/);
-  if (msg.includes('rastrear') || msg.includes('tracking') || msg.includes('paquete') || msg.includes('donde esta') || msg.includes('dónde está') || trackingMatch) {
-    if (trackingMatch && !msg.includes('tarifa') && !msg.includes('precio') && !msg.includes('horario')) {
-      return `📦 Para consultar tu número de guía ${trackingMatch[0]}, puedes ingresar directamente a nuestra sección de rastreo en tiempo real: jrscargocr.com/tracking?number=${trackingMatch[0]} o indicármelo aquí para asistirte.`;
-    }
-    return `📦 *Rastreo de Paquetes en JRS CARGO*\n\nPor favor compárteme tu número de tracking (guía) para consultar su ubicación exacta en Miami o Costa Rica en tiempo real.`;
+  // 1. Detección precisa de número de tracking
+  const detectedTracking = extractTrackingNumber(lastMessage);
+  if (detectedTracking) {
+    return await getTrackingMessage(detectedTracking);
   }
 
-  // 2. Tarifas y Precios
-  if (msg.includes('tarifa') || msg.includes('precio') || msg.includes('costo') || msg.includes('cuanto vale') || msg.includes('cuánto vale') || msg.includes('cuanto cuesta') || msg.includes('cuánto cuesta') || msg.includes('libra') || msg.includes('aereo') || msg.includes('aéreo') || msg.includes('maritimo') || msg.includes('marítimo')) {
-    return `✈️ *TARIFAS DE ENVÍO JRS CARGO*\n\n` +
-      `📦 *Aéreo:* \n` +
-      `• Miami (USA) ➡️ Costa Rica: *$7 por libra*\n` +
-      `• España (Madrid) ➡️ Costa Rica: *$15 por libra*\n` +
-      `• China ➡️ Costa Rica: *$17 por libra*\n\n` +
-      `🚢 *Marítimo:* \n` +
-      `• Miami (USA) ➡️ Costa Rica: *$30 por pie cúbico (ft³)*\n\n` +
-      `💡 *Beneficios incluidos:* Entrega rápida en 3 a 5 días hábiles (aéreo), asesoría aduanal y casillero 100% gratuito.`;
+  if (msg.includes('rastrear') || msg.includes('tracking') || msg.includes('paquete') || msg.includes('donde esta') || msg.includes('dónde está') || msg.includes('guia') || msg.includes('guía') || msg.includes('seguimiento')) {
+    return `📦 *Rastreo de Paquetes en JRS CARGO*\n\n` +
+      `Por favor escribe tu número de tracking o guía (ejemplo: *TBA315891485906*, *1Z999999999*, *JRS-1054*) y con gusto te mostraré su ubicación y estado actual en tiempo real.`;
   }
 
-  // 3. Casillero / Registro / Dirección
+  // 2. Casillero / Registro / Dirección (Priorizado para evitar confusión)
   if (msg.includes('casillero') || msg.includes('direccion') || msg.includes('dirección') || msg.includes('abrir') || msg.includes('registro') || msg.includes('cuenta') || msg.includes('miami')) {
     return `🏢 *TU CASILLERO GRATUITO EN MIAMI*\n\n` +
       `Puedes abrir tu casillero en 1 minuto de forma gratuita aquí:\n` +
@@ -78,6 +135,18 @@ function getSmartLocalResponse(lastMessage: string): string {
       `• *Estado:* FL (Florida)\n` +
       `• *Código Postal:* 33166\n` +
       `• *Teléfono:* +1 (786) 388-7100`;
+  }
+
+  // 3. Tarifas y Precios
+  if (msg.includes('tarifa') || msg.includes('precio') || msg.includes('costo') || msg.includes('cuanto vale') || msg.includes('cuánto vale') || msg.includes('cuanto cuesta') || msg.includes('cuánto cuesta') || msg.includes('libra') || msg.includes('aereo') || msg.includes('aéreo') || msg.includes('maritimo') || msg.includes('marítimo')) {
+    return `✈️ *TARIFAS DE ENVÍO JRS CARGO*\n\n` +
+      `📦 *Aéreo:* \n` +
+      `• Miami (USA) ➡️ Costa Rica: *$7 por libra*\n` +
+      `• España (Madrid) ➡️ Costa Rica: *$15 por libra*\n` +
+      `• China ➡️ Costa Rica: *$17 por libra*\n\n` +
+      `🚢 *Marítimo:* \n` +
+      `• Miami (USA) ➡️ Costa Rica: *$30 por pie cúbico (ft³)*\n\n` +
+      `💡 *Beneficios incluidos:* Entrega rápida en 3 a 5 días hábiles (aéreo), asesoría aduanal y casillero 100% gratuito.`;
   }
 
   // 4. Tiempos de entrega
@@ -100,7 +169,7 @@ function getSmartLocalResponse(lastMessage: string): string {
   // 6. Respuesta por defecto cordial y orientativa
   return `¡Hola! 👋 Soy *Clari*, tu asistente virtual de JRS CARGO.\n\n` +
     `Puedo ayudarte con:\n` +
-    `• 📦 *Rastreo de tus paquetes* con número de guía\n` +
+    `• 📦 *Rastreo de tus paquetes* (escribe tu número de guía aquí)\n` +
     `• ✈️ *Tarifas y cotizaciones* (Aéreo $7/lb, Marítimo $30/ft³)\n` +
     `• 🏢 *Información de casillero gratuito* en Miami, España y China\n` +
     `• ⏱️ *Tiempos de tránsito y entregas*\n\n` +
@@ -180,13 +249,13 @@ Mantén respuestas limpias, sin exceso de texto.`,
         return result.toDataStreamResponse();
       } catch (aiErr) {
         console.warn("AI generation failed, fallback to smart engine:", aiErr);
-        const fallbackText = getSmartLocalResponse(lastUserMessage);
+        const fallbackText = await getSmartLocalResponse(lastUserMessage);
         return createStreamResponse(fallbackText);
       }
     }
 
     // High performance smart local engine fallback
-    const localResponse = getSmartLocalResponse(lastUserMessage);
+    const localResponse = await getSmartLocalResponse(lastUserMessage);
     return createStreamResponse(localResponse);
   } catch (error) {
     console.error("Chat API error:", error);
