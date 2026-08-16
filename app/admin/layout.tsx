@@ -13,19 +13,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const isLoginPage = pathname === '/admin/login';
   
+  const [mounted, setMounted] = useState(false);
   const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebar_open');
-      return saved !== null ? saved === 'true' : true;
-    }
-    return true;
-  });
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('sidebar_open', String(isDesktopSidebarOpen));
-  }, [isDesktopSidebarOpen]);
+    setMounted(true);
+    const saved = localStorage.getItem('sidebar_open');
+    if (saved !== null) {
+      setIsDesktopSidebarOpen(saved === 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem('sidebar_open', String(isDesktopSidebarOpen));
+    }
+  }, [isDesktopSidebarOpen, mounted]);
   
   const [openSections, setOpenSections] = useState({
     operaciones: true,
@@ -66,37 +71,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">{children}</div>;
   }
 
-
   return (
     <ModalProvider>
       <div className="min-h-screen bg-[#FAFAFA] print:bg-white print:h-auto print:min-h-0 print:block flex text-gray-900 selection:bg-brand-accent selection:text-white">
         {/* Mobile overlay */}
         {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40 lg:hidden print:hidden"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 lg:hidden print:hidden animate-fade-in"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      {/* Collapsed sidebar strip - desktop only */}
-      {!isDesktopSidebarOpen && (
-        <div className="fixed inset-y-0 left-0 w-14 bg-[#0B1D2B] z-50 hidden lg:flex flex-col items-center py-4 print:hidden">
-          <button
-            onClick={() => setIsDesktopSidebarOpen(true)}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-brand-yellow/20 flex items-center justify-center text-gray-400 hover:text-brand-yellow transition-all duration-200 group"
-          >
-            <Menu size={18} className="group-hover:scale-110 transition-transform" />
-          </button>
-        </div>
-      )}
-
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0B1D2B] flex flex-col z-50 transform transition-all duration-300 ease-in-out ${
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-[#0B1D2B] flex flex-col z-50 transform transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       } ${isDesktopSidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'} print:hidden`}>
         
         {/* Sidebar Header */}
-        <div className="h-20 flex items-center justify-between px-5 border-b border-white/5">
+        <div className="h-20 flex items-center justify-between px-5 border-b border-white/5 shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-white/10 p-1.5 rounded-lg flex items-center justify-center">
               <Image src="/logo.png" alt="JRS Cargo Logo" width={28} height={28} className="object-contain" />
@@ -110,10 +102,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Desktop collapse button */}
             <button 
               onClick={() => setIsDesktopSidebarOpen(false)}
-              className="hidden lg:flex w-8 h-8 items-center justify-center text-gray-500 hover:text-brand-yellow hover:bg-white/10 rounded-lg transition-all duration-200 group"
-              title="Colapsar menú"
+              className="hidden lg:flex w-8 h-8 items-center justify-center text-gray-400 hover:text-brand-yellow hover:bg-white/10 rounded-lg transition-all duration-200 group"
+              title="Ocultar menú lateral"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform">
                 <path d="M11 17l-5-5 5-5" />
                 <path d="M18 17l-5-5 5-5" />
               </svg>
@@ -121,9 +113,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Mobile close button */}
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
-              className="lg:hidden p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+              className="lg:hidden p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
         </div>
@@ -315,21 +307,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ${
-        isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-14'
+      <main className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${
+        isDesktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'
       } print:ml-0 print:block print:h-auto print:min-h-0`}>
         
         {/* Top Header */}
         <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between gap-4 sticky top-0 z-30 print:hidden">
-          <div className="flex items-center gap-4 shrink-0">
-            {/* Mobile Toggle */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Sidebar Toggle (Mobile & Desktop) */}
             <button 
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+                  setIsDesktopSidebarOpen(prev => !prev);
+                } else {
+                  setIsMobileMenuOpen(true);
+                }
+              }}
+              className="p-2 text-gray-600 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors flex items-center justify-center"
+              title={isDesktopSidebarOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
-            <h2 className="text-xl font-black text-gray-800 tracking-tight hidden lg:block">Sistema de Gestión</h2>
+            <h2 className="text-xl font-black text-gray-800 tracking-tight hidden sm:block">Sistema de Gestión</h2>
           </div>
           
           <div className="flex-1 max-w-2xl px-2 sm:px-4">
