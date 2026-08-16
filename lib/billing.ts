@@ -83,7 +83,9 @@ export function formatDisplayDate(dateString: string | null | undefined): string
   return dateString;
 }
 
-export function formatCostaRicaDateTime(date: Date = new Date()): string {
+export function formatCostaRicaDateTime(date: Date | string = new Date()): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const validDate = isNaN(d.getTime()) ? new Date() : d;
   return new Intl.DateTimeFormat('es-CR', {
     timeZone: 'America/Costa_Rica',
     year: 'numeric',
@@ -93,19 +95,23 @@ export function formatCostaRicaDateTime(date: Date = new Date()): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false
-  }).format(date);
+  }).format(validDate);
 }
 
-export function formatCostaRicaDate(date: Date = new Date()): string {
+export function formatCostaRicaDate(date: Date | string = new Date()): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const validDate = isNaN(d.getTime()) ? new Date() : d;
   return new Intl.DateTimeFormat('es-CR', {
     timeZone: 'America/Costa_Rica',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).format(date);
+  }).format(validDate);
 }
 
-export function formatCostaRicaISO(date: Date = new Date()): string {
+export function formatCostaRicaISO(date: Date | string = new Date()): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const validDate = isNaN(d.getTime()) ? new Date() : d;
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Costa_Rica',
     year: 'numeric',
@@ -115,7 +121,7 @@ export function formatCostaRicaISO(date: Date = new Date()): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: false
-  }).formatToParts(date);
+  }).formatToParts(validDate);
 
   const get = (type: string) => parts.find(p => p.type === type)?.value || '00';
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}-06:00`;
