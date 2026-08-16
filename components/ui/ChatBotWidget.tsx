@@ -3,9 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
 import { 
-  X, Send, Bot, Loader2, Sparkles, MessageSquare, 
+  X, Send, Bot, Sparkles, 
   Package, DollarSign, MapPin, Clock, MessageCircle, 
-  ChevronRight, Copy, Check, ExternalLink, RotateCcw
+  ChevronRight, ExternalLink, RotateCcw
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
@@ -85,7 +85,6 @@ const QUICK_ACTIONS = [
 
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const { messages, input, handleInputChange, handleSubmit, setInput, isLoading, error, setMessages } = useChat({
     maxSteps: 4,
@@ -106,12 +105,6 @@ export default function ChatBotWidget() {
       const fakeEvent = new Event('submit', { cancelable: true }) as unknown as React.FormEvent<HTMLFormElement>;
       handleSubmit(fakeEvent);
     }, 50);
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedText(text);
-    setTimeout(() => setCopiedText(null), 2000);
   };
 
   const handleReset = () => {
