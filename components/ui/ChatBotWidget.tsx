@@ -10,17 +10,17 @@ import {
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 
-const AnimatedRobotFace = () => {
+const AnimatedRobotFace = ({ isHovered = false }: { isHovered?: boolean }) => {
   const faceRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   
-  const springConfig = { damping: 25, stiffness: 250, mass: 0.5 };
+  const springConfig = { damping: 20, stiffness: 300, mass: 0.4 };
   const smoothX = useSpring(mouseX, springConfig);
   const smoothY = useSpring(mouseY, springConfig);
   
-  const eyeX = useTransform(smoothX, [-1, 1], [-6, 6]);
-  const eyeY = useTransform(smoothY, [-1, 1], [-4, 4]);
+  const eyeX = useTransform(smoothX, [-1, 1], [-7, 7]);
+  const eyeY = useTransform(smoothY, [-1, 1], [-5, 5]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -45,12 +45,37 @@ const AnimatedRobotFace = () => {
   }, [mouseX, mouseY]);
 
   return (
-    <div ref={faceRef} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.25)] flex items-center justify-center relative overflow-hidden border-2 border-white">
-      {/* Glow Ring */}
+    <motion.div 
+      animate={isHovered ? { 
+        y: [0, -8, -3, -6, -4],
+        rotate: [0, -6, 6, -3, 3, 0],
+        scale: [1, 1.12, 1.08]
+      } : { 
+        y: [0, -3, 0], 
+        rotate: 0,
+        scale: 1 
+      }}
+      transition={isHovered ? {
+        duration: 1.2,
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      } : {
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      ref={faceRef} 
+      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center justify-center relative overflow-hidden border-2 border-white"
+    >
+      {/* Outer Multi-color Halo Ring - Accelerates on Hover */}
       <motion.div 
-        animate={{ rotate: 360 }}
-        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-90"
+        animate={{ rotate: 360, scale: isHovered ? 1.3 : 1.05 }}
+        transition={{ 
+          rotate: { duration: isHovered ? 1.8 : 6, repeat: Infinity, ease: "linear" },
+          scale: { duration: 0.3 }
+        }}
+        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
       />
       
       <div className="absolute inset-1 rounded-full bg-white z-0"></div>
@@ -59,20 +84,55 @@ const AnimatedRobotFace = () => {
       <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-900 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/40 z-10">
         <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px]"></div>
         
+        {/* Animated Eyes */}
         <motion.div style={{ x: eyeX, y: eyeY }} className="flex gap-2 relative z-10">
+          {/* Left Eye */}
           <motion.div 
-            animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
-            transition={{ duration: 3.5, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
-            className="w-2.5 h-3.5 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(249,178,51,0.9)]"
+            animate={isHovered ? {
+              scaleY: [1, 0.15, 1.2, 0.9, 1.1],
+              scaleX: [1, 1.1, 0.9, 1.1, 1],
+            } : {
+              scaleY: [1, 0.1, 1, 1, 1],
+              scaleX: 1
+            }}
+            transition={isHovered ? {
+              duration: 1.2,
+              repeat: Infinity,
+              times: [0, 0.1, 0.3, 0.6, 1]
+            } : {
+              duration: 3.5,
+              repeat: Infinity,
+              times: [0, 0.05, 0.1, 0.5, 1]
+            }}
+            className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
+              isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
+            }`}
           />
+          {/* Right Eye */}
           <motion.div 
-            animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
-            transition={{ duration: 3.5, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
-            className="w-2.5 h-3.5 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(249,178,51,0.9)]"
+            animate={isHovered ? {
+              scaleY: [1, 0.15, 1.2, 0.9, 1.1],
+              scaleX: [1, 1.1, 0.9, 1.1, 1],
+            } : {
+              scaleY: [1, 0.1, 1, 1, 1],
+              scaleX: 1
+            }}
+            transition={isHovered ? {
+              duration: 1.2,
+              repeat: Infinity,
+              times: [0, 0.1, 0.3, 0.6, 1]
+            } : {
+              duration: 3.5,
+              repeat: Infinity,
+              times: [0, 0.05, 0.1, 0.5, 1]
+            }}
+            className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
+              isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
+            }`}
           />
         </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -85,6 +145,7 @@ const QUICK_ACTIONS = [
 
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTriggerHovered, setIsTriggerHovered] = useState(false);
 
   const { messages, input, handleInputChange, handleSubmit, setInput, isLoading, error, setMessages } = useChat({
     maxSteps: 4,
@@ -411,20 +472,25 @@ export default function ChatBotWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-3 transition-transform"
+          onMouseEnter={() => setIsTriggerHovered(true)}
+          onMouseLeave={() => setIsTriggerHovered(false)}
+          className="group flex items-center gap-3 transition-transform focus:outline-none"
           aria-label="Abrir asistente Clari"
         >
-          <div className="bg-[#0B1D2B] text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap hidden sm:flex items-center gap-2">
+          <motion.div
+            animate={isTriggerHovered ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 8, scale: 0.92 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="bg-[#0B1D2B] text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 text-xs font-bold whitespace-nowrap hidden sm:flex items-center gap-2 pointer-events-none"
+          >
             <Sparkles size={14} className="text-brand-yellow animate-spin" />
-            <span>Habla con <strong>Clari</strong></span>
-          </div>
+            <span>👋 ¡Hola! Habla con <strong className="text-brand-yellow font-black">Clari</strong></span>
+          </motion.div>
 
           <motion.div
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.94 }}
+            whileTap={{ scale: 0.92 }}
             className="relative cursor-pointer"
           >
-            <AnimatedRobotFace />
+            <AnimatedRobotFace isHovered={isTriggerHovered} />
           </motion.div>
         </button>
       )}
