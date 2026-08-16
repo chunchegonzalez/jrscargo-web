@@ -64,144 +64,152 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const amberColor = rgb(0.90, 0.55, 0.05);
 
   const margin = 40;
-  let y = height - margin;
+  const pageTop = height - margin;
 
-  // Try to embed logo image
+  // ==========================================
+  // 1. HEADER (Top Left: Text, Top Right: Logo)
+  // ==========================================
+  let headerBottom = pageTop - 65;
+
+  // Draw Logo in top right corner (proportional scaling to height = 46pt)
   try {
     const logoPath = path.join(process.cwd(), 'public', 'logo.png');
     if (fs.existsSync(logoPath)) {
       const logoBytes = fs.readFileSync(logoPath);
       const logoImg = await pdfDoc.embedPng(logoBytes);
-      const logoDims = logoImg.scale(0.25);
+      const targetLogoHeight = 46;
+      const logoScale = targetLogoHeight / logoImg.height;
+      const logoWidth = logoImg.width * logoScale;
+      const logoHeight = targetLogoHeight;
+      
       page.drawImage(logoImg, {
-        x: width - margin - logoDims.width,
-        y: y - logoDims.height + 10,
-        width: logoDims.width,
-        height: logoDims.height,
+        x: width - margin - logoWidth,
+        y: pageTop - logoHeight + 4,
+        width: logoWidth,
+        height: logoHeight,
       });
+      headerBottom = Math.min(headerBottom, pageTop - logoHeight - 12);
     }
   } catch (e) {
     console.warn('Could not embed PNG logo in PDF, rendering vector text header', e);
   }
 
-  // 1. Company Header
+  // Header Text (Top Left)
   page.drawText('FACTURA', {
     x: margin,
-    y,
+    y: pageTop - 5,
     size: 22,
     font: fontBold,
     color: brandBlue,
   });
-  y -= 20;
 
   page.drawText('JRS CARGO S.A.', {
     x: margin,
-    y,
+    y: pageTop - 25,
     size: 11,
     font: fontBold,
     color: textDark,
   });
-  y -= 14;
 
-  page.drawText('Heredia, San Pablo de Heredia, Costa Rica', {
+  page.drawText('San Pablo de Heredia, Costa Rica', {
     x: margin,
-    y,
-    size: 9,
-    font: fontRegular,
-    color: textGray,
-  });
-  y -= 12;
-
-  page.drawText('Tel: +506 7260-1238  |  info@jrscargocr.com  |  www.jrscargocr.com', {
-    x: margin,
-    y,
+    y: pageTop - 38,
     size: 8.5,
     font: fontRegular,
     color: textGray,
   });
-  y -= 20;
 
-  // Divider Line
+  page.drawText('Tel: +506 7260-1238  |  info@jrscargocr.com  |  www.jrscargocr.com', {
+    x: margin,
+    y: pageTop - 50,
+    size: 8,
+    font: fontRegular,
+    color: textGray,
+  });
+
+  // Divider Line (strictly below header)
+  let y = headerBottom;
   page.drawLine({
     start: { x: margin, y },
     end: { x: width - margin, y },
     thickness: 1,
     color: borderGray,
   });
-  y -= 22;
+  y -= 16;
 
-  // 2. Invoice Meta & Client Info Box
+  // ==========================================
+  // 2. CLIENT & INVOICE METADATA SECTION
+  // ==========================================
   const clientName = clean(invoice.clients?.name || 'Cliente');
   const clientEmail = clean(invoice.clients?.email || '');
   const clientPhone = clean(invoice.clients?.phone || '');
   const [yearStr, monthStr, dayStr] = (invoice.issue_date || '').split('T')[0].split('-');
   const formattedDate = yearStr && monthStr && dayStr ? `${dayStr}/${monthStr}/${yearStr}` : new Date().toLocaleDateString('es-CR');
 
-  // Left Column: Client Details
+  const metaStartY = y;
+
+  // Left: Client info
   page.drawText('FACTURAR A:', {
     x: margin,
-    y,
-    size: 8.5,
+    y: metaStartY,
+    size: 8,
     font: fontBold,
     color: textLight,
   });
-  y -= 14;
 
   page.drawText(clientName, {
     x: margin,
-    y,
-    size: 13,
+    y: metaStartY - 13,
+    size: 12,
     font: fontBold,
     color: textDark,
   });
-  y -= 13;
 
   if (clientEmail) {
     page.drawText(clientEmail, {
       x: margin,
-      y,
-      size: 9,
+      y: metaStartY - 25,
+      size: 8.5,
       font: fontRegular,
       color: textGray,
     });
-    y -= 12;
   }
+
   if (clientPhone) {
     page.drawText(clientPhone, {
       x: margin,
-      y,
-      size: 9,
+      y: metaStartY - (clientEmail ? 36 : 25),
+      size: 8.5,
       font: fontRegular,
       color: textGray,
     });
-    y -= 12;
   }
 
-  // Right Column (Invoice Number, Date, Status)
-  const metaX = width - margin - 170;
-  let metaY = y + (clientEmail ? 39 : 27);
+  // Right: Invoice Meta (Cleanly positioned on the right)
+  const metaLabelX = width - margin - 170;
+  const metaValueX = width - margin - 65;
 
-  page.drawText('No. de Factura:', { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
-  page.drawText(clean(invoice.invoice_number), { x: width - margin - 60, y: metaY, size: 10, font: fontBold, color: brandBlue });
-  metaY -= 14;
+  page.drawText('No. de Factura:', { x: metaLabelX, y: metaStartY, size: 8.5, font: fontRegular, color: textGray });
+  page.drawText(clean(invoice.invoice_number), { x: metaValueX, y: metaStartY, size: 10, font: fontBold, color: brandBlue });
 
-  page.drawText('Fecha de Emision:', { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
-  page.drawText(clean(formattedDate), { x: width - margin - 60, y: metaY, size: 9, font: fontRegular, color: textDark });
-  metaY -= 14;
+  page.drawText('Fecha de Emision:', { x: metaLabelX, y: metaStartY - 14, size: 8.5, font: fontRegular, color: textGray });
+  page.drawText(clean(formattedDate), { x: metaValueX, y: metaStartY - 14, size: 8.5, font: fontRegular, color: textDark });
 
   const statusText = clean((invoice.status || 'PENDIENTE').toUpperCase());
   const statusColor = statusText === 'PAGADA' ? successGreen : (statusText === 'ANULADA' ? rgb(0.8, 0.2, 0.2) : amberColor);
-  page.drawText('Estado:', { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
-  page.drawText(statusText, { x: width - margin - 60, y: metaY, size: 9, font: fontBold, color: statusColor });
+  page.drawText('Estado:', { x: metaLabelX, y: metaStartY - 28, size: 8.5, font: fontBold, color: textGray });
+  page.drawText(statusText, { x: metaValueX, y: metaStartY - 28, size: 8.5, font: fontBold, color: statusColor });
 
-  y -= 25;
+  y = metaStartY - 52;
 
-  // 3. Table Header
+  // ==========================================
+  // 3. TABLE HEADER
+  // ==========================================
   const colX = {
     service: margin + 8,
     tracking: margin + 175,
-    weight: margin + 315,
-    rate: margin + 380,
+    weight: margin + 325,
+    rate: margin + 385,
     amount: width - margin - 10,
   };
 
@@ -222,7 +230,9 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   y = tableTop - 24;
 
-  // 4. Table Rows
+  // ==========================================
+  // 4. TABLE ROWS
+  // ==========================================
   const items = invoice.items || [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -239,8 +249,12 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
       });
     }
 
-    // Service name
-    const serviceName = clean((item.service_name || 'Transporte Internacional').substring(0, 32));
+    // Clean service name so it doesn't overlap tracking
+    let rawService = item.service_name || 'Transporte Internacional';
+    if (rawService.includes(' - ') && item.tracking_number) {
+      rawService = rawService.split(' - ')[0];
+    }
+    const serviceName = clean(rawService.substring(0, 28));
     page.drawText(serviceName, { x: colX.service, y: y - 8, size: 8.5, font: fontRegular, color: textDark });
 
     // Tracking
@@ -273,7 +287,9 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   y -= 15;
 
-  // 5. Totals Box (Right Aligned)
+  // ==========================================
+  // 5. TOTALS SECTION
+  // ==========================================
   const totalsWidth = 200;
   const totalsX = width - margin - totalsWidth;
   const exchangeRate = invoice.exchange_rate || 530;
@@ -314,7 +330,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   y -= 32;
 
-  // Total Colones (Using standard WinAnsi CRC prefix)
+  // Total Colones
   page.drawText('Total Colones:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
   const crcStr = clean(`CRC ${formattedColones}`);
   page.drawText(crcStr, { x: width - margin - fontBold.widthOfTextAtSize(crcStr, 9), y, size: 9, font: fontBold, color: textDark });
