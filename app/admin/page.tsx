@@ -355,8 +355,8 @@ export default function AdminDashboard() {
             <Link href="/admin/bodega" className="flex items-center px-4 py-2 bg-brand-yellow text-white rounded-full text-xs font-medium hover:bg-brand-yellow/90 transition-colors">
               <Plus className="w-3 h-3 mr-1.5" /> Escanear Paquete
             </Link>
-            <Link href="/admin/entregas/masivo" className="flex items-center px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-brand-blue hover:bg-gray-50 transition-colors">
-              <Package className="w-3 h-3 mr-1.5" /> Entrega Masiva
+            <Link href="/admin/bodega/masivo" className="flex items-center px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-brand-blue hover:bg-gray-50 transition-colors">
+              <Package className="w-3 h-3 mr-1.5" /> Recepción Masiva
             </Link>
           </div>
         </div>

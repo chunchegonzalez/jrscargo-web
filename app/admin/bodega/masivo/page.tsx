@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Play, CheckCircle2, XCircle, Loader2, PackageCheck, Truck, ArrowLeft } from 'lucide-react';
+import { Layers, Play, CheckCircle2, XCircle, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { formatCostaRicaDateTime, extractCompanyAndClient } from '@/lib/billing';
 
@@ -12,7 +12,6 @@ interface Result {
 }
 
 export default function BodegaMasivo() {
-  const [mode, setMode] = useState<'recepcion' | 'entrega'>('recepcion');
   const [text, setText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
@@ -20,7 +19,7 @@ export default function BodegaMasivo() {
 
   useEffect(() => {
     textareaRef.current?.focus();
-  }, [mode]);
+  }, []);
 
   const handleProcess = async () => {
     const trackings = text
@@ -37,76 +36,52 @@ export default function BodegaMasivo() {
     
     for (const tracking of trackings) {
       try {
-        if (mode === 'recepcion') {
-          // RECEPCIÓN MASIVA: Buscar en Worldbox y guardar como "En Bodega"
-          const wbRes = await fetch(`/api/tracking?number=${encodeURIComponent(tracking)}`);
-          const wbData = await wbRes.json();
-          
-          let client = 'Desconocido';
-          let company = 'JRS CARGO';
-          let weightStr = '0 lbs';
-          
-          if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
-            const pkg = wbData.rawData.package;
-            const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
-            const extracted = extractCompanyAndClient(fullConsignee);
-            company = extracted.company;
-            client = extracted.cleanClient;
-            weightStr = `${pkg.weight || '0'} ${pkg.weightUnit || 'lbs'}`;
-          }
+        // RECEPCIÓN MASIVA: Buscar en Worldbox y guardar como "En Bodega"
+        const wbRes = await fetch(`/api/tracking?number=${encodeURIComponent(tracking)}`);
+        const wbData = await wbRes.json();
+        
+        let client = 'Desconocido';
+        let company = 'JRS CARGO';
+        let weightStr = '0 lbs';
+        
+        if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
+          const pkg = wbData.rawData.package;
+          const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+          const extracted = extractCompanyAndClient(fullConsignee);
+          company = extracted.company;
+          client = extracted.cleanClient;
+          weightStr = `${pkg.weight || '0'} ${pkg.weightUnit || 'lbs'}`;
+        }
 
-          if (wbData.status !== 'SUCCESS' || !wbData.rawData?.package) {
-            newResults.push({ tracking, status: 'error', message: 'No encontrado en Worldbox' });
-            setResults([...newResults]);
-            continue;
-          }
+        if (wbData.status !== 'SUCCESS' || !wbData.rawData?.package) {
+          newResults.push({ tracking, status: 'error', message: 'No encontrado en Worldbox' });
+          setResults([...newResults]);
+          continue;
+        }
 
-          const formattedDate = formatCostaRicaDateTime();
-          
-          const res = await fetch('/api/inventory', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: tracking,
-              client: client,
-              company: company,
-              weight: weightStr,
-              status: 'En Bodega',
-              history: [{
-                date: formattedDate,
-                action: 'Paquete Recibido en Bodega Costa Rica (Recepción Masiva)',
-                user: 'Operador Bodega'
-              }]
-            })
-          });
+        const formattedDate = formatCostaRicaDateTime();
+        
+        const res = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: tracking,
+            client: client,
+            company: company,
+            weight: weightStr,
+            status: 'En Bodega',
+            history: [{
+              date: formattedDate,
+              action: 'Paquete Recibido en Bodega Costa Rica (Recepción Masiva)',
+              user: 'Operador Bodega'
+            }]
+          })
+        });
 
-          if (res.ok) {
-            newResults.push({ tracking, status: 'success', message: 'Ingresado a Bodega CR con éxito' });
-          } else {
-            newResults.push({ tracking, status: 'error', message: 'Error al guardar en Base de Datos' });
-          }
+        if (res.ok) {
+          newResults.push({ tracking, status: 'success', message: 'Ingresado a Bodega CR con éxito' });
         } else {
-          // ENTREGA MASIVA: Marcar como "Entregado"
-          const formattedDate = formatCostaRicaDateTime();
-          
-          const res = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              status: 'Entregado',
-              history: [{
-                date: formattedDate,
-                action: 'Paquete Entregado al Cliente (Entrega Masiva)',
-                user: 'Operador Bodega'
-              }]
-            })
-          });
-
-          if (res.ok) {
-            newResults.push({ tracking, status: 'success', message: 'Marcado como Entregado exitosamente' });
-          } else {
-            newResults.push({ tracking, status: 'error', message: 'No encontrado en inventario local o error al actualizar' });
-          }
+          newResults.push({ tracking, status: 'error', message: 'Error al guardar en Base de Datos' });
         }
       } catch {
         newResults.push({ tracking, status: 'error', message: 'Error de red o servidor' });
@@ -130,12 +105,10 @@ export default function BodegaMasivo() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-brand-blue mb-1">
-            {mode === 'recepcion' ? 'Recepción Masiva' : 'Entrega Masiva'}
+            Recepción Masiva
           </h1>
           <p className="text-gray-500 text-sm">
-            {mode === 'recepcion' 
-              ? 'Escanea múltiples trackings a la vez para ingresarlos a la Bodega CR.' 
-              : 'Escanea múltiples trackings a la vez para marcarlos como Entregados.'}
+            Escanea múltiples trackings a la vez para ingresarlos a la Bodega CR.
           </p>
         </div>
         <Link 
@@ -144,32 +117,6 @@ export default function BodegaMasivo() {
         >
           <ArrowLeft size={14} /> Volver a escáner individual
         </Link>
-      </div>
-
-      {/* Tabs Selector de Modo */}
-      <div className="flex bg-gray-100 p-1.5 rounded-2xl max-w-md border border-gray-200/80">
-        <button
-          onClick={() => { setMode('recepcion'); setResults([]); }}
-          className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-            mode === 'recepcion'
-              ? 'bg-brand-blue text-white shadow-md'
-              : 'text-gray-600 hover:text-brand-blue'
-          }`}
-        >
-          <PackageCheck size={16} />
-          <span>Recepción Masiva (En Bodega)</span>
-        </button>
-        <button
-          onClick={() => { setMode('entrega'); setResults([]); }}
-          className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-            mode === 'entrega'
-              ? 'bg-green-600 text-white shadow-md'
-              : 'text-gray-600 hover:text-green-700'
-          }`}
-        >
-          <Truck size={16} />
-          <span>Entrega Masiva (Entregado)</span>
-        </button>
       </div>
 
       {/* Rectángulo Fijo de Escaneo Masivo */}
@@ -184,11 +131,10 @@ export default function BodegaMasivo() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             disabled={isProcessing}
-            placeholder={
-              mode === 'recepcion'
-                ? "Ejemplo: 9400109205568123456789 1Z9999999999999999 TBA123456789000..."
-                : "Escanea las guías a entregar (ej: TBA333684768111, 1Z999999...)"
-            }
+            placeholder="Ejemplo:
+9400109205568123456789
+1Z9999999999999999
+TBA123456789000..."
             className="w-full h-56 p-4 rounded-2xl bg-gray-50 border-2 border-brand-blue/80 text-brand-blue font-mono font-bold text-sm focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 focus:bg-white transition-all disabled:opacity-50 resize-none outline-none leading-relaxed"
           />
         </div>
@@ -200,11 +146,7 @@ export default function BodegaMasivo() {
           <button 
             onClick={handleProcess}
             disabled={isProcessing || detectedCount === 0}
-            className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50 ${
-              mode === 'recepcion' 
-                ? 'bg-brand-blue hover:bg-brand-blue/90 shadow-brand-blue/20' 
-                : 'bg-green-600 hover:bg-green-700 shadow-green-600/20'
-            }`}
+            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50 bg-brand-blue hover:bg-brand-blue/90 shadow-brand-blue/20"
           >
             {isProcessing ? (
               <><Loader2 className="animate-spin" size={18} /> Procesando...</>
