@@ -32,6 +32,7 @@ export default function NuevoGastoPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -55,8 +56,9 @@ export default function NuevoGastoPage() {
     setPreviewUrl(url);
 
     try {
-      // Redimensionar la imagen para evitar errores de tamaño de Next.js (Payload Too Large) y ahorrar tokens
+      // Redimensionar la imagen para optimizar el tamaño y guardarla
       const resizedBase64 = await resizeImage(file);
+      setReceiptBase64(resizedBase64);
       const base64Data = resizedBase64.split(',')[1];
       const mimeType = 'image/jpeg';
 
@@ -159,7 +161,7 @@ export default function NuevoGastoPage() {
           amount: numAmount,
           currency,
           category,
-          receipt_image: null // Evitar guardar un blob URL local que no sirve
+          receipt_image: receiptBase64 || null
         })
       });
 

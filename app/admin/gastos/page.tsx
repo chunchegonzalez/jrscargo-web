@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Search, Receipt } from 'lucide-react';
+import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye } from 'lucide-react';
 import { formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -13,8 +13,17 @@ type Expense = {
   amount: number | string;
   currency?: string;
   category: string;
-  receipt_url?: string;
+  receipt_image?: string | null;
+  receipt_url?: string | null;
 };
+
+interface SelectedReceiptModal {
+  image: string;
+  provider: string;
+  amount: string;
+  date: string;
+  category: string;
+}
 
 export default function GastosPage() {
   const { showAlert, showConfirm } = useModal();
@@ -22,6 +31,7 @@ export default function GastosPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
+  const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceiptModal | null>(null);
 
   useEffect(() => {
     loadExpenses();
@@ -131,32 +141,56 @@ export default function GastosPage() {
                     <th className="pb-3 font-medium">Fecha</th>
                     <th className="pb-3 font-medium">Proveedor</th>
                     <th className="pb-3 font-medium">Categoría</th>
+                    <th className="pb-3 font-medium">Documento</th>
                     <th className="pb-3 font-medium text-right">Monto</th>
                     <th className="pb-3 font-medium text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredExpenses.map((expense) => (
-                    <tr key={expense.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-4 text-sm text-gray-600">
-                        {formatDisplayDate(expense.date)}
-                      </td>
-                      <td className="py-4 text-sm font-bold text-gray-800 uppercase">{expense.provider_name}</td>
-                      <td className="py-4">
-                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="py-4 text-sm font-bold text-brand-blue text-right">
-                        {formatCurrency(Number(expense.amount), expense.currency)}
-                      </td>
-                      <td className="py-4 text-center">
-                        <button onClick={() => handleDelete(expense.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" title="Eliminar Gasto">
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredExpenses.map((expense) => {
+                    const docImg = expense.receipt_image || expense.receipt_url;
+                    return (
+                      <tr key={expense.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-4 text-sm text-gray-600">
+                          {formatDisplayDate(expense.date)}
+                        </td>
+                        <td className="py-4 text-sm font-bold text-gray-800 uppercase">{expense.provider_name}</td>
+                        <td className="py-4">
+                          <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">
+                            {expense.category}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          {docImg ? (
+                            <button
+                              onClick={() => setSelectedReceipt({
+                                image: docImg,
+                                provider: expense.provider_name,
+                                amount: formatCurrency(Number(expense.amount), expense.currency),
+                                date: formatDisplayDate(expense.date),
+                                category: expense.category
+                              })}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-brand-blue text-brand-blue hover:text-white border border-blue-200/60 rounded-xl text-xs font-bold transition-all shadow-sm group cursor-pointer"
+                              title="Ver factura escaneada"
+                            >
+                              <Eye size={14} className="group-hover:scale-110 transition-transform" />
+                              <span>Ver Documento</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400 font-medium">Sin adjunto</span>
+                          )}
+                        </td>
+                        <td className="py-4 text-sm font-bold text-brand-blue text-right">
+                          {formatCurrency(Number(expense.amount), expense.currency)}
+                        </td>
+                        <td className="py-4 text-center">
+                          <button onClick={() => handleDelete(expense.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" title="Eliminar Gasto">
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -181,6 +215,59 @@ export default function GastosPage() {
         </div>
 
       </div>
+
+      {/* Modal Lightbox para Ver Documento Escaneado */}
+      {selectedReceipt && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedReceipt(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-blue/10 text-brand-blue rounded-xl">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-brand-blue text-base">{selectedReceipt.provider}</h3>
+                  <p className="text-xs text-gray-500">{selectedReceipt.date} • {selectedReceipt.category} • <strong className="text-brand-blue">{selectedReceipt.amount}</strong></p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a 
+                  href={selectedReceipt.image} 
+                  download={`factura-${selectedReceipt.provider.replace(/\s+/g, '_')}.jpg`}
+                  className="p-2 text-gray-600 hover:text-brand-blue hover:bg-gray-200/60 rounded-xl transition-colors inline-flex items-center gap-1 text-xs font-bold"
+                  title="Descargar imagen"
+                >
+                  <Download size={16} />
+                  <span className="hidden sm:inline">Descargar</span>
+                </a>
+                <button 
+                  onClick={() => setSelectedReceipt(null)}
+                  className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido / Imagen */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex items-center justify-center bg-gray-900/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={selectedReceipt.image} 
+                alt={`Comprobante ${selectedReceipt.provider}`} 
+                className="max-h-[65vh] w-auto object-contain rounded-2xl shadow-md border border-gray-200"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
