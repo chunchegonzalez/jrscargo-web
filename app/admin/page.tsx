@@ -356,7 +356,7 @@ export default function AdminDashboard() {
               <Plus className="w-3 h-3 mr-1.5" /> Escanear Paquete
             </Link>
             <Link href="/admin/bodega/masivo" className="flex items-center px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-medium text-brand-blue hover:bg-gray-50 transition-colors">
-              <Package className="w-3 h-3 mr-1.5" /> Recepción Masiva
+              <Package className="w-3 h-3 mr-1.5" /> Acción Masiva
             </Link>
           </div>
         </div>

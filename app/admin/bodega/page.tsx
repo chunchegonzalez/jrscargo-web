@@ -236,7 +236,7 @@ export default function BodegaScanner() {
             className="px-4 py-2.5 bg-brand-blue text-white rounded-xl text-xs font-bold hover:bg-brand-blue/90 transition-all flex items-center gap-2 shadow-sm"
           >
             <Layers size={15} />
-            <span>Recepción Masiva</span>
+            <span>Acción Masiva</span>
           </Link>
           {packageData && (
             <button onClick={resetScanner} className="px-3 py-2 text-xs font-bold text-brand-red hover:underline">

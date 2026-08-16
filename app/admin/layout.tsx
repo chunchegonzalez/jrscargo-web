@@ -153,7 +153,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex flex-col gap-0.5 ml-7 pl-3 border-l border-white/10">
               {[
                 { href: '/admin/bodega', label: 'Escanear Individual', exact: true },
-                { href: '/admin/bodega/masivo', label: 'Recepción Masiva' },
+                { href: '/admin/bodega/masivo', label: 'Acción Masiva' },
                 { href: '/admin/inventario', label: 'Inventario CR' },
                 { href: '/admin/tracking', label: 'Tracking de Paquetes' },
               ].map(link => {
