@@ -343,22 +343,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <p className="text-[13px] font-black text-gray-900 uppercase tracking-wide leading-tight group-hover:text-brand-blue transition-colors">
                   {currentUser?.username || 'Cargando...'}
                 </p>
-                <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                    {currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}
-                  </p>
-                </div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">
+                  {currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}
+                </p>
               </div>
 
-              <div className="relative">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0B1D2B] via-brand-blue to-[#1B5E86] shadow-md shadow-brand-blue/20 flex items-center justify-center text-white font-black text-xs border-2 border-white tracking-wider transition-transform duration-200 group-hover:scale-105">
-                  {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0B1D2B] via-brand-blue to-[#1B5E86] shadow-md shadow-brand-blue/20 flex items-center justify-center text-white font-black text-xs border-2 border-white tracking-wider transition-transform duration-200 group-hover:scale-105">
+                {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
               </div>
 
               <ChevronDown 
