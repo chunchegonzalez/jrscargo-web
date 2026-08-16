@@ -5,7 +5,7 @@ import { useChat } from 'ai/react';
 import { 
   X, Send, Bot, Sparkles, 
   Package, DollarSign, MapPin, Clock, MessageCircle, 
-  ChevronRight, ExternalLink, RotateCcw
+  ChevronRight, ExternalLink, RotateCcw, User, Mail, ArrowRight
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
@@ -147,6 +147,13 @@ export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isTriggerHovered, setIsTriggerHovered] = useState(false);
 
+  // User details for Bot Leads in Admin Panel
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registerError, setRegisterError] = useState('');
+  const [isSubmittingLead, setIsSubmittingLead] = useState(false);
+
   const { messages, input, handleInputChange, handleSubmit, setInput, isLoading, error, setMessages } = useChat({
     maxSteps: 4,
   });
@@ -155,10 +162,63 @@ export default function ChatBotWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem('clari_lead_name');
+      const savedEmail = localStorage.getItem('clari_lead_email');
+      if (savedName && savedEmail) {
+        setUserName(savedName);
+        setUserEmail(savedEmail);
+        setIsRegistered(true);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading, isOpen]);
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError('');
+    const trimmedName = userName.trim();
+    const trimmedEmail = userEmail.trim().toLowerCase();
+
+    if (!trimmedName) {
+      setRegisterError('Por favor ingresa tu nombre');
+      return;
+    }
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setRegisterError('Por favor ingresa un correo válido');
+      return;
+    }
+
+    try {
+      setIsSubmittingLead(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('clari_lead_name', trimmedName);
+        localStorage.setItem('clari_lead_email', trimmedEmail);
+      }
+      setIsRegistered(true);
+
+      // Send to Admin Panel (bot-leads)
+      await fetch('/api/bot-leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          message: 'Inicio de chat en sitio web'
+        })
+      });
+    } catch (err) {
+      console.error('Error saving lead:', err);
+      setIsRegistered(true);
+    } finally {
+      setIsSubmittingLead(false);
+    }
+  };
 
   const handleQuickAction = (queryText: string) => {
     setInput(queryText);
@@ -258,7 +318,7 @@ export default function ChatBotWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="mb-3 w-[calc(100vw-2.5rem)] sm:w-[410px] h-[75vh] sm:h-[560px] max-h-[640px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-100"
+            className="mb-3 w-[calc(100vw-2.5rem)] sm:w-[410px] h-[78vh] sm:h-[580px] max-h-[660px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-100"
           >
             {/* Header */}
             <div className="bg-[#0B1D2B] p-4 text-white flex justify-between items-center relative overflow-hidden shrink-0">
@@ -314,16 +374,74 @@ export default function ChatBotWidget() {
             {/* Chat Conversation Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
               
-              {/* Welcome Presentation Card */}
-              {messages.length === 0 && (
+              {/* Lead Registration Form Gate if not registered */}
+              {!isRegistered && messages.length === 0 && (
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-left animate-fade-in space-y-3">
+                  <div className="flex items-center gap-2 text-brand-blue font-black text-sm">
+                    <Sparkles size={16} className="text-brand-yellow" />
+                    ¡Bienvenido a JRS CARGO!
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Soy <strong>Clari</strong>. Para brindarte una atención rápida y registrar tu consulta en el sistema, por favor indícanos tus datos:
+                  </p>
+
+                  <form onSubmit={handleRegisterSubmit} className="space-y-2.5 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">Nombre Completo</label>
+                      <div className="relative">
+                        <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej. Carlos Mora"
+                          value={userName}
+                          onChange={(e) => setUserName(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">Correo Electrónico</label>
+                      <div className="relative">
+                        <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="email"
+                          required
+                          placeholder="Ej. carlos@gmail.com"
+                          value={userEmail}
+                          onChange={(e) => setUserEmail(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {registerError && (
+                      <p className="text-[11px] text-red-600 font-semibold">{registerError}</p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingLead}
+                      className="w-full mt-1 py-2.5 bg-brand-blue hover:bg-brand-blue/95 active:scale-[0.98] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
+                    >
+                      <span>{isSubmittingLead ? 'Conectando...' : 'Iniciar Atención'}</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* Welcome Presentation Card (When Registered) */}
+              {isRegistered && messages.length === 0 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left">
                     <div className="flex items-center gap-2 text-brand-blue font-bold text-xs mb-1">
                       <Sparkles size={14} className="text-brand-yellow" />
-                      ¡Bienvenido a JRS CARGO!
+                      ¡Hola, {userName.split(' ')[0]}!
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                      Soy <strong>Clari</strong>. Te puedo orientar sobre tarifas aéreas ($7/lb), marítimas ($30/ft³), abrir tu casillero o rastrear tus paquetes.
+                      Te puedo orientar sobre tarifas aéreas ($7/lb), marítimas ($30/ft³), abrir tu casillero o rastrear tus paquetes en tiempo real.
                     </p>
                     <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400">
                       <span>⚡ Respuesta inmediata</span>
