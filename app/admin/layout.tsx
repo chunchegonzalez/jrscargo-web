@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, User } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
@@ -17,6 +17,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [currentUser, setCurrentUser] = useState<{username: string, role: string} | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -47,7 +49,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsProfileDropdownOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsProfileDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoginPage) {
@@ -334,17 +354,113 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <GlobalSearch role={currentUser?.role} />
           </div>
           
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="text-right hidden sm:flex flex-col justify-center">
-              <p className="text-[13px] font-black text-gray-900 uppercase tracking-wide leading-tight">{currentUser?.username || 'Cargando...'}</p>
-              <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}</p>
+          {/* User Profile Capsule with Interactive Dropdown */}
+          <div ref={profileDropdownRef} className="relative shrink-0">
+            <button
+              onClick={() => setIsProfileDropdownOpen(prev => !prev)}
+              className={`group flex items-center gap-3 p-1.5 sm:pl-3.5 sm:pr-2 sm:py-1.5 rounded-2xl transition-all duration-200 border cursor-pointer select-none ${
+                isProfileDropdownOpen 
+                  ? 'bg-brand-blue/5 border-brand-blue/30 shadow-md ring-4 ring-brand-blue/10' 
+                  : 'bg-white hover:bg-gray-50/80 border-gray-200/80 hover:border-brand-blue/30 shadow-sm hover:shadow'
+              }`}
+            >
+              <div className="text-right hidden sm:flex flex-col justify-center">
+                <p className="text-[13px] font-black text-gray-900 uppercase tracking-wide leading-tight group-hover:text-brand-blue transition-colors">
+                  {currentUser?.username || 'Cargando...'}
+                </p>
+                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    {currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-blue to-[#0A2636] shadow-sm flex items-center justify-center text-white font-black text-sm border border-brand-blue/20">
-              {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
-            </div>
+
+              <div className="relative">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0B1D2B] via-brand-blue to-[#1B5E86] shadow-md shadow-brand-blue/20 flex items-center justify-center text-white font-black text-xs border-2 border-white tracking-wider transition-transform duration-200 group-hover:scale-105">
+                  {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white shadow-sm"></div>
+              </div>
+
+              <ChevronDown 
+                size={14} 
+                className={`text-gray-400 hidden sm:block transition-transform duration-200 ${
+                  isProfileDropdownOpen ? 'rotate-180 text-brand-blue font-bold' : 'group-hover:text-gray-600'
+                }`} 
+              />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Header inside dropdown */}
+                <div className="p-3 border-b border-gray-100 bg-gray-50/70 rounded-xl mb-1">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0B1D2B] to-brand-blue text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
+                      {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-black text-gray-900 text-sm truncate uppercase tracking-tight">
+                        {currentUser?.username || 'Usuario'}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <ShieldCheck size={12} className="text-brand-blue shrink-0" />
+                        <span className="text-[11px] font-bold text-gray-500">
+                          {currentUser?.role === 'admin' ? 'Administrador Principal' : 'Operador de Bodega'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick actions */}
+                <div className="space-y-0.5 py-1">
+                  {currentUser?.role === 'admin' && (
+                    <Link
+                      href="/admin/ajustes"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-gray-700 hover:text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
+                    >
+                      <Settings size={15} className="text-gray-400" />
+                      <span>Ajustes del Sistema</span>
+                    </Link>
+                  )}
+                  <Link
+                    href="/admin/inventario"
+                    onClick={() => setIsProfileDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-gray-700 hover:text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
+                  >
+                    <Package size={15} className="text-gray-400" />
+                    <span>Inventario Costa Rica</span>
+                  </Link>
+                  {currentUser?.role === 'admin' && (
+                    <Link
+                      href="/admin/clientes"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-gray-700 hover:text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
+                    >
+                      <Users size={15} className="text-gray-400" />
+                      <span>Directorio de Clientes</span>
+                    </Link>
+                  )}
+                </div>
+
+                {/* Logout Button */}
+                <div className="border-t border-gray-100 pt-1 mt-1">
+                  <button
+                    onClick={() => { setIsProfileDropdownOpen(false); handleLogout(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                  >
+                    <LogOut size={15} />
+                    <span>Cerrar Sesión</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
