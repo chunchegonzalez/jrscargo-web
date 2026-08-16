@@ -51,7 +51,7 @@ const AnimatedRobotFace = ({ isHovered = false }: { isHovered?: boolean }) => {
         rotate: [0, -6, 6, -3, 3, 0],
         scale: [1, 1.12, 1.08]
       } : { 
-        y: [0, -3, 0], 
+        y: 0, 
         rotate: 0,
         scale: 1 
       }}
@@ -61,9 +61,8 @@ const AnimatedRobotFace = ({ isHovered = false }: { isHovered?: boolean }) => {
         repeatType: "reverse",
         ease: "easeInOut"
       } : {
-        duration: 3,
-        repeat: Infinity,
-        ease: "easeInOut"
+        duration: 0.25,
+        ease: "easeOut"
       }}
       ref={faceRef} 
       className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center justify-center relative overflow-hidden border-2 border-white"
