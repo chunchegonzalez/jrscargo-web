@@ -22,15 +22,6 @@ function buildItemRow(item: InvoiceItem): string {
   '</tr>';
 }
 
-function buildAttachmentItemRow(item: InvoiceItem): string {
-  return '<tr>' +
-    '<td>' + item.service_name + '</td>' +
-    '<td style="font-family:monospace;color:#666;">' + (item.tracking_number || '-') + '</td>' +
-    '<td style="text-align:center;color:#666;">' + (item.weight || '-') + ' lb</td>' +
-    '<td style="text-align:right;font-weight:600;">$' + item.amount.toFixed(2) + '</td>' +
-  '</tr>';
-}
-
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const smtpUser = process.env.SMTP_USER;
@@ -133,57 +124,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
       '<p style="margin:0 0 2px;font-size:12px;font-weight:700;color:#12435E;">JRS CARGO S.A.</p>',
       '<p style="margin:0;font-size:10px;color:#ccc;">info@jrscargocr.com &nbsp;|&nbsp; +506 7260-1238 &nbsp;|&nbsp; jrscargocr.com</p>',
       '</div></div>'
-    ].join('\n');
-
-    // Attachment: printable invoice HTML document
-    const attachmentItems = invoice.items.map((item: InvoiceItem) => buildAttachmentItemRow(item)).join('');
-    
-    const attachmentDiscount = invoice.discount_percent > 0 ? (
-      '<tr><td style="text-align:right;color:#999;">Descuento (' + invoice.discount_percent + '%)</td>' +
-      '<td style="text-align:right;color:#10b981;width:120px;">-$' + ((invoice.subtotal * invoice.discount_percent) / 100).toFixed(2) + '</td></tr>'
-    ) : '';
-
-    const attachmentNotes = invoice.notes ? (
-      '<div style="margin-top:30px;padding:15px;background:#f9f9f9;border-radius:4px;font-size:12px;color:#666;">' +
-      '<strong>Notas:</strong><br/>' + invoice.notes.replace(/\n/g, '<br/>') + '</div>'
-    ) : '';
-
-    const invoiceHtml = [
-      '<!DOCTYPE html><html><head><meta charset="UTF-8">',
-      '<title>Factura ' + invoice.invoice_number + '</title>',
-      '<style>',
-      '@media print { body { margin:0; padding:20px; -webkit-print-color-adjust:exact; print-color-adjust:exact; } }',
-      'body { font-family:Helvetica Neue,Arial,sans-serif; margin:0; padding:40px; background:#fff; color:#333; }',
-      'table { width:100%; border-collapse:collapse; }',
-      'th, td { padding:10px 0; border-bottom:1px solid #eee; }',
-      'th { text-align:left; color:#bbb; font-size:11px; text-transform:uppercase; font-weight:600; }',
-      '.header td { border:none; } .details td { border:none; padding:5px 0; } .totals td { border:none; padding:5px 0; }',
-      '.footer { margin-top:50px; text-align:center; font-size:10px; color:#999; border-top:1px solid #eee; padding-top:20px; }',
-      '</style></head><body>',
-      '<table class="header"><tr>',
-      '<td><img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:40px;" /></td>',
-      '<td style="text-align:right;">',
-      '<div style="font-size:12px;color:#bbb;text-transform:uppercase;">Factura</div>',
-      '<div style="font-size:20px;font-weight:bold;color:#12435E;">' + invoice.invoice_number + '</div>',
-      '</td></tr></table>',
-      '<table class="details"><tr>',
-      '<td style="width:50%;"><strong>Cliente:</strong><br/>' + invoice.clients.name + '<br/>' + invoice.clients.email + '<br/>' + (invoice.clients.phone || '') + '</td>',
-      '<td style="width:50%;text-align:right;"><strong>Fecha:</strong><br/>' + issueDate + '</td>',
-      '</tr></table>',
-      '<table><thead><tr>',
-      '<th>Servicio</th><th>Tracking</th><th style="text-align:center;">Peso</th><th style="text-align:right;">Monto</th>',
-      '</tr></thead><tbody>' + attachmentItems + '</tbody></table>',
-      '<table class="totals">',
-      attachmentDiscount,
-      '<tr><td style="text-align:right;font-size:14px;font-weight:bold;color:#12435E;">Total USD</td>',
-      '<td style="text-align:right;font-size:18px;font-weight:bold;color:#12435E;width:120px;">$' + invoice.total.toFixed(2) + '</td></tr>',
-      '<tr><td style="text-align:right;font-size:12px;color:#666;">Total Colones</td>',
-      '<td style="text-align:right;font-size:14px;font-weight:bold;color:#666;width:120px;">&#8353;' + totalColones + '</td></tr>',
-      '<tr><td colspan="2" style="text-align:right;font-size:10px;color:#999;padding-top:10px;">Tipo de cambio: &#8353;' + exchangeRate + ' por $1 USD</td></tr>',
-      '</table>',
-      attachmentNotes,
-      '<div class="footer"><strong style="color:#12435E;">JRS CARGO S.A.</strong><br/>info@jrscargocr.com | +506 7260-1238 | jrscargocr.com</div>',
-      '</body></html>'
     ].join('\n');
 
     // Generate PDF document buffer

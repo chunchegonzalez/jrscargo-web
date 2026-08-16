@@ -52,7 +52,6 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   let y = height - margin;
 
   // Try to embed logo image
-  let logoDrawn = false;
   try {
     const logoPath = path.join(process.cwd(), 'public', 'logo.png');
     if (fs.existsSync(logoPath)) {
@@ -65,7 +64,6 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
         width: logoDims.width,
         height: logoDims.height,
       });
-      logoDrawn = true;
     }
   } catch (e) {
     console.warn('Could not embed PNG logo in PDF, rendering vector text header', e);
@@ -310,7 +308,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   page.drawText(`T.C. ₡${exchangeRate} por $1 USD`, { x: width - margin - fontRegular.widthOfTextAtSize(`T.C. ₡${exchangeRate} por $1 USD`, 7.5), y, size: 7.5, font: fontRegular, color: textLight });
 
   // 6. Notes / Mensaje de Cliente (Left Side)
-  let notesY = y + 45;
+  const notesY = y + 45;
   const notesText = invoice.notes || 'Gracias por elegir a JRS CARGO';
   page.drawRectangle({
     x: margin,
