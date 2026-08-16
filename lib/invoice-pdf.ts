@@ -27,6 +27,21 @@ export interface InvoiceDataForPdf {
   }>;
 }
 
+function clean(text: string | null | undefined): string {
+  if (!text) return '';
+  return text
+    .replace(/₡/g, 'CRC ')
+    .replace(/°/g, '.')
+    .replace(/•/g, '-')
+    .replace(/–/g, '-')
+    .replace(/—/g, '-')
+    .replace(/“/g, '"')
+    .replace(/”/g, '"')
+    .replace(/‘/g, "'")
+    .replace(/’/g, "'")
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+}
+
 export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]); // A4 (595.28 x 841.89 pt)
@@ -116,9 +131,9 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   y -= 22;
 
   // 2. Invoice Meta & Client Info Box
-  const clientName = invoice.clients?.name || 'Cliente';
-  const clientEmail = invoice.clients?.email || '';
-  const clientPhone = invoice.clients?.phone || '';
+  const clientName = clean(invoice.clients?.name || 'Cliente');
+  const clientEmail = clean(invoice.clients?.email || '');
+  const clientPhone = clean(invoice.clients?.phone || '');
   const [yearStr, monthStr, dayStr] = (invoice.issue_date || '').split('T')[0].split('-');
   const formattedDate = yearStr && monthStr && dayStr ? `${dayStr}/${monthStr}/${yearStr}` : new Date().toLocaleDateString('es-CR');
 
@@ -166,17 +181,17 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const metaX = width - margin - 170;
   let metaY = y + (clientEmail ? 39 : 27);
 
-  page.drawText(`N° de Factura:`, { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
-  page.drawText(invoice.invoice_number, { x: width - margin - 60, y: metaY, size: 10, font: fontBold, color: brandBlue });
+  page.drawText('No. de Factura:', { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
+  page.drawText(clean(invoice.invoice_number), { x: width - margin - 60, y: metaY, size: 10, font: fontBold, color: brandBlue });
   metaY -= 14;
 
-  page.drawText(`Fecha de Emisión:`, { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
-  page.drawText(formattedDate, { x: width - margin - 60, y: metaY, size: 9, font: fontRegular, color: textDark });
+  page.drawText('Fecha de Emision:', { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
+  page.drawText(clean(formattedDate), { x: width - margin - 60, y: metaY, size: 9, font: fontRegular, color: textDark });
   metaY -= 14;
 
-  const statusText = (invoice.status || 'PENDIENTE').toUpperCase();
+  const statusText = clean((invoice.status || 'PENDIENTE').toUpperCase());
   const statusColor = statusText === 'PAGADA' ? successGreen : (statusText === 'ANULADA' ? rgb(0.8, 0.2, 0.2) : amberColor);
-  page.drawText(`Estado:`, { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
+  page.drawText('Estado:', { x: metaX, y: metaY, size: 9, font: fontRegular, color: textGray });
   page.drawText(statusText, { x: width - margin - 60, y: metaY, size: 9, font: fontBold, color: statusColor });
 
   y -= 25;
@@ -200,7 +215,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   });
 
   page.drawText('PRODUCTO / SERVICIO', { x: colX.service, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
-  page.drawText('N° DE RASTREO', { x: colX.tracking, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText('NO. DE RASTREO', { x: colX.tracking, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText('PESO', { x: colX.weight, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText('TARIFA', { x: colX.rate, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText('IMPORTE (USD)', { x: colX.amount - 65, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
@@ -225,20 +240,20 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     }
 
     // Service name
-    const serviceName = (item.service_name || 'Transporte Internacional').substring(0, 32);
+    const serviceName = clean((item.service_name || 'Transporte Internacional').substring(0, 32));
     page.drawText(serviceName, { x: colX.service, y: y - 8, size: 8.5, font: fontRegular, color: textDark });
 
     // Tracking
-    const tracking = (item.tracking_number || '-').substring(0, 24);
+    const tracking = clean((item.tracking_number || '-').substring(0, 24));
     page.drawText(tracking, { x: colX.tracking, y: y - 8, size: 8, font: fontMono, color: brandNavy });
 
     // Weight
     const weightStr = item.weight !== undefined && item.weight !== null && item.weight !== '' ? `${item.weight} lb` : '-';
-    page.drawText(weightStr, { x: colX.weight, y: y - 8, size: 8.5, font: fontRegular, color: textGray });
+    page.drawText(clean(weightStr), { x: colX.weight, y: y - 8, size: 8.5, font: fontRegular, color: textGray });
 
     // Rate
     const rateStr = item.rate !== undefined && item.rate !== null && item.rate !== '' ? `$${Number(item.rate).toFixed(2)}` : '-';
-    page.drawText(rateStr, { x: colX.rate, y: y - 8, size: 8.5, font: fontRegular, color: textGray });
+    page.drawText(clean(rateStr), { x: colX.rate, y: y - 8, size: 8.5, font: fontRegular, color: textGray });
 
     // Amount
     const amountStr = `$${Number(item.amount || 0).toFixed(2)}`;
@@ -264,7 +279,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const exchangeRate = invoice.exchange_rate || 530;
   const totalUSD = Number(invoice.total || 0);
   const totalCRC = totalUSD * exchangeRate;
-  const formattedColones = totalCRC.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formattedColones = totalCRC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // Subtotal
   page.drawText('Subtotal:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
@@ -299,17 +314,18 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   y -= 32;
 
-  // Total Colones
+  // Total Colones (Using standard WinAnsi CRC prefix)
   page.drawText('Total Colones:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
-  const crcStr = `₡${formattedColones}`;
+  const crcStr = clean(`CRC ${formattedColones}`);
   page.drawText(crcStr, { x: width - margin - fontBold.widthOfTextAtSize(crcStr, 9), y, size: 9, font: fontBold, color: textDark });
   y -= 12;
 
-  page.drawText(`T.C. ₡${exchangeRate} por $1 USD`, { x: width - margin - fontRegular.widthOfTextAtSize(`T.C. ₡${exchangeRate} por $1 USD`, 7.5), y, size: 7.5, font: fontRegular, color: textLight });
+  const tcText = clean(`T.C. CRC ${exchangeRate} por $1 USD`);
+  page.drawText(tcText, { x: width - margin - fontRegular.widthOfTextAtSize(tcText, 7.5), y, size: 7.5, font: fontRegular, color: textLight });
 
   // 6. Notes / Mensaje de Cliente (Left Side)
   const notesY = y + 45;
-  const notesText = invoice.notes || 'Gracias por elegir a JRS CARGO';
+  const notesText = clean(invoice.notes || 'Gracias por elegir a JRS CARGO');
   page.drawRectangle({
     x: margin,
     y: notesY - 35,
@@ -322,7 +338,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   page.drawText('NOTAS & CONDICIONES:', { x: margin + 8, y: notesY - 2, size: 7.5, font: fontBold, color: brandBlue });
   page.drawText(notesText.substring(0, 75), { x: margin + 8, y: notesY - 14, size: 8, font: fontRegular, color: textGray });
-  page.drawText('Servicio de Casillero y Envíos Internacionales.', { x: margin + 8, y: notesY - 26, size: 7.5, font: fontRegular, color: textLight });
+  page.drawText('Servicio de Casillero y Envios Internacionales.', { x: margin + 8, y: notesY - 26, size: 7.5, font: fontRegular, color: textLight });
 
   // 7. Footer
   const footerY = 35;
@@ -333,8 +349,8 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     color: borderGray,
   });
 
-  const footerText1 = 'JRS CARGO S.A. • San Pablo de Heredia, Costa Rica';
-  const footerText2 = 'info@jrscargocr.com • Tel: +506 7260-1238 • www.jrscargocr.com';
+  const footerText1 = 'JRS CARGO S.A. - San Pablo de Heredia, Costa Rica';
+  const footerText2 = 'info@jrscargocr.com | Tel: +506 7260-1238 | www.jrscargocr.com';
   
   page.drawText(footerText1, {
     x: (width - fontBold.widthOfTextAtSize(footerText1, 8)) / 2,
