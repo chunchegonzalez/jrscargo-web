@@ -1,43 +1,41 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from 'ai/react';
-import { X, Send, Bot, Loader2, Sparkles, User, Mail, ArrowRight } from 'lucide-react';
+import { 
+  X, Send, Bot, Loader2, Sparkles, MessageSquare, 
+  Package, DollarSign, MapPin, Clock, MessageCircle, 
+  ChevronRight, Copy, Check, ExternalLink, RotateCcw
+} from 'lucide-react';
 import Image from 'next/image';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 
 const AnimatedRobotFace = () => {
   const faceRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   
-  // Smooth out the mouse movement
   const springConfig = { damping: 25, stiffness: 250, mass: 0.5 };
   const smoothX = useSpring(mouseX, springConfig);
   const smoothY = useSpring(mouseY, springConfig);
   
-  // Map normalized vector [-1, 1] to pixel offsets
   const eyeX = useTransform(smoothX, [-1, 1], [-6, 6]);
   const eyeY = useTransform(smoothY, [-1, 1], [-4, 4]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!faceRef.current) return;
-      
       const rect = faceRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       
       const deltaX = e.clientX - centerX;
       const deltaY = e.clientY - centerY;
-      
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      const maxDistance = 400; // distance at which eyes reach edge
+      const maxDistance = 400;
       const normalizedDist = Math.min(distance / maxDistance, 1);
       
       const angle = Math.atan2(deltaY, deltaX);
-      
-      // Calculate final x and y mapped to [-1, 1] range
       mouseX.set(Math.cos(angle) * normalizedDist);
       mouseY.set(Math.sin(angle) * normalizedDist);
     };
@@ -47,38 +45,30 @@ const AnimatedRobotFace = () => {
   }, [mouseX, mouseY]);
 
   return (
-    <div ref={faceRef} className="w-16 h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.2)] flex items-center justify-center relative overflow-hidden border border-white">
-      {/* Outer Glow Ring (Brand Colors: Blue, Yellow, Red) */}
+    <div ref={faceRef} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_8px_30px_rgba(0,0,0,0.25)] flex items-center justify-center relative overflow-hidden border-2 border-white">
+      {/* Glow Ring */}
       <motion.div 
         animate={{ rotate: 360 }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
         className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-90"
       />
       
-      {/* Background to mask out the center of the ring */}
       <div className="absolute inset-1 rounded-full bg-white z-0"></div>
       
-      {/* Inner Black Visor */}
-      <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-800 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/30 z-10">
-        {/* Reflection */}
-        <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-full blur-[1px]"></div>
+      {/* Inner Visor */}
+      <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-900 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/40 z-10">
+        <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px]"></div>
         
-        {/* Eyes Group with Mouse Tracking */}
-        <motion.div 
-          style={{ x: eyeX, y: eyeY }}
-          className="flex gap-2 relative z-10"
-        >
-          {/* Left Eye (Blinking only) */}
+        <motion.div style={{ x: eyeX, y: eyeY }} className="flex gap-2 relative z-10">
           <motion.div 
             animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
-            transition={{ duration: 4, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
-            className="w-2.5 h-4 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+            transition={{ duration: 3.5, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
+            className="w-2.5 h-3.5 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(249,178,51,0.9)]"
           />
-          {/* Right Eye (Blinking only) */}
           <motion.div 
             animate={{ scaleY: [1, 0.1, 1, 1, 1] }}
-            transition={{ duration: 4, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
-            className="w-2.5 h-4 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]"
+            transition={{ duration: 3.5, repeat: Infinity, times: [0, 0.05, 0.1, 0.5, 1] }}
+            className="w-2.5 h-3.5 bg-brand-yellow rounded-full shadow-[0_0_8px_rgba(249,178,51,0.9)]"
           />
         </motion.div>
       </div>
@@ -86,291 +76,338 @@ const AnimatedRobotFace = () => {
   );
 };
 
+const QUICK_ACTIONS = [
+  { id: 'tarifas', label: 'Tarifas y Precios', icon: DollarSign, query: '¿Cuáles son las tarifas aéreas y marítimas?' },
+  { id: 'tracking', label: 'Rastrear mi paquete', icon: Package, query: 'Quiero rastrear un paquete' },
+  { id: 'casillero', label: 'Dirección de Casillero', icon: MapPin, query: '¿Cuál es la dirección del casillero en Miami y cómo registrarme?' },
+  { id: 'tiempos', label: 'Tiempos de entrega', icon: Clock, query: '¿Cuánto tiempo tardan los envíos a Costa Rica?' },
+];
+
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [copiedText, setCopiedText] = useState<string | null>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-    maxSteps: 5,
-    body: {
-      userName,
-      userEmail
-    }
+  const { messages, input, handleInputChange, handleSubmit, setInput, isLoading, error, setMessages } = useChat({
+    maxSteps: 4,
   });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll to bottom when messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, error]);
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-
-    const trimmedName = userName.trim();
-    const trimmedEmail = userEmail.trim();
-
-    if (!trimmedName) {
-      setFormError('Por favor ingresa tu nombre');
-      return;
+    if (isOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-    if (!trimmedEmail) {
-      setFormError('Por favor ingresa tu correo');
-      return;
-    }
-    // Basic email validation
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setFormError('Por favor ingresa un correo válido');
-      return;
-    }
+  }, [messages, isLoading, isOpen]);
 
-    setUserName(trimmedName);
-    setUserEmail(trimmedEmail);
-    setIsRegistered(true);
+  const handleQuickAction = (queryText: string) => {
+    setInput(queryText);
+    setTimeout(() => {
+      const fakeEvent = new Event('submit', { cancelable: true }) as unknown as React.FormEvent<HTMLFormElement>;
+      handleSubmit(fakeEvent);
+    }, 50);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  const handleReset = () => {
+    setMessages([]);
+    setInput('');
+  };
+
+  // Formatter for rich text rendering
+  const renderMessageContent = (content: string) => {
+    const lines = content.split('\n');
+    return (
+      <div className="space-y-1.5 text-[13px] leading-relaxed">
+        {lines.map((line, idx) => {
+          if (!line.trim()) return <div key={idx} className="h-1" />;
+
+          // Parse markdown-like bold *text*
+          const formattedLine = line.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+
+          // Highlight specific CTA links
+          if (line.includes('worldboxcr.com/jrscargo/register')) {
+            return (
+              <div key={idx} className="my-2">
+                <a
+                  href="https://worldboxcr.com/jrscargo/register"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-brand-yellow text-brand-blue font-bold rounded-xl text-xs hover:bg-brand-yellow/90 transition-transform active:scale-95 shadow-sm"
+                >
+                  <ExternalLink size={14} /> Abrir Casillero Gratis
+                </a>
+              </div>
+            );
+          }
+
+          if (line.includes('wa.me/50672601238') || line.includes('+506 7260 1238')) {
+            return (
+              <div key={idx} className="my-2">
+                <a
+                  href="https://wa.me/50672601238"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#25D366] text-white font-bold rounded-xl text-xs hover:bg-[#20b858] transition-transform active:scale-95 shadow-sm"
+                >
+                  <MessageCircle size={14} /> Contactar por WhatsApp
+                </a>
+              </div>
+            );
+          }
+
+          return (
+            <p 
+              key={idx} 
+              dangerouslySetInnerHTML={{ __html: formattedLine }} 
+              className={line.startsWith('•') ? 'pl-2 text-gray-700 font-medium' : ''}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-      {/* Chat Window */}
-      {isOpen && (
-        <div className="mb-4 w-[calc(100vw-3rem)] sm:w-[400px] h-[65vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-gray-200 animate-slide-up">
-          {/* Header */}
-          <div className="bg-brand-blue p-4 flex justify-between items-center text-white">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1">
-                <Image src="/logo.png" alt="JRS Cargo" width={32} height={32} className="w-full h-auto object-contain" />
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="mb-3 w-[calc(100vw-2.5rem)] sm:w-[410px] h-[75vh] sm:h-[560px] max-h-[640px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-100"
+          >
+            {/* Header */}
+            <div className="bg-[#0B1D2B] p-4 text-white flex justify-between items-center relative overflow-hidden shrink-0">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-yellow/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 p-1 flex items-center justify-center">
+                    <Image src="/logo.png" alt="JRS Cargo" width={28} height={28} className="object-contain" />
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0B1D2B] rounded-full animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-black text-sm tracking-tight text-white">Clari</h3>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-brand-yellow/20 text-brand-yellow rounded font-bold uppercase tracking-wider">AI</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Asistente Oficial JRS
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-lg">Clari</h3>
-                <p className="text-xs text-brand-yellow font-medium">Asistente en línea</p>
+
+              <div className="flex items-center gap-1 relative z-10">
+                <a
+                  href="https://wa.me/50672601238"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-gray-400 hover:text-green-400 hover:bg-white/10 rounded-xl transition-colors"
+                  title="Abrir WhatsApp oficial"
+                >
+                  <MessageCircle size={18} />
+                </a>
+                {messages.length > 0 && (
+                  <button
+                    onClick={handleReset}
+                    className="p-2 text-gray-400 hover:text-brand-yellow hover:bg-white/10 rounded-xl transition-colors"
+                    title="Reiniciar chat"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                  title="Cerrar chat"
+                >
+                  <X size={20} />
+                </button>
               </div>
             </div>
-            <button 
-              onClick={() => setIsOpen(false)}
-              className="text-white/70 hover:text-white transition-colors"
-            >
-              <X size={24} />
-            </button>
-          </div>
 
-          {/* Registration Form or Chat */}
-          {!isRegistered ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
-              <div className="w-12 h-12 rounded-full bg-brand-blue/10 flex items-center justify-center mb-4">
-                <Bot size={24} className="text-brand-blue" />
-              </div>
-              <h4 className="text-lg font-bold text-gray-800 mb-1">¡Hola! Soy Clari</h4>
-              <p className="text-sm text-gray-500 text-center mb-6">Para brindarte una mejor atención, por favor ingresa tus datos:</p>
+            {/* Chat Conversation Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
               
-              <form onSubmit={handleRegister} className="w-full max-w-[300px] space-y-3">
-                <div className="relative">
-                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Tu nombre"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-                    autoFocus
-                  />
-                </div>
-                <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="email"
-                    placeholder="Tu correo electrónico"
-                    value={userEmail}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-                  />
-                </div>
-                
-                {formError && (
-                  <p className="text-xs text-red-500 text-center font-medium">{formError}</p>
-                )}
+              {/* Welcome Presentation Card */}
+              {messages.length === 0 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left">
+                    <div className="flex items-center gap-2 text-brand-blue font-bold text-xs mb-1">
+                      <Sparkles size={14} className="text-brand-yellow" />
+                      ¡Bienvenido a JRS CARGO!
+                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                      Soy <strong>Clari</strong>. Te puedo orientar sobre tarifas aéreas ($7/lb), marítimas ($30/ft³), abrir tu casillero o rastrear tus paquetes.
+                    </p>
+                    <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400">
+                      <span>⚡ Respuesta inmediata</span>
+                      <span className="font-bold text-brand-blue">Miami • España • China</span>
+                    </div>
+                  </div>
 
+                  {/* Quick Action Buttons */}
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Preguntas frecuentes:</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {QUICK_ACTIONS.map(action => {
+                        const Icon = action.icon;
+                        return (
+                          <button
+                            key={action.id}
+                            onClick={() => handleQuickAction(action.query)}
+                            className="w-full text-left p-3 rounded-2xl bg-white hover:bg-brand-blue/5 border border-gray-100 hover:border-brand-blue/20 flex items-center justify-between transition-all group shadow-sm hover:shadow"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-xl bg-brand-blue/5 text-brand-blue group-hover:bg-brand-blue group-hover:text-white flex items-center justify-center transition-colors">
+                                <Icon size={14} />
+                              </div>
+                              <span className="text-xs font-bold text-gray-700 group-hover:text-brand-blue transition-colors">
+                                {action.label}
+                              </span>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-400 group-hover:text-brand-blue group-hover:translate-x-0.5 transition-all" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Message List */}
+              {messages.map((m) => {
+                const isUser = m.role === 'user';
+                return (
+                  <div key={m.id} className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                    {!isUser && (
+                      <div className="w-7 h-7 rounded-xl bg-[#0B1D2B] text-brand-yellow flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                        <Bot size={14} />
+                      </div>
+                    )}
+
+                    <div
+                      className={`max-w-[85%] p-3.5 rounded-2xl shadow-sm text-left ${
+                        isUser
+                          ? 'bg-brand-blue text-white rounded-tr-sm font-medium text-xs'
+                          : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                      }`}
+                    >
+                      {isUser ? (
+                        <p className="whitespace-pre-wrap">{m.content}</p>
+                      ) : (
+                        renderMessageContent(m.content)
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Typing Loader */}
+              {isLoading && (
+                <div className="flex gap-2.5 justify-start animate-fade-in">
+                  <div className="w-7 h-7 rounded-xl bg-[#0B1D2B] text-brand-yellow flex items-center justify-center shrink-0">
+                    <Bot size={14} />
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm p-3.5 shadow-sm flex items-center gap-1.5">
+                    <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce" />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-3 bg-red-50 text-red-700 rounded-2xl text-xs text-center border border-red-100">
+                  <p className="font-bold mb-1">Estamos experimentando una alta demanda.</p>
+                  <p>Por favor contáctanos directamente a nuestro <a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="font-bold underline text-green-700">WhatsApp Oficial (+506 7260 1238)</a>.</p>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Pills Bar when conversation is active */}
+            {messages.length > 0 && (
+              <div className="px-3 py-1.5 bg-white border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
+                <button
+                  onClick={() => handleQuickAction('¿Cuáles son las tarifas aéreas y marítimas?')}
+                  className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
+                >
+                  💰 Tarifas
+                </button>
+                <button
+                  onClick={() => handleQuickAction('¿Cómo abro un casillero en Miami?')}
+                  className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
+                >
+                  🏢 Casillero Miami
+                </button>
+                <button
+                  onClick={() => handleQuickAction('¿Cuánto tiempo tardan los envíos?')}
+                  className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
+                >
+                  ⏱️ Tiempos
+                </button>
+                <a
+                  href="https://wa.me/50672601238"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 rounded-full bg-green-50 hover:bg-green-100 text-green-700 text-[11px] font-semibold whitespace-nowrap transition-colors flex items-center gap-1"
+                >
+                  <MessageCircle size={12} /> WhatsApp
+                </a>
+              </div>
+            )}
+
+            {/* Input Bar */}
+            <div className="p-3.5 bg-white border-t border-gray-100 shrink-0">
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder="Escribe tu consulta o número de tracking..."
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                  disabled={isLoading}
+                />
                 <button
                   type="submit"
-                  className="w-full py-3 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                  disabled={isLoading || !input.trim()}
+                  className="w-10 h-10 rounded-2xl bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0"
                 >
-                  Comenzar chat <ArrowRight size={16} />
+                  <Send size={16} />
                 </button>
               </form>
-
-              <p className="text-[10px] text-gray-400 mt-4 text-center">Tus datos se usan solo para personalizar la atención.</p>
             </div>
-          ) : (
-            <>
-              {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                {messages.length === 0 && !error && (
-                  <div className="text-center text-sm text-gray-500 mt-10">
-                    <p className="mb-2 font-semibold">¡Hola {userName}! Soy Clari, tu asistente virtual en JRS CARGO.</p>
-                    <p>¿En qué te puedo ayudar hoy? (Ej: Tarifas, tiempos, casilleros)</p>
-                  </div>
-                )}
-                
-                {messages.map(m => {
-                  if (!m.content && m.toolInvocations && m.toolInvocations.length > 0) {
-                    // Check if any tool has completed with a result
-                    const completedTool = m.toolInvocations.find(
-                      (t: { state: string }) => t.state === 'result'
-                    );
-                    
-                    if (completedTool && 'result' in completedTool) {
-                      const result = completedTool.result as { success?: boolean; trackingInfo?: { package?: { tracking?: string; statusLabel?: string; weight?: number; description?: string; provider?: string; consignatario?: string }; timeline?: { date?: string; status?: string }[] }; error?: string };
-                      
-                      if (result.success && result.trackingInfo) {
-                        const pkg = result.trackingInfo.package;
-                        const timeline = result.trackingInfo.timeline;
-                        return (
-                          <div key={m.id} className="flex gap-3 justify-start">
-                            <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                              <Bot size={16} />
-                            </div>
-                            <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm p-4 text-sm shadow-sm max-w-[90%] text-left space-y-2">
-                              <p className="font-bold text-brand-blue">📦 Tracking: {pkg?.tracking}</p>
-                              <p>Estado: <span className="font-semibold">{pkg?.statusLabel || 'Desconocido'}</span></p>
-                              {pkg?.weight && <p>Peso: {pkg.weight} lbs</p>}
-                              {pkg?.provider && <p>Proveedor: {pkg.provider}</p>}
-                              {pkg?.description && <p>Descripción: {pkg.description}</p>}
-                              {timeline && timeline.length > 0 && (
-                                <div className="pt-2 border-t border-gray-100">
-                                  <p className="font-semibold text-xs text-gray-500 mb-1">Últimos eventos:</p>
-                                  {timeline.slice(0, 3).map((evt, i) => (
-                                    <p key={i} className="text-xs text-gray-600">
-                                      • {evt.status} {evt.date ? '(' + new Date(evt.date).toLocaleDateString('es-CR') + ')' : ''}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      } else if (result.error) {
-                        return (
-                          <div key={m.id} className="flex gap-3 justify-start">
-                            <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                              <Bot size={16} />
-                            </div>
-                            <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm p-4 text-sm shadow-sm max-w-[90%] text-center">
-                              <p>{result.error}</p>
-                            </div>
-                          </div>
-                        );
-                      }
-                    }
-                    
-                    // Still loading
-                    return (
-                      <div key={m.id} className="flex gap-3 justify-start">
-                        <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                          <Bot size={16} />
-                        </div>
-                        <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm text-center p-4 text-sm shadow-sm max-w-[90%] flex items-center gap-2">
-                          <Loader2 size={16} className="animate-spin text-brand-blue" />
-                          <span>Buscando paquete en el sistema...</span>
-                        </div>
-                      </div>
-                    );
-                  }
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-                  if (!m.content) return null;
-
-                  return (
-                    <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      {m.role !== 'user' && (
-                        <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                          <Bot size={16} />
-                        </div>
-                      )}
-                      <div className={`max-w-[90%] p-4 text-sm shadow-sm ${
-                        m.role === 'user' 
-                          ? 'bg-brand-blue text-white rounded-2xl rounded-tr-sm text-right' 
-                          : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm text-center'
-                      }`}>
-                        <div className="whitespace-pre-wrap leading-relaxed">
-                          {m.content.replace(/\*\*/g, '').replace(/###/g, '').replace(/\*/g, '•')}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {error && !messages.some(m => m.toolInvocations?.some((t: { state: string; result?: unknown }) => t.state === 'result' && t.result && typeof t.result === 'object' && 'success' in (t.result as Record<string, unknown>))) && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                      <Bot size={16} />
-                    </div>
-                    <div className="bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-tl-sm p-4 text-sm shadow-sm max-w-[90%] text-center">
-                      <p className="mb-2 font-medium">¡Ups! En este momento estoy experimentando un alto volumen de consultas.</p>
-                      <p className="mb-3 text-gray-500">Para una atención inmediata, por favor escríbenos a nuestro WhatsApp oficial:</p>
-                      <a 
-                        href="https://wa.me/50672601238" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white font-bold py-2 px-5 rounded-full transition-all shadow-md hover:shadow-lg hover:scale-105"
-                      >
-                        Abrir WhatsApp
-                      </a>
-                    </div>
-                  </div>
-                )}
-                {isLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-brand-blue flex-shrink-0 flex items-center justify-center text-white">
-                      <Bot size={16} />
-                    </div>
-                    <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm p-4 flex items-center shadow-sm">
-                      <Loader2 size={16} className="animate-spin text-brand-blue" />
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input Area */}
-              <div className="p-4 bg-white border-t border-gray-100">
-                <form onSubmit={handleSubmit} className="flex gap-2 relative">
-                  <input
-                    value={input}
-                    onChange={handleInputChange}
-                    placeholder="Escribe tu mensaje aquí..."
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-                    disabled={isLoading}
-                  />
-                  <button 
-                    type="submit" 
-                    disabled={isLoading || !input.trim()}
-                    className="w-12 h-12 bg-gradient-to-tr from-brand-yellow to-yellow-400 text-brand-blue rounded-full flex items-center justify-center disabled:opacity-50 disabled:grayscale hover:shadow-lg hover:scale-105 active:scale-95 transition-all flex-shrink-0"
-                  >
-                    <Send size={20} className="-ml-1" />
-                  </button>
-                </form>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Floating Button */}
+      {/* Floating Trigger Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-3 transition-transform hover:scale-105"
+          className="group flex items-center gap-3 transition-transform"
+          aria-label="Abrir asistente Clari"
         >
-          <div className="bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 text-sm font-semibold text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:flex items-center gap-2">
-            <Sparkles size={16} className="text-brand-yellow" />
-            Habla con Clari
+          <div className="bg-[#0B1D2B] text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap hidden sm:flex items-center gap-2">
+            <Sparkles size={14} className="text-brand-yellow animate-spin" />
+            <span>Habla con <strong>Clari</strong></span>
           </div>
-          <motion.div 
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative group-hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-shadow rounded-full"
+
+          <motion.div
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            className="relative cursor-pointer"
           >
             <AnimatedRobotFace />
           </motion.div>
