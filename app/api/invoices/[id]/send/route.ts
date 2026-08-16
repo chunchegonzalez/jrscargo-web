@@ -32,8 +32,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { user: smtpUser, pass: smtpPass },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
     });
 
     const invoice = await getInvoiceById(params.id);

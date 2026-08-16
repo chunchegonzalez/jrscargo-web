@@ -42,6 +42,8 @@ function clean(text: string | null | undefined): string {
     .replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
 }
 
+let cachedLogoBytes: Buffer | null = null;
+
 export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]); // A4 (595.28 x 841.89 pt)
@@ -73,10 +75,14 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   let logoBottom = pageTop - logoTargetHeight;
 
   try {
-    const logoPath = path.join(process.cwd(), 'public', 'logo.png');
-    if (fs.existsSync(logoPath)) {
-      const logoBytes = fs.readFileSync(logoPath);
-      const logoImg = await pdfDoc.embedPng(logoBytes);
+    if (!cachedLogoBytes) {
+      const logoPath = path.join(process.cwd(), 'public', 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        cachedLogoBytes = fs.readFileSync(logoPath);
+      }
+    }
+    if (cachedLogoBytes) {
+      const logoImg = await pdfDoc.embedPng(cachedLogoBytes);
       const logoScale = logoTargetHeight / logoImg.height;
       const logoWidth = logoImg.width * logoScale;
       
