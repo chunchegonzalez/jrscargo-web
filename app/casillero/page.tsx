@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Sparkles, MapPin, CheckCircle2, ArrowRight, ShieldCheck, Clock, Plane } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, Clock, Plane } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Abrir Casillero Gratis en Miami | JRS CARGO Costa Rica',
