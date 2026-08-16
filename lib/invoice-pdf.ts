@@ -312,23 +312,12 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     y -= 14;
   }
 
-  // Total USD Highlight Box
-  page.drawRectangle({
-    x: totalsX - 8,
-    y: y - 18,
-    width: totalsWidth + 8,
-    height: 28,
-    color: bgLight,
-    borderColor: brandBlue,
-    borderWidth: 1,
-  });
-
-  page.drawText('TOTAL USD:', { x: totalsX, y: y - 10, size: 11, font: fontBold, color: brandBlue });
+  // Total USD (Clean, without rectangle border)
+  page.drawText('Total USD:', { x: totalsX, y, size: 11, font: fontBold, color: brandBlue });
   const totalStr = `$${totalUSD.toFixed(2)}`;
-  const totalWidth = fontBold.widthOfTextAtSize(totalStr, 14);
-  page.drawText(totalStr, { x: width - margin - totalWidth, y: y - 10, size: 14, font: fontBold, color: brandBlue });
-
-  y -= 32;
+  const totalWidth = fontBold.widthOfTextAtSize(totalStr, 13);
+  page.drawText(totalStr, { x: width - margin - totalWidth, y, size: 13, font: fontBold, color: brandBlue });
+  y -= 16;
 
   // Total Colones
   page.drawText('Total Colones:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
@@ -340,7 +329,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   page.drawText(tcText, { x: width - margin - fontRegular.widthOfTextAtSize(tcText, 7.5), y, size: 7.5, font: fontRegular, color: textLight });
 
   // 6. Notes / Mensaje de Cliente (Left Side)
-  const notesY = y + 45;
+  const notesY = y + 38;
   const notesText = clean(invoice.notes || 'Gracias por elegir a JRS CARGO');
   page.drawRectangle({
     x: margin,
