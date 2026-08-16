@@ -89,7 +89,7 @@ export default function BodegaInventario() {
               let comp = item.company;
               if (!comp || comp === 'N/A' || comp === 'Independiente' || comp === 'OTRO') {
                 const extracted = extractCompanyAndClient(item.client);
-                comp = extracted.company !== 'Independiente' ? extracted.company : (comp || 'JRS CARGO');
+                comp = extracted.company || 'JRS CARGO';
               }
               return {
                 id: item.id,
@@ -229,6 +229,7 @@ export default function BodegaInventario() {
               <option value="Todas">Todas las Empresas</option>
               <option value="JRS CARGO">JRS CARGO</option>
               <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+              <option value="JR LOGISTICS">JR LOGISTICS</option>
             </select>
           </div>
         </div>
@@ -404,12 +405,15 @@ export default function BodegaInventario() {
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Empresa / Proveedor</label>
-                <input 
-                  type="text" 
-                  value={editingItem.company || ''} 
+                <select 
+                  value={editingItem.company || 'JRS CARGO'} 
                   onChange={e => setEditingItem({...editingItem, company: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium" 
-                />
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium bg-white" 
+                >
+                  <option value="JRS CARGO">JRS CARGO</option>
+                  <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+                  <option value="JR LOGISTICS">JR LOGISTICS</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

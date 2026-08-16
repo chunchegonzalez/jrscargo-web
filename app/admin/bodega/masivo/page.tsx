@@ -43,7 +43,7 @@ export default function BodegaMasivo() {
           const wbData = await wbRes.json();
           
           let client = 'Desconocido';
-          let company = 'Independiente';
+          let company = 'JRS CARGO';
           let weightStr = '0 lbs';
           
           if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {

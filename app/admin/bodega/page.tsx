@@ -98,7 +98,7 @@ export default function BodegaScanner() {
             consignatario: '',
             weight: '',
             weightUnit: 'lbs',
-            provider: 'Independiente',
+            provider: 'JRS CARGO',
             description: '',
             isManual: true
           });
@@ -331,13 +331,13 @@ export default function BodegaScanner() {
                   <div>
                     <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Empresa</p>
                     <select
-                      value={packageData.provider || 'Independiente'}
+                      value={packageData.provider || 'JRS CARGO'}
                       onChange={(e) => setPackageData({ ...packageData, provider: e.target.value })}
                       className="w-full text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100 focus:border-brand-blue focus:ring-0 cursor-pointer"
                     >
-                      <option value="Independiente">Independiente</option>
                       <option value="JRS CARGO">JRS CARGO</option>
                       <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+                      <option value="JR LOGISTICS">JR LOGISTICS</option>
                     </select>
                   </div>
                 </div>

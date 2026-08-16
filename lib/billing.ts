@@ -131,22 +131,24 @@ export function formatCostaRicaISO(date: Date | string | number = new Date()): s
   return formatter.format(d);
 }
 
+export type CompanyType = 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS';
+
 /**
- * Extracts company ('JRS CARGO' or 'ATLANTIC IMPORTS') and cleaned client name
+ * Extracts company ('JRS CARGO', 'ATLANTIC IMPORTS', or 'JR LOGISTICS') and cleaned client name
  * from API raw consignee / client string.
  */
 export function extractCompanyAndClient(rawConsignee: string | null | undefined): { 
-  company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'Independiente'; 
+  company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS'; 
   cleanClient: string 
 } {
-  if (!rawConsignee) return { company: 'Independiente', cleanClient: 'Desconocido' };
+  if (!rawConsignee) return { company: 'JRS CARGO', cleanClient: 'Desconocido' };
   
   const text = rawConsignee.trim();
-  let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'Independiente' = 'Independiente';
+  let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' = 'JRS CARGO';
 
-  // 1. Check for JRS Cargo signatures
-  if (/\bJRS(\s*CARGO)?\b/i.test(text) || /\bJRS[-\s]*\d+/i.test(text)) {
-    company = 'JRS CARGO';
+  // 1. Check for JR Logistics signatures
+  if (/\b(JR(\s*LOGISTICS?)|JRL[-\s]*\d+|JR[-\s]*\d+)\b/i.test(text)) {
+    company = 'JR LOGISTICS';
   }
   // 2. Check for Atlantic Imports signatures (AT-, ATLANTIC, or 1900-2999 locker codes)
   else if (
@@ -157,14 +159,14 @@ export function extractCompanyAndClient(rawConsignee: string | null | undefined)
   ) {
     company = 'ATLANTIC IMPORTS';
   }
-  // 3. 1000-1899 locker numbers -> JRS
-  else if (/\b1[0-8]\d{2}\b/.test(text)) {
+  // 3. JRS Cargo signatures (JRS, JRS-XXXX, or 1000-1899 locker numbers)
+  else if (/\bJRS(\s*CARGO)?\b/i.test(text) || /\bJRS[-\s]*\d+/i.test(text) || /\b1[0-8]\d{2}\b/.test(text)) {
     company = 'JRS CARGO';
   }
 
   // Clean client name by removing company tags and locker codes
   let cleanClient = text
-    .replace(/\b(JRS(\s*CARGO)?|ATLANTIC(\s*IMPORTS?)?|AT)\b/gi, '')
+    .replace(/\b(JRS(\s*CARGO)?|ATLANTIC(\s*IMPORTS?)?|AT|JR(\s*LOGISTICS?)?|JRL)\b/gi, '')
     .replace(/-\s*\d+/g, '')
     .replace(/\b(1\d{3}|2\d{3})\b/g, '')
     .replace(/[-_]+/g, ' ')
