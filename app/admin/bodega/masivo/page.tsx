@@ -46,9 +46,13 @@ export default function BodegaMasivo() {
         
         if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
           const pkg = wbData.rawData.package;
-          const fullConsignee = pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
-          const extracted = extractCompanyAndClient(fullConsignee);
-          company = extracted.company;
+          const fullConsignee = pkg.clientName || pkg.consignatario || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+          const extracted = extractCompanyAndClient(
+            fullConsignee,
+            pkg.tenantName || pkg.company,
+            pkg.clientCode
+          );
+          company = pkg.company || extracted.company;
           client = extracted.cleanClient;
           weightStr = `${pkg.weight || '0'} ${pkg.weightUnit || 'lbs'}`;
         }

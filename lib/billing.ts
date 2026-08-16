@@ -135,19 +135,32 @@ export type CompanyType = 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS';
 
 /**
  * Extracts company ('JRS CARGO', 'ATLANTIC IMPORTS', or 'JR LOGISTICS') and cleaned client name
- * from API raw consignee / client string.
+ * from API raw consignee / client string, tenant name, or client code.
  */
-export function extractCompanyAndClient(rawConsignee: string | null | undefined): { 
+export function extractCompanyAndClient(
+  rawConsignee: string | null | undefined,
+  tenantName?: string | null,
+  clientCode?: string | null
+): { 
   company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS'; 
   cleanClient: string 
 } {
-  if (!rawConsignee) return { company: 'JRS CARGO', cleanClient: 'Desconocido' };
+  const text = (rawConsignee || '').trim();
+  const tenant = (tenantName || '').toUpperCase();
+  const code = (clientCode || '').toUpperCase();
   
-  const text = rawConsignee.trim();
   let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' = 'JRS CARGO';
 
-  // 1. Check for JR Logistics signatures
-  if (/\b(JR(\s*LOGISTICS?)|JRL[-\s]*\d+|JR[-\s]*\d+)\b/i.test(text)) {
+  // 0. Explicit tenantName or clientCode check from Worldbox
+  if (tenant.includes('ATLANTIC') || code.startsWith('AT-') || code.includes('ATLANTIC')) {
+    company = 'ATLANTIC IMPORTS';
+  } else if (tenant.includes('LOGISTICS') || tenant.includes('JR ') || code.startsWith('JR-') || code.startsWith('JRL-')) {
+    company = 'JR LOGISTICS';
+  } else if (tenant.includes('JRS') || code.startsWith('JRS-')) {
+    company = 'JRS CARGO';
+  }
+  // 1. Check for JR Logistics signatures in consignee text
+  else if (/\b(JR(\s*LOGISTICS?)|JRL[-\s]*\d+|JR[-\s]*\d+)\b/i.test(text)) {
     company = 'JR LOGISTICS';
   }
   // 2. Check for Atlantic Imports signatures (AT-, ATLANTIC, or 1900-2999 locker codes)
@@ -173,7 +186,7 @@ export function extractCompanyAndClient(rawConsignee: string | null | undefined)
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (!cleanClient) cleanClient = text;
+  if (!cleanClient) cleanClient = text || 'Desconocido';
 
   return { company, cleanClient };
 }
