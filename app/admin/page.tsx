@@ -5,13 +5,22 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend, LineChart, Line
 } from 'recharts';
-import { Package, TrendingUp, DollarSign, CheckCircle, AlertCircle, Plus, Building2 } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, CheckCircle, AlertCircle, Plus, Building2, ShoppingBag, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 import { parseLocalDate } from '@/lib/billing';
 
 interface UserData {
   username: string;
   role: string;
+}
+
+interface InvoiceItemLine {
+  invoice_id?: string;
+  tracking_number?: string;
+  service_name?: string;
+  amount?: number | string;
+  weight?: number | string;
+  rate?: number | string;
 }
 
 interface InvoiceData {
@@ -21,6 +30,7 @@ interface InvoiceData {
   issue_date: string;
   total: number;
   invoice_payments?: { amount_applied: number | string }[];
+  invoice_items?: InvoiceItemLine[];
 }
 
 interface InventoryItem {
@@ -200,6 +210,80 @@ export default function AdminDashboard() {
     Recibidos: inventory.filter(p => isSameDay(new Date(p.received_date || p.created_at), day.date)).length,
     Entregados: inventory.filter(p => p.status === 'Entregado' && isSameDay(new Date(p.updated_at || p.created_at), day.date)).length,
   }));
+
+  // --- Product Sales Analysis ---
+  const productSalesData = useMemo(() => {
+    // 1. Filter invoices based on dateFilter
+    const activeInvoices = invoices.filter(inv => {
+      if (inv.status === 'Anulada') return false;
+      const invDate = parseLocalDate(inv.issue_date);
+      const curr = new Date();
+      if (dateFilter === 'hoy') return isSameDay(invDate, curr);
+      if (dateFilter === 'semana') return invDate >= startOfWeek(curr) && invDate <= endOfDay(curr);
+      if (dateFilter === 'mes') return invDate >= startOfMonth(curr) && invDate <= endOfDay(curr);
+      return true;
+    });
+
+    const map = new Map<string, { name: string; revenue: number; quantity: number; totalWeight: number }>();
+
+    activeInvoices.forEach(inv => {
+      const items = inv.invoice_items || [];
+      if (items.length > 0) {
+        items.forEach(it => {
+          const rawName = (it.service_name || 'Servicio de Carga / Flete').trim();
+          const name = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+          const amount = Number(it.amount) || 0;
+          const weight = Number(it.weight) || 0;
+
+          const current = map.get(name) || { name, revenue: 0, quantity: 0, totalWeight: 0 };
+          current.revenue += amount;
+          current.quantity += 1;
+          current.totalWeight += weight;
+          map.set(name, current);
+        });
+      } else {
+        // Fallback for invoices without itemized lines
+        const name = 'Flete / Paquetería General';
+        const amount = Number(inv.total) || 0;
+        const current = map.get(name) || { name, revenue: 0, quantity: 0, totalWeight: 0 };
+        current.revenue += amount;
+        current.quantity += 1;
+        map.set(name, current);
+      }
+    });
+
+    const totalRevenue = Array.from(map.values()).reduce((sum, p) => sum + p.revenue, 0);
+    const totalUnits = Array.from(map.values()).reduce((sum, p) => sum + p.quantity, 0);
+
+    const list = Array.from(map.values())
+      .map(p => ({
+        ...p,
+        averageTicket: p.quantity > 0 ? p.revenue / p.quantity : 0,
+        percentage: totalRevenue > 0 ? (p.revenue / totalRevenue) * 100 : 0
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    const topProduct = list[0] || null;
+
+    // Palette for charts
+    const colors = ['#12435E', '#F5A623', '#2ecc71', '#9b59b6', '#3498db', '#e74c3c', '#1abc9c', '#34495e'];
+    const chartData = list.slice(0, 6).map((item, idx) => ({
+      name: item.name.length > 18 ? item.name.substring(0, 18) + '...' : item.name,
+      fullName: item.name,
+      Ventas: Number(item.revenue.toFixed(2)),
+      Cantidad: item.quantity,
+      color: colors[idx % colors.length]
+    }));
+
+    return {
+      list,
+      chartData,
+      totalRevenue,
+      totalUnits,
+      topProduct,
+      activeServicesCount: list.length
+    };
+  }, [invoices, dateFilter]);
 
   // --- Cash flow (6 months) ---
   const monthlyData: { name: string; Total: number }[] = [];
@@ -633,6 +717,155 @@ export default function AdminDashboard() {
             <Link href="/admin/facturacion" className="text-xs font-bold text-brand-blue hover:underline">
               Ir a los registros →
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN: ANÁLISIS DE VENTAS POR PRODUCTO / SERVICIO */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-brand-blue/10 flex items-center justify-center text-brand-blue shrink-0">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-gray-800 tracking-tight">Análisis de Ventas por Producto / Servicio</h2>
+              <p className="text-xs text-gray-400">Rendimiento, volumen facturado y participación de mercado por servicio</p>
+            </div>
+          </div>
+          <span className="text-xs font-bold px-3 py-1.5 bg-gray-50 text-gray-600 rounded-full border border-gray-100 self-start sm:self-auto">
+            Período: <strong className="text-brand-blue capitalize">{dateFilter === 'hoy' ? 'Hoy' : dateFilter === 'semana' ? 'Esta Semana' : dateFilter === 'mes' ? 'Este Mes' : 'Histórico Total'}</strong>
+          </span>
+        </div>
+
+        {/* Mini KPIs de Productos */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Producto Estrella</p>
+            <p className="text-sm font-black text-brand-blue truncate" title={productSalesData.topProduct?.name || 'N/A'}>
+              {productSalesData.topProduct?.name || 'Sin ventas'}
+            </p>
+            <p className="text-xs font-bold text-green-600 mt-1">
+              ${productSalesData.topProduct?.revenue.toFixed(2) || '0.00'} ({productSalesData.topProduct?.percentage.toFixed(0) || 0}%)
+            </p>
+          </div>
+
+          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Total Facturado</p>
+            <p className="text-xl font-black text-gray-800">${productSalesData.totalRevenue.toFixed(2)}</p>
+            <p className="text-xs text-gray-400 mt-1">En el período seleccionado</p>
+          </div>
+
+          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Líneas Facturadas</p>
+            <p className="text-xl font-black text-gray-800">{productSalesData.totalUnits}</p>
+            <p className="text-xs text-gray-400 mt-1">Ítems / Servicios procesados</p>
+          </div>
+
+          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Ticket Promedio</p>
+            <p className="text-xl font-black text-gray-800">
+              ${productSalesData.totalUnits > 0 ? (productSalesData.totalRevenue / productSalesData.totalUnits).toFixed(2) : '0.00'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Por línea de producto</p>
+          </div>
+        </div>
+
+        {/* Gráfico y Tabla Comparativa */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+          {/* Gráfico de Barras */}
+          <div className="lg:col-span-5 bg-gray-50/70 p-5 rounded-2xl border border-gray-100 flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center gap-2">
+                <BarChart2 className="w-4 h-4 text-brand-blue" />
+                Ingresos por Servicio
+              </h3>
+              <p className="text-xs text-gray-400 mb-4">Top productos con mayor facturación ($ USD)</p>
+            </div>
+            
+            <div className="h-64 w-full">
+              {productSalesData.chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={productSalesData.chartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
+                    <XAxis type="number" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={v => `$${v}`} />
+                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} width={110} />
+                    <RechartsTooltip 
+                      formatter={(val: number) => [`$${val.toFixed(2)} USD`, 'Facturado']}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} 
+                    />
+                    <Bar dataKey="Ventas" radius={[0, 6, 6, 0]} maxBarSize={24}>
+                      {productSalesData.chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs">
+                  <ShoppingBag size={32} className="opacity-30 mb-2" />
+                  No hay ventas registradas en este período.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tabla Desglose Detallado */}
+          <div className="lg:col-span-7 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                  <th className="pb-3">Producto / Servicio</th>
+                  <th className="pb-3 text-center">Cant.</th>
+                  <th className="pb-3 text-right">Ingresos</th>
+                  <th className="pb-3 text-right">Ticket Prom.</th>
+                  <th className="pb-3 text-right pr-2">Participación</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 text-xs">
+                {productSalesData.list.slice(0, 7).map((prod, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="py-3.5 pr-2 font-bold text-gray-800 flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-brand-blue/10 text-brand-blue text-[10px] font-black flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+                      <span className="truncate max-w-[200px]" title={prod.name}>
+                        {prod.name}
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-center text-gray-600 font-semibold">
+                      {prod.quantity}
+                    </td>
+                    <td className="py-3.5 text-right font-black text-brand-blue whitespace-nowrap">
+                      ${prod.revenue.toFixed(2)}
+                    </td>
+                    <td className="py-3.5 text-right text-gray-600 whitespace-nowrap">
+                      ${prod.averageTicket.toFixed(2)}
+                    </td>
+                    <td className="py-3.5 text-right pr-2 whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-16 bg-gray-100 h-2 rounded-full overflow-hidden hidden sm:block">
+                          <div 
+                            className="bg-brand-blue h-full rounded-full" 
+                            style={{ width: `${Math.min(prod.percentage, 100)}%` }}
+                          />
+                        </div>
+                        <span className="font-bold text-gray-700 w-10 text-right">
+                          {prod.percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {productSalesData.list.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-400 font-medium">
+                      No se encontraron líneas facturadas en este rango.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

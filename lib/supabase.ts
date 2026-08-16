@@ -302,7 +302,7 @@ export async function getInvoices() {
 
   // 3. Fetch invoice items (for tracking mapping)
   try {
-    const itemsRes = await fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number`, {
+    const itemsRes = await fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, {
       headers: getHeaders(),
       cache: 'no-store'
     });
