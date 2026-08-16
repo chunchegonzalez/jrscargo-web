@@ -298,31 +298,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
 
         </nav>
-
-        {/* User Profile */}
-        <div className="p-3 border-t border-white/5">
-          <button 
-            onClick={() => toggleSection('perfil')}
-            className="w-full flex items-center justify-between p-2.5 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
-          >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-tr from-brand-yellow to-brand-yellow/60 flex items-center justify-center text-[#0B1D2B] font-black text-[10px]">
-                {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'US'}
-              </div>
-              <div className="text-left truncate">
-                <p className="text-[12px] font-bold text-white truncate leading-tight">{currentUser?.username || 'Mi Perfil'}</p>
-                <p className="text-[10px] text-gray-500 truncate">{currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}</p>
-              </div>
-            </div>
-            {openSections.perfil ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}
-          </button>
-          
-          <div className={`overflow-hidden transition-all duration-300 ${openSections.perfil ? 'max-h-20 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-            <button onClick={handleLogout} className="w-full text-left py-2 px-3 rounded-lg text-[12px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center gap-2">
-              <LogOut size={14} /> Cerrar sesión
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
