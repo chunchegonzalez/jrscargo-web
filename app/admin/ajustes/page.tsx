@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Users, Trash2, Eye, EyeOff, Edit2, Save, 
-  Bot, Mail, MessageSquare, Search, Copy, Check, 
-  ExternalLink, Calendar, RefreshCw, UserCheck
+  Bot, Mail, Search, Copy, Check, 
+  Calendar, RefreshCw, UserCheck
 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDateTime } from '@/lib/billing';
