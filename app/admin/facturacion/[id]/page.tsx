@@ -145,10 +145,10 @@ export default function InvoiceViewPage() {
         
         <div className="px-12 pt-10 pb-8 flex-1 flex flex-col">
           
-          {/* HEADER: Company info + Logo */}
-          <div className="flex justify-between items-start mb-2">
+          {/* HEADER: Company info + Contact + Logo */}
+          <div className="flex justify-between items-start mb-2 gap-4">
             <div>
-              <p className="text-lg font-bold text-gray-700 tracking-wide uppercase">Factura</p>
+              <p className="text-xl font-black text-gray-800 tracking-wide uppercase">Factura</p>
               <p className="text-sm font-bold text-gray-700 mt-1">JRS CARGO S.A.</p>
               <p className="text-xs text-gray-400">Heredia</p>
               <p className="text-xs text-gray-400">San Pablo de Heredia, Costa Rica</p>
@@ -159,7 +159,7 @@ export default function InvoiceViewPage() {
               <p>www.jrscargocr.com</p>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="JRS Cargo" className="h-16 w-auto object-contain" />
+            <img src="/logo.png" alt="JRS Cargo" className="h-28 md:h-32 print:h-32 w-auto object-contain shrink-0" />
           </div>
 
           {/* Separator */}
