@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 
-type Client = { id: string; name: string; email: string; phone?: string; address?: string };
+type Client = { id: string; name: string; email: string; phone?: string; address?: string; discount_percent?: number };
 type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
 type ServiceType = { id: string; name: string; default_rate: number };
 
@@ -298,11 +298,20 @@ export default function EditarFacturaPage() {
                               setSelectedClientId(c.id);
                               setSearchClientTerm(c.name);
                               setIsClientDropdownOpen(false);
+                              const fixedDiscount = Number(c.discount_percent) || 0;
+                              setDiscountPercent(fixedDiscount);
                             }}
-                            className={`px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 ${selectedClientId === c.id ? 'bg-brand-blue/5 font-bold text-brand-blue' : 'text-gray-700'}`}
+                            className={`px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-center justify-between ${selectedClientId === c.id ? 'bg-brand-blue/5 font-bold text-brand-blue' : 'text-gray-700'}`}
                           >
-                            <div className="text-sm">{c.name}</div>
-                            <div className="text-xs text-gray-400">{c.email}</div>
+                            <div>
+                              <div className="text-sm font-medium">{c.name}</div>
+                              <div className="text-xs text-gray-400">{c.email}</div>
+                            </div>
+                            {Number(c.discount_percent || 0) > 0 && (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200 shrink-0">
+                                🏷️ {c.discount_percent}% desc
+                              </span>
+                            )}
                           </div>
                         ))}
                         {clients.filter(c => c.name.toLowerCase().includes(searchClientTerm.toLowerCase())).length === 0 && (

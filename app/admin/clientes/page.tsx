@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2, Filter, ArrowUpDown } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit, Plus, X, DollarSign, Eye, Trash2, Filter, ArrowUpDown, Tag, Percent } from 'lucide-react';
 import { getInvoiceStats, formatCurrency } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -12,6 +12,8 @@ type Client = {
   email: string;
   phone?: string;
   address?: string;
+  cedula?: string;
+  discount_percent?: number;
   created_at?: string;
   // Computed fields
   totalInvoices?: number;
@@ -24,8 +26,8 @@ export default function ClientesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'todos' | 'con_saldo' | 'sin_facturas' | 'nuevos'>('todos');
-  const [sortBy, setSortBy] = useState<'nombre' | 'saldo' | 'facturas' | 'reciente'>('nombre');
+  const [statusFilter, setStatusFilter] = useState<'todos' | 'con_saldo' | 'con_descuento' | 'sin_facturas' | 'nuevos'>('todos');
+  const [sortBy, setSortBy] = useState<'nombre' | 'saldo' | 'descuento' | 'facturas' | 'reciente'>('nombre');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,7 +134,8 @@ export default function ClientesPage() {
       const matchesSearch = !searchTerm || 
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.phone && c.phone.includes(searchTerm));
+        (c.phone && c.phone.includes(searchTerm)) ||
+        (c.cedula && c.cedula.includes(searchTerm));
       
       if (!matchesSearch) return false;
 
@@ -140,6 +143,8 @@ export default function ClientesPage() {
       switch (statusFilter) {
         case 'con_saldo':
           return (c.pendingBalanceUSD || 0) > 0 || (c.pendingBalanceCRC || 0) > 0;
+        case 'con_descuento':
+          return Number(c.discount_percent || 0) > 0;
         case 'sin_facturas':
           return (c.totalInvoices || 0) === 0;
         case 'nuevos': {
@@ -156,6 +161,8 @@ export default function ClientesPage() {
       switch (sortBy) {
         case 'saldo':
           return ((b.pendingBalanceUSD || 0) + (b.pendingBalanceCRC || 0)) - ((a.pendingBalanceUSD || 0) + (a.pendingBalanceCRC || 0));
+        case 'descuento':
+          return (b.discount_percent || 0) - (a.discount_percent || 0);
         case 'facturas':
           return (b.totalInvoices || 0) - (a.totalInvoices || 0);
         case 'reciente':
@@ -171,11 +178,11 @@ export default function ClientesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-brand-blue mb-2">Directorio de Clientes</h1>
-          <p className="text-gray-500">Gestiona la información de contacto de todos tus clientes.</p>
+          <p className="text-gray-500">Gestiona la información de contacto y descuentos fijos de todos tus clientes.</p>
         </div>
         <button 
           onClick={() => {
-            setEditingClient({ name: '', email: '', phone: '' });
+            setEditingClient({ name: '', email: '', phone: '', cedula: '', discount_percent: 0 });
             setIsModalOpen(true);
           }}
           className="btn-primary"
@@ -194,7 +201,7 @@ export default function ClientesPage() {
           <div className="relative">
             <input 
               type="text" 
-              placeholder="Buscar por nombre, correo o teléfono..." 
+              placeholder="Buscar por nombre, correo, teléfono o cédula..." 
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue w-full sm:w-80" 
@@ -209,6 +216,7 @@ export default function ClientesPage() {
             <Filter size={14} className="text-gray-400" />
             {[
               { key: 'todos' as const, label: 'Todos', count: clients.length },
+              { key: 'con_descuento' as const, label: 'Con Descuento Fijo', count: clients.filter(c => Number(c.discount_percent || 0) > 0).length },
               { key: 'con_saldo' as const, label: 'Con Saldo', count: clients.filter(c => (c.pendingBalanceUSD || 0) > 0 || (c.pendingBalanceCRC || 0) > 0).length },
               { key: 'sin_facturas' as const, label: 'Sin Facturas', count: clients.filter(c => (c.totalInvoices || 0) === 0).length },
               { key: 'nuevos' as const, label: 'Nuevos (30d)', count: clients.filter(c => { if (!c.created_at) return false; const d = new Date(); d.setDate(d.getDate() - 30); return new Date(c.created_at) >= d; }).length },
@@ -234,6 +242,7 @@ export default function ClientesPage() {
               className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 font-medium text-gray-600 focus:outline-none focus:border-brand-blue"
             >
               <option value="nombre">Nombre A-Z</option>
+              <option value="descuento">Mayor Descuento</option>
               <option value="saldo">Mayor Saldo</option>
               <option value="facturas">Más Facturas</option>
               <option value="reciente">Más Reciente</option>
@@ -247,8 +256,9 @@ export default function ClientesPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contacto</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Facturas Totales</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contacto / Cédula</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Descuento Fijo</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Facturas</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Saldo Pendiente</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Acción</th>
               </tr>
@@ -256,11 +266,11 @@ export default function ClientesPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-500">Cargando clientes...</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">Cargando clientes...</td>
                 </tr>
               ) : filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-500">No se encontraron clientes.</td>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">No se encontraron clientes.</td>
                 </tr>
               ) : (
                 filteredClients.map(client => (
@@ -274,6 +284,13 @@ export default function ClientesPage() {
                           <Link href={`/admin/clientes/${client.id}`} className="text-sm font-bold text-gray-800 hover:text-brand-blue transition-colors">
                             {client.name}
                           </Link>
+                          {Number(client.discount_percent || 0) > 0 && (
+                            <div className="mt-0.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
+                                <Percent size={10} /> {client.discount_percent}% Fijo
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -289,7 +306,21 @@ export default function ClientesPage() {
                             <a href={`tel:${client.phone}`} className="hover:text-brand-blue transition-colors">{client.phone}</a>
                           </div>
                         )}
+                        {client.cedula && (
+                          <div className="text-xs text-gray-400 font-medium">
+                            Céd: <span className="text-gray-600">{client.cedula}</span>
+                          </div>
+                        )}
                       </div>
+                    </td>
+                    <td className="p-4 text-center">
+                      {Number(client.discount_percent || 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-black text-xs border border-emerald-200">
+                          <Tag size={12} /> {client.discount_percent}% DESC
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 font-medium">0% (Estándar)</span>
+                      )}
                     </td>
                     <td className="p-4 text-center text-sm font-bold text-gray-600">
                       {client.totalInvoices || 0}
@@ -370,9 +401,9 @@ export default function ClientesPage() {
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre Completo</label>
                 <input 
                   required 
-                  value={editingClient.name} 
+                  value={editingClient.name || ''} 
                   onChange={e => setEditingClient({...editingClient, name: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium" 
                 />
               </div>
               <div>
@@ -380,22 +411,66 @@ export default function ClientesPage() {
                 <input 
                   required 
                   type="email"
-                  value={editingClient.email} 
+                  value={editingClient.email || ''} 
                   onChange={e => setEditingClient({...editingClient, email: e.target.value})}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
-                <input 
-                  type="tel"
-                  value={editingClient.phone || ''} 
-                  onChange={e => setEditingClient({...editingClient, phone: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Teléfono</label>
+                  <input 
+                    type="tel"
+                    placeholder="8888-8888"
+                    value={editingClient.phone || ''} 
+                    onChange={e => setEditingClient({...editingClient, phone: e.target.value})}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cédula / ID</label>
+                  <input 
+                    type="text"
+                    placeholder="1-1234-5678"
+                    value={editingClient.cedula || ''} 
+                    onChange={e => setEditingClient({...editingClient, cedula: e.target.value})}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
+                  />
+                </div>
               </div>
-              <div className="pt-4 flex gap-3">
-                <button type="submit" className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold hover:bg-brand-blue/90 transition-colors">
+
+              {/* Fixed Discount Configuration */}
+              <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-xs font-black text-emerald-900 uppercase tracking-wider">
+                    <Tag size={14} className="text-emerald-600" /> Descuento Fijo Automático
+                  </label>
+                  {Number(editingClient.discount_percent || 0) > 0 && (
+                    <span className="text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shadow-xs">
+                      {editingClient.discount_percent}% Activo
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input 
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    placeholder="0 (Sin descuento)"
+                    value={editingClient.discount_percent !== undefined && editingClient.discount_percent !== null ? editingClient.discount_percent : ''} 
+                    onChange={e => setEditingClient({...editingClient, discount_percent: parseFloat(e.target.value) || 0})}
+                    className="w-full px-4 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-10" 
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-700 font-black text-sm">%</span>
+                </div>
+                <p className="text-[11px] text-emerald-700/80 leading-tight">
+                  Este porcentaje se aplicará automáticamente en el sistema de facturación al seleccionar a este cliente.
+                </p>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button type="submit" className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold hover:bg-brand-blue/90 transition-colors shadow-sm">
                   Guardar
                 </button>
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">

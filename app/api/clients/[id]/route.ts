@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getHeaders, getClientInvoices, getClientPayments } from '@/lib/supabase';
+import { parseClientAddress, formatClientAddress } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
     if (!res.ok) throw new Error('Error fetching client');
     const clientsData = await res.json();
     if (!clientsData.length) throw new Error('Client not found');
-    const client = clientsData[0];
+    const rawClient = clientsData[0];
+
+    const extra = parseClientAddress(rawClient.address);
+    const client = {
+      ...rawClient,
+      cedula: extra.cedula,
+      discount_percent: extra.discount_percent,
+      raw_address: extra.raw_address
+    };
 
     // Fetch Client Invoices and Payments
     const [invoices, payments] = await Promise.all([
@@ -37,11 +46,25 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const id = params.id;
     const body = await request.json();
     
+    const formattedAddress = formatClientAddress({
+      cedula: body.cedula,
+      discount_percent: body.discount_percent,
+      address: body.address || body.raw_address || ''
+    });
+
+    const payload: Record<string, unknown> = {
+      address: formattedAddress
+    };
+
+    if (body.name !== undefined) payload.name = body.name;
+    if (body.email !== undefined) payload.email = body.email;
+    if (body.phone !== undefined) payload.phone = body.phone;
+    
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const res = await fetch(`${url}/rest/v1/clients?id=eq.${id}`, {
       method: 'PATCH',
       headers: getHeaders(),
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) {

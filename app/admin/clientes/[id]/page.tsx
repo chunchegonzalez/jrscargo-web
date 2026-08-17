@@ -13,6 +13,7 @@ type Client = {
   phone?: string;
   address?: string;
   cedula?: string;
+  discount_percent?: number;
   created_at: string;
 };
 
@@ -95,9 +96,13 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     e.preventDefault();
     setIsSaving(true);
     try {
-      // Repurpose 'address' column for cedula to avoid DB schema errors
-      const payload = { ...editForm, address: editForm.cedula };
-      delete payload.cedula; // Ensure we don't send the cedula column
+      const payload = { 
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        cedula: editForm.cedula,
+        discount_percent: editForm.discount_percent !== undefined ? Number(editForm.discount_percent) : 0
+      };
       
       const res = await fetch(`/api/clients/${clientId}`, {
         method: 'PUT',
@@ -157,6 +162,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                 email: client.email, 
                 phone: client.phone || '', 
                 cedula: client.cedula || client.address || '',
+                discount_percent: client.discount_percent || 0,
                 created_at: new Date(client.created_at).toISOString().split('T')[0] 
               });
               setIsEditing(true);
@@ -173,6 +179,12 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               <DollarSign size={18} /> Recibir Pago
             </Link>
           )}
+          <Link 
+            href={`/admin/facturacion/nueva?client_id=${client.id}&client_name=${encodeURIComponent(client.name)}`}
+            className="px-4 py-2 bg-brand-yellow text-[#0B1D2B] font-black rounded-lg hover:bg-brand-yellow/90 transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <Plus size={18} /> Nueva Factura
+          </Link>
           <Link 
             href={`/admin/cuentas-por-cobrar/estado-cuenta/${client.id}`}
             className="px-4 py-2 bg-[#0A2636] text-white font-bold rounded-lg hover:bg-[#0A2636]/90 transition-colors flex items-center gap-2 shadow-lg shadow-[#0A2636]/20"
@@ -206,8 +218,15 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                 {client.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{client.name}</h2>
-                <p className="text-sm text-gray-500">Cliente desde {new Date(client.created_at).toLocaleDateString()}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-2xl font-bold text-gray-900">{client.name}</h2>
+                  {Number(client.discount_percent || 0) > 0 && (
+                    <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-black text-xs border border-emerald-300">
+                      🏷️ {client.discount_percent}% Descuento Fijo
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 mt-0.5">Cliente desde {new Date(client.created_at).toLocaleDateString()}</p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -482,6 +501,36 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
                     />
                   </div>
+                </div>
+
+                {/* Descuento Fijo */}
+                <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-emerald-900 uppercase tracking-wider">
+                      🏷️ Descuento Fijo Automático (%)
+                    </label>
+                    {Number(editForm.discount_percent || 0) > 0 && (
+                      <span className="text-xs font-black text-emerald-700 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shadow-xs">
+                        {editForm.discount_percent}% Activo
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      placeholder="0 (Sin descuento)"
+                      value={editForm.discount_percent !== undefined && editForm.discount_percent !== null ? editForm.discount_percent : ''} 
+                      onChange={(e) => setEditForm({...editForm, discount_percent: parseFloat(e.target.value) || 0})}
+                      className="w-full px-4 py-2.5 bg-white border border-emerald-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 pr-10"
+                    />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-700 font-black text-sm">%</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700/80 leading-tight">
+                    Este porcentaje se aplicará automáticamente en el sistema de facturación al seleccionar a este cliente.
+                  </p>
                 </div>
               </form>
             </div>
