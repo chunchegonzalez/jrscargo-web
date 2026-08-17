@@ -1,77 +1,48 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySignedCookie, AUTH_COOKIE_NAME } from '@/lib/auth';
 
-// Routes that require authentication
-const PROTECTED_PAGE_PREFIX = '/admin';
-const PROTECTED_API_PREFIXES = [
-  '/api/invoices',
-  '/api/clients',
-  '/api/payments',
-  '/api/packages',
-  '/api/services',
-  '/api/settings',
-  '/api/expenses',
-];
-
-// Public API routes (no auth required)
+// Explicit public API endpoints that do not require admin authentication
 const PUBLIC_API_ROUTES = [
-  '/api/auth',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/me',
   '/api/contact',
   '/api/chat',
   '/api/tracking',
   '/api/monitor',
+  '/api/monitor/quotes',
 ];
 
 function isPublicApiRoute(pathname: string): boolean {
-  return PUBLIC_API_ROUTES.some(route => pathname.startsWith(route));
+  return PUBLIC_API_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'));
 }
 
-function isProtectedApiRoute(pathname: string): boolean {
-  return PROTECTED_API_PREFIXES.some(prefix => pathname.startsWith(prefix));
-}
-
-function isValidSignedCookie(cookieValue: string): boolean {
-  // Quick format check: should be base64data.hmac_signature
-  const dotIndex = cookieValue.lastIndexOf('.');
-  if (dotIndex === -1 || dotIndex === 0) return false;
-  
-  const signature = cookieValue.substring(dotIndex + 1);
-  // HMAC-SHA256 = 64 hex chars
-  if (signature.length !== 64) return false;
-  if (!/^[0-9a-f]+$/.test(signature)) return false;
-  
-  // Check payload is valid base64
-  const payload = cookieValue.substring(0, dotIndex);
-  try {
-    const decoded = atob(payload);
-    const parsed = JSON.parse(decoded);
-    return !!(parsed.username && parsed.role);
-  } catch {
-    return false;
-  }
-}
-
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const authCookie = request.cookies.get('jrs_admin_auth');
+  const authCookie = request.cookies.get(AUTH_COOKIE_NAME);
 
-  // Protect admin pages (except login)
-  if (pathname.startsWith(PROTECTED_PAGE_PREFIX) && !pathname.startsWith('/admin/login')) {
-    if (!authCookie || !authCookie.value || !isValidSignedCookie(authCookie.value)) {
-      // Clear invalid cookie and redirect to login
-      const response = NextResponse.redirect(new URL('/admin/login', request.url));
+  // 1. Protect Admin Pages (/admin/* except /admin/login)
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+    const user = await verifySignedCookie(authCookie?.value);
+    
+    if (!user) {
+      const loginUrl = new URL('/admin/login', request.url);
+      const response = NextResponse.redirect(loginUrl);
       if (authCookie) {
-        response.cookies.delete('jrs_admin_auth');
+        response.cookies.delete(AUTH_COOKIE_NAME);
       }
       return response;
     }
   }
 
-  // Protect admin API routes
-  if (isProtectedApiRoute(pathname) && !isPublicApiRoute(pathname)) {
-    if (!authCookie || !authCookie.value || !isValidSignedCookie(authCookie.value)) {
+  // 2. Protect API Routes (Default Deny for /api/*)
+  if (pathname.startsWith('/api') && !isPublicApiRoute(pathname)) {
+    const user = await verifySignedCookie(authCookie?.value);
+    
+    if (!user) {
       return NextResponse.json(
-        { error: 'No autorizado' },
+        { success: false, error: 'Acceso no autorizado. Sesión requerida.' },
         { status: 401 }
       );
     }

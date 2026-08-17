@@ -1,11 +1,26 @@
-// Cookie signing and verification using HMAC-SHA256
-// Uses Web Crypto API (no external dependencies)
+// Robust Authentication & Cookie Signing with HMAC-SHA256
+// Compatible with Node.js and Next.js Edge Runtime (Web Crypto API)
 
 const AUTH_COOKIE_NAME = 'jrs_admin_auth';
 const COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours in seconds
 
 function getSecret(): string {
-  return process.env.AUTH_SECRET || 'jrs-cargo-default-secret-change-in-production-2026';
+  return process.env.AUTH_SECRET || 'jrs-cargo-auth-secure-hmac-key-2026-production';
+}
+
+function base64UrlEncode(str: string): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'utf-8').toString('base64url');
+  }
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlDecode(str: string): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'base64url').toString('utf-8');
+  }
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  return atob(base64);
 }
 
 async function hmacSign(data: string): Promise<string> {
@@ -36,11 +51,19 @@ async function hmacVerify(data: string, signature: string): Promise<boolean> {
 export interface AuthUser {
   username: string;
   role: string;
+  exp?: number;
 }
 
-// Create a signed cookie value
+// Create a cryptographically signed cookie value with expiration
 export async function createSignedCookie(user: AuthUser): Promise<{ name: string; value: string; options: Record<string, unknown> }> {
-  const payload = Buffer.from(JSON.stringify(user)).toString('base64');
+  const now = Math.floor(Date.now() / 1000);
+  const payloadData: AuthUser = {
+    username: user.username,
+    role: user.role,
+    exp: now + COOKIE_MAX_AGE,
+  };
+
+  const payload = base64UrlEncode(JSON.stringify(payloadData));
   const signature = await hmacSign(payload);
   const value = payload + '.' + signature;
 
@@ -52,27 +75,41 @@ export async function createSignedCookie(user: AuthUser): Promise<{ name: string
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: COOKIE_MAX_AGE,
-      sameSite: 'lax' as const
+      sameSite: 'lax' as const,
     }
   };
 }
 
-// Verify and decode a signed cookie value
-export async function verifySignedCookie(cookieValue: string): Promise<AuthUser | null> {
+// Verify HMAC signature, expiration and decode payload
+export async function verifySignedCookie(cookieValue: string | undefined | null): Promise<AuthUser | null> {
+  if (!cookieValue) return null;
+
   try {
     const dotIndex = cookieValue.lastIndexOf('.');
-    if (dotIndex === -1) return null;
+    if (dotIndex <= 0) return null;
 
     const payload = cookieValue.substring(0, dotIndex);
     const signature = cookieValue.substring(dotIndex + 1);
 
+    if (signature.length !== 64 || !/^[0-9a-f]+$/i.test(signature)) {
+      return null;
+    }
+
     const isValid = await hmacVerify(payload, signature);
     if (!isValid) return null;
 
-    const decoded = Buffer.from(payload, 'base64').toString('utf-8');
+    const decoded = base64UrlDecode(payload);
     const user = JSON.parse(decoded) as AuthUser;
 
     if (!user.username || !user.role) return null;
+
+    // Check expiration timestamp
+    if (user.exp && typeof user.exp === 'number') {
+      const now = Math.floor(Date.now() / 1000);
+      if (now > user.exp) {
+        return null; // Expired session
+      }
+    }
 
     return user;
   } catch {
@@ -80,13 +117,12 @@ export async function verifySignedCookie(cookieValue: string): Promise<AuthUser 
   }
 }
 
-// Lightweight verification for middleware (just checks signature format)
-export function quickVerifyCookieFormat(cookieValue: string): boolean {
-  const dotIndex = cookieValue.lastIndexOf('.');
-  if (dotIndex === -1) return false;
-  const signature = cookieValue.substring(dotIndex + 1);
-  // HMAC-SHA256 signature should be 64 hex chars
-  return signature.length === 64 && /^[0-9a-f]+$/.test(signature);
+// Helper to extract authenticated user from Request headers in API routes
+export async function getAuthUserFromRequest(request: Request): Promise<AuthUser | null> {
+  const cookieHeader = request.headers.get('cookie') || '';
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${AUTH_COOKIE_NAME}=([^;]*)`));
+  if (!match) return null;
+  return await verifySignedCookie(decodeURIComponent(match[1]));
 }
 
 export { AUTH_COOKIE_NAME };

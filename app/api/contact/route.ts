@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 
+function escapeHtml(str: string | undefined | null): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -13,78 +23,85 @@ export async function POST(request: Request) {
       );
     }
 
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(String(email).trim())) {
+      return NextResponse.json(
+        { error: 'Formato de correo electrónico inválido.' },
+        { status: 400 }
+      );
+    }
+
+    const safeCompany = escapeHtml(companyName);
+    const safeContact = escapeHtml(contactName);
+    const safeEmail = escapeHtml(email);
+    const safePhone = escapeHtml(phone);
+    const safeVolume = escapeHtml(volume);
+    const safeMessage = escapeHtml(message);
+
     // Save to Supabase for monitoring
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-      await fetch(supabaseUrl + '/rest/v1/contact_submissions', {
-        method: 'POST',
-        headers: {
-          'apikey': supabaseKey,
-          'Authorization': 'Bearer ' + supabaseKey,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          company_name: companyName,
-          contact_name: contactName,
-          email: email,
-          phone: phone,
-          volume: volume,
-          message: message || '',
-          status: 'nuevo'
-        })
-      });
+      if (supabaseUrl && supabaseKey) {
+        await fetch(supabaseUrl + '/rest/v1/contact_submissions', {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': 'Bearer ' + supabaseKey,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            company_name: String(companyName).substring(0, 200),
+            contact_name: String(contactName).substring(0, 200),
+            email: String(email).substring(0, 200),
+            phone: String(phone).substring(0, 50),
+            volume: String(volume || '').substring(0, 50),
+            message: String(message || '').substring(0, 2000),
+            status: 'nuevo'
+          })
+        });
+      }
     } catch {
       // Non-critical, continue with email
     }
 
-    const apiKey = process.env.RESEND_API_KEY || "re_GPTpJMRG_4eQ7dUT89kjXmBqKsjhZCvhy";
+    const apiKey = process.env.RESEND_API_KEY;
 
-    // Si no hay API key configurada, solo registramos en consola (útil para desarrollo)
     if (!apiKey) {
-      console.log('--- NUEVA SOLICITUD EMPRESARIAL ---');
-      console.log(`Empresa: ${companyName}`);
-      console.log(`Contacto: ${contactName}`);
-      console.log(`Email: ${email}`);
-      console.log(`Teléfono: ${phone}`);
-      console.log(`Volumen: ${volume}`);
-      console.log(`Mensaje: ${message}`);
-      console.log('-----------------------------------');
-      console.warn('NOTA: El correo no se envió porque falta RESEND_API_KEY en .env.local');
-      
-      // Retornamos success simulado para que la UI funcione
+      // Return simulated success if no Resend key is configured
       return NextResponse.json({ success: true, simulated: true });
     }
 
-    // HTML del correo
+    // HTML del correo sanitizado
     const emailHtml = `
       <h2>Nueva Solicitud de Cotización Empresarial</h2>
       <p>Un cliente mayorista/empresarial ha llenado el formulario en la web de JRS CARGO.</p>
       <table border="1" cellpadding="10" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 600px;">
         <tr>
           <td style="background: #f3f4f6; font-weight: bold; width: 30%;">Empresa</td>
-          <td>${companyName}</td>
+          <td>${safeCompany}</td>
         </tr>
         <tr>
           <td style="background: #f3f4f6; font-weight: bold;">Contacto</td>
-          <td>${contactName}</td>
+          <td>${safeContact}</td>
         </tr>
         <tr>
           <td style="background: #f3f4f6; font-weight: bold;">Correo</td>
-          <td><a href="mailto:${email}">${email}</a></td>
+          <td><a href="mailto:${safeEmail}">${safeEmail}</a></td>
         </tr>
         <tr>
           <td style="background: #f3f4f6; font-weight: bold;">Teléfono</td>
-          <td>${phone}</td>
+          <td>${safePhone}</td>
         </tr>
         <tr>
           <td style="background: #f3f4f6; font-weight: bold;">Volumen Mes</td>
-          <td>${volume} lbs</td>
+          <td>${safeVolume} lbs</td>
         </tr>
         <tr>
           <td style="background: #f3f4f6; font-weight: bold;">Detalles</td>
-          <td>${message || 'Sin detalles adicionales'}</td>
+          <td>${safeMessage || 'Sin detalles adicionales'}</td>
         </tr>
       </table>
       <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">
@@ -92,7 +109,6 @@ export async function POST(request: Request) {
       </p>
     `;
 
-    // Enviar usando la API HTTP de Resend (sin dependencias)
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -100,11 +116,11 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        from: 'JRS Cargo Web <onboarding@resend.dev>', // Debe actualizarse si tienes un dominio verificado
+        from: 'JRS Cargo Web <onboarding@resend.dev>',
         to: 'info@jrscargocr.com',
-        subject: `Cotización Corporativa: ${companyName}`,
+        subject: `Cotización Corporativa: ${safeCompany}`,
         html: emailHtml,
-        reply_to: email
+        reply_to: String(email).trim()
       })
     });
 
@@ -112,13 +128,12 @@ export async function POST(request: Request) {
       const errorData = await res.text();
       console.error('Error enviando correo con Resend:', errorData);
       return NextResponse.json(
-        { error: 'No se pudo enviar el correo a través de Resend.' },
+        { error: 'No se pudo enviar el correo.' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
-
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
