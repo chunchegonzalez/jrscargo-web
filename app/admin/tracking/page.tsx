@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, Package, MapPin, Truck, CheckCircle2, Clock, Loader2, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { Search, Package, MapPin, Truck, CheckCircle2, Clock, Loader2, AlertTriangle, FileText, ExternalLink, Plus } from 'lucide-react';
 
 interface TrackingEvent {
   date: string;
@@ -43,6 +44,16 @@ interface LocalItem {
   created_at: string;
 }
 
+interface MatchedInvoice {
+  id: string;
+  invoice_number: string;
+  status: string;
+  total: number;
+  currency?: string;
+  issue_date?: string;
+  client_name?: string;
+}
+
 function formatDate(ds: string | null | undefined): string {
   if (!ds) return 'N/A';
   try {
@@ -79,9 +90,10 @@ export default function TrackingPage() {
   const [pkg, setPkg] = useState<TrackingPackage | null>(null);
   const [timeline, setTimeline] = useState<TrackingEvent[]>([]);
   const [localItem, setLocalItem] = useState<LocalItem | null>(null);
+  const [matchedInvoice, setMatchedInvoice] = useState<MatchedInvoice | null>(null);
 
-  const handleSearch = async () => {
-    const num = trackingInput.trim();
+  const executeSearch = useCallback(async (searchNumber: string) => {
+    const num = searchNumber.trim();
     if (!num) return;
 
     setLoading(true);
@@ -89,10 +101,11 @@ export default function TrackingPage() {
     setPkg(null);
     setTimeline([]);
     setLocalItem(null);
+    setMatchedInvoice(null);
     setSearched(true);
 
     try {
-      // Fetch from tracking API
+      // 1. Fetch from tracking API
       const res = await fetch(`/api/tracking?number=${encodeURIComponent(num)}`);
       if (!res.ok) {
         throw new Error('No se encontraron datos para este tracking');
@@ -106,7 +119,7 @@ export default function TrackingPage() {
         throw new Error('No se encontraron datos para este tracking');
       }
 
-      // Also check local inventory
+      // 2. Check local inventory in parallel
       try {
         const localRes = await fetch(`/api/inventory/${encodeURIComponent(num)}`);
         if (localRes.ok) {
@@ -118,12 +131,61 @@ export default function TrackingPage() {
       } catch {
         // Local lookup is optional
       }
+
+      // 3. Check for associated invoices with this tracking number
+      try {
+        const invRes = await fetch('/api/invoices');
+        if (invRes.ok) {
+          const invData = await invRes.json();
+          if (invData.success && Array.isArray(invData.data)) {
+            const cleanSearch = num.toUpperCase();
+            const found = invData.data.find((inv: Record<string, unknown>) => {
+              const items = inv.invoice_items as Array<Record<string, unknown>> | undefined;
+              if (!items || !Array.isArray(items)) return false;
+              return items.some((it) => {
+                const itTrack = String(it.tracking_number || '').trim().toUpperCase();
+                return itTrack && (itTrack === cleanSearch || cleanSearch.includes(itTrack) || itTrack.includes(cleanSearch));
+              });
+            });
+
+            if (found) {
+              const clientObj = found.clients as Record<string, unknown> | undefined;
+              setMatchedInvoice({
+                id: String(found.id),
+                invoice_number: String(found.invoice_number || ''),
+                status: String(found.status || 'Pendiente'),
+                total: Number(found.total) || 0,
+                currency: String(found.currency || 'USD'),
+                issue_date: String(found.issue_date || ''),
+                client_name: String(clientObj?.name || '')
+              });
+            }
+          }
+        }
+      } catch {
+        // Invoice lookup is optional
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al buscar tracking');
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleSearch = () => {
+    executeSearch(trackingInput);
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryNumber = urlParams.get('number') || urlParams.get('tracking');
+      if (queryNumber) {
+        setTrackingInput(queryNumber);
+        executeSearch(queryNumber);
+      }
+    }
+  }, [executeSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
@@ -174,7 +236,7 @@ export default function TrackingPage() {
       {loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
-          <p className="text-gray-400 text-sm">Consultando información del paquete...</p>
+          <p className="text-gray-400 text-sm">Consultando información del paquete y facturas...</p>
         </div>
       )}
 
@@ -199,12 +261,29 @@ export default function TrackingPage() {
                 <p className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Número de Tracking</p>
                 <h2 className="text-2xl font-black text-gray-800 font-mono">{pkg.tracking || trackingInput}</h2>
               </div>
-              {statusLabel && statusStyle && (
-                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border}`}>
-                  {getTimelineIcon(statusLabel)}
-                  {statusLabel}
-                </div>
-              )}
+              <div className="flex items-center gap-3 flex-wrap">
+                {matchedInvoice && (
+                  <Link
+                    href={`/admin/facturacion/${matchedInvoice.id}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-brand-blue text-white hover:bg-brand-blue/90 transition-all shadow-sm group"
+                    title="Ver Factura Asociada"
+                  >
+                    <FileText size={14} className="text-brand-yellow" />
+                    <span>Factura: #{matchedInvoice.invoice_number}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${matchedInvoice.status === 'Pagada' ? 'bg-green-500 text-white' : 'bg-amber-400 text-amber-950'}`}>
+                      {matchedInvoice.status}
+                    </span>
+                    <ExternalLink size={12} className="opacity-70 group-hover:opacity-100" />
+                  </Link>
+                )}
+
+                {statusLabel && statusStyle && (
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border}`}>
+                    {getTimelineIcon(statusLabel)}
+                    {statusLabel}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Package details grid */}
@@ -227,6 +306,46 @@ export default function TrackingPage() {
                   <p className="text-sm font-bold text-gray-800">{pkg.volumetricWeight} {pkg.weightUnit || 'lbs'}</p>
                 </div>
               )}
+
+              {/* Factura asociada card in grid */}
+              {matchedInvoice ? (
+                <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3">
+                  <p className="text-[10px] text-brand-blue uppercase font-black mb-1 flex items-center gap-1">
+                    <FileText size={12} /> Factura Asociada
+                  </p>
+                  <div className="flex items-center justify-between gap-1">
+                    <Link
+                      href={`/admin/facturacion/${matchedInvoice.id}`}
+                      className="text-sm font-black text-brand-blue hover:underline inline-flex items-center gap-1"
+                    >
+                      #{matchedInvoice.invoice_number}
+                      <ExternalLink size={12} className="text-gray-400" />
+                    </Link>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${matchedInvoice.status === 'Pagada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'}`}>
+                      {matchedInvoice.status}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1 font-medium">
+                    Total: <strong className="text-gray-800">${matchedInvoice.total.toFixed(2)} {matchedInvoice.currency || 'USD'}</strong>
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl p-3 border border-dashed border-gray-200 flex flex-col justify-between">
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold mb-1 flex items-center gap-1">
+                      <FileText size={12} /> Factura
+                    </p>
+                    <p className="text-xs text-gray-400 font-medium">Sin facturar aún</p>
+                  </div>
+                  <Link
+                    href={`/admin/facturacion/nueva?tracking=${encodeURIComponent(pkg.tracking || trackingInput)}`}
+                    className="mt-2 text-[11px] font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
+                  >
+                    <Plus size={11} /> Crear Factura
+                  </Link>
+                </div>
+              )}
+
               {pkg.dimensions && (
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Dimensiones</p>
@@ -262,13 +381,26 @@ export default function TrackingPage() {
             {/* Local inventory badge */}
             {localItem && (
               <div className="mt-4 p-3 bg-brand-blue/5 border border-brand-blue/10 rounded-xl flex items-center gap-3">
-                <div className="w-8 h-8 bg-brand-blue/10 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-brand-blue/10 rounded-full flex items-center justify-center shrink-0">
                   <Package className="w-4 h-4 text-brand-blue" />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-brand-blue">En nuestro inventario local</p>
-                  <p className="text-[11px] text-gray-500">
-                    Estado: {localItem.status} • Cliente: {localItem.client_name} • Recibido: {formatDate(localItem.received_date || localItem.created_at)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="text-xs font-bold text-brand-blue">En nuestro inventario local</p>
+                    {matchedInvoice && (
+                      <Link
+                        href={`/admin/facturacion/${matchedInvoice.id}`}
+                        className="text-[11px] font-black text-brand-blue bg-white px-2.5 py-0.5 rounded-lg border border-brand-blue/20 hover:bg-brand-blue hover:text-white transition-colors inline-flex items-center gap-1"
+                      >
+                        <FileText size={11} /> Factura #{matchedInvoice.invoice_number} ({matchedInvoice.status})
+                      </Link>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Estado: <span className="font-semibold text-gray-700">{localItem.status}</span>
+                    {matchedInvoice ? ` • Factura: #${matchedInvoice.invoice_number}` : ''}
+                    {localItem.client_name ? ` • Cliente: ${localItem.client_name}` : ''}
+                    {` • Recibido: ${formatDate(localItem.received_date || localItem.created_at)}`}
                   </p>
                 </div>
               </div>
