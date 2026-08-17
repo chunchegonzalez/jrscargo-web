@@ -26,7 +26,8 @@ const ratesData = [
     flagUrl: 'https://flagcdn.com/us.svg',
     note: [
       'Importante: No se pueden enviar cargamentos que requieran permisos especiales.',
-      'Se debe adjuntar la factura de cada producto enviado marítimo para la declaración de aduanas.'
+      'Se debe adjuntar la factura de cada producto enviado marítimo para la declaración de aduanas.',
+      'Todo envío marítimo tiene que realizarse una prealerta en nuestro sistema.'
     ],
   },
   {
