@@ -154,7 +154,7 @@ async function getSmartLocalResponse(lastMessage: string): Promise<string> {
     return `⏱️ *TIEMPOS DE ENTREGA ESTIMADOS*\n\n` +
       `✈️ *Servicio Aéreo:* De *3 a 5 días hábiles* una vez recibido en nuestra bodega de origen (Miami, Madrid o China).\n\n` +
       `🚢 *Servicio Marítimo:* De *2 a 3 semanas* desde el despacho en Miami.\n\n` +
-      `🚚 *En Costa Rica:* Entregamos en el GAM y enviamos a todo el país mediante Correos de Costa Rica o encomienda.`;
+      `🚚 *En Costa Rica:* Entregamos en el GAM (por un costo adicional) y enviamos a todo el país mediante Correos de Costa Rica o encomienda.`;
   }
 
   // 5. Contacto / WhatsApp / Asesor Humano / Ubicación
@@ -222,7 +222,7 @@ INFORMACIÓN OFICIAL JRS CARGO:
 - Tarifa Marítima Miami: $30 por pie cúbico (ft³). Entrega en 2 a 3 semanas.
 - WhatsApp de atención: +506 7260 1238 (wa.me/50672601238)
 - Dirección Miami: 8280 NW 64th St, Miami, FL 33166.
-- Entregas en todo Costa Rica (GAM a domicilio y envíos por Correos de CR).
+- Entregas en todo Costa Rica (GAM a domicilio por un costo adicional y envíos por Correos de CR o encomienda).
 
 Si el usuario ingresa un número de rastreo o tracking, ejecuta de inmediato la herramienta 'trackPackage'.
 Si no tienes el dato exacto de una cotización especial (mercancía peligrosa, aduanas especiales), deriva con calidez a WhatsApp.
