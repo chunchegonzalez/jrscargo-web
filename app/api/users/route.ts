@@ -15,7 +15,8 @@ export async function GET(request: Request) {
     const data = await getUsers();
     // Sanitize: Never expose password hashes to frontend
     const sanitized = (data || []).map((u: Record<string, unknown>) => {
-      const { password: _password, ...safeUser } = u;
+      const safeUser = { ...u };
+      delete safeUser.password;
       return safeUser;
     });
 
