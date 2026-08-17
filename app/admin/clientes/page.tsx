@@ -256,9 +256,8 @@ export default function ClientesPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contacto / Cédula</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Descuento Fijo</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Facturas</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contacto</th>
+                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Facturas Totales</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Saldo Pendiente</th>
                 <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Acción</th>
               </tr>
@@ -266,11 +265,11 @@ export default function ClientesPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">Cargando clientes...</td>
+                  <td colSpan={5} className="p-8 text-center text-gray-500">Cargando clientes...</td>
                 </tr>
               ) : filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">No se encontraron clientes.</td>
+                  <td colSpan={5} className="p-8 text-center text-gray-500">No se encontraron clientes.</td>
                 </tr>
               ) : (
                 filteredClients.map(client => (
@@ -281,16 +280,16 @@ export default function ClientesPage() {
                           {client.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <Link href={`/admin/clientes/${client.id}`} className="text-sm font-bold text-gray-800 hover:text-brand-blue transition-colors">
-                            {client.name}
-                          </Link>
-                          {Number(client.discount_percent || 0) > 0 && (
-                            <div className="mt-0.5">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200">
-                                <Percent size={10} /> {client.discount_percent}% Fijo
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link href={`/admin/clientes/${client.id}`} className="text-sm font-bold text-gray-800 hover:text-brand-blue transition-colors">
+                              {client.name}
+                            </Link>
+                            {Number(client.discount_percent || 0) > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200">
+                                <Tag size={10} /> {client.discount_percent}% desc
                               </span>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -312,15 +311,6 @@ export default function ClientesPage() {
                           </div>
                         )}
                       </div>
-                    </td>
-                    <td className="p-4 text-center">
-                      {Number(client.discount_percent || 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-black text-xs border border-emerald-200">
-                          <Tag size={12} /> {client.discount_percent}% DESC
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400 font-medium">0% (Estándar)</span>
-                      )}
                     </td>
                     <td className="p-4 text-center text-sm font-bold text-gray-600">
                       {client.totalInvoices || 0}
