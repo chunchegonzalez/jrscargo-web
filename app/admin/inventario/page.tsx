@@ -231,6 +231,10 @@ export default function BodegaInventario() {
               <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
               <option value="JR LOGISTICS">JR LOGISTICS</option>
             </select>
+
+            <span className="px-3.5 py-2 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-xl shrink-0">
+              {filteredInventory.length} {filteredInventory.length === 1 ? 'Línea' : 'Líneas'}
+            </span>
           </div>
         </div>
 
@@ -239,7 +243,8 @@ export default function BodegaInventario() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
-                <th className="p-4 pl-6">Tracking</th>
+                <th className="p-4 pl-6 text-center w-14">#</th>
+                <th className="p-4">Tracking</th>
                 <th className="p-4">Cliente</th>
                 <th className="p-4">Empresa</th>
                 <th className="p-4">Peso</th>
@@ -252,12 +257,17 @@ export default function BodegaInventario() {
             <tbody className="divide-y divide-gray-50 text-sm">
               {filteredInventory.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-gray-500">No hay paquetes que coincidan con la búsqueda.</td>
+                  <td colSpan={9} className="p-8 text-center text-gray-500">No hay paquetes que coincidan con la búsqueda.</td>
                 </tr>
               )}
-              {filteredInventory.map((item) => (
+              {filteredInventory.map((item, index) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-                  <td className="p-4 pl-6 font-bold text-brand-blue flex items-center gap-3">
+                  <td className="p-4 pl-6 text-center">
+                    <span className="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold text-xs inline-flex items-center justify-center">
+                      {index + 1}
+                    </span>
+                  </td>
+                  <td className="p-4 font-bold text-brand-blue flex items-center gap-3">
                     <button 
                       onClick={() => handleViewPhotos(item.id)} 
                       disabled={loadingPhotosFor === item.id}
@@ -319,7 +329,7 @@ export default function BodegaInventario() {
         
         {/* Footer Tabla */}
         <div className="p-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 text-center font-medium">
-          Mostrando {filteredInventory.length} de {inventory.length} paquetes totales
+          Mostrando {filteredInventory.length} de {inventory.length} líneas / paquetes totales
         </div>
       </div>
 
