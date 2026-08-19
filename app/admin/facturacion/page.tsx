@@ -110,11 +110,13 @@ export default function FacturacionDashboard() {
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const matchStatus = filterStatus === 'Todas' || inv.status === filterStatus;
+    const stats = getInvoiceStats(inv);
+    const effectiveStatus = stats.displayStatus;
+    const matchStatus = filterStatus === 'Todas' || effectiveStatus === filterStatus;
     const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
     const matchDate = filterDate === '' || invDate === filterDate;
     const searchLower = searchTerm.toLowerCase();
-    const matchSearch = inv.clients?.name.toLowerCase().includes(searchLower) || inv.invoice_number.toLowerCase().includes(searchLower);
+    const matchSearch = (inv.clients?.name || '').toLowerCase().includes(searchLower) || (inv.invoice_number || '').toLowerCase().includes(searchLower);
     return matchStatus && matchDate && matchSearch;
   });
 
