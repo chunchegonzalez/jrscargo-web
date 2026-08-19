@@ -428,7 +428,9 @@ export default function NuevaFacturaPage() {
             <span className="px-3 py-1 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-full">
               {items.length} {items.length === 1 ? 'línea' : 'líneas'}
             </span>
-              <div className="border border-gray-200 rounded-xl bg-white">
+          </div>
+          
+          <div className="border border-gray-200 rounded-xl bg-white">
             <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid items-center rounded-t-xl">
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-4">Producto/Servicio</div>
