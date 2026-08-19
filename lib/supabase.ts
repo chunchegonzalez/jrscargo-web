@@ -196,7 +196,91 @@ export async function getServices() {
     cache: 'no-store'
   });
   if (!res.ok) throw new Error('Error fetching services');
-  return res.json();
+  const data = await res.json();
+  return (data || []).filter((s: { name?: string }) => !s.name?.startsWith('CONFIG_'));
+}
+
+// --- TIPO DE CAMBIO (EXCHANGE RATE) ---
+
+export async function getStoredExchangeRate(): Promise<number> {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const res = await fetch(`${url}/rest/v1/services?name=eq.CONFIG_EXCHANGE_RATE`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0 && Number(data[0].default_rate) > 0) {
+        return Number(data[0].default_rate);
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching stored exchange rate:', err);
+  }
+  return 500;
+}
+
+export async function setStoredExchangeRate(rate: number, updateTodayInvoices: boolean = true, targetDate?: string): Promise<{ success: boolean; rate: number; updatedInvoicesCount: number }> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const numRate = Number(rate) || 500;
+  
+  // 1. Save or update CONFIG_EXCHANGE_RATE in services table
+  try {
+    const checkRes = await fetch(`${url}/rest/v1/services?name=eq.CONFIG_EXCHANGE_RATE`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+    const existing = checkRes.ok ? await checkRes.json() : [];
+    
+    if (existing && existing.length > 0) {
+      await fetch(`${url}/rest/v1/services?id=eq.${existing[0].id}`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ default_rate: numRate })
+      });
+    } else {
+      await fetch(`${url}/rest/v1/services`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          name: 'CONFIG_EXCHANGE_RATE',
+          default_rate: numRate
+        })
+      });
+    }
+  } catch (err) {
+    console.error('Error saving exchange rate in database:', err);
+  }
+
+  // 2. If updateTodayInvoices, find and update all invoices for targetDate
+  let updatedInvoicesCount = 0;
+  if (updateTodayInvoices) {
+    try {
+      const dateToMatch = targetDate || new Date().toISOString().split('T')[0];
+      const invRes = await fetch(`${url}/rest/v1/invoices?issue_date=eq.${encodeURIComponent(dateToMatch)}`, {
+        headers: getHeaders(),
+        cache: 'no-store'
+      });
+      if (invRes.ok) {
+        const todayInvoices = await invRes.json();
+        if (todayInvoices && todayInvoices.length > 0) {
+          const patchRes = await fetch(`${url}/rest/v1/invoices?issue_date=eq.${encodeURIComponent(dateToMatch)}`, {
+            method: 'PATCH',
+            headers: getHeaders(),
+            body: JSON.stringify({ exchange_rate: numRate })
+          });
+          if (patchRes.ok) {
+            updatedInvoicesCount = todayInvoices.length;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error updating today invoices exchange rate:', err);
+    }
+  }
+
+  return { success: true, rate: numRate, updatedInvoicesCount };
 }
 
 export async function createService(service: Record<string, unknown>) {

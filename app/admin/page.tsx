@@ -5,9 +5,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend, LineChart, Line
 } from 'recharts';
-import { Package, TrendingUp, DollarSign, CheckCircle, AlertCircle, Plus, Building2, ShoppingBag, BarChart2 } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, CheckCircle, AlertCircle, Plus, Building2, ShoppingBag, BarChart2, Coins, Save, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { parseLocalDate } from '@/lib/billing';
+import { parseLocalDate, getLocalTodayDate, formatDisplayDate } from '@/lib/billing';
+import { useModal } from '@/app/components/ModalProvider';
 
 interface UserData {
   username: string;
@@ -29,6 +30,7 @@ interface InvoiceData {
   status: string;
   issue_date: string;
   total: number;
+  exchange_rate?: number;
   invoice_payments?: { amount_applied: number | string }[];
   invoice_items?: InvoiceItemLine[];
 }
@@ -70,20 +72,27 @@ function formatShortDay(d: Date): string {
 
 
 export default function AdminDashboard() {
+  const { showAlert } = useModal();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<'hoy' | 'semana' | 'mes' | 'todos'>('mes');
   
+  // Exchange rate state
+  const [currentExchangeRate, setCurrentExchangeRate] = useState<number>(500);
+  const [exchangeRateInput, setExchangeRateInput] = useState<string>('500');
+  const [isSavingExchangeRate, setIsSavingExchangeRate] = useState<boolean>(false);
+  
   useEffect(() => {
     const fetchAll = async () => {
       try {
         setLoading(true);
-        const [userRes, invRes, pkgRes] = await Promise.all([
+        const [userRes, invRes, pkgRes, rateRes] = await Promise.all([
           fetch('/api/auth/me'),
           fetch('/api/invoices'),
-          fetch('/api/inventory')
+          fetch('/api/inventory'),
+          fetch('/api/exchange-rate')
         ]);
         
         if (userRes.ok) {
@@ -98,6 +107,13 @@ export default function AdminDashboard() {
           const pd = await pkgRes.json();
           setInventory((pd.data || []).filter((p: InventoryItem) => p.status !== 'Eliminado'));
         }
+        if (rateRes.ok) {
+          const rd = await rateRes.json();
+          if (rd.success && Number(rd.rate) > 0) {
+            setCurrentExchangeRate(Number(rd.rate));
+            setExchangeRateInput(String(rd.rate));
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -106,6 +122,40 @@ export default function AdminDashboard() {
     };
     fetchAll();
   }, []);
+
+  const handleSaveExchangeRate = async () => {
+    const rateNum = Number(exchangeRateInput);
+    if (!rateNum || isNaN(rateNum) || rateNum <= 0) {
+      await showAlert('Aviso', 'Por favor ingresa un tipo de cambio numérico válido.');
+      return;
+    }
+    setIsSavingExchangeRate(true);
+    try {
+      const todayDate = getLocalTodayDate();
+      const res = await fetch('/api/exchange-rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rate: rateNum, updateTodayInvoices: true, date: todayDate })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCurrentExchangeRate(rateNum);
+        await showAlert('Éxito', data.message || `Tipo de cambio guardado a ₡${rateNum}.`);
+        // Refresh invoices in dashboard to reflect updated rates
+        const invRes = await fetch('/api/invoices');
+        if (invRes.ok) {
+          const id = await invRes.json();
+          setInvoices(id.data || []);
+        }
+      } else {
+        await showAlert('Aviso', 'Error al guardar tipo de cambio: ' + (data.error || ''));
+      }
+    } catch {
+      await showAlert('Aviso', 'Error de conexión al actualizar tipo de cambio.');
+    } finally {
+      setIsSavingExchangeRate(false);
+    }
+  };
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();
@@ -361,6 +411,52 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Tipo de Cambio del Día */}
+        <div className="bg-gradient-to-r from-white via-white to-amber-50/40 rounded-2xl shadow-sm border border-gray-100 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 bg-brand-yellow/15 text-brand-blue rounded-xl shrink-0">
+              <Coins className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-800 text-sm">Tipo de Cambio Oficial del Día</h3>
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md border border-emerald-200 uppercase">
+                  Vigente: ₡{currentExchangeRate}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Aplica a todas las facturas emitidas hoy ({formatDisplayDate(getLocalTodayDate())})
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 focus-within:border-brand-blue focus-within:bg-white transition-colors shadow-inner">
+              <span className="text-xs font-black text-gray-400 mr-1.5">₡</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={exchangeRateInput}
+                onChange={e => setExchangeRateInput(e.target.value)}
+                className="w-20 bg-transparent font-black text-brand-blue text-sm focus:outline-none"
+                placeholder="500"
+              />
+              <span className="text-xs font-bold text-gray-400 ml-1">CRC / $1 USD</span>
+            </div>
+
+            <button
+              onClick={handleSaveExchangeRate}
+              disabled={isSavingExchangeRate || !exchangeRateInput}
+              className="px-4 py-2 bg-brand-blue text-white rounded-xl text-xs font-bold hover:bg-brand-blue/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Guardar y actualizar todas las facturas de hoy"
+            >
+              {isSavingExchangeRate ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Actualizar Tipo de Cambio</span>
+            </button>
+          </div>
+        </div>
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
@@ -543,6 +639,52 @@ export default function AdminDashboard() {
             {f === 'hoy' ? 'Hoy' : f === 'semana' ? 'Esta Semana' : f === 'mes' ? 'Este Mes' : 'Todos'}
           </button>
         ))}
+      </div>
+
+      {/* Tipo de Cambio del Día */}
+      <div className="bg-gradient-to-r from-white via-white to-amber-50/40 rounded-2xl shadow-sm border border-gray-100 p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-brand-yellow/15 text-brand-blue rounded-xl shrink-0">
+            <Coins className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-800 text-sm">Tipo de Cambio Oficial del Día</h3>
+              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-md border border-emerald-200 uppercase">
+                Vigente: ₡{currentExchangeRate}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Aplica a todas las facturas emitidas hoy ({formatDisplayDate(getLocalTodayDate())})
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 focus-within:border-brand-blue focus-within:bg-white transition-colors shadow-inner">
+            <span className="text-xs font-black text-gray-400 mr-1.5">₡</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={exchangeRateInput}
+              onChange={e => setExchangeRateInput(e.target.value)}
+              className="w-20 bg-transparent font-black text-brand-blue text-sm focus:outline-none"
+              placeholder="500"
+            />
+            <span className="text-xs font-bold text-gray-400 ml-1">CRC / $1 USD</span>
+          </div>
+
+          <button
+            onClick={handleSaveExchangeRate}
+            disabled={isSavingExchangeRate || !exchangeRateInput}
+            className="px-4 py-2 bg-brand-blue text-white rounded-xl text-xs font-bold hover:bg-brand-blue/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shrink-0"
+            title="Guardar y actualizar todas las facturas de hoy"
+          >
+            {isSavingExchangeRate ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>Actualizar Tipo de Cambio</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}

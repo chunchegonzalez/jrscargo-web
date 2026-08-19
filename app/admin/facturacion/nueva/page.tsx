@@ -53,7 +53,20 @@ export default function NuevaFacturaPage() {
     loadClients();
     loadCatalogServices();
     loadNextInvoiceNumber();
+    loadDailyExchangeRate();
   }, []);
+
+  const loadDailyExchangeRate = async () => {
+    try {
+      const res = await fetch('/api/exchange-rate');
+      const data = await res.json();
+      if (res.ok && data.success && Number(data.rate) > 0) {
+        setExchangeRate(Number(data.rate));
+      }
+    } catch {
+      // Keep default 500
+    }
+  };
 
   const loadCatalogServices = async () => {
     try {
