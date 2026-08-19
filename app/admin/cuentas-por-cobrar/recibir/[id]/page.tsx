@@ -52,6 +52,28 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           }).filter((inv: Record<string, unknown>) => (inv.pendingBalance as number) > 0);
 
           setInvoices(processedInvs);
+
+          // Check if specific invoice requested in URL query
+          if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetInvId = urlParams.get('invoice_id');
+            if (targetInvId) {
+              const matched = processedInvs.find((i: Record<string, unknown>) => i.id === targetInvId);
+              if (matched) {
+                const bal = matched.pendingBalance as number;
+                setApplications({ [targetInvId]: bal });
+                setTotalPaymentAmount(bal.toFixed(2));
+                setAmountToApply(bal);
+              }
+            } else if (processedInvs.length === 1) {
+              // If only 1 invoice exists, pre-select it
+              const single = processedInvs[0];
+              const bal = single.pendingBalance as number;
+              setApplications({ [String(single.id)]: bal });
+              setTotalPaymentAmount(bal.toFixed(2));
+              setAmountToApply(bal);
+            }
+          }
         } else {
           console.error('Error fetching client data', data.error);
         }
@@ -94,9 +116,10 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     });
   };
 
-  // Auto-distribute payment amount across invoices
-  useEffect(() => {
-    const val = parseFloat(totalPaymentAmount);
+  // User types global amount at top-right
+  const handleGlobalAmountChange = (valStr: string) => {
+    setTotalPaymentAmount(valStr);
+    const val = parseFloat(valStr);
     if (isNaN(val) || val <= 0) {
       setApplications({});
       setAmountToApply(0);
@@ -108,50 +131,54 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
     for (const inv of invoices) {
       if (remaining <= 0) break;
-      const pendingBalance = inv.pendingBalance as number;
-      const invId = inv.id as string;
+      const pendingBalance = Number(inv.pendingBalance) || 0;
+      const invId = String(inv.id);
       
       if (remaining >= pendingBalance) {
         newApps[invId] = pendingBalance;
-        remaining -= pendingBalance;
+        remaining = Number((remaining - pendingBalance).toFixed(2));
       } else {
-        newApps[invId] = remaining;
+        newApps[invId] = Number(remaining.toFixed(2));
         remaining = 0;
       }
     }
     setApplications(newApps);
-    setAmountToApply(val - remaining);
-  }, [totalPaymentAmount, invoices]);
-
-  const toggleInvoice = (invId: string, pendingBalance: number) => {
-    const newApps = { ...applications };
-    if (newApps[invId]) {
-      delete newApps[invId];
-    } else {
-      newApps[invId] = pendingBalance;
-    }
-    setApplications(newApps);
-    
-    // Update total payment amount based on manual selection
-    const total = Object.values(newApps).reduce((a, b) => a + b, 0);
-    setTotalPaymentAmount(total.toFixed(2));
-    setAmountToApply(total);
+    setAmountToApply(Number((val - remaining).toFixed(2)));
   };
 
-  const handleManualAmountChange = (invId: string, amount: string, max: number) => {
-    const val = parseFloat(amount);
-    const newApps = { ...applications };
-    
-    if (isNaN(val) || val <= 0) {
-      delete newApps[invId];
-    } else {
-      newApps[invId] = Math.min(val, max);
-    }
-    
-    setApplications(newApps);
-    const total = Object.values(newApps).reduce((a, b) => a + b, 0);
-    setTotalPaymentAmount(total.toFixed(2));
-    setAmountToApply(total);
+  // User clicks checkbox to toggle specific invoice
+  const toggleInvoice = (invId: string, pendingBalance: number) => {
+    setApplications(prev => {
+      const next = { ...prev };
+      if (next[invId]) {
+        delete next[invId];
+      } else {
+        next[invId] = pendingBalance;
+      }
+      const newTotal = Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0);
+      const formatted = newTotal > 0 ? newTotal.toFixed(2) : '';
+      setTotalPaymentAmount(formatted);
+      setAmountToApply(Number(newTotal.toFixed(2)));
+      return next;
+    });
+  };
+
+  // User edits individual invoice payment input
+  const handleManualAmountChange = (invId: string, amountStr: string, max: number) => {
+    const val = parseFloat(amountStr);
+    setApplications(prev => {
+      const next = { ...prev };
+      if (isNaN(val) || val <= 0) {
+        delete next[invId];
+      } else {
+        next[invId] = Math.min(val, max);
+      }
+      const newTotal = Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0);
+      const formatted = newTotal > 0 ? newTotal.toFixed(2) : '';
+      setTotalPaymentAmount(formatted);
+      setAmountToApply(Number(newTotal.toFixed(2)));
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -305,7 +332,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 type="number"
                 placeholder="0.00"
                 value={totalPaymentAmount}
-                onChange={e => setTotalPaymentAmount(e.target.value)}
+                onChange={e => handleGlobalAmountChange(e.target.value)}
                 className="w-32 bg-transparent text-4xl font-black text-gray-900 focus:outline-none text-right placeholder-gray-300 print:text-black print:border-none"
               />
             </div>
