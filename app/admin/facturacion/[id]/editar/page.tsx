@@ -559,7 +559,8 @@ export default function EditarFacturaPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center justify-between pt-1">
