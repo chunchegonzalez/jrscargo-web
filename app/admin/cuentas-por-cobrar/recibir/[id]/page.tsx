@@ -326,17 +326,18 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
           <div className="md:col-span-4 bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col items-end text-right justify-center">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Importe Recibido</p>
-            <div className="flex items-baseline gap-1 mb-2">
-              <span className="text-2xl font-medium text-gray-400">{currency === 'CRC' ? '₡' : '$'}</span>
+            <div className="flex items-center justify-end gap-1.5 mb-2 w-full">
+              <span className="text-2xl font-bold text-gray-400 shrink-0">{currency === 'CRC' ? '₡' : '$'}</span>
               <input 
                 type="number"
+                step="0.01"
                 placeholder="0.00"
                 value={totalPaymentAmount}
                 onChange={e => handleGlobalAmountChange(e.target.value)}
-                className="w-32 bg-transparent text-4xl font-black text-gray-900 focus:outline-none text-right placeholder-gray-300 print:text-black print:border-none"
+                className="w-full max-w-[220px] bg-transparent text-3xl sm:text-4xl font-black text-gray-900 focus:outline-none text-right placeholder-gray-300 print:text-black print:border-none tracking-tight"
               />
             </div>
-            <p className="text-xs font-bold text-gray-400">Cliente Saldo ({currency}): <span className="text-gray-800">{formatCurrency(currentBalance, currency)}</span></p>
+            <p className="text-xs font-bold text-gray-400">Cliente Saldo ({currency}): <span className="text-gray-800 font-black">{formatCurrency(currentBalance, currency)}</span></p>
           </div>
         </div>
 
@@ -353,7 +354,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Fecha de Vencimiento</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right hidden sm:table-cell">Importe Original</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Saldo Pendiente</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-32">Pago</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-40">Pago</th>
                 </tr>
               </thead>
               <tbody>
@@ -368,7 +369,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     const invoiceNumber = inv.invoice_number as string;
 
                     const isChecked = !!applications[invId];
-                    const appAmount = applications[invId] || '';
+                    const appAmount = applications[invId] !== undefined ? applications[invId] : '';
                     
                     const dueDate = parseLocalDate(issueDate);
                     dueDate.setDate(dueDate.getDate() + 30);
@@ -386,14 +387,15 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                         <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">{formatCurrency(Number(invTotal), currency)}</td>
                         <td className="p-4 text-sm font-medium text-gray-800 text-right">{formatCurrency(pendingBalance, currency)}</td>
                         <td className="p-4 text-right">
-                          <div className={`flex items-center justify-end gap-1 ${isChecked ? 'text-green-700' : 'text-gray-400'}`}>
-                            <span className="font-bold">{currency === 'CRC' ? '₡' : '$'}</span>
+                          <div className={`inline-flex items-center justify-end gap-1 px-2.5 py-1.5 rounded-lg border transition-colors ${isChecked ? 'bg-green-50 border-green-300 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                            <span className="font-bold text-xs">{currency === 'CRC' ? '₡' : '$'}</span>
                             <input 
                               type="number"
+                              step="0.01"
                               value={appAmount}
                               onChange={(e) => handleManualAmountChange(invId, e.target.value, pendingBalance)}
                               placeholder="0.00"
-                              className={`w-20 bg-transparent text-right focus:outline-none focus:border-b focus:border-green-500 ${isChecked ? 'font-bold' : ''}`}
+                              className="w-24 bg-transparent text-right font-black text-sm focus:outline-none text-gray-800"
                             />
                           </div>
                         </td>
