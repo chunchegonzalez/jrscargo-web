@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Printer, CheckSquare, Square, Trash2 } from 'lucide-react';
+import { ArrowLeft, Printer, Check, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseLocalDate, getLocalTodayDate } from '@/lib/billing';
@@ -377,7 +377,13 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     return (
                       <tr key={invId} className={`border-b border-gray-100 last:border-0 transition-colors ${isChecked ? 'bg-green-50/30' : 'hover:bg-gray-50/50'}`}>
                         <td className="p-4 text-center cursor-pointer print:hidden" onClick={() => toggleInvoice(invId, pendingBalance)}>
-                          {isChecked ? <CheckSquare className="text-green-600 mx-auto" size={20} /> : <Square className="text-gray-300 mx-auto" size={20} />}
+                          <div className={`w-5 h-5 mx-auto rounded-md flex items-center justify-center transition-all duration-150 ${
+                            isChecked 
+                              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/20 scale-105' 
+                              : 'bg-white border-2 border-gray-300 hover:border-brand-blue hover:bg-brand-blue/5'
+                          }`}>
+                            {isChecked && <Check size={13} strokeWidth={3.5} />}
+                          </div>
                         </td>
                         <td className="p-4">
                           <p className="font-bold text-brand-blue text-sm">Factura #{invoiceNumber}</p>
