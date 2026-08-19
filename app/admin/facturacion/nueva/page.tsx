@@ -3,13 +3,23 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, UserPlus, ChevronDown } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { getLocalTodayDate } from '@/lib/billing';
 
 type Client = { id: string; name: string; email: string; phone?: string; address?: string; discount_percent?: number };
 type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
 type ServiceType = { id: string; name: string; default_rate: number };
+
+const DEFAULT_SERVICES: ServiceType[] = [
+  { id: '1', name: 'TRANSPORTE ESTÁNDAR AÉREO MIA - SJO', default_rate: 7 },
+  { id: '2', name: 'MAYORISTA AEREO MIA - SJO', default_rate: 9 },
+  { id: '3', name: 'SERVICIO MARITIMO MIA - SJO', default_rate: 30 },
+  { id: '4', name: 'MAYORISTA MARITIMO MIA - SJO TODO INCLUIDO', default_rate: 25 },
+  { id: '5', name: 'TRANSPORTE ESTÁNDAR AÉREO CHINA - SJO', default_rate: 17 },
+  { id: '6', name: 'TRANSPORTE ESTÁNDAR AÉREO MADRID - SJO', default_rate: 15 },
+  { id: '7', name: 'COMPRA EN SITIO WEB', default_rate: 0 },
+];
 
 export default function NuevaFacturaPage() {
   const { showAlert } = useModal();
@@ -418,10 +428,8 @@ export default function NuevaFacturaPage() {
             <span className="px-3 py-1 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-full">
               {items.length} {items.length === 1 ? 'línea' : 'líneas'}
             </span>
-          </div>
-          
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid items-center">
+              <div className="border border-gray-200 rounded-xl bg-white">
+            <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid items-center rounded-t-xl">
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-4">Producto/Servicio</div>
               <div className="col-span-3">Nº Rastreo</div>
@@ -430,7 +438,9 @@ export default function NuevaFacturaPage() {
               <div className="col-span-2 text-right pr-8">Importe ($)</div>
             </div>
 
-            {items.map((item, index) => (
+            {items.map((item, index) => {
+              const availableServices = catalogServices.length > 0 ? catalogServices : DEFAULT_SERVICES;
+              return (
               <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
                 <div className="hidden md:flex justify-center items-center">
                   <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 font-bold text-xs flex items-center justify-center">
@@ -439,36 +449,59 @@ export default function NuevaFacturaPage() {
                 </div>
                 <div className="md:col-span-4 relative">
                   <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Línea #{index + 1} - Producto / Servicio</div>
-                  <input 
-                    placeholder="Ej. Transporte Marítimo" 
-                    value={item.service_name} 
-                    onChange={e => {
-                      handleItemChange(item.id, 'service_name', e.target.value);
-                      setActiveServiceDropdown(item.id);
-                    }}
-                    onFocus={() => setActiveServiceDropdown(item.id)}
-                    onBlur={() => setTimeout(() => setActiveServiceDropdown(null), 200)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue uppercase"
-                  />
-                  {activeServiceDropdown === item.id && catalogServices.length > 0 && (
-                    <div className="absolute z-50 w-full min-w-[250px] mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {catalogServices
-                        .filter(s => s.name.toLowerCase().includes((item.service_name || '').toLowerCase()))
+                  <div className="relative">
+                    <input 
+                      placeholder="Seleccionar o escribir servicio..." 
+                      value={item.service_name} 
+                      onChange={e => {
+                        handleItemChange(item.id, 'service_name', e.target.value);
+                        setActiveServiceDropdown(item.id);
+                      }}
+                      onFocus={() => setActiveServiceDropdown(item.id)}
+                      onBlur={() => setTimeout(() => setActiveServiceDropdown(null), 250)}
+                      className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue uppercase font-medium text-gray-800"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setActiveServiceDropdown(activeServiceDropdown === item.id ? null : item.id);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-brand-blue cursor-pointer"
+                      title="Ver catálogo de servicios"
+                    >
+                      <ChevronDown size={16} className={`transition-transform duration-200 ${activeServiceDropdown === item.id ? 'rotate-180 text-brand-blue' : ''}`} />
+                    </button>
+                  </div>
+
+                  {activeServiceDropdown === item.id && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-100 min-w-[280px]">
+                      <div className="p-2 bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-wider sticky top-0 border-b border-gray-100">
+                        Catálogo de Servicios Disponibles
+                      </div>
+                      {availableServices
+                        .filter(s => !item.service_name || s.name.toLowerCase().includes(item.service_name.toLowerCase()))
                         .map(s => (
                         <div 
                           key={s.id} 
-                          onClick={() => {
+                          onMouseDown={(e) => {
+                            e.preventDefault();
                             handleItemChange(item.id, 'service_name', s.name);
                             setActiveServiceDropdown(null);
                           }}
-                          className="px-4 py-2 hover:bg-brand-blue/5 cursor-pointer border-b border-gray-100 last:border-0 flex justify-between items-center"
+                          className="px-3 py-2.5 hover:bg-brand-blue/5 cursor-pointer flex justify-between items-center transition-colors group"
                         >
-                          <span className="text-xs font-bold text-gray-700">{s.name}</span>
-                          <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded">${Number(s.default_rate).toFixed(2)}</span>
+                          <span className="text-xs font-bold text-gray-700 group-hover:text-brand-blue">{s.name}</span>
+                          <span className="text-xs font-black text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-lg shrink-0 ml-2">
+                            ${Number(s.default_rate).toFixed(2)}
+                          </span>
                         </div>
                       ))}
-                      {catalogServices.filter(s => s.name.toLowerCase().includes((item.service_name || '').toLowerCase())).length === 0 && (
-                         <div className="px-4 py-3 text-xs text-gray-500 text-center">Presiona Enter o sigue escribiendo...</div>
+                      {availableServices.filter(s => !item.service_name || s.name.toLowerCase().includes(item.service_name.toLowerCase())).length === 0 && (
+                        <div className="px-4 py-3 text-xs text-gray-500 text-center">
+                          Usar personalizado: &quot;{item.service_name}&quot;
+                        </div>
                       )}
                     </div>
                   )}
