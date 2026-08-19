@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, AlertCircle, CheckCircle2, Mail, MailCheck, RefreshCw } from 'lucide-react';
+import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -19,18 +19,22 @@ type Invoice = {
   invoice_payments?: { amount_applied: number | string }[];
 };
 
+type SortField = 'date' | 'number' | 'client' | 'amount' | 'status' | 'email';
+
 export default function FacturacionDashboard() {
   const { showAlert } = useModal();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Filter States
   const [filterStatus, setFilterStatus] = useState<string>('Todas');
   const [filterDate, setFilterDate] = useState<string>('');
+  const [filterEmail, setFilterEmail] = useState<string>('Todos');
   const [searchTerm, setSearchTerm] = useState<string>('');
   
-  const [totalPendingUSD, setTotalPendingUSD] = useState(0);
-  const [totalPaidUSD, setTotalPaidUSD] = useState(0);
-
+  // Sorting State
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Email Modal State
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -39,37 +43,20 @@ export default function FacturacionDashboard() {
   const [emailMessage, setEmailMessage] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  const calculateStats = useCallback((data: Invoice[]) => {
-    let pendingUSD = 0, paidUSD = 0;
-
-    
-    data.forEach(inv => {
-      const stats = getInvoiceStats(inv);
-      if (stats.currency !== 'CRC') {
-        pendingUSD += stats.pending;
-        paidUSD += stats.paid;
-      }
-    });
-
-    setTotalPendingUSD(pendingUSD);
-    setTotalPaidUSD(paidUSD);
-
-  }, []);
-
   const loadInvoices = useCallback(async () => {
     try {
+      setLoading(true);
       const res = await fetch('/api/invoices');
       const data = await res.json();
       if (data.success) {
-        setInvoices(data.data);
-        calculateStats(data.data);
+        setInvoices(data.data || []);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [calculateStats]);
+  }, []);
 
   useEffect(() => {
     loadInvoices();
@@ -93,7 +80,6 @@ export default function FacturacionDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        // Update local state with sent timestamp
         setInvoices(prev => prev.map(inv => 
           inv.id === emailInvoice.id ? { ...inv, email_sent_at: data.email_sent_at || new Date().toISOString() } : inv
         ));
@@ -109,16 +95,92 @@ export default function FacturacionDashboard() {
     }
   };
 
-  const filteredInvoices = invoices.filter(inv => {
-    const stats = getInvoiceStats(inv);
-    const effectiveStatus = stats.displayStatus;
-    const matchStatus = filterStatus === 'Todas' || effectiveStatus === filterStatus;
-    const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
-    const matchDate = filterDate === '' || invDate === filterDate;
-    const searchLower = searchTerm.toLowerCase();
-    const matchSearch = (inv.clients?.name || '').toLowerCase().includes(searchLower) || (inv.invoice_number || '').toLowerCase().includes(searchLower);
-    return matchStatus && matchDate && matchSearch;
-  });
+  // Filtered invoices (Dynamic calculation)
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const stats = getInvoiceStats(inv);
+      const effectiveStatus = stats.displayStatus;
+      const matchStatus = filterStatus === 'Todas' || effectiveStatus === filterStatus;
+      
+      const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
+      const matchDate = filterDate === '' || invDate === filterDate;
+      
+      const matchEmail = filterEmail === 'Todos' ||
+        (filterEmail === 'Enviado' && !!inv.email_sent_at) ||
+        (filterEmail === 'No enviado' && !inv.email_sent_at);
+        
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchSearch = !searchLower || 
+        (inv.clients?.name || '').toLowerCase().includes(searchLower) || 
+        (inv.clients?.email || '').toLowerCase().includes(searchLower) || 
+        (inv.invoice_number || '').toLowerCase().includes(searchLower);
+
+      return matchStatus && matchDate && matchEmail && matchSearch;
+    });
+  }, [invoices, filterStatus, filterDate, filterEmail, searchTerm]);
+
+  // Sorted invoices based on active column header sort
+  const sortedInvoices = useMemo(() => {
+    return [...filteredInvoices].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'date') {
+        const da = new Date(a.issue_date).getTime() || 0;
+        const db = new Date(b.issue_date).getTime() || 0;
+        comparison = da - db;
+      } else if (sortField === 'number') {
+        comparison = a.invoice_number.localeCompare(b.invoice_number, undefined, { numeric: true });
+      } else if (sortField === 'client') {
+        const na = (a.clients?.name || '').toLowerCase();
+        const nb = (b.clients?.name || '').toLowerCase();
+        comparison = na.localeCompare(nb);
+      } else if (sortField === 'amount') {
+        const ta = Number(a.total) || 0;
+        const tb = Number(b.total) || 0;
+        comparison = ta - tb;
+      } else if (sortField === 'status') {
+        const sa = getInvoiceStats(a).displayStatus;
+        const sb = getInvoiceStats(b).displayStatus;
+        comparison = sa.localeCompare(sb);
+      } else if (sortField === 'email') {
+        const ea = a.email_sent_at ? 1 : 0;
+        const eb = b.email_sent_at ? 1 : 0;
+        comparison = ea - eb;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredInvoices, sortField, sortOrder]);
+
+  // Dynamically calculated stats that react to ANY active filter
+  const { totalPendingUSD, totalPaidUSD, totalFacturadoUSD } = useMemo(() => {
+    let pendingUSD = 0, paidUSD = 0, facturadoUSD = 0;
+    filteredInvoices.forEach(inv => {
+      const stats = getInvoiceStats(inv);
+      if (stats.currency !== 'CRC') {
+        pendingUSD += stats.pending;
+        paidUSD += stats.paid;
+        facturadoUSD += Number(inv.total) || 0;
+      }
+    });
+    return { totalPendingUSD: pendingUSD, totalPaidUSD: paidUSD, totalFacturadoUSD: facturadoUSD };
+  }, [filteredInvoices]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'date' || field === 'amount' ? 'desc' : 'asc');
+    }
+  };
+
+  const hasActiveFilters = filterStatus !== 'Todas' || filterDate !== '' || filterEmail !== 'Todos' || searchTerm !== '';
+
+  const clearAllFilters = () => {
+    setFilterStatus('Todas');
+    setFilterDate('');
+    setFilterEmail('Todos');
+    setSearchTerm('');
+  };
 
   const formatEmailDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -139,25 +201,40 @@ export default function FacturacionDashboard() {
         </Link>
       </div>
 
-      {/* Tarjetas de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
-            <AlertCircle size={32} />
+      {/* Tarjetas de Resumen Dinámicas (se recalculan con cualquier filtro) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-brand-blue shrink-0">
+            <DollarSign size={28} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pendiente</p>
-            <h2 className="text-3xl font-black text-brand-blue">{formatCurrency(totalPendingUSD, 'USD')}</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Facturado</p>
+              <span className="px-2 py-0.5 bg-blue-50 text-brand-blue text-[10px] font-black rounded-md">
+                {filteredInvoices.length} {filteredInvoices.length === 1 ? 'factura' : 'facturas'}
+              </span>
+            </div>
+            <h2 className="text-2xl lg:text-3xl font-black text-brand-blue">{formatCurrency(totalFacturadoUSD, 'USD')}</h2>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center text-green-500 shrink-0">
-            <CheckCircle2 size={32} />
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
+            <AlertCircle size={28} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Total Pagado</p>
-            <h2 className="text-3xl font-black text-brand-blue">{formatCurrency(totalPaidUSD, 'USD')}</h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pendiente</p>
+            <h2 className="text-2xl lg:text-3xl font-black text-orange-600">{formatCurrency(totalPendingUSD, 'USD')}</h2>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-green-500 shrink-0">
+            <CheckCircle2 size={28} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pagado</p>
+            <h2 className="text-2xl lg:text-3xl font-black text-green-700">{formatCurrency(totalPaidUSD, 'USD')}</h2>
           </div>
         </div>
       </div>
@@ -165,54 +242,159 @@ export default function FacturacionDashboard() {
       {/* Lista de Facturas */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-            <FileText className="text-brand-blue" size={24} /> 
-            Últimas Facturas
-          </h2>
+          <div className="flex items-center gap-3">
+            <FileText className="text-brand-blue shrink-0" size={24} /> 
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">
+                Últimas Facturas
+              </h2>
+              <p className="text-xs text-gray-400">
+                Mostrando {filteredInvoices.length} de {invoices.length} facturas registradas
+              </p>
+            </div>
+          </div>
           
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <select 
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium text-gray-700"
             >
-              <option value="Todas">Todas las facturas</option>
+              <option value="Todas">Todos los estados</option>
               <option value="Pendiente">Pendientes</option>
               <option value="Pagada">Pagadas</option>
               <option value="Vencida">Vencidas</option>
+            </select>
+
+            <select 
+              value={filterEmail}
+              onChange={(e) => setFilterEmail(e.target.value)}
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium text-gray-700"
+            >
+              <option value="Todos">Todos los correos</option>
+              <option value="Enviado">Correo Enviado</option>
+              <option value="No enviado">Correo No Enviado</option>
             </select>
             
             <input 
               type="date" 
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue text-gray-600"
+              className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue text-gray-600 font-medium"
             />
 
             <div className="relative">
               <input 
                 type="text" 
-                placeholder="Buscar cliente o n.º..." 
+                placeholder="Buscar cliente, correo o n.º..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue w-full sm:w-64" 
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+                title="Restablecer todos los filtros"
+              >
+                <X size={14} /> Limpiar
+              </button>
+            )}
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">N.º Factura</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Importe</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Correo</th>
-                <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acción</th>
+              <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
+                <th 
+                  className="p-4 cursor-pointer hover:bg-gray-100/80 transition-colors"
+                  onClick={() => handleSort('date')}
+                  title="Ordenar por fecha"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Fecha</span>
+                    {sortField === 'date' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 cursor-pointer hover:bg-gray-100/80 transition-colors"
+                  onClick={() => handleSort('number')}
+                  title="Ordenar por número de factura"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>N.º Factura</span>
+                    {sortField === 'number' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 cursor-pointer hover:bg-gray-100/80 transition-colors"
+                  onClick={() => handleSort('client')}
+                  title="Ordenar por nombre de cliente"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Cliente</span>
+                    {sortField === 'client' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 text-right cursor-pointer hover:bg-gray-100/80 transition-colors"
+                  onClick={() => handleSort('amount')}
+                  title="Ordenar por importe total"
+                >
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Importe</span>
+                    {sortField === 'amount' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 cursor-pointer hover:bg-gray-100/80 transition-colors"
+                  onClick={() => handleSort('status')}
+                  title="Ordenar por estado"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Estado</span>
+                    {sortField === 'status' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 text-center cursor-pointer hover:bg-gray-100/80 transition-colors"
+                  onClick={() => handleSort('email')}
+                  title="Ordenar por estado de envío de correo"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>Correo</span>
+                    {sortField === 'email' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th className="p-4 text-right">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -220,12 +402,12 @@ export default function FacturacionDashboard() {
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-gray-500">Cargando facturas...</td>
                 </tr>
-              ) : filteredInvoices.length === 0 ? (
+              ) : sortedInvoices.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-gray-500">No se encontraron facturas con esos filtros.</td>
                 </tr>
               ) : (
-                filteredInvoices.map(inv => {
+                sortedInvoices.map(inv => {
                   const stats = getInvoiceStats(inv);
                   const displayStatus = stats.displayStatus;
 
