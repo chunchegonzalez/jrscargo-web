@@ -297,13 +297,39 @@ export default function TrackingPage() {
               {pkg.weight && (
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Peso</p>
-                  <p className="text-sm font-bold text-gray-800">{pkg.weight} {pkg.weightUnit || 'lbs'}</p>
+                  <p className="text-sm font-bold text-gray-800">
+                    {(() => {
+                      const num = parseFloat(String(pkg.weight));
+                      const unit = (pkg.weightUnit || 'lbs').toLowerCase();
+                      if (isNaN(num)) return `${pkg.weight} ${pkg.weightUnit || 'lbs'}`;
+                      if (unit.includes('kg')) {
+                        const lbs = (num * 2.20462).toFixed(2);
+                        return `${num} kg (${lbs} lbs)`;
+                      } else {
+                        const kg = (num * 0.453592).toFixed(2);
+                        return `${num} lbs (${kg} kg)`;
+                      }
+                    })()}
+                  </p>
                 </div>
               )}
               {pkg.volumetricWeight && (
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Peso Volumétrico</p>
-                  <p className="text-sm font-bold text-gray-800">{pkg.volumetricWeight} {pkg.weightUnit || 'lbs'}</p>
+                  <p className="text-sm font-bold text-gray-800">
+                    {(() => {
+                      const num = parseFloat(String(pkg.volumetricWeight));
+                      const unit = (pkg.weightUnit || 'lbs').toLowerCase();
+                      if (isNaN(num)) return `${pkg.volumetricWeight} ${pkg.weightUnit || 'lbs'}`;
+                      if (unit.includes('kg')) {
+                        const lbs = (num * 2.20462).toFixed(2);
+                        return `${num} kg (${lbs} lbs)`;
+                      } else {
+                        const kg = (num * 0.453592).toFixed(2);
+                        return `${num} lbs (${kg} kg)`;
+                      }
+                    })()}
+                  </p>
                 </div>
               )}
 

@@ -294,7 +294,20 @@ export default function TrackingSearch() {
                       </div>
                       <div>
                         <p className="text-xs text-brand-text-light uppercase font-semibold">Peso</p>
-                        <p className="font-medium text-brand-text-gray">{result.rawData.package.weight} {result.rawData.package.weightUnit}</p>
+                        <p className="font-medium text-brand-text-gray">
+                          {(() => {
+                            const num = parseFloat(String(result.rawData.package.weight));
+                            const unit = (result.rawData.package.weightUnit || 'lbs').toLowerCase();
+                            if (isNaN(num)) return `${result.rawData.package.weight} ${result.rawData.package.weightUnit || 'lbs'}`;
+                            if (unit.includes('kg')) {
+                              const lbs = (num * 2.20462).toFixed(2);
+                              return `${num} kg (${lbs} lbs)`;
+                            } else {
+                              const kg = (num * 0.453592).toFixed(2);
+                              return `${num} lbs (${kg} kg)`;
+                            }
+                          })()}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-brand-text-light uppercase font-semibold">Descripción</p>

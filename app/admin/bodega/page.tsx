@@ -329,7 +329,18 @@ export default function BodegaScanner() {
                       </div>
                     ) : (
                       <p className="text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        {packageData.weight} {packageData.weightUnit}
+                        {(() => {
+                          const num = parseFloat(String(packageData.weight));
+                          const unit = (packageData.weightUnit || 'lbs').toLowerCase();
+                          if (isNaN(num)) return `${packageData.weight} ${packageData.weightUnit || 'lbs'}`;
+                          if (unit.includes('kg')) {
+                            const lbs = (num * 2.20462).toFixed(2);
+                            return `${num} kg (${lbs} lbs)`;
+                          } else {
+                            const kg = (num * 0.453592).toFixed(2);
+                            return `${num} lbs (${kg} kg)`;
+                          }
+                        })()}
                       </p>
                     )}
                   </div>
