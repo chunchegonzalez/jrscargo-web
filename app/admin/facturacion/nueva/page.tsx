@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, UserPlus, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, UserPlus, ChevronDown, MessageCircle, Mail, Send, Check } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { getLocalTodayDate } from '@/lib/billing';
+import { generateInvoiceWhatsAppMessage, formatWhatsAppPhone, openWhatsAppWeb } from '@/lib/whatsapp';
 
 type Client = { id: string; name: string; email: string; phone?: string; address?: string; discount_percent?: number };
 type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
@@ -45,6 +46,10 @@ export default function NuevaFacturaPage() {
     { id: 1, service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }
   ]);
   const [notes, setNotes] = useState('Gracias por elegir a JRS CARGO.');
+
+  // Auto-send notification state
+  const [autoSendEmail, setAutoSendEmail] = useState(true);
+  const [autoSendWhatsApp, setAutoSendWhatsApp] = useState(true);
 
   // New client state
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: 'Costa Rica' });
@@ -266,6 +271,40 @@ export default function NuevaFacturaPage() {
       
       const data = await res.json();
       if (res.ok && data.success) {
+        const newInvoiceId = data.id;
+        const selectedClient = clients.find(c => c.id === selectedClientId);
+
+        // 1. Envío automático por Correo Electrónico
+        if (autoSendEmail && newInvoiceId) {
+          try {
+            fetch(`/api/invoices/${newInvoiceId}/send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({})
+            }).catch(err => console.error('Error auto-sending email:', err));
+          } catch (err) {
+            console.error('Error auto-sending email:', err);
+          }
+        }
+
+        // 2. Envío automático por WhatsApp
+        if (autoSendWhatsApp && selectedClient) {
+          const clientPhone = selectedClient.phone || '';
+          const clientName = selectedClient.name || 'Cliente';
+          const msg = generateInvoiceWhatsAppMessage({
+            clientName,
+            invoiceNumber,
+            items,
+            totalAmount: total,
+            pendingAmount: total,
+            currency,
+            exchangeRate,
+            isPaid: false
+          });
+          openWhatsAppWeb(clientPhone, msg);
+        }
+
+        await showAlert('Éxito', `✅ Factura ${invoiceNumber} guardada y procesada para envío.`);
         router.push('/admin/facturacion');
       } else {
         await showAlert('Aviso', 'Error al guardar factura: ' + (data.error || 'Verifica que hayas ejecutado el código SQL en Supabase.'));
@@ -582,13 +621,59 @@ export default function NuevaFacturaPage() {
           </div>
         </div>
 
-        {/* Totales y Guardar */}
-        <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-end gap-6">
-          <div className="w-full md:w-1/2">
-            <p className="text-xs text-gray-500 mb-2">Esta factura se guardará en estado <span className="font-bold text-orange-500">Pendiente</span>. Podrás enviarla por correo desde el dashboard principal.</p>
+        {/* Totales y Opciones de Envío */}
+        <div className="border-t border-gray-100 pt-8 flex flex-col lg:flex-row justify-between items-start gap-8">
+          
+          {/* Panel de Envío Automático */}
+          <div className="w-full lg:w-1/2 space-y-4">
+            <div className="bg-gradient-to-br from-emerald-50/90 to-teal-50/60 border border-emerald-200/90 rounded-2xl p-5 shadow-xs">
+              <div className="flex items-center gap-2 text-emerald-950 font-black text-sm mb-1">
+                <span className="text-lg">⚡</span>
+                <span>Proceso de Envío Automático al Guardar</span>
+              </div>
+              <p className="text-xs text-emerald-800/80 mb-4 leading-relaxed">
+                Al crear la factura, el sistema enviará los comprobantes y notificaciones automáticamente a tu cliente sin pasos adicionales.
+              </p>
+
+              <div className="space-y-2.5">
+                <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${autoSendEmail ? 'bg-white border-emerald-300 shadow-2xs' : 'bg-white/50 border-gray-200 opacity-60'}`}>
+                  <input 
+                    type="checkbox" 
+                    checked={autoSendEmail} 
+                    onChange={e => setAutoSendEmail(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 text-emerald-600 rounded focus:ring-emerald-500 border-gray-300"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-gray-900 flex items-center gap-1.5">
+                      <Mail size={14} className="text-emerald-600" /> Enviar Factura en PDF por Correo
+                    </span>
+                    <span className="text-gray-500 block text-[11px] mt-0.5">Envía el correo oficial con el desglose de paquetes y PDF adjunto.</span>
+                  </div>
+                </label>
+
+                <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${autoSendWhatsApp ? 'bg-white border-emerald-300 shadow-2xs' : 'bg-white/50 border-gray-200 opacity-60'}`}>
+                  <input 
+                    type="checkbox" 
+                    checked={autoSendWhatsApp} 
+                    onChange={e => setAutoSendWhatsApp(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 text-emerald-600 rounded focus:ring-emerald-500 border-gray-300"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-gray-900 flex items-center gap-1.5">
+                      <MessageCircle size={14} className="text-[#25D366]" /> Enviar Aviso de Retiro por WhatsApp
+                    </span>
+                    <span className="text-gray-500 block text-[11px] mt-0.5">Abre WhatsApp con el mensaje listo informando trackings y saldo pendiente.</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400">
+              * La factura quedará registrada en estado <strong className="text-orange-500">Pendiente</strong> hasta que se registre su cobro.
+            </p>
           </div>
           
-          <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-2xl border border-gray-200">
+          <div className="w-full lg:w-5/12 bg-gray-50 p-6 rounded-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-bold text-gray-600">Subtotal</span>
               <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
@@ -626,13 +711,20 @@ export default function NuevaFacturaPage() {
           </div>
         </div>
         
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex flex-col sm:flex-row justify-end items-center gap-3">
+          <Link
+            href="/admin/facturacion"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 text-center transition-colors"
+          >
+            Cancelar
+          </Link>
           <button 
             onClick={handleSaveInvoice}
             disabled={loading}
-            className="btn-primary"
+            className="w-full sm:w-auto btn-primary px-8 py-3.5 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
           >
-            <Save size={20} /> {loading ? 'Guardando...' : 'Guardar y Cerrar'}
+            <Send size={18} />
+            <span>{loading ? 'Guardando y Procesando...' : 'Guardar y Enviar Automáticamente'}</span>
           </button>
         </div>
 
