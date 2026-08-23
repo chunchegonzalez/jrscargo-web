@@ -358,8 +358,8 @@ export async function deleteExpense(id: string) {
 export async function getInvoices() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   
-  // 1. Fetch invoices with client data
-  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(id,name,email)&order=created_at.desc`, {
+  // 1. Fetch invoices with client data (including phone for WhatsApp)
+  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(id,name,email,phone,address)&order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
