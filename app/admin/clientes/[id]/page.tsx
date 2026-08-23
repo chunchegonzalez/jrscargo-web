@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, Trash2, Plus, Edit3 } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, Trash2, Plus, Edit3, MapPin } from 'lucide-react';
 import Link from 'next/link';
-import { getInvoiceStats, formatCurrency, formatDisplayDate } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Client = {
@@ -126,6 +126,14 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   if (loading) return <div className="p-8 text-center text-gray-500">Cargando perfil del cliente...</div>;
   if (!client) return <div className="p-8 text-center text-red-500">Cliente no encontrado</div>;
 
+  const parsedExtra = parseClientAddress(client.address);
+  const cleanCedula = (client.cedula && !client.cedula.trim().startsWith('{'))
+    ? client.cedula.trim()
+    : (parsedExtra.cedula && !parsedExtra.cedula.trim().startsWith('{') ? parsedExtra.cedula.trim() : '');
+  const cleanAddress = parsedExtra.raw_address && !parsedExtra.raw_address.trim().startsWith('{')
+    ? parsedExtra.raw_address.trim()
+    : (client.address && !client.address.trim().startsWith('{') ? client.address.trim() : '');
+
   let totalFacturadoUSD = 0, totalFacturadoCRC = 0;
   let totalPagadoUSD = 0, totalPagadoCRC = 0;
   let totalPendienteUSD = 0, totalPendienteCRC = 0;
@@ -168,8 +176,8 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                 name: client.name, 
                 email: client.email, 
                 phone: client.phone || '', 
-                cedula: client.cedula || client.address || '',
-                discount_percent: client.discount_percent || 0,
+                cedula: cleanCedula,
+                discount_percent: client.discount_percent || parsedExtra.discount_percent || 0,
                 created_at: new Date(client.created_at).toISOString().split('T')[0] 
               });
               setIsEditing(true);
@@ -234,9 +242,9 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-2xl font-bold text-gray-900">{client.name}</h2>
-                  {Number(client.discount_percent || 0) > 0 && (
+                  {(Number(client.discount_percent || 0) > 0 || Number(parsedExtra.discount_percent || 0) > 0) && (
                     <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-black text-xs border border-emerald-300">
-                      🏷️ {client.discount_percent}% Descuento Fijo
+                      🏷️ {client.discount_percent || parsedExtra.discount_percent}% Descuento Fijo
                     </span>
                   )}
                 </div>
@@ -244,24 +252,30 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
-                <Mail size={16} className="text-gray-400" />
+              <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
+                <Mail size={16} className="text-gray-400 shrink-0" />
                 <a href={`mailto:${client.email}`} className="hover:text-brand-blue transition-colors truncate max-w-[200px]">{client.email}</a>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
-                <Phone size={16} className="text-gray-400" />
+              <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
+                <Phone size={16} className="text-gray-400 shrink-0" />
                 {client.phone ? (
                   <a href={`tel:${client.phone}`} className="hover:text-brand-blue transition-colors">{client.phone}</a>
                 ) : (
-                  <span>-</span>
+                  <span className="text-gray-400 italic">Sin teléfono</span>
                 )}
               </div>
-              { (client.cedula || client.address) && (
-                <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
-                  <FileText size={16} className="text-gray-400" />
-                  <span>Cédula: {client.cedula || client.address}</span>
+              {cleanCedula ? (
+                <div className="flex items-center gap-2 text-sm text-gray-700 font-medium bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
+                  <FileText size={16} className="text-gray-400 shrink-0" />
+                  <span>Cédula: <strong className="text-gray-900">{cleanCedula}</strong></span>
                 </div>
-              )}
+              ) : null}
+              {cleanAddress ? (
+                <div className="flex items-center gap-2 text-sm text-gray-700 font-medium bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
+                  <MapPin size={16} className="text-gray-400 shrink-0" />
+                  <span>Dirección: <strong className="text-gray-900">{cleanAddress}</strong></span>
+                </div>
+              ) : null}
             </div>
           </div>
 
