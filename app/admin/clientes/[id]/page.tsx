@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, Trash2, Plus } from 'lucide-react';
+import { ArrowLeft, Printer, FileText, DollarSign, Mail, Phone, Trash2, Plus, Edit3 } from 'lucide-react';
 import Link from 'next/link';
 import { getInvoiceStats, formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
@@ -147,14 +147,21 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     <div className="w-full bg-white min-h-screen relative font-sans print:m-0 print:p-0">
       
       {/* Header Bar (Hidden in Print) */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gray-50/50 print:hidden">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/clientes" className="text-gray-400 hover:text-gray-600 transition-colors">
-            <ArrowLeft size={24} />
-          </Link>
-          <h1 className="text-xl font-bold text-gray-800">Perfil del Cliente</h1>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 px-6 py-4 bg-white shadow-sm print:hidden">
         <div className="flex items-center gap-3">
+          <Link 
+            href="/admin/clientes" 
+            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors flex items-center justify-center shadow-xs"
+            title="Volver a Clientes"
+          >
+            <ArrowLeft size={20} />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Perfil del Cliente</h1>
+            <p className="text-xs text-gray-400 font-medium">Gestión de cuenta y facturación</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
           <button 
             onClick={() => {
               setEditForm({ 
@@ -167,29 +174,36 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               });
               setIsEditing(true);
             }}
-            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+            className="h-10 px-4 bg-white border border-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-xs inline-flex items-center gap-2 whitespace-nowrap shrink-0"
           >
-            Editar Perfil
+            <Edit3 size={16} className="text-gray-500" />
+            <span>Editar Perfil</span>
           </button>
+          
           {(totalPendienteUSD > 0 || totalPendienteCRC > 0) && (
             <Link 
               href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
-              className="px-4 py-2 bg-green-50 text-green-700 font-bold rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2"
+              className="h-10 px-4 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs sm:text-sm rounded-xl hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-xs inline-flex items-center gap-2 whitespace-nowrap shrink-0"
             >
-              <DollarSign size={18} /> Recibir Pago
+              <DollarSign size={16} className="text-emerald-600" />
+              <span>Recibir Pago</span>
             </Link>
           )}
+
           <Link 
             href={`/admin/facturacion/nueva?client_id=${client.id}&client_name=${encodeURIComponent(client.name)}`}
-            className="px-4 py-2 bg-brand-yellow text-[#0B1D2B] font-black rounded-lg hover:bg-brand-yellow/90 transition-colors flex items-center gap-2 shadow-sm"
+            className="h-10 px-4 bg-[#FDBF47] hover:bg-[#eab03e] text-[#0B1D2B] font-black text-xs sm:text-sm rounded-xl transition-all shadow-xs hover:shadow-md inline-flex items-center gap-2 whitespace-nowrap shrink-0"
           >
-            <Plus size={18} /> Nueva Factura
+            <Plus size={16} className="stroke-[3]" />
+            <span>Nueva Factura</span>
           </Link>
+
           <Link 
             href={`/admin/cuentas-por-cobrar/estado-cuenta/${client.id}`}
-            className="px-4 py-2 bg-[#0A2636] text-white font-bold rounded-lg hover:bg-[#0A2636]/90 transition-colors flex items-center gap-2 shadow-lg shadow-[#0A2636]/20"
+            className="h-10 px-4 bg-[#0E2942] hover:bg-[#071828] text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-[#0E2942]/20 hover:shadow-lg inline-flex items-center gap-2 whitespace-nowrap shrink-0"
           >
-            <Printer size={18} /> Estado de Cuenta
+            <Printer size={16} />
+            <span>Estado de Cuenta</span>
           </Link>
         </div>
       </div>
