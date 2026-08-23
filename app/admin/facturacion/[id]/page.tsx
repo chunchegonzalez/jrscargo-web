@@ -3,10 +3,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Printer, Ban, Trash2, MessageCircle, Copy, Check, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Printer, Ban, Trash2 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatDisplayDate } from '@/lib/billing';
-import { generateInvoiceWhatsAppMessage, formatWhatsAppPhone, openWhatsAppWeb } from '@/lib/whatsapp';
 
 type InvoiceItem = {
   id: string;
@@ -43,12 +42,6 @@ export default function InvoiceViewPage() {
   const id = params.id as string;
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // WhatsApp Modal State
-  const [waModalOpen, setWaModalOpen] = useState(false);
-  const [waPhone, setWaPhone] = useState('');
-  const [waMessage, setWaMessage] = useState('');
-  const [waCopied, setWaCopied] = useState(false);
   const loadInvoice = useCallback(async () => {
     try {
       const res = await fetch(`/api/invoices/${id}`);
@@ -114,61 +107,17 @@ export default function InvoiceViewPage() {
   const exchangeRate = invoice.exchange_rate || 530;
   const totalColones = (Number(invoice.total) * exchangeRate).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const totalNum = Number(invoice.total) || 0;
-  const pendingAmount = displayStatus === 'Pagada' || displayStatus === 'Anulada' ? 0 : Math.max(0, totalNum - paidAmount);
-
-  const openWhatsAppModal = () => {
-    const clientName = invoice.clients?.name || 'Cliente';
-    const rawPhone = invoice.clients?.phone || '';
-    const cleanPhone = formatWhatsAppPhone(rawPhone);
-    const items = invoice.items || [];
-
-    const generatedMsg = generateInvoiceWhatsAppMessage({
-      clientName,
-      invoiceNumber: invoice.invoice_number,
-      items,
-      totalAmount: totalNum,
-      pendingAmount,
-      currency: 'USD',
-      exchangeRate: invoice.exchange_rate || 510,
-      isPaid: displayStatus === 'Pagada'
-    });
-
-    setWaPhone(rawPhone || cleanPhone);
-    setWaMessage(generatedMsg);
-    setWaCopied(false);
-    setWaModalOpen(true);
-  };
-
-  const handleSendWhatsApp = () => {
-    openWhatsAppWeb(waPhone, waMessage);
-  };
-
-  const handleCopyWhatsApp = () => {
-    navigator.clipboard.writeText(waMessage);
-    setWaCopied(true);
-    setTimeout(() => setWaCopied(false), 2500);
-  };
-
   return (
     <div className="max-w-5xl mx-auto space-y-6 print:space-y-0 print:m-0 print:p-0 print:max-w-none">
       {/* Actions - hidden on print */}
-      <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
+      <div className="flex items-center justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link href="/admin/facturacion" className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500">
             <ArrowLeft size={20} />
           </Link>
           <h1 className="text-2xl font-black text-brand-blue">Factura {invoice.invoice_number}</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button 
-            onClick={openWhatsAppModal} 
-            className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 flex items-center gap-2 text-sm font-bold shadow-sm rounded-lg transition-all"
-            title="Avisar al cliente por WhatsApp sobre sus paquetes listos y saldo"
-          >
-            <MessageCircle size={18} className="text-[#25D366]" />
-            <span>Avisar WhatsApp</span>
-          </button>
+        <div className="flex gap-2">
           {invoice.status !== 'Anulada' && (
             <button onClick={handleVoidInvoice} className="px-4 py-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
               <Ban size={18} /> Anular
@@ -307,98 +256,6 @@ export default function InvoiceViewPage() {
 
         </div>
       </div>
-
-      {/* WhatsApp Modal */}
-      {waModalOpen && invoice && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setWaModalOpen(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh] border border-emerald-100" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-emerald-100 flex justify-between items-center bg-gradient-to-r from-emerald-50 to-teal-50 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#25D366] text-white flex items-center justify-center shadow-md shadow-[#25D366]/30">
-                  <MessageCircle size={22} />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-gray-900 text-lg">Avisar Retiro por WhatsApp</h3>
-                  <p className="text-xs text-gray-500 font-medium">Factura {invoice.invoice_number} • {invoice.clients?.name}</p>
-                </div>
-              </div>
-              <button onClick={() => setWaModalOpen(false)} className="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-gray-400 hover:text-gray-600 flex items-center justify-center text-xl transition-colors shadow-xs">
-                &times;
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Número de WhatsApp (Cliente)</span>
-                  <span className="text-[11px] text-gray-400 font-normal">Costa Rica (+506)</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base">🇨🇷</span>
-                  <input 
-                    type="tel"
-                    value={waPhone}
-                    onChange={e => setWaPhone(e.target.value)}
-                    placeholder="Ej: 72601238 o +506 7260 1238"
-                    className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#25D366] focus:bg-white focus:ring-2 focus:ring-[#25D366]/20 text-sm font-bold text-gray-800 transition-all"
-                  />
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1">Si ingresas un número de 8 dígitos, se agregará el código de Costa Rica (+506) automáticamente.</p>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider">
-                    Mensaje de Notificación de Retiro
-                  </label>
-                  <button 
-                    type="button"
-                    onClick={handleCopyWhatsApp}
-                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md transition-colors"
-                  >
-                    {waCopied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                    <span>{waCopied ? '¡Copiado!' : 'Copiar texto'}</span>
-                  </button>
-                </div>
-                <textarea 
-                  value={waMessage}
-                  onChange={e => setWaMessage(e.target.value)}
-                  rows={8}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#25D366] focus:bg-white focus:ring-2 focus:ring-[#25D366]/20 text-xs font-mono text-gray-800 leading-relaxed resize-none transition-all"
-                />
-                <p className="text-[11px] text-gray-400 mt-1">Puedes editar o personalizar el mensaje antes de enviarlo.</p>
-              </div>
-
-              <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setWaModalOpen(false)} 
-                  className="px-4 py-3 font-bold text-gray-500 hover:bg-gray-100 rounded-xl text-sm transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleCopyWhatsApp}
-                  className="px-4 py-3 font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5"
-                >
-                  {waCopied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
-                  <span>{waCopied ? '¡Copiado!' : 'Copiar'}</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleSendWhatsApp}
-                  className="flex-1 py-3 font-black bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-sm transition-all shadow-md shadow-[#25D366]/30 flex items-center justify-center gap-2 hover:scale-[1.02]"
-                >
-                  <MessageCircle size={18} />
-                  <span>Abrir en WhatsApp</span>
-                  <ExternalLink size={14} className="opacity-80" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
