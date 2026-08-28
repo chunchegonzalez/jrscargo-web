@@ -103,12 +103,6 @@ export default function AdminLogin() {
                 <p className="text-brand-yellow text-[10px] font-extrabold uppercase tracking-[0.25em] mt-1">Costa Rica</p>
               </div>
             </div>
-
-            {/* Live Status Badge */}
-            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span>Online</span>
-            </div>
           </div>
 
           {/* Center Main Message */}
