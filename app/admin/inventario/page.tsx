@@ -105,7 +105,7 @@ export default function BodegaInventario() {
         }
 
         // Fetch invoices to build tracking -> invoice map
-        const invRes = await fetch('/api/invoices');
+        const invRes = await fetch('/api/invoices?includeItems=true');
         if (invRes.ok) {
           const invData = await invRes.json();
           const map = new Map<string, { number: string; id: string }>();

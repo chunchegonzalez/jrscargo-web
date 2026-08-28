@@ -12,7 +12,7 @@ export const getHeaders = () => {
 
 export async function getInventory() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const res = await fetch(`${url}/rest/v1/local_inventory?select=id,tracking_number,client_name,status,weight,received_date,created_at,updated_at,company_name,notes&order=created_at.desc`, {
+  const res = await fetch(`${url}/rest/v1/local_inventory?order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
