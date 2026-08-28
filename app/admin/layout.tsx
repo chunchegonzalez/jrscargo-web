@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   if (isLoginPage) {
-    return <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">{children}</div>;
+    return <>{children}</>;
   }
 
   return (
