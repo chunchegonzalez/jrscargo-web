@@ -13,6 +13,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   const [client, setClient] = useState<Record<string, unknown> | null>(null);
   const [invoices, setInvoices] = useState<Record<string, unknown>[]>([]);
   const [clientPayments, setClientPayments] = useState<Record<string, unknown>[]>([]);
+  const [exchangeRate, setExchangeRate] = useState<number>(500);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -34,8 +35,18 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const res = await fetch(`/api/clients/${clientId}`);
+        const [res, rateRes] = await Promise.all([
+          fetch(`/api/clients/${clientId}`),
+          fetch('/api/exchange-rate')
+        ]);
         const data = await res.json();
+
+        if (rateRes.ok) {
+          const rateData = await rateRes.json();
+          if (rateData.success && Number(rateData.rate) > 0) {
+            setExchangeRate(Number(rateData.rate));
+          }
+        }
 
         if (data.success) {
           setClient(data.client);
@@ -326,7 +337,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
           <div className="md:col-span-4 bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col items-end text-right justify-center">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Importe Recibido</p>
-            <div className="flex items-center justify-end gap-1.5 mb-2 w-full">
+            <div className="flex items-center justify-end gap-1.5 mb-1.5 w-full">
               <span className="text-2xl font-bold text-gray-400 shrink-0">{currency === 'CRC' ? '₡' : '$'}</span>
               <input 
                 type="number"
@@ -337,7 +348,17 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 className="w-full max-w-[220px] bg-transparent text-3xl sm:text-4xl font-black text-gray-900 focus:outline-none text-right placeholder-gray-300 print:text-black print:border-none tracking-tight"
               />
             </div>
-            <p className="text-xs font-bold text-gray-400">Cliente Saldo ({currency}): <span className="text-gray-800 font-black">{formatCurrency(currentBalance, currency)}</span></p>
+            {parseFloat(totalPaymentAmount || '0') > 0 && (
+              <p className="text-xs font-extrabold text-brand-blue mb-2 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-100">
+                ≈ ₡{Math.round(parseFloat(totalPaymentAmount || '0') * exchangeRate).toLocaleString('es-CR')} CRC
+              </p>
+            )}
+            <p className="text-xs font-bold text-gray-400">
+              Cliente Saldo (USD): <span className="text-gray-800 font-black">{formatCurrency(currentBalance, currency)}</span>
+            </p>
+            <p className="text-xs font-bold text-gray-400 mt-0.5">
+              Saldo en Colones: <span className="text-brand-blue font-extrabold">₡{Math.round(currentBalance * exchangeRate).toLocaleString('es-CR')} CRC</span>
+            </p>
           </div>
         </div>
 
@@ -390,8 +411,14 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                           <p className="text-xs text-gray-500">({formatDisplayDate(issueDate)})</p>
                         </td>
                         <td className="p-4 text-sm text-gray-600 hidden sm:table-cell">{formatDisplayDate(dueDate.toISOString().split('T')[0])}</td>
-                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">{formatCurrency(Number(invTotal), currency)}</td>
-                        <td className="p-4 text-sm font-medium text-gray-800 text-right">{formatCurrency(pendingBalance, currency)}</td>
+                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">
+                          <div>{formatCurrency(Number(invTotal), currency)}</div>
+                          <div className="text-[11px] text-gray-400 font-normal">₡{Math.round(Number(invTotal) * (Number(inv.exchange_rate) || exchangeRate)).toLocaleString('es-CR')}</div>
+                        </td>
+                        <td className="p-4 text-sm font-medium text-gray-800 text-right">
+                          <div className="font-bold">{formatCurrency(pendingBalance, currency)}</div>
+                          <div className="text-[11px] text-emerald-600 font-bold">₡{Math.round(pendingBalance * (Number(inv.exchange_rate) || exchangeRate)).toLocaleString('es-CR')}</div>
+                        </td>
                         <td className="p-4 text-right">
                           <div className={`inline-flex items-center justify-end gap-1 px-2.5 py-1.5 rounded-lg border transition-colors ${isChecked ? 'bg-green-50 border-green-300 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
                             <span className="font-bold text-xs">{currency === 'CRC' ? '₡' : '$'}</span>
@@ -413,8 +440,14 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             </table>
           </div>
           
-          <div className="mt-4 flex justify-end">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Monto a Aplicar: <span className="text-xl font-black text-green-600 ml-2">{formatCurrency(amountToApply, currency)}</span></p>
+          <div className="mt-4 flex flex-col items-end">
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+              Monto a Aplicar: <span className="text-xl font-black text-green-600 ml-2">{formatCurrency(amountToApply, currency)}</span>
+            </p>
+            <p className="text-xs font-bold text-gray-500 mt-1">
+              Total en Colones: <span className="text-base font-black text-brand-blue ml-1">₡{Math.round(amountToApply * exchangeRate).toLocaleString('es-CR')} CRC</span>
+              <span className="text-[10px] text-gray-400 font-medium ml-1.5">(T.C. ₡{exchangeRate})</span>
+            </p>
           </div>
         </div>
 

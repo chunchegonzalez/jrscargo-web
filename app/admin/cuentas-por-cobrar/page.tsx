@@ -19,17 +19,26 @@ export default function CuentasPorCobrarPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [totalGeneral, setTotalGeneral] = useState(0);
+  const [exchangeRate, setExchangeRate] = useState<number>(500);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [clientsRes, invoicesRes] = await Promise.all([
+      const [clientsRes, invoicesRes, rateRes] = await Promise.all([
         fetch('/api/clients'),
-        fetch('/api/invoices')
+        fetch('/api/invoices'),
+        fetch('/api/exchange-rate')
       ]);
 
       const clientsData = await clientsRes.json();
       const invoicesData = await invoicesRes.json();
+
+      if (rateRes.ok) {
+        const rateData = await rateRes.json();
+        if (rateData.success && Number(rateData.rate) > 0) {
+          setExchangeRate(Number(rateData.rate));
+        }
+      }
 
       if (!clientsData.success || !invoicesData.success) {
         throw new Error('Failed to load data');
@@ -104,7 +113,13 @@ export default function CuentasPorCobrarPage() {
           <p className="text-brand-blue-light font-bold uppercase tracking-wider mb-2 text-sm flex items-center gap-2">
             <DollarSign size={18} /> Total por Cobrar
           </p>
-          <h2 className="text-5xl font-black">${totalGeneral.toFixed(2)} <span className="text-2xl text-brand-blue-light/70">USD</span></h2>
+          <h2 className="text-4xl sm:text-5xl font-black mb-1">
+            ${totalGeneral.toFixed(2)} <span className="text-xl text-brand-blue-light/70">USD</span>
+          </h2>
+          <p className="text-sm font-extrabold text-brand-yellow flex items-center gap-1.5 mt-1">
+            <span>≈ ₡{Math.round(totalGeneral * exchangeRate).toLocaleString('es-CR')} CRC</span>
+            <span className="text-white/60 font-normal text-xs">(T.C. ₡{exchangeRate})</span>
+          </p>
         </div>
         <div className="relative z-10 flex gap-4">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center min-w-[120px]">
@@ -167,6 +182,7 @@ export default function CuentasPorCobrarPage() {
                     </td>
                     <td className="p-4 text-right">
                       <p className="text-lg font-black text-brand-blue">${client.totalBalance.toFixed(2)}</p>
+                      <p className="text-xs font-bold text-gray-400">≈ ₡{Math.round(client.totalBalance * exchangeRate).toLocaleString('es-CR')}</p>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
