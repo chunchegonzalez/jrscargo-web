@@ -532,23 +532,6 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
-
-        {/* Interactive Live Converter Pill Widget */}
-        <div className="pt-3 border-t border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-amber-50/50 -mx-5 sm:-mx-6 -mb-5 sm:-mb-6 p-4 rounded-b-3xl">
-          <div className="flex items-center gap-2 text-gray-600 font-medium">
-            <span className="font-bold text-amber-700">Calculadora Rápida:</span>
-            <span>$50 = <strong>₡{(50 * (Number(exchangeRateInput) || currentExchangeRate)).toLocaleString('es-CR')}</strong></span>
-            <span>&bull;</span>
-            <span>$100 = <strong>₡{(100 * (Number(exchangeRateInput) || currentExchangeRate)).toLocaleString('es-CR')}</strong></span>
-            <span>&bull;</span>
-            <span>$250 = <strong>₡{(250 * (Number(exchangeRateInput) || currentExchangeRate)).toLocaleString('es-CR')}</strong></span>
-          </div>
-
-          <span className="text-[11px] text-gray-400 italic">
-            El cambio se propaga en tiempo real a nuevas facturas y cobros.
-          </span>
-        </div>
-
       </div>
 
       {/* 3. Interactive KPI Cards Row */}
