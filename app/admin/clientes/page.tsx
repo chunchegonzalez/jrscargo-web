@@ -193,7 +193,7 @@ export default function ClientesPage() {
 
       {/* Lista de Clientes */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-6 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
             <Users className="text-brand-blue" size={24} /> 
             Lista Completa
@@ -211,7 +211,7 @@ export default function ClientesPage() {
         </div>
 
         {/* Filters Row */}
-        <div className="px-6 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="px-6 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Filter size={14} className="text-gray-400" />
             {[
