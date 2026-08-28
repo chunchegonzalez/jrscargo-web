@@ -393,14 +393,9 @@ export default function AdminDashboard() {
       {/* 1. Header & Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-              {greeting}, <span className="text-brand-blue">{currentUser?.username || 'Equipo JRS'}</span>
-            </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-brand-blue/10 text-brand-blue border border-brand-blue/20 uppercase tracking-wider">
-              {currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}
-            </span>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            {greeting}, <span className="text-brand-blue">{currentUser?.username || 'Equipo JRS'}</span>
+          </h1>
           <p className="text-gray-500 text-xs sm:text-sm mt-1 font-medium">
             Panel interactivo de rendimiento, operaciones de carga y facturación.
           </p>
@@ -445,50 +440,115 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* 2. Tipo de Cambio Oficial del Día (Preserved Section) */}
-      <div className="bg-gradient-to-r from-white via-amber-50/20 to-amber-50/50 rounded-3xl shadow-sm border border-amber-200/60 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-600 shrink-0 shadow-inner">
-            <Coins className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-black text-gray-900 text-sm sm:text-base">Tipo de Cambio Oficial del Día</h3>
-              <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-black rounded-lg border border-emerald-200 uppercase tracking-wider">
-                Vigente: ₡{currentExchangeRate}
-              </span>
+      {/* 2. Tipo de Cambio Oficial del Día (Dynamic & Interactive Hub) */}
+      <div className="bg-gradient-to-br from-white via-white to-amber-50/40 rounded-3xl shadow-sm border border-amber-200/70 p-5 sm:p-6 space-y-4">
+        
+        {/* Main Header & Controls Row */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-amber-500/20">
+              <Coins className="w-6 h-6" />
             </div>
-            <p className="text-xs text-gray-500 mt-0.5 font-medium">
-              Aplica a todas las facturas y cálculos emitidos hoy ({formatDisplayDate(getLocalTodayDate())})
-            </p>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-gray-900 text-base sm:text-lg">Tipo de Cambio Oficial</h3>
+                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-black rounded-lg border border-emerald-200">
+                  ₡{currentExchangeRate} CRC = $1.00 USD
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 font-medium flex-wrap">
+                <span>Fecha: <strong className="text-gray-700">{formatDisplayDate(getLocalTodayDate())}</strong></span>
+                <span>&bull;</span>
+                <span className="text-brand-blue font-bold flex items-center gap-1">
+                  <CheckCircle2 size={13} className="text-emerald-500" />
+                  {invoices.filter(i => (i.issue_date || '').split('T')[0] === getLocalTodayDate()).length} facturas de hoy sincronizadas
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Adjustment & Save Form */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Quick Step Adjustments */}
+            <div className="hidden sm:flex items-center bg-gray-100/80 p-1 rounded-2xl gap-1">
+              <button
+                type="button"
+                onClick={() => setExchangeRateInput(prev => String(Math.max(1, (Number(prev) || 500) - 5)))}
+                className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-white hover:text-gray-900 rounded-xl transition-all cursor-pointer"
+                title="Restar ₡5"
+              >
+                -5
+              </button>
+              <button
+                type="button"
+                onClick={() => setExchangeRateInput(prev => String(Math.max(1, (Number(prev) || 500) - 1)))}
+                className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-white hover:text-gray-900 rounded-xl transition-all cursor-pointer"
+                title="Restar ₡1"
+              >
+                -1
+              </button>
+              <button
+                type="button"
+                onClick={() => setExchangeRateInput(prev => String((Number(prev) || 500) + 1))}
+                className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-white hover:text-gray-900 rounded-xl transition-all cursor-pointer"
+                title="Sumar ₡1"
+              >
+                +1
+              </button>
+              <button
+                type="button"
+                onClick={() => setExchangeRateInput(prev => String((Number(prev) || 500) + 5))}
+                className="px-2.5 py-1 text-xs font-bold text-gray-600 hover:bg-white hover:text-gray-900 rounded-xl transition-all cursor-pointer"
+                title="Sumar ₡5"
+              >
+                +5
+              </button>
+            </div>
+
+            {/* Input Box */}
+            <div className="flex items-center bg-white border-2 border-amber-300/80 rounded-2xl px-3.5 py-2 focus-within:border-brand-blue focus-within:ring-4 focus-within:ring-brand-blue/10 transition-all shadow-sm">
+              <span className="text-xs font-black text-amber-600 mr-1.5">₡</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={exchangeRateInput}
+                onChange={e => setExchangeRateInput(e.target.value)}
+                className="w-24 bg-transparent font-black text-brand-blue text-base focus:outline-none"
+                placeholder="500"
+              />
+              <span className="text-[11px] font-bold text-gray-400 ml-1">CRC</span>
+            </div>
+
+            {/* Update Button */}
+            <button
+              onClick={handleSaveExchangeRate}
+              disabled={isSavingExchangeRate || !exchangeRateInput}
+              className="px-4 py-2.5 bg-gradient-to-r from-brand-blue to-[#0C2B3D] text-white rounded-2xl text-xs font-bold hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer shrink-0 shadow-sm"
+              title="Guardar y actualizar todas las facturas emitidas hoy"
+            >
+              {isSavingExchangeRate ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Actualizar Tipo de Cambio</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center bg-white border border-gray-300 rounded-2xl px-3.5 py-2 focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/10 transition-all shadow-sm">
-            <span className="text-xs font-black text-gray-400 mr-1.5">₡</span>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={exchangeRateInput}
-              onChange={e => setExchangeRateInput(e.target.value)}
-              className="w-24 bg-transparent font-black text-brand-blue text-sm focus:outline-none"
-              placeholder="500"
-            />
-            <span className="text-[11px] font-bold text-gray-400 ml-1">CRC / $1 USD</span>
+        {/* Interactive Live Converter Pill Widget */}
+        <div className="pt-3 border-t border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-amber-50/50 -mx-5 sm:-mx-6 -mb-5 sm:-mb-6 p-4 rounded-b-3xl">
+          <div className="flex items-center gap-2 text-gray-600 font-medium">
+            <span className="font-bold text-amber-700">Calculadora Rápida:</span>
+            <span>$50 = <strong>₡{(50 * (Number(exchangeRateInput) || currentExchangeRate)).toLocaleString('es-CR')}</strong></span>
+            <span>&bull;</span>
+            <span>$100 = <strong>₡{(100 * (Number(exchangeRateInput) || currentExchangeRate)).toLocaleString('es-CR')}</strong></span>
+            <span>&bull;</span>
+            <span>$250 = <strong>₡{(250 * (Number(exchangeRateInput) || currentExchangeRate)).toLocaleString('es-CR')}</strong></span>
           </div>
 
-          <button
-            onClick={handleSaveExchangeRate}
-            disabled={isSavingExchangeRate || !exchangeRateInput}
-            className="px-4 py-2.5 bg-brand-blue text-white rounded-2xl text-xs font-bold hover:bg-brand-blue/90 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shrink-0"
-            title="Guardar y actualizar todas las facturas de hoy"
-          >
-            {isSavingExchangeRate ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>Actualizar Tipo de Cambio</span>
-          </button>
+          <span className="text-[11px] text-gray-400 italic">
+            El cambio se propaga en tiempo real a nuevas facturas y cobros.
+          </span>
         </div>
+
       </div>
 
       {/* 3. Interactive KPI Cards Row */}
