@@ -358,46 +358,44 @@ export async function deleteExpense(id: string) {
 export async function getInvoices() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   
-  // 1. Fetch invoices with client data
-  const res = await fetch(`${url}/rest/v1/invoices?select=*,clients(id,name,email)&order=created_at.desc`, {
-    headers: getHeaders(),
-    cache: 'no-store'
-  });
-  if (!res.ok) throw new Error('Error fetching invoices');
-  const invoices = await res.json();
-
-  // 2. Fetch payments gracefully
-  try {
-    const payRes = await fetch(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
+  // Parallel fetch: invoices, payments, and items all fetched at the same time
+  const [resInv, resPay, resItems] = await Promise.all([
+    fetch(`${url}/rest/v1/invoices?select=*,clients(id,name,email)&order=created_at.desc`, {
       headers: getHeaders(),
       cache: 'no-store'
-    });
-    if (payRes.ok) {
-      const payments = await payRes.json();
-      invoices.forEach((inv: Record<string, unknown>) => {
-        inv.invoice_payments = payments.filter((p: Record<string, unknown>) => p.invoice_id === inv.id);
-      });
-    } else {
-      invoices.forEach((inv: Record<string, unknown>) => { inv.invoice_payments = []; });
-    }
-  } catch {
-    invoices.forEach((inv: Record<string, unknown>) => { inv.invoice_payments = []; });
+    }),
+    fetch(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    }).catch(() => null),
+    fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    }).catch(() => null)
+  ]);
+
+  if (!resInv.ok) throw new Error('Error fetching invoices');
+  const invoices = await resInv.json();
+
+  const payments = resPay && resPay.ok ? await resPay.json() : [];
+  const items = resItems && resItems.ok ? await resItems.json() : [];
+
+  // Group payments and items by invoice_id with Map for O(N) instant lookups
+  const paymentsMap = new Map<string, Array<Record<string, unknown>>>();
+  for (const p of payments) {
+    if (!paymentsMap.has(p.invoice_id)) paymentsMap.set(p.invoice_id, []);
+    paymentsMap.get(p.invoice_id)!.push(p);
   }
 
-  // 3. Fetch invoice items (for tracking mapping)
-  try {
-    const itemsRes = await fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, {
-      headers: getHeaders(),
-      cache: 'no-store'
-    });
-    if (itemsRes.ok) {
-      const items = await itemsRes.json();
-      invoices.forEach((inv: Record<string, unknown>) => {
-        inv.invoice_items = items.filter((it: Record<string, unknown>) => it.invoice_id === inv.id);
-      });
-    }
-  } catch {
-    // Non-critical
+  const itemsMap = new Map<string, Array<Record<string, unknown>>>();
+  for (const it of items) {
+    if (!itemsMap.has(it.invoice_id)) itemsMap.set(it.invoice_id, []);
+    itemsMap.get(it.invoice_id)!.push(it);
+  }
+
+  for (const inv of invoices) {
+    inv.invoice_payments = paymentsMap.get(inv.id) || [];
+    inv.invoice_items = itemsMap.get(inv.id) || [];
   }
 
   return invoices;
@@ -406,36 +404,29 @@ export async function getInvoices() {
 export async function getInvoiceById(id: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   
-  // 1. Fetch invoice + client
-  const resInv = await fetch(`${url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}&select=*,clients(*)`, {
-    headers: getHeaders(),
-    cache: 'no-store'
-  });
+  // Fetch invoice, items, and payments concurrently in parallel
+  const [resInv, resItems, resPayments] = await Promise.all([
+    fetch(`${url}/rest/v1/invoices?id=eq.${encodeURIComponent(id)}&select=*,clients(*)`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    }),
+    fetch(`${url}/rest/v1/invoice_items?invoice_id=eq.${encodeURIComponent(id)}`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    }),
+    fetch(`${url}/rest/v1/invoice_payments?invoice_id=eq.${encodeURIComponent(id)}&select=amount_applied`, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    }).catch(() => null)
+  ]);
+
   if (!resInv.ok) throw new Error('Error fetching invoice');
   const invData = await resInv.json();
   if (!invData.length) return null;
   const invoice = invData[0];
 
-  // 2. Fetch items
-  const resItems = await fetch(`${url}/rest/v1/invoice_items?invoice_id=eq.${encodeURIComponent(id)}`, {
-    headers: getHeaders(),
-    cache: 'no-store'
-  });
-  if (!resItems.ok) throw new Error('Error fetching invoice items');
-  const items = await resItems.json();
-
-  // 3. Fetch payments
-  const resPayments = await fetch(`${url}/rest/v1/invoice_payments?invoice_id=eq.${encodeURIComponent(id)}&select=amount_applied`, {
-    headers: getHeaders(),
-    cache: 'no-store'
-  });
-  let payments = [];
-  if (resPayments.ok) {
-    payments = await resPayments.json();
-  }
-
-  invoice.items = items;
-  invoice.invoice_payments = payments;
+  invoice.items = resItems.ok ? await resItems.json() : [];
+  invoice.invoice_payments = resPayments && resPayments.ok ? await resPayments.json() : [];
   return invoice;
 }
 

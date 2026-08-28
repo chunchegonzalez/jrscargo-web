@@ -112,7 +112,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen && !dataLoaded && !isFetching) {
+    if (isOpen && query.trim().length > 0 && !dataLoaded && !isFetching) {
       const loadData = async () => {
         setIsFetching(true);
         try {
@@ -133,7 +133,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
       };
       loadData();
     }
-  }, [isOpen, dataLoaded, isFetching]);
+  }, [isOpen, query, dataLoaded, isFetching]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
