@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye } from 'lucide-react';
+import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2 } from 'lucide-react';
 import { formatCurrency, formatDisplayDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -25,6 +25,18 @@ interface SelectedReceiptModal {
   category: string;
 }
 
+const CATEGORY_OPTIONS = [
+  'Combustible',
+  'Mantenimiento de Vehículos',
+  'Papelería y Oficina',
+  'Planillas / Salarios',
+  'Viáticos / Alimentación',
+  'Servicios',
+  'Pago de Proveedor',
+  'Local San Pablo',
+  'Otros'
+];
+
 export default function GastosPage() {
   const { showAlert, showConfirm } = useModal();
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -32,6 +44,17 @@ export default function GastosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
   const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceiptModal | null>(null);
+
+  // Edit Expense State
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editForm, setEditForm] = useState({
+    provider_name: '',
+    date: '',
+    amount: '',
+    currency: 'USD',
+    category: 'Otros'
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadExpenses();
@@ -62,6 +85,61 @@ export default function GastosPage() {
       }
     } catch {
       await showAlert('Aviso', 'Error de red');
+    }
+  };
+
+  const handleOpenEdit = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditForm({
+      provider_name: expense.provider_name || '',
+      date: expense.date ? expense.date.split('T')[0] : new Date().toISOString().split('T')[0],
+      amount: String(expense.amount || ''),
+      currency: expense.currency || 'USD',
+      category: expense.category || 'Otros'
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExpense) return;
+
+    const numAmount = parseFloat(editForm.amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      await showAlert('Aviso', 'Por favor ingresa un monto válido.');
+      return;
+    }
+
+    if (!editForm.provider_name.trim()) {
+      await showAlert('Aviso', 'Por favor ingresa el nombre del proveedor.');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/expenses/${editingExpense.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider_name: editForm.provider_name.trim(),
+          date: editForm.date,
+          amount: numAmount,
+          currency: editForm.currency,
+          category: editForm.category
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEditingExpense(null);
+        await showAlert('Éxito', 'Gasto actualizado correctamente.');
+        loadExpenses();
+      } else {
+        await showAlert('Aviso', data.error || 'Error al actualizar el gasto.');
+      }
+    } catch {
+      await showAlert('Aviso', 'Error de conexión al intentar actualizar.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -184,9 +262,22 @@ export default function GastosPage() {
                           {formatCurrency(Number(expense.amount), expense.currency)}
                         </td>
                         <td className="py-4 text-center">
-                          <button onClick={() => handleDelete(expense.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" title="Eliminar Gasto">
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button 
+                              onClick={() => handleOpenEdit(expense)} 
+                              className="p-2 text-brand-blue hover:text-white hover:bg-brand-blue rounded-lg transition-colors inline-flex cursor-pointer" 
+                              title="Editar Gasto"
+                            >
+                              <Pencil size={17} />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(expense.id)} 
+                              className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex cursor-pointer" 
+                              title="Eliminar Gasto"
+                            >
+                              <Trash2 size={17} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -215,6 +306,148 @@ export default function GastosPage() {
         </div>
 
       </div>
+
+      {/* Modal para Editar Gasto */}
+      {editingExpense && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setEditingExpense(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col border border-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-brand-blue/10 text-brand-blue rounded-xl">
+                  <Pencil size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-brand-blue text-base">Editar Gasto u Operación</h3>
+                  <p className="text-xs text-gray-500">Modifica los datos del comprobante registrado</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingExpense(null)}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Formulario */}
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+              
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                  Proveedor / Beneficiario
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.provider_name}
+                  onChange={e => setEditForm({ ...editForm, provider_name: e.target.value })}
+                  placeholder="Ej: KARRY CARGO S.A."
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                    Fecha del Gasto
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editForm.date}
+                    onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                    Categoría
+                  </label>
+                  <select
+                    value={editForm.category}
+                    onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  >
+                    {CATEGORY_OPTIONS.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                    Monto
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={editForm.amount}
+                    onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-black text-gray-900 focus:bg-white focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">
+                    Moneda
+                  </label>
+                  <select
+                    value={editForm.currency}
+                    onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 focus:bg-white focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="CRC">CRC (₡)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingExpense(null)}
+                  disabled={isUpdating}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-5 py-2.5 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold rounded-xl text-sm shadow-sm flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>Guardar Cambios</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Lightbox para Ver Documento Escaneado */}
       {selectedReceipt && (

@@ -353,6 +353,20 @@ export async function deleteExpense(id: string) {
   return { success: true };
 }
 
+export async function updateExpense(id: string, expense: Record<string, unknown>) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/expenses?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(expense)
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error('Supabase Error: ' + errorText);
+  }
+  return { success: true };
+}
+
 // --- FACTURAS ---
 
 export async function getInvoices(opts?: { includeItems?: boolean }) {
