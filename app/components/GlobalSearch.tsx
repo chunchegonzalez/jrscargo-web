@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, User, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
+import { parseClientAddress } from '@/lib/billing';
 
 // Static Modules for quick navigation
 const MODULES = [
@@ -26,6 +27,8 @@ interface ClientItem {
   cedula?: string;
   phone?: string;
   address?: string;
+  raw_address?: string;
+  discount_percent?: number | string;
 }
 
 interface InvoiceItem {
@@ -162,13 +165,18 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
     (!m.adminOnly || role === 'admin') && m.label.toLowerCase().includes(q)
   );
 
-  const filteredClients = clients.filter(c => 
-    (c.name && c.name.toLowerCase().includes(q)) || 
-    (c.email && c.email.toLowerCase().includes(q)) || 
-    (c.cedula && c.cedula.toLowerCase().includes(q)) ||
-    (c.phone && c.phone.toLowerCase().includes(q)) ||
-    (c.address && c.address.toLowerCase().includes(q))
-  ).slice(0, 5);
+  const filteredClients = clients.filter(c => {
+    const extra = parseClientAddress(c.address);
+    const cleanAddress = c.raw_address || extra.raw_address || (c.address?.startsWith('{') ? '' : c.address) || '';
+    const cleanCedula = c.cedula || extra.cedula || '';
+    return (
+      (c.name && c.name.toLowerCase().includes(q)) || 
+      (c.email && c.email.toLowerCase().includes(q)) || 
+      (cleanCedula && cleanCedula.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.toLowerCase().includes(q)) ||
+      (cleanAddress && cleanAddress.toLowerCase().includes(q))
+    );
+  }).slice(0, 5);
   
   const filteredInvoices = invoices.filter(i => {
     const invNum = (i.invoice_number || '').toLowerCase();
@@ -312,25 +320,44 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                 <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                   <User size={11} /> Clientes ({filteredClients.length} resultados)
                 </div>
-                {filteredClients.map((client, i) => (
-                  <button key={i} onClick={() => handleSelect(`/admin/clientes/${client.id}`)}
-                    className="w-full text-left px-3 py-2.5 hover:bg-brand-blue/5 rounded-xl flex items-center justify-between text-sm transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-brand-blue/10 group-hover:text-brand-blue">
-                        <User size={14} />
+                {filteredClients.map((client, i) => {
+                  const extra = parseClientAddress(client.address);
+                  const cleanCedula = client.cedula || extra.cedula || '';
+                  const cleanAddress = client.raw_address || extra.raw_address || (client.address?.startsWith('{') ? '' : client.address) || '';
+                  const discount = client.discount_percent !== undefined ? Number(client.discount_percent) : extra.discount_percent;
+
+                  return (
+                    <button key={i} onClick={() => handleSelect(`/admin/clientes/${client.id}`)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-brand-blue/5 rounded-xl flex items-center justify-between text-sm transition-colors group">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-brand-blue/10 group-hover:text-brand-blue shrink-0">
+                          <User size={14} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-gray-800 group-hover:text-brand-blue truncate">{client.name}</div>
+                          <div className="text-xs text-gray-500 truncate">{client.email || client.phone}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-gray-800 group-hover:text-brand-blue">{client.name}</div>
-                        <div className="text-xs text-gray-500">{client.email || client.phone}</div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        {discount > 0 && (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            🏷️ {discount}% desc
+                          </span>
+                        )}
+                        {cleanCedula && (
+                          <div className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+                            Céd: {cleanCedula}
+                          </div>
+                        )}
+                        {!cleanCedula && cleanAddress && (
+                          <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md max-w-[150px] truncate">
+                            {cleanAddress}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {(client.cedula || client.address) && (
-                      <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
-                        {client.cedula || client.address}
-                      </div>
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
 

@@ -25,6 +25,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       ...rawClient,
       cedula: extra.cedula,
       discount_percent: extra.discount_percent,
+      address: extra.raw_address,
       raw_address: extra.raw_address
     };
 
