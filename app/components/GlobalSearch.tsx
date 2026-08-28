@@ -106,34 +106,37 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   const router = useRouter();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const isFetchingRef = useRef(false);
+  const dataLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen && query.trim().length > 0 && !dataLoaded && !isFetching) {
-      const loadData = async () => {
-        setIsFetching(true);
-        try {
-          const [clientsRes, invoicesRes, invRes] = await Promise.all([
-            fetch('/api/clients').then(r => r.json()).catch(() => ({ success: false, data: [] })),
-            fetch('/api/invoices').then(r => r.json()).catch(() => ({ success: false, data: [] })),
-            fetch('/api/inventory').then(r => r.json()).catch(() => ({ success: false, data: [] }))
-          ]);
-          if (clientsRes.success) setClients(clientsRes.data || []);
-          if (invoicesRes.success) setInvoices(invoicesRes.data || []);
-          if (invRes.success) setInventory(invRes.data || []);
-          setDataLoaded(true);
-        } catch (error) {
-          console.error("Error loading search data:", error);
-        } finally {
+    if (isOpen && query.trim().length > 0 && !dataLoadedRef.current && !isFetchingRef.current) {
+      isFetchingRef.current = true;
+      setIsFetching(true);
+
+      Promise.all([
+        fetch('/api/clients').then(r => r.json()).catch(() => ({ success: false, data: [] })),
+        fetch('/api/invoices').then(r => r.json()).catch(() => ({ success: false, data: [] })),
+        fetch('/api/inventory').then(r => r.json()).catch(() => ({ success: false, data: [] }))
+      ])
+        .then(([clientsRes, invoicesRes, invRes]) => {
+          if (clientsRes?.success) setClients(clientsRes.data || []);
+          if (invoicesRes?.success) setInvoices(invoicesRes.data || []);
+          if (invRes?.success) setInventory(invRes.data || []);
+          dataLoadedRef.current = true;
+        })
+        .catch(err => {
+          console.error("Error loading search data:", err);
+        })
+        .finally(() => {
+          isFetchingRef.current = false;
           setIsFetching(false);
-        }
-      };
-      loadData();
+        });
     }
-  }, [isOpen, query, dataLoaded, isFetching]);
+  }, [isOpen, query]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -214,7 +217,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
           className="w-full bg-gray-100/80 border border-transparent hover:bg-gray-50 hover:border-gray-200 focus:bg-white focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 rounded-full px-5 py-2.5 pl-11 text-sm font-medium text-gray-700 transition-all outline-none placeholder-gray-400"
         />
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-blue transition-colors" size={18} />
-        {isFetching && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-blue animate-spin" size={16} />}
+        {isFetching && query.trim().length > 0 && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-blue animate-spin" size={16} />}
       </div>
 
       {isOpen && query.length > 0 && (
