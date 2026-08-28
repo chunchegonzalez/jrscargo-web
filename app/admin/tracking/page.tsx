@@ -105,65 +105,32 @@ export default function TrackingPage() {
     setSearched(true);
 
     try {
-      // 1. Fetch from tracking API
-      const res = await fetch(`/api/tracking?number=${encodeURIComponent(num)}`);
-      if (!res.ok) {
-        throw new Error('No se encontraron datos para este tracking');
-      }
-      const data = await res.json();
+      // Fetch ALL 3 sources in PARALLEL instead of sequential waterfall
+      const [trackingResult, localResult, invoiceResult] = await Promise.allSettled([
+        fetch(`/api/tracking?number=${encodeURIComponent(num)}`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/inventory/${encodeURIComponent(num)}`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/invoices/by-tracking?tracking=${encodeURIComponent(num)}`).then(r => r.ok ? r.json() : null)
+      ]);
 
-      if (data.status === 'SUCCESS' && data.rawData) {
-        setPkg(data.rawData.package || null);
-        setTimeline(data.rawData.timeline || []);
+      // Process tracking API result
+      const trackingData = trackingResult.status === 'fulfilled' ? trackingResult.value : null;
+      if (trackingData?.status === 'SUCCESS' && trackingData.rawData) {
+        setPkg(trackingData.rawData.package || null);
+        setTimeline(trackingData.rawData.timeline || []);
       } else {
         throw new Error('No se encontraron datos para este tracking');
       }
 
-      // 2. Check local inventory in parallel
-      try {
-        const localRes = await fetch(`/api/inventory/${encodeURIComponent(num)}`);
-        if (localRes.ok) {
-          const localData = await localRes.json();
-          if (localData.success && localData.data) {
-            setLocalItem(localData.data);
-          }
-        }
-      } catch {
-        // Local lookup is optional
+      // Process local inventory result
+      const localData = localResult.status === 'fulfilled' ? localResult.value : null;
+      if (localData?.success && localData.data) {
+        setLocalItem(localData.data);
       }
 
-      // 3. Check for associated invoices with this tracking number
-      try {
-        const invRes = await fetch('/api/invoices');
-        if (invRes.ok) {
-          const invData = await invRes.json();
-          if (invData.success && Array.isArray(invData.data)) {
-            const cleanSearch = num.toUpperCase();
-            const found = invData.data.find((inv: Record<string, unknown>) => {
-              const items = inv.invoice_items as Array<Record<string, unknown>> | undefined;
-              if (!items || !Array.isArray(items)) return false;
-              return items.some((it) => {
-                const itTrack = String(it.tracking_number || '').trim().toUpperCase();
-                return itTrack && (itTrack === cleanSearch || cleanSearch.includes(itTrack) || itTrack.includes(cleanSearch));
-              });
-            });
-
-            if (found) {
-              const clientObj = found.clients as Record<string, unknown> | undefined;
-              setMatchedInvoice({
-                id: String(found.id),
-                invoice_number: String(found.invoice_number || ''),
-                status: String(found.status || 'Pendiente'),
-                total: Number(found.total) || 0,
-                currency: String(found.currency || 'USD'),
-                issue_date: String(found.issue_date || ''),
-                client_name: String(clientObj?.name || '')
-              });
-            }
-          }
-        }
-      } catch {
-        // Invoice lookup is optional
+      // Process invoice lookup result
+      const invoiceData = invoiceResult.status === 'fulfilled' ? invoiceResult.value : null;
+      if (invoiceData?.success && invoiceData.data) {
+        setMatchedInvoice(invoiceData.data);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al buscar tracking');

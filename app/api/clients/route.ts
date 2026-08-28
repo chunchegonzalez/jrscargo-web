@@ -18,7 +18,10 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ success: true, data: normalized }, { status: 200 });
+    return NextResponse.json({ success: true, data: normalized }, {
+      status: 200,
+      headers: { 'Cache-Control': 's-maxage=15, stale-while-revalidate=60' }
+    });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Error fetching clients';
     return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });

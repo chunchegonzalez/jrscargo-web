@@ -6,7 +6,9 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const data = await getInventory();
-    return NextResponse.json({ success: true, data }, { status: 200 });
+    const response = NextResponse.json({ success: true, data }, { status: 200 });
+    response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
+    return response;
   } catch {
     return NextResponse.json({ success: false, error: 'Error fetching inventory' }, { status: 500 });
   }

@@ -12,7 +12,7 @@ export const getHeaders = () => {
 
 export async function getInventory() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const res = await fetch(`${url}/rest/v1/local_inventory?order=created_at.desc`, {
+  const res = await fetch(`${url}/rest/v1/local_inventory?select=id,tracking_number,client_name,status,weight,received_date,created_at,updated_at,company_name,notes&order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
@@ -355,26 +355,36 @@ export async function deleteExpense(id: string) {
 
 // --- FACTURAS ---
 
-export async function getInvoices() {
+export async function getInvoices(opts?: { includeItems?: boolean }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const includeItems = opts?.includeItems ?? false;
   
-  // Parallel fetch: invoices, payments, and items all fetched at the same time
-  const [resInv, resPay, resItems] = await Promise.all([
-    fetch(`${url}/rest/v1/invoices?select=*,clients(id,name,email)&order=created_at.desc`, {
+  // Parallel fetch: invoices + payments always, items only when needed
+  const fetches: Promise<Response | null>[] = [
+    fetch(`${url}/rest/v1/invoices?select=id,invoice_number,issue_date,total,status,client_id,currency,email_sent_at,exchange_rate,created_at,clients(id,name,email)&order=created_at.desc`, {
       headers: getHeaders(),
       cache: 'no-store'
     }),
     fetch(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
       headers: getHeaders(),
       cache: 'no-store'
-    }).catch(() => null),
-    fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, {
-      headers: getHeaders(),
-      cache: 'no-store'
     }).catch(() => null)
-  ]);
+  ];
 
-  if (!resInv.ok) throw new Error('Error fetching invoices');
+  if (includeItems) {
+    fetches.push(
+      fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, {
+        headers: getHeaders(),
+        cache: 'no-store'
+      }).catch(() => null)
+    );
+  }
+
+  const results = await Promise.all(fetches);
+  const [resInv, resPay] = results;
+  const resItems = includeItems ? results[2] : null;
+
+  if (!resInv || !resInv.ok) throw new Error('Error fetching invoices');
   const invoices = await resInv.json();
 
   const payments = resPay && resPay.ok ? await resPay.json() : [];
@@ -387,15 +397,20 @@ export async function getInvoices() {
     paymentsMap.get(p.invoice_id)!.push(p);
   }
 
-  const itemsMap = new Map<string, Array<Record<string, unknown>>>();
-  for (const it of items) {
-    if (!itemsMap.has(it.invoice_id)) itemsMap.set(it.invoice_id, []);
-    itemsMap.get(it.invoice_id)!.push(it);
-  }
-
-  for (const inv of invoices) {
-    inv.invoice_payments = paymentsMap.get(inv.id) || [];
-    inv.invoice_items = itemsMap.get(inv.id) || [];
+  if (includeItems) {
+    const itemsMap = new Map<string, Array<Record<string, unknown>>>();
+    for (const it of items) {
+      if (!itemsMap.has(it.invoice_id)) itemsMap.set(it.invoice_id, []);
+      itemsMap.get(it.invoice_id)!.push(it);
+    }
+    for (const inv of invoices) {
+      inv.invoice_payments = paymentsMap.get(inv.id) || [];
+      inv.invoice_items = itemsMap.get(inv.id) || [];
+    }
+  } else {
+    for (const inv of invoices) {
+      inv.invoice_payments = paymentsMap.get(inv.id) || [];
+    }
   }
 
   return invoices;

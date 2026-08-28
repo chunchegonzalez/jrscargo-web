@@ -3,10 +3,14 @@ import { getInvoices, createInvoice } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const data = await getInvoices();
-    return NextResponse.json({ success: true, data }, { status: 200 });
+    const { searchParams } = new URL(request.url);
+    const includeItems = searchParams.get('includeItems') === 'true';
+    const data = await getInvoices({ includeItems });
+    const response = NextResponse.json({ success: true, data }, { status: 200 });
+    response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
+    return response;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Error fetching invoices';
     return NextResponse.json({ success: false, error: errorMsg }, { status: 500 });
