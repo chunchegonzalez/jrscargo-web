@@ -25,6 +25,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       ...rawClient,
       cedula: extra.cedula,
       discount_percent: extra.discount_percent,
+      secondary_email: extra.secondary_email,
       address: extra.raw_address,
       raw_address: extra.raw_address
     };
@@ -50,6 +51,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const formattedAddress = formatClientAddress({
       cedula: body.cedula,
       discount_percent: body.discount_percent,
+      secondary_email: body.secondary_email,
       address: body.address || body.raw_address || ''
     });
 

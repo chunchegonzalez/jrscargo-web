@@ -283,9 +283,10 @@ export function parseClientAddress(addressVal?: string | null): {
   cedula: string;
   discount_percent: number;
   raw_address: string;
+  secondary_email: string;
 } {
   if (!addressVal) {
-    return { cedula: '', discount_percent: 0, raw_address: '' };
+    return { cedula: '', discount_percent: 0, raw_address: '', secondary_email: '' };
   }
   const str = String(addressVal).trim();
   try {
@@ -295,6 +296,7 @@ export function parseClientAddress(addressVal?: string | null): {
         cedula: String(data.cedula || ''),
         discount_percent: Number(data.discount_percent) || 0,
         raw_address: String(data.address || ''),
+        secondary_email: String(data.secondary_email || data.email2 || ''),
       };
     }
   } catch {
@@ -309,6 +311,7 @@ export function parseClientAddress(addressVal?: string | null): {
     cedula: cleanStr,
     discount_percent: discount,
     raw_address: cleanStr,
+    secondary_email: '',
   };
 }
 
@@ -316,15 +319,18 @@ export function formatClientAddress(data: {
   cedula?: string;
   discount_percent?: number | string;
   address?: string;
+  secondary_email?: string;
 }): string {
   const discount = Number(data.discount_percent) || 0;
   const cedula = (data.cedula || '').trim();
   const address = (data.address || '').trim();
+  const secondary_email = (data.secondary_email || '').trim();
 
   return JSON.stringify({
     cedula,
     discount_percent: discount,
     address,
+    secondary_email,
   });
 }
 

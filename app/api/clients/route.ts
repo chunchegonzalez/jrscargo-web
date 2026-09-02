@@ -13,6 +13,7 @@ export async function GET() {
         ...c,
         cedula: extra.cedula,
         discount_percent: extra.discount_percent,
+        secondary_email: extra.secondary_email,
         address: extra.raw_address,
         raw_address: extra.raw_address
       };
@@ -32,10 +33,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // Package cedula, discount_percent, and address cleanly
+    // Package cedula, discount_percent, secondary_email, and address cleanly
     const formattedAddress = formatClientAddress({
       cedula: body.cedula,
       discount_percent: body.discount_percent,
+      secondary_email: body.secondary_email,
       address: body.address || body.raw_address || ''
     });
 

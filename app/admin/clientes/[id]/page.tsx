@@ -10,6 +10,7 @@ type Client = {
   id: string;
   name: string;
   email: string;
+  secondary_email?: string;
   phone?: string;
   address?: string;
   cedula?: string;
@@ -99,6 +100,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
       const payload = { 
         name: editForm.name,
         email: editForm.email,
+        secondary_email: editForm.secondary_email,
         phone: editForm.phone,
         cedula: editForm.cedula,
         discount_percent: editForm.discount_percent !== undefined ? Number(editForm.discount_percent) : 0
@@ -133,6 +135,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
   const cleanAddress = parsedExtra.raw_address && !parsedExtra.raw_address.trim().startsWith('{')
     ? parsedExtra.raw_address.trim()
     : (client.address && !client.address.trim().startsWith('{') ? client.address.trim() : '');
+  const cleanSecondaryEmail = client.secondary_email || parsedExtra.secondary_email || '';
 
   let totalFacturadoUSD = 0, totalFacturadoCRC = 0;
   let totalPagadoUSD = 0, totalPagadoCRC = 0;
@@ -175,6 +178,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
               setEditForm({ 
                 name: client.name, 
                 email: client.email, 
+                secondary_email: cleanSecondaryEmail,
                 phone: client.phone || '', 
                 cedula: cleanCedula,
                 discount_percent: client.discount_percent || parsedExtra.discount_percent || 0,
@@ -254,7 +258,15 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
                 <Mail size={16} className="text-gray-400 shrink-0" />
-                <a href={`mailto:${client.email}`} className="hover:text-brand-blue transition-colors truncate max-w-[200px]">{client.email}</a>
+                <div className="truncate">
+                  <a href={`mailto:${client.email}`} className="hover:text-brand-blue transition-colors truncate max-w-[200px]">{client.email}</a>
+                  {cleanSecondaryEmail && (
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      <span className="font-bold text-brand-blue/70">2º: </span>
+                      <a href={`mailto:${cleanSecondaryEmail}`} className="hover:text-brand-blue transition-colors">{cleanSecondaryEmail}</a>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
                 <Phone size={16} className="text-gray-400 shrink-0" />
@@ -498,6 +510,21 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Segundo Correo <span className="text-gray-400 font-normal text-xs">(opcional)</span>
+                    </label>
+                    <input 
+                      type="email" 
+                      placeholder="ejemplo2@correo.com"
+                      value={editForm.secondary_email || ''}
+                      onChange={(e) => setEditForm({...editForm, secondary_email: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Teléfono / WhatsApp</label>
                     <input 
                       type="text" 
@@ -506,9 +533,6 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Cédula / Identificación</label>
                     <input 
@@ -519,6 +543,7 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-brand-blue font-medium bg-gray-50 focus:bg-white transition-colors"
                     />
                   </div>
+                </div>
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Cliente Desde</label>
                     <input 

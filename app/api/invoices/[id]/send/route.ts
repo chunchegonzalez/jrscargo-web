@@ -134,9 +134,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     // Generate PDF document buffer
     const pdfBuffer = await generateInvoicePdf(invoice);
 
+    const clientExtra = parseClientAddress(invoice.clients?.address);
+    const recipients = [invoice.clients.email];
+    if (clientExtra.secondary_email && clientExtra.secondary_email.includes('@')) {
+      recipients.push(clientExtra.secondary_email.trim());
+    }
+
     const info = await transporter.sendMail({
       from: '"JRS Cargo Facturación" <' + smtpUser + '>',
-      to: invoice.clients.email,
+      to: recipients.join(', '),
       subject: customSubject,
       html: htmlContent,
       attachments: [{

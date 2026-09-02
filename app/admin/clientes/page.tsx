@@ -10,6 +10,7 @@ type Client = {
   id: string;
   name: string;
   email: string;
+  secondary_email?: string;
   phone?: string;
   address?: string;
   cedula?: string;
@@ -134,6 +135,7 @@ export default function ClientesPage() {
       const matchesSearch = !searchTerm || 
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.secondary_email && c.secondary_email.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (c.phone && c.phone.includes(searchTerm)) ||
         (c.cedula && c.cedula.includes(searchTerm));
       
@@ -299,6 +301,12 @@ export default function ClientesPage() {
                           <Mail size={14} className="text-gray-400" />
                           <a href={`mailto:${client.email}`} className="hover:text-brand-blue transition-colors">{client.email}</a>
                         </div>
+                        {client.secondary_email && (
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 pl-5">
+                            <span className="text-[10px] uppercase font-bold text-gray-400 bg-gray-100 px-1 py-0.2 rounded">2º</span>
+                            <a href={`mailto:${client.secondary_email}`} className="hover:text-brand-blue transition-colors">{client.secondary_email}</a>
+                          </div>
+                        )}
                         {client.phone && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Phone size={14} className="text-gray-400" />
@@ -403,6 +411,18 @@ export default function ClientesPage() {
                   type="email"
                   value={editingClient.email || ''} 
                   onChange={e => setEditingClient({...editingClient, email: e.target.value})}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Segundo Correo Electrónico <span className="text-gray-400 font-normal lowercase">(opcional)</span>
+                </label>
+                <input 
+                  type="email"
+                  placeholder="ejemplo2@correo.com"
+                  value={editingClient.secondary_email || ''} 
+                  onChange={e => setEditingClient({...editingClient, secondary_email: e.target.value})}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue" 
                 />
               </div>
