@@ -22,7 +22,8 @@ type InvoiceDetail = {
   issue_date: string;
   notes?: string;
   subtotal: string | number;
-  discount_percent: string | number;
+  discount_percent?: string | number;
+  discount_amount?: string | number;
   total: string | number;
   exchange_rate?: number;
   clients?: {

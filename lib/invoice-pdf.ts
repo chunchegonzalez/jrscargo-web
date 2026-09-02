@@ -8,7 +8,8 @@ export interface InvoiceDataForPdf {
   due_date?: string;
   status: string;
   subtotal: number;
-  discount_percent: number;
+  discount_percent?: number;
+  discount_amount?: number;
   total: number;
   exchange_rate?: number;
   notes?: string;
