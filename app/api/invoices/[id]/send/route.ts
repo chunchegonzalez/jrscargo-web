@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById } from '@/lib/supabase';
 import { generateInvoicePdf } from '@/lib/invoice-pdf';
+import { parseClientAddress } from '@/lib/billing';
 import nodemailer from 'nodemailer';
 
 export const dynamic = 'force-dynamic';
