@@ -42,8 +42,8 @@ export default function ClientesPage() {
     try {
       // Fetch clients and invoices in parallel
       const [clientsRes, invoicesRes] = await Promise.all([
-        fetch('/api/clients'),
-        fetch('/api/invoices')
+        fetch('/api/clients', { cache: 'no-store' }),
+        fetch('/api/invoices', { cache: 'no-store' })
       ]);
 
       const clientsData = await clientsRes.json();

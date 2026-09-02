@@ -21,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: normalized }, {
       status: 200,
-      headers: { 'Cache-Control': 's-maxage=15, stale-while-revalidate=60' }
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' }
     });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Error fetching clients';

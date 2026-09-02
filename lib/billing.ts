@@ -292,11 +292,39 @@ export function parseClientAddress(addressVal?: string | null): {
   try {
     const data = JSON.parse(str);
     if (data && typeof data === 'object') {
+      let secEmail = String(data.secondary_email || data.email2 || '').trim();
+      let rawAddr = String(data.address || '').trim();
+      let ced = String(data.cedula || '').trim();
+      let disc = Number(data.discount_percent) || 0;
+      
+      // If address is nested JSON from older saves, unwrap it
+      while (rawAddr.startsWith('{') && rawAddr.endsWith('}')) {
+        try {
+          const inner = JSON.parse(rawAddr);
+          if (inner && typeof inner === 'object') {
+            if (!secEmail && (inner.secondary_email || inner.email2)) {
+              secEmail = String(inner.secondary_email || inner.email2).trim();
+            }
+            if (!ced && inner.cedula) {
+              ced = String(inner.cedula).trim();
+            }
+            if (!disc && inner.discount_percent) {
+              disc = Number(inner.discount_percent) || 0;
+            }
+            rawAddr = String(inner.address || '').trim();
+          } else {
+            break;
+          }
+        } catch {
+          break;
+        }
+      }
+
       return {
-        cedula: String(data.cedula || ''),
-        discount_percent: Number(data.discount_percent) || 0,
-        raw_address: String(data.address || ''),
-        secondary_email: String(data.secondary_email || data.email2 || ''),
+        cedula: ced,
+        discount_percent: disc,
+        raw_address: rawAddr,
+        secondary_email: secEmail,
       };
     }
   } catch {
@@ -323,8 +351,20 @@ export function formatClientAddress(data: {
 }): string {
   const discount = Number(data.discount_percent) || 0;
   const cedula = (data.cedula || '').trim();
-  const address = (data.address || '').trim();
+  let address = (data.address || '').trim();
   const secondary_email = (data.secondary_email || '').trim();
+
+  // If address is a JSON string, extract just the raw inner address
+  if (address.startsWith('{') && address.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(address);
+      if (parsed && typeof parsed === 'object') {
+        address = String(parsed.address || '').trim();
+      }
+    } catch {
+      // Keep as is
+    }
+  }
 
   return JSON.stringify({
     cedula,
