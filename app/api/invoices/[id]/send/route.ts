@@ -136,14 +136,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const pdfBuffer = await generateInvoicePdf(invoice);
 
     const clientExtra = parseClientAddress(invoice.clients?.address);
-    const recipients = [invoice.clients.email];
-    if (clientExtra.secondary_email && clientExtra.secondary_email.includes('@')) {
-      recipients.push(clientExtra.secondary_email.trim());
-    }
+    const primaryEmail = invoice.clients.email?.trim();
+    const secondaryEmail = clientExtra.secondary_email?.trim();
 
-    const info = await transporter.sendMail({
+    const mailOptions: nodemailer.SendMailOptions = {
       from: '"JRS Cargo Facturación" <' + smtpUser + '>',
-      to: recipients.join(', '),
+      to: primaryEmail,
       subject: customSubject,
       html: htmlContent,
       attachments: [{
@@ -151,7 +149,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
         content: pdfBuffer,
         contentType: 'application/pdf'
       }]
-    });
+    };
+
+    if (secondaryEmail && secondaryEmail.includes('@')) {
+      mailOptions.cc = secondaryEmail;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
     const sentAt = new Date().toISOString();
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
-import { getInvoiceStats, formatCurrency, formatDisplayDate } from '@/lib/billing';
+import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Invoice = {
@@ -15,7 +15,7 @@ type Invoice = {
   client_id: string;
   currency?: string;
   email_sent_at?: string | null;
-  clients?: { id?: string; name: string; email: string };
+  clients?: { id?: string; name: string; email: string; address?: string; secondary_email?: string };
   invoice_payments?: { amount_applied: number | string }[];
 };
 
@@ -530,9 +530,24 @@ export default function FacturacionDashboard() {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Destinatario</label>
-                <p className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600">{emailInvoice.clients?.email}</p>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Destinatario (Para)</label>
+                <p className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 font-medium">{emailInvoice.clients?.email}</p>
               </div>
+
+              {(() => {
+                const extra = parseClientAddress(emailInvoice.clients?.address);
+                const secondary = emailInvoice.clients?.secondary_email || extra.secondary_email;
+                if (!secondary) return null;
+                return (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">En Copia (CC)</label>
+                    <p className="px-4 py-3 bg-blue-50/70 border border-blue-200 rounded-xl text-sm text-brand-blue font-semibold flex items-center justify-between">
+                      <span>{secondary}</span>
+                      <span className="text-[11px] bg-white text-brand-blue px-2 py-0.5 rounded-md border border-blue-200 font-bold">2º Correo</span>
+                    </p>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Asunto del Correo</label>
