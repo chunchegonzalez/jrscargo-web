@@ -375,7 +375,7 @@ export async function getInvoices(opts?: { includeItems?: boolean }) {
   
   // Parallel fetch: invoices + payments always, items only when needed
   const fetches: Promise<Response | null>[] = [
-    fetch(`${url}/rest/v1/invoices?select=id,invoice_number,issue_date,total,status,client_id,currency,email_sent_at,exchange_rate,created_at,clients(id,name,email)&order=created_at.desc`, {
+    fetch(`${url}/rest/v1/invoices?select=id,invoice_number,issue_date,total,status,client_id,currency,email_sent_at,exchange_rate,created_at,clients(id,name,email,address)&order=created_at.desc`, {
       headers: getHeaders(),
       cache: 'no-store'
     }),

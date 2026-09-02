@@ -54,12 +54,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     let customSubject = 'Factura #' + invoice.invoice_number + ' de JRS CARGO S.A.';
     let customMessage = 'Adjunto a este correo encontrarás los detalles de tu factura reciente.';
+    let customCc = '';
 
     try {
       const body = await request.json();
       if (body.subject) customSubject = body.subject;
       if (body.message) {
         customMessage = body.message.replace(/\n/g, '<br/>');
+      }
+      if (body.cc !== undefined) {
+        customCc = String(body.cc).trim();
       }
     } catch {
       // Ignorar si no hay body
@@ -137,7 +141,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const clientExtra = parseClientAddress(invoice.clients?.address);
     const primaryEmail = invoice.clients.email?.trim();
-    const secondaryEmail = clientExtra.secondary_email?.trim();
+    const secondaryEmail = customCc || clientExtra.secondary_email?.trim();
 
     const mailOptions: nodemailer.SendMailOptions = {
       from: '"JRS Cargo Facturación" <' + smtpUser + '>',

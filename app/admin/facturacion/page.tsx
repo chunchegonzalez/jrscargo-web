@@ -41,6 +41,7 @@ export default function FacturacionDashboard() {
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
+  const [emailCc, setEmailCc] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const loadInvoices = useCallback(async () => {
@@ -64,6 +65,8 @@ export default function FacturacionDashboard() {
 
   const openEmailModal = (inv: Invoice) => {
     setEmailInvoice(inv);
+    const extra = parseClientAddress(inv.clients?.address);
+    setEmailCc(inv.clients?.secondary_email || extra.secondary_email || '');
     setEmailSubject('Factura #' + inv.invoice_number + ' de JRS CARGO S.A.');
     setEmailMessage('Adjunto a este correo encontrarás los detalles de tu factura reciente. Por favor, revisa la información a continuación.');
     setEmailModalOpen(true);
@@ -76,7 +79,7 @@ export default function FacturacionDashboard() {
       const res = await fetch('/api/invoices/' + emailInvoice.id + '/send', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: emailSubject, message: emailMessage })
+        body: JSON.stringify({ subject: emailSubject, message: emailMessage, cc: emailCc })
       });
       const data = await res.json();
       if (data.success) {
@@ -534,20 +537,25 @@ export default function FacturacionDashboard() {
                 <p className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 font-medium">{emailInvoice.clients?.email}</p>
               </div>
 
-              {(() => {
-                const extra = parseClientAddress(emailInvoice.clients?.address);
-                const secondary = emailInvoice.clients?.secondary_email || extra.secondary_email;
-                if (!secondary) return null;
-                return (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">En Copia (CC)</label>
-                    <p className="px-4 py-3 bg-blue-50/70 border border-blue-200 rounded-xl text-sm text-brand-blue font-semibold flex items-center justify-between">
-                      <span>{secondary}</span>
-                      <span className="text-[11px] bg-white text-brand-blue px-2 py-0.5 rounded-md border border-blue-200 font-bold">2º Correo</span>
-                    </p>
-                  </div>
-                );
-              })()}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    En Copia (CC) <span className="text-gray-400 font-normal lowercase">(opcional)</span>
+                  </label>
+                  {emailCc && (
+                    <span className="text-[10px] bg-blue-50 text-brand-blue border border-blue-200 font-bold px-2 py-0.5 rounded-md">
+                      2º Correo del cliente
+                    </span>
+                  )}
+                </div>
+                <input 
+                  type="email"
+                  placeholder="ejemplo2@correo.com"
+                  value={emailCc}
+                  onChange={e => setEmailCc(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
+                />
+              </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Asunto del Correo</label>
