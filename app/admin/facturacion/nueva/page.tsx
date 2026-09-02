@@ -143,19 +143,21 @@ export default function NuevaFacturaPage() {
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now(), service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }]);
+    setItems(prev => [...prev, { id: Date.now() + Math.random(), service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }]);
   };
 
   const handleRemoveItem = (id: number) => {
-    if (items.length === 1) return;
-    setItems(items.filter(item => item.id !== id));
+    setItems(prev => {
+      if (prev.length <= 1) return prev;
+      return prev.filter(item => item.id !== id);
+    });
   };
 
   const handleWeightUnitChange = (newUnit: 'Lb' | 'Kg') => {
     if (newUnit === weightUnit) return;
     setWeightUnit(newUnit);
     
-    setItems(items.map(item => {
+    setItems(prev => prev.map(item => {
       if (!item.weight) return item;
       const w = Number(item.weight);
       const newWeight = newUnit === 'Kg' ? (w * 0.453592) : (w * 2.20462);
@@ -191,7 +193,7 @@ export default function NuevaFacturaPage() {
   };
 
   const handleItemChange = (id: number, field: string, value: string) => {
-    setItems(items.map(item => {
+    setItems(prev => prev.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         
@@ -564,7 +566,7 @@ export default function NuevaFacturaPage() {
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-brand-blue focus:outline-none focus:border-brand-blue text-right"
                     />
                   </div>
-                  <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-auto md:mt-0">
+                  <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-auto md:mt-0">
                     <Trash2 size={18} />
                   </button>
                 </div>
@@ -574,7 +576,7 @@ export default function NuevaFacturaPage() {
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            <button onClick={handleAddItem} className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-blue/80 px-2 py-1 rounded-lg hover:bg-brand-blue/5 transition-colors">
+            <button type="button" onClick={handleAddItem} className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-blue/80 px-2 py-1 rounded-lg hover:bg-brand-blue/5 transition-colors">
               <Plus size={16} /> Agregar línea
             </button>
             <span className="text-xs font-bold text-gray-500">
