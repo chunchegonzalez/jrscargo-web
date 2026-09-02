@@ -213,21 +213,46 @@ export default function InvoiceViewPage() {
 
           {/* Totals - simple right-aligned */}
           <div className="flex justify-end mb-6">
-            <div className="w-56">
-              {Number(invoice.discount_percent) > 0 && (
-                <div className="flex justify-between py-1 text-xs text-gray-500">
-                  <span>Descuento ({invoice.discount_percent}%)</span>
-                  <span className="text-green-600">-${((Number(invoice.subtotal) * Number(invoice.discount_percent)) / 100).toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between py-1 border-b border-gray-200 text-xs text-gray-500">
-                <span>Subtotal</span>
-                <span className="text-gray-700">${Number(invoice.subtotal).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between py-2 text-sm">
-                <span className="font-bold text-gray-700">Total</span>
-                <span className="font-black text-gray-900 text-lg">${Number(invoice.total).toFixed(2)}</span>
-              </div>
+            <div className="w-64">
+              {(() => {
+                const subtotalVal = Number(invoice.subtotal || invoice.total || 0);
+                const totalVal = Number(invoice.total || 0);
+                const rawDiscPercent = Number(invoice.discount_percent) || 0;
+                const rawDiscAmt = Number(invoice.discount_amount) || 0;
+
+                let computedDiscountPercent = 0;
+                let computedDiscountAmount = 0;
+
+                if (rawDiscPercent > 0) {
+                  computedDiscountPercent = rawDiscPercent;
+                  computedDiscountAmount = (subtotalVal * rawDiscPercent) / 100;
+                } else if (rawDiscAmt > 0) {
+                  computedDiscountAmount = rawDiscAmt;
+                  computedDiscountPercent = subtotalVal > 0 ? Math.round((rawDiscAmt / subtotalVal) * 100 * 10) / 10 : 0;
+                } else if (subtotalVal > totalVal && subtotalVal > 0) {
+                  computedDiscountAmount = subtotalVal - totalVal;
+                  computedDiscountPercent = Math.round(((subtotalVal - totalVal) / subtotalVal) * 100 * 10) / 10;
+                }
+
+                return (
+                  <>
+                    <div className="flex justify-between py-1 text-xs text-gray-500">
+                      <span>Subtotal</span>
+                      <span className="text-gray-700 font-medium">${subtotalVal.toFixed(2)}</span>
+                    </div>
+                    {computedDiscountAmount > 0 && (
+                      <div className="flex justify-between py-1 text-xs text-gray-500">
+                        <span>Descuento {computedDiscountPercent > 0 ? `(${computedDiscountPercent}%)` : ''}</span>
+                        <span className="text-green-600 font-bold">-${computedDiscountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between py-2 border-t border-gray-200 text-sm mt-1">
+                      <span className="font-bold text-gray-700">Total</span>
+                      <span className="font-black text-gray-900 text-lg">${totalVal.toFixed(2)}</span>
+                    </div>
+                  </>
+                );
+              })()}
               <div className="flex justify-between py-1 text-xs text-gray-400">
                 <span>Total Colones</span>
                 <span className="text-gray-500">₡{totalColones}</span>

@@ -244,6 +244,7 @@ export default function NuevaFacturaPage() {
         issue_date: issueDate,
         subtotal,
         tax_amount: 0,
+        discount_percent: discountPercent,
         discount_amount: discountAmount,
         total,
         notes,

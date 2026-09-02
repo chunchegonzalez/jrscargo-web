@@ -301,17 +301,35 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const totalCRC = totalUSD * exchangeRate;
   const formattedColones = totalCRC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const subtotalVal = Number(invoice.subtotal || invoice.total || 0);
+  const rawDiscPercent = Number(invoice.discount_percent) || 0;
+  const rawDiscAmt = Number(invoice.discount_amount) || 0;
+
+  let computedDiscPercent = 0;
+  let computedDiscAmt = 0;
+
+  if (rawDiscPercent > 0) {
+    computedDiscPercent = rawDiscPercent;
+    computedDiscAmt = (subtotalVal * rawDiscPercent) / 100;
+  } else if (rawDiscAmt > 0) {
+    computedDiscAmt = rawDiscAmt;
+    computedDiscPercent = subtotalVal > 0 ? Math.round((rawDiscAmt / subtotalVal) * 100 * 10) / 10 : 0;
+  } else if (subtotalVal > totalUSD && subtotalVal > 0) {
+    computedDiscAmt = subtotalVal - totalUSD;
+    computedDiscPercent = Math.round(((subtotalVal - totalUSD) / subtotalVal) * 100 * 10) / 10;
+  }
+
   // Subtotal
   page.drawText('Subtotal:', { x: totalsX, y, size: 9, font: fontRegular, color: textGray });
-  const subStr = `$${Number(invoice.subtotal || invoice.total).toFixed(2)}`;
+  const subStr = `$${subtotalVal.toFixed(2)}`;
   page.drawText(subStr, { x: width - margin - fontRegular.widthOfTextAtSize(subStr, 9), y, size: 9, font: fontRegular, color: textDark });
   y -= 15;
 
   // Discount (if any)
-  if (invoice.discount_percent && invoice.discount_percent > 0) {
-    const discAmt = ((Number(invoice.subtotal) * invoice.discount_percent) / 100).toFixed(2);
-    page.drawText(`Descuento (${invoice.discount_percent}%):`, { x: totalsX, y, size: 9, font: fontRegular, color: successGreen });
-    const discStr = `-$${discAmt}`;
+  if (computedDiscAmt > 0) {
+    const label = computedDiscPercent > 0 ? `Descuento (${computedDiscPercent}%):` : 'Descuento:';
+    page.drawText(label, { x: totalsX, y, size: 9, font: fontRegular, color: successGreen });
+    const discStr = `-$${computedDiscAmt.toFixed(2)}`;
     page.drawText(discStr, { x: width - margin - fontRegular.widthOfTextAtSize(discStr, 9), y, size: 9, font: fontRegular, color: successGreen });
     y -= 15;
   }

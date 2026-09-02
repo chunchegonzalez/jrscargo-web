@@ -77,10 +77,29 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const itemsHtml = invoice.items.map((item: InvoiceItem) => buildItemRow(item)).join('');
 
-    const discountHtml = invoice.discount_percent > 0 ? (
+    const subtotalVal = Number(invoice.subtotal || invoice.total || 0);
+    const totalVal = Number(invoice.total || 0);
+    const rawDiscPercent = Number(invoice.discount_percent) || 0;
+    const rawDiscAmt = Number(invoice.discount_amount) || 0;
+
+    let computedDiscPercent = 0;
+    let computedDiscAmt = 0;
+
+    if (rawDiscPercent > 0) {
+      computedDiscPercent = rawDiscPercent;
+      computedDiscAmt = (subtotalVal * rawDiscPercent) / 100;
+    } else if (rawDiscAmt > 0) {
+      computedDiscAmt = rawDiscAmt;
+      computedDiscPercent = subtotalVal > 0 ? Math.round((rawDiscAmt / subtotalVal) * 100 * 10) / 10 : 0;
+    } else if (subtotalVal > totalVal && subtotalVal > 0) {
+      computedDiscAmt = subtotalVal - totalVal;
+      computedDiscPercent = Math.round(((subtotalVal - totalVal) / subtotalVal) * 100 * 10) / 10;
+    }
+
+    const discountHtml = computedDiscAmt > 0 ? (
       '<tr>' +
-        '<td style="padding:6px 0;font-size:12px;color:#999;">Descuento (' + invoice.discount_percent + '%)</td>' +
-        '<td style="padding:6px 0;font-size:13px;color:#10b981;text-align:right;">-$' + ((invoice.subtotal * invoice.discount_percent) / 100).toFixed(2) + '</td>' +
+        '<td style="padding:6px 0;font-size:12px;color:#10b981;">Descuento ' + (computedDiscPercent > 0 ? '(' + computedDiscPercent + '%)' : '') + '</td>' +
+        '<td style="padding:6px 0;font-size:13px;color:#10b981;text-align:right;font-weight:bold;">-$' + computedDiscAmt.toFixed(2) + '</td>' +
       '</tr>'
     ) : '';
 
