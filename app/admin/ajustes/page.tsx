@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Users, Trash2, Eye, EyeOff, Edit2, Save, 
   Bot, Mail, Search, Copy, Check, 
-  Calendar, RefreshCw, UserCheck
+  Calendar, RefreshCw, UserCheck, Phone
 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDateTime } from '@/lib/billing';
@@ -218,11 +218,26 @@ export default function AjustesPage() {
                           {initials}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-gray-800 text-sm truncate">{lead.name}</p>
-                          <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                            <Mail size={12} className="shrink-0 text-brand-blue" />
-                            <span>{lead.email}</span>
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-gray-800 text-sm truncate">{lead.name}</p>
+                            {lead.address && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 bg-brand-blue/10 text-brand-blue rounded-md shrink-0">
+                                {lead.address}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
+                            <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+                              <Mail size={12} className="shrink-0 text-brand-blue" />
+                              <span>{lead.email}</span>
+                            </p>
+                            {lead.phone && (
+                              <p className="text-xs text-gray-500 truncate flex items-center gap-1">
+                                <Phone size={12} className="shrink-0 text-emerald-600" />
+                                <span>{lead.phone}</span>
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
