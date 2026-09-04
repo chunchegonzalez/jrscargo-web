@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, UploadCloud, Sparkles, Loader2, ChevronDown, Check } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
+import { getLocalTodayDate } from '@/lib/billing';
 
 export default function NuevoGastoPage() {
   const { showAlert } = useModal();
   const router = useRouter();
   
   const [providerName, setProviderName] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getLocalTodayDate());
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [category, setCategory] = useState('Otros');

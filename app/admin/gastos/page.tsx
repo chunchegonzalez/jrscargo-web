@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2 } from 'lucide-react';
-import { formatCurrency, formatDisplayDate } from '@/lib/billing';
+import { formatCurrency, formatDisplayDate, getLocalTodayDate, parseLocalDate } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Expense = {
@@ -92,7 +92,7 @@ export default function GastosPage() {
     setEditingExpense(expense);
     setEditForm({
       provider_name: expense.provider_name || '',
-      date: expense.date ? expense.date.split('T')[0] : new Date().toISOString().split('T')[0],
+      date: expense.date ? expense.date.split('T')[0] : getLocalTodayDate(),
       amount: String(expense.amount || ''),
       currency: expense.currency || 'USD',
       category: expense.category || 'Otros'
@@ -120,7 +120,7 @@ export default function GastosPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider_name: editForm.provider_name.trim(),
+          provider_name: editForm.provider_name,
           date: editForm.date,
           amount: numAmount,
           currency: editForm.currency,
@@ -143,9 +143,21 @@ export default function GastosPage() {
     }
   };
 
+  const getExpenseMonth = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const clean = String(dateStr).split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length >= 2) {
+      const monthNum = parseInt(parts[1], 10) - 1;
+      if (!isNaN(monthNum)) return monthNum.toString();
+    }
+    const d = new Date(dateStr);
+    return !isNaN(d.getTime()) ? d.getMonth().toString() : '';
+  };
+
   const filteredExpenses = expenses.filter(exp => {
     const matchesSearch = exp.provider_name.toLowerCase().includes(searchTerm.toLowerCase()) || exp.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const expMonth = new Date(exp.date).getMonth().toString();
+    const expMonth = getExpenseMonth(exp.date);
     const matchesMonth = selectedMonth === 'all' || expMonth === selectedMonth;
     return matchesSearch && matchesMonth;
   });

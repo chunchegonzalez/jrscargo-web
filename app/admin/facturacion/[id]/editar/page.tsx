@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, UserPlus, ChevronDown } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
+import { getLocalTodayDate } from '@/lib/billing';
 
 type Client = { id: string; name: string; email: string; phone?: string; address?: string; discount_percent?: number };
 type InvoiceItem = { id: number; service_name: string; tracking_number: string; weight: string; rate: string; amount: number | string };
@@ -40,7 +41,7 @@ export default function EditarFacturaPage() {
   const currency = 'USD';
   const [exchangeRate, setExchangeRate] = useState(500);
   const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState(getLocalTodayDate());
   const [discountPercent, setDiscountPercent] = useState(0);
   const [items, setItems] = useState<InvoiceItem[]>([
     { id: 1, service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }
