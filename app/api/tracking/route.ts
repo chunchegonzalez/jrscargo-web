@@ -86,6 +86,9 @@ export async function GET(request: Request) {
         if (upperTenant.includes('ATLANTIC') || upperCode.startsWith('AT-') || upperCode.includes('ATLANTIC')) {
           data.package.provider = 'ATLANTIC IMPORTS';
           data.package.company = 'ATLANTIC IMPORTS';
+        } else if (upperTenant.includes('TRINITY') || upperCode.startsWith('TB-') || upperCode.startsWith('TRINITY') || upperCode.includes('TRINITY')) {
+          data.package.provider = 'TRINITY BOX';
+          data.package.company = 'TRINITY BOX';
         } else if (upperTenant.includes('LOGISTICS') || upperTenant.includes('JR ') || upperCode.startsWith('JR-') || upperCode.startsWith('JRL-')) {
           data.package.provider = 'JR LOGISTICS';
           data.package.company = 'JR LOGISTICS';
@@ -94,7 +97,7 @@ export async function GET(request: Request) {
           data.package.company = 'JRS CARGO';
         }
 
-        const genericCompanies = ['JRS CARGO', 'ATLANTIC IMPORTS', 'JR LOGISTICS'];
+        const genericCompanies = ['JRS CARGO', 'ATLANTIC IMPORTS', 'JR LOGISTICS', 'TRINITY BOX'];
         const isGenericClientName = genericCompanies.includes((matched.clientName || '').trim().toUpperCase());
         
         if (matched.clientName && (!data.package.consignatario || !isGenericClientName)) {

@@ -232,6 +232,7 @@ export default function BodegaInventario() {
               <option value="JRS CARGO">JRS CARGO</option>
               <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
               <option value="JR LOGISTICS">JR LOGISTICS</option>
+              <option value="TRINITY BOX">TRINITY BOX</option>
             </select>
 
             <span className="px-3.5 py-2 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-xl shrink-0">
@@ -425,6 +426,7 @@ export default function BodegaInventario() {
                   <option value="JRS CARGO">JRS CARGO</option>
                   <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
                   <option value="JR LOGISTICS">JR LOGISTICS</option>
+                  <option value="TRINITY BOX">TRINITY BOX</option>
                 </select>
               </div>
 

@@ -187,12 +187,12 @@ export function formatCostaRicaISO(date: Date | string | number = new Date()): s
   return formatter.format(d);
 }
 
-export type CompanyType = 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS';
+export type CompanyType = 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' | 'TRINITY BOX';
 
 /**
- * Extracts company ('JRS CARGO', 'ATLANTIC IMPORTS', or 'JR LOGISTICS') and cleaned client name
+ * Extracts company ('JRS CARGO', 'ATLANTIC IMPORTS', 'JR LOGISTICS', or 'TRINITY BOX') and cleaned client name
  * from API raw consignee / client string, tenant name, or client code.
- * Completely strips all company names (JRS Cargo, Atlantic Imports, JR Logistics), prefixes, and locker numbers.
+ * Completely strips all company names (JRS Cargo, Atlantic Imports, JR Logistics, Trinity Box), prefixes, and locker numbers.
  */
 export function extractCompanyAndClient(
   rawConsignee: string | null | undefined,
@@ -200,7 +200,7 @@ export function extractCompanyAndClient(
   clientCode?: string | null,
   rawClientName?: string | null
 ): { 
-  company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS'; 
+  company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' | 'TRINITY BOX'; 
   cleanClient: string 
 } {
   const text = (rawConsignee || '').trim();
@@ -208,21 +208,27 @@ export function extractCompanyAndClient(
   const code = (clientCode || '').toUpperCase();
   const clName = (rawClientName || '').trim();
   
-  let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' = 'JRS CARGO';
+  let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' | 'TRINITY BOX' = 'JRS CARGO';
 
   // 0. Explicit tenantName or clientCode check from Worldbox
   if (tenant.includes('ATLANTIC') || code.startsWith('AT-') || code.includes('ATLANTIC')) {
     company = 'ATLANTIC IMPORTS';
+  } else if (tenant.includes('TRINITY') || code.startsWith('TB-') || code.startsWith('TRINITY') || code.includes('TRINITY')) {
+    company = 'TRINITY BOX';
   } else if (tenant.includes('LOGISTICS') || tenant.includes('JR ') || code.startsWith('JR-') || code.startsWith('JRL-')) {
     company = 'JR LOGISTICS';
   } else if (tenant.includes('JRS') || code.startsWith('JRS-')) {
     company = 'JRS CARGO';
   }
-  // 1. Check for JR Logistics signatures in consignee text
+  // 1. Check for Trinity Box signatures in consignee text
+  else if (/\b(TRINITY(\s*BOX)?|TB[-\s]*\d+)\b/i.test(text + ' ' + clName)) {
+    company = 'TRINITY BOX';
+  }
+  // 2. Check for JR Logistics signatures in consignee text
   else if (/\b(JR(\s*LOGISTICS?)|JRL[-\s]*\d+|JR[-\s]*\d+)\b/i.test(text + ' ' + clName)) {
     company = 'JR LOGISTICS';
   }
-  // 2. Check for Atlantic Imports signatures (AT-, ATLANTIC, or 1900-2999 locker codes)
+  // 3. Check for Atlantic Imports signatures (AT-, ATLANTIC, or 1900-2999 locker codes)
   else if (
     /\b(AT(\s*IMPORTS?)?|ATLANTIC(\s*IMPORTS?)?)\b/i.test(text + ' ' + clName) ||
     /\bAT[-\s]*\d+/i.test(text + ' ' + clName) ||
@@ -231,7 +237,7 @@ export function extractCompanyAndClient(
   ) {
     company = 'ATLANTIC IMPORTS';
   }
-  // 3. JRS Cargo signatures (JRS, JRS-XXXX, or 1000-1899 locker numbers)
+  // 4. JRS Cargo signatures (JRS, JRS-XXXX, or 1000-1899 locker numbers)
   else if (/\bJRS(\s*CARGO)?\b/i.test(text + ' ' + clName) || /\bJRS[-\s]*\d+/i.test(text + ' ' + clName) || /\b1[0-8]\d{2}\b/.test(text + ' ' + clName)) {
     company = 'JRS CARGO';
   }
@@ -240,12 +246,11 @@ export function extractCompanyAndClient(
   const cleanStr = (str: string): string => {
     return str
       // Remove full company names (case insensitive)
-      .replace(/\b(JRS\s*CARGO(\s*S\.?A\.?)?|ATLANTIC\s*IMPORTS?(\s*S\.?A\.?)?|JR\s*LOGISTICS?(\s*S\.?A\.?)?)\b/gi, ' ')
-      .replace(/\b(JRS|ATLANTIC|IMPORTS?|LOGISTICS?|JRL)\b/gi, ' ')
-      // Remove prefix codes like AT-1947, JR-1020, JRS-1001, At--2011
-      .replace(/\bAT[-_\s]*\d+\b/gi, ' ')
-      .replace(/\b(JR|JRL|JRS)[-_\s]*\d+\b/gi, ' ')
-      .replace(/\bAT\b/gi, ' ')
+      .replace(/\b(JRS\s*CARGO(\s*S\.?A\.?)?|ATLANTIC\s*IMPORTS?(\s*S\.?A\.?)?|JR\s*LOGISTICS?(\s*S\.?A\.?)?|TRINITY\s*BOX(\s*S\.?A\.?)?)\b/gi, ' ')
+      .replace(/\b(JRS|ATLANTIC|IMPORTS?|LOGISTICS?|JRL|TRINITY|TRINITY\s*BOX|TB)\b/gi, ' ')
+      // Remove prefix codes like AT-1947, JR-1020, JRS-1001, TB-101, At--2011
+      .replace(/\b(AT|JR|JRL|JRS|TB)[-_\s]*\d+\b/gi, ' ')
+      .replace(/\b(AT|TB)\b/gi, ' ')
       // Remove locker numbers, hashtags, isolated digits
       .replace(/#\s*\d+/g, ' ')
       .replace(/[-_\s/]+\d+[-_\s/]*/g, ' ')

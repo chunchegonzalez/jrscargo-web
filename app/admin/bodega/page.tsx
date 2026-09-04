@@ -354,6 +354,7 @@ export default function BodegaScanner() {
                       <option value="JRS CARGO">JRS CARGO</option>
                       <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
                       <option value="JR LOGISTICS">JR LOGISTICS</option>
+                      <option value="TRINITY BOX">TRINITY BOX</option>
                     </select>
                   </div>
                 </div>
