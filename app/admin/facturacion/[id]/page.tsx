@@ -149,7 +149,7 @@ export default function InvoiceViewPage() {
           {/* HEADER: Company info + Logo */}
           <div className="flex justify-between items-start mb-2 gap-4">
             <div>
-              <p className="text-2xl font-black text-gray-800 tracking-wide uppercase">Factura</p>
+              <p className="text-2xl font-black text-gray-800 tracking-wide uppercase">Comprobante de Compra</p>
               <p className="text-sm font-bold text-gray-700 mt-1">JRS CARGO S.A.</p>
               <p className="text-xs text-gray-400">San Pablo de Heredia, Costa Rica</p>
             </div>
@@ -164,7 +164,7 @@ export default function InvoiceViewPage() {
           <div className="flex justify-between mb-1">
             <div>
               <p className="text-sm font-bold text-gray-800">{invoice.clients?.name}</p>
-              <p className="text-xs text-gray-500">Facturar a</p>
+              <p className="text-xs text-gray-500">Cliente / Comprador</p>
               <p className="text-xs text-gray-400">{invoice.clients?.name}</p>
               {invoice.clients?.email && <p className="text-xs text-gray-400">{invoice.clients.email}</p>}
               {invoice.clients?.phone && <p className="text-xs text-gray-400">{invoice.clients.phone}</p>}
@@ -181,9 +181,9 @@ export default function InvoiceViewPage() {
 
           {/* Invoice Details */}
           <div className="mb-8">
-            <p className="text-sm font-bold text-gray-700 mb-1">Detalles de Factura</p>
-            <p className="text-xs text-gray-500">N.º de Factura: {invoice.invoice_number}</p>
-            <p className="text-xs text-gray-500">Fecha de Factura: {formatDisplayDate(invoice.issue_date)}</p>
+            <p className="text-sm font-bold text-gray-700 mb-1">Detalles del Comprobante</p>
+            <p className="text-xs text-gray-500">N.º de Comprobante: {invoice.invoice_number}</p>
+            <p className="text-xs text-gray-500">Fecha de Emisión: {formatDisplayDate(invoice.issue_date)}</p>
           </div>
 
           {/* Items Table - simple, no colored header */}

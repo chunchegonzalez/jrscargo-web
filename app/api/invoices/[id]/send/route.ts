@@ -52,8 +52,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ success: false, error: 'Client email not found' }, { status: 400 });
     }
 
-    let customSubject = 'Factura #' + invoice.invoice_number + ' de JRS CARGO S.A.';
-    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu factura reciente.';
+    let customSubject = 'Comprobante #' + invoice.invoice_number + ' de JRS CARGO S.A.';
+    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu comprobante reciente.';
     let customCc = '';
 
     try {
@@ -116,7 +116,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       '<table style="width:100%;"><tr>',
       '<td><img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:36px;width:auto;" /></td>',
       '<td style="text-align:right;">',
-      '<p style="margin:0;font-size:10px;color:#bbb;text-transform:uppercase;letter-spacing:1px;">Factura</p>',
+      '<p style="margin:0;font-size:10px;color:#bbb;text-transform:uppercase;letter-spacing:1px;">Comprobante de Compra</p>',
       '<p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#12435E;">' + invoice.invoice_number + '</p>',
       '</td></tr></table></div>',
       '<div style="height:1px;background:#eee;margin:20px 32px;"></div>',
@@ -168,7 +168,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       subject: customSubject,
       html: htmlContent,
       attachments: [{
-        filename: 'Factura-' + invoice.invoice_number + '.pdf',
+        filename: 'Comprobante-' + invoice.invoice_number + '.pdf',
         content: pdfBuffer,
         contentType: 'application/pdf'
       }]

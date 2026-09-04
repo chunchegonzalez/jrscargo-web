@@ -100,10 +100,10 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   }
 
   // Header Text (Left)
-  page.drawText('FACTURA', {
+  page.drawText('COMPROBANTE DE COMPRA', {
     x: margin,
     y: pageTop - 6,
-    size: 24,
+    size: 19,
     font: fontBold,
     color: brandBlue,
   });
@@ -154,7 +154,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const metaStartY = y;
 
   // Left: Client info
-  page.drawText('FACTURAR A:', {
+  page.drawText('CLIENTE / COMPRADOR:', {
     x: margin,
     y: metaStartY,
     size: 8,
@@ -194,7 +194,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
   const metaLabelX = width - margin - 170;
   const metaValueX = width - margin - 60;
 
-  page.drawText('No. de Factura:', { x: metaLabelX, y: metaStartY, size: 9, font: fontRegular, color: textGray });
+  page.drawText('No. de Comprobante:', { x: metaLabelX, y: metaStartY, size: 9, font: fontRegular, color: textGray });
   page.drawText(clean(invoice.invoice_number), { x: metaValueX, y: metaStartY, size: 10.5, font: fontBold, color: brandBlue });
 
   page.drawText('Fecha de Emision:', { x: metaLabelX, y: metaStartY - 15, size: 9, font: fontRegular, color: textGray });
