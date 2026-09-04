@@ -67,8 +67,8 @@ export default function FacturacionDashboard() {
     setEmailInvoice(inv);
     const extra = parseClientAddress(inv.clients?.address);
     setEmailCc(inv.clients?.secondary_email || extra.secondary_email || '');
-    setEmailSubject('Factura #' + inv.invoice_number + ' de JRS CARGO S.A.');
-    setEmailMessage('Adjunto a este correo encontrarás los detalles de tu factura reciente. Por favor, revisa la información a continuación.');
+    setEmailSubject('Comprobante de Compra #' + inv.invoice_number + ' - JRS CARGO');
+    setEmailMessage('Adjunto a este correo encontrarás los detalles de tu comprobante de compra reciente. Por favor, revisa la información a continuación.');
     setEmailModalOpen(true);
   };
 

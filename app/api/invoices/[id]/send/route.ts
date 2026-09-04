@@ -15,11 +15,25 @@ type InvoiceItem = {
 };
 
 function buildItemRow(item: InvoiceItem): string {
+  const trackingPart = item.tracking_number ? '<span style="font-family:Consolas,Monaco,monospace;color:#475569;word-break:break-all;font-size:12px;">📦 ' + item.tracking_number + '</span>' : '';
+  const weightPart = item.weight ? '<span style="font-weight:600;color:#334155;font-size:12px;">' + item.weight + ' lb</span>' : '';
+  const sep = (item.tracking_number && item.weight) ? ' &nbsp;•&nbsp; ' : '';
+  const metaLine = (trackingPart || weightPart) ? '<p style="margin:4px 0 0;font-size:12px;color:#64748b;line-height:1.4;">' + trackingPart + sep + weightPart + '</p>' : '';
+
   return '<tr>' +
-    '<td style="padding:10px 0;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">' + item.service_name + '</td>' +
-    '<td style="padding:10px 0;font-size:11px;color:#999;font-family:monospace;border-bottom:1px solid #f0f0f0;">' + (item.tracking_number || '-') + '</td>' +
-    '<td style="padding:10px 0;font-size:12px;color:#999;text-align:center;border-bottom:1px solid #f0f0f0;">' + (item.weight || '-') + ' lb</td>' +
-    '<td style="padding:10px 0;font-size:13px;color:#333;font-weight:600;text-align:right;border-bottom:1px solid #f0f0f0;">$' + item.amount.toFixed(2) + '</td>' +
+    '<td style="padding:14px 0;border-bottom:1px solid #f1f5f9;">' +
+      '<table style="width:100%;border-collapse:collapse;">' +
+        '<tr>' +
+          '<td style="vertical-align:top;padding-right:16px;">' +
+            '<p style="margin:0;font-size:14px;font-weight:700;color:#1e293b;line-height:1.4;">' + item.service_name + '</p>' +
+            metaLine +
+          '</td>' +
+          '<td style="vertical-align:top;text-align:right;white-space:nowrap;width:95px;">' +
+            '<p style="margin:0;font-size:15px;font-weight:700;color:#12435E;">$' + item.amount.toFixed(2) + '</p>' +
+          '</td>' +
+        '</tr>' +
+      '</table>' +
+    '</td>' +
   '</tr>';
 }
 
@@ -52,8 +66,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ success: false, error: 'Client email not found' }, { status: 400 });
     }
 
-    let customSubject = 'Comprobante #' + invoice.invoice_number + ' de JRS CARGO S.A.';
-    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu comprobante reciente.';
+    let customSubject = 'Comprobante de Compra #' + invoice.invoice_number + ' - JRS CARGO';
+    let customMessage = 'Adjunto a este correo encontrarás los detalles de tu comprobante de compra reciente. Por favor, revisa la información a continuación.';
     let customCc = '';
 
     try {
@@ -98,61 +112,87 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const discountHtml = computedDiscAmt > 0 ? (
       '<tr>' +
-        '<td style="padding:6px 0;font-size:12px;color:#10b981;">Descuento ' + (computedDiscPercent > 0 ? '(' + computedDiscPercent + '%)' : '') + '</td>' +
-        '<td style="padding:6px 0;font-size:13px;color:#10b981;text-align:right;font-weight:bold;">-$' + computedDiscAmt.toFixed(2) + '</td>' +
+        '<td style="padding:6px 0;font-size:13px;color:#10b981;font-weight:600;">Descuento ' + (computedDiscPercent > 0 ? '(' + computedDiscPercent + '%)' : '') + '</td>' +
+        '<td style="padding:6px 0;font-size:14px;color:#10b981;text-align:right;font-weight:700;">-$' + computedDiscAmt.toFixed(2) + '</td>' +
       '</tr>'
     ) : '';
 
     const notesHtml = invoice.notes ? (
-      '<div style="margin-top:24px;padding:14px;background:#fafafa;border-radius:6px;">' +
-        '<p style="margin:0;font-size:12px;color:#888;line-height:1.5;">' + invoice.notes.replace(/\n/g, '<br/>') + '</p>' +
+      '<div style="margin-top:20px;padding:14px 18px;background:#f8fafc;border-left:4px solid #12435E;border-radius:0 10px 10px 0;">' +
+        '<p style="margin:0;font-size:12px;color:#475569;line-height:1.6;font-style:italic;">' + invoice.notes.replace(/\n/g, '<br/>') + '</p>' +
       '</div>'
     ) : '';
 
-    // Email body HTML
+    // Modern, spacious Email body HTML
     const htmlContent = [
-      '<div style="font-family:Helvetica Neue,Arial,sans-serif;max-width:560px;margin:0 auto;background:#fff;color:#333;">',
-      '<div style="padding:32px 32px 0;">',
-      '<table style="width:100%;"><tr>',
-      '<td><img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:36px;width:auto;" /></td>',
-      '<td style="text-align:right;">',
-      '<p style="margin:0;font-size:10px;color:#bbb;text-transform:uppercase;letter-spacing:1px;">Comprobante de Compra</p>',
-      '<p style="margin:2px 0 0;font-size:15px;font-weight:700;color:#12435E;">' + invoice.invoice_number + '</p>',
-      '</td></tr></table></div>',
-      '<div style="height:1px;background:#eee;margin:20px 32px;"></div>',
-      '<div style="padding:0 32px;">',
-      '<p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 4px;">Hola <strong>' + invoice.clients.name + '</strong>,</p>',
-      '<p style="font-size:13px;color:#999;line-height:1.6;margin:0 0 28px;">' + customMessage + '</p>',
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">',
-      '<tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px;color:#bbb;">Fecha</td>',
-      '<td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;text-align:right;">' + issueDate + '</td></tr>',
-      '<tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px;color:#bbb;">Cliente</td>',
-      '<td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#333;text-align:right;">' + invoice.clients.name + '</td></tr>',
-      '</table>',
-      '<p style="font-size:10px;font-weight:700;color:#12435E;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px;">Detalle</p>',
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">',
-      '<thead><tr>',
-      '<th style="text-align:left;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;border-bottom:1px solid #eee;font-weight:600;">Servicio</th>',
-      '<th style="text-align:left;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;border-bottom:1px solid #eee;font-weight:600;">Tracking</th>',
-      '<th style="text-align:center;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;border-bottom:1px solid #eee;font-weight:600;">Peso</th>',
-      '<th style="text-align:right;padding:6px 0;color:#bbb;font-size:10px;text-transform:uppercase;border-bottom:1px solid #eee;font-weight:600;">Monto</th>',
-      '</tr></thead>',
-      '<tbody>' + itemsHtml + '</tbody></table>',
-      '<div style="border-top:2px solid #12435E;padding-top:14px;margin-top:4px;">',
-      '<table style="width:100%;border-collapse:collapse;">',
+      '<!DOCTYPE html>',
+      '<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>',
+      '<body style="margin:0;padding:24px 12px;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;color:#1e293b;-webkit-font-smoothing:antialiased;">',
+      '  <table role="presentation" style="width:100%;max-width:580px;margin:0 auto;background-color:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.04);border-collapse:separate;">',
+      '    <tr><td style="padding:32px 32px 24px;">',
+      '      <table role="presentation" style="width:100%;border-collapse:collapse;">',
+      '        <tr>',
+      '          <td style="vertical-align:middle;">',
+      '            <img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:40px;width:auto;display:block;" />',
+      '          </td>',
+      '          <td style="text-align:right;vertical-align:middle;">',
+      '            <span style="display:inline-block;background:#eff6ff;color:#12435E;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:4px 10px;border-radius:8px;border:1px solid #dbeafe;">Comprobante de Compra</span>',
+      '            <p style="margin:4px 0 0;font-size:16px;font-weight:800;color:#12435E;">' + invoice.invoice_number + '</p>',
+      '          </td>',
+      '        </tr>',
+      '      </table>',
+      '    </td></tr>',
+      '    <tr><td style="height:1px;background:#e2e8f0;margin:0;padding:0;font-size:0;line-height:0;"></td></tr>',
+      '    <tr><td style="padding:28px 32px;">',
+      '      <p style="font-size:16px;color:#0f172a;line-height:1.5;margin:0 0 8px;">Hola <strong>' + invoice.clients.name + '</strong>,</p>',
+      '      <p style="font-size:14px;color:#475569;line-height:1.6;margin:0 0 24px;">' + customMessage + '</p>',
+      '      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:28px;">',
+      '        <table role="presentation" style="width:100%;border-collapse:collapse;">',
+      '          <tr>',
+      '            <td style="padding:4px 0;font-size:12px;color:#64748b;">Fecha de Emisión</td>',
+      '            <td style="padding:4px 0;font-size:13px;font-weight:600;color:#1e293b;text-align:right;">' + issueDate + '</td>',
+      '          </tr>',
+      '          <tr>',
+      '            <td style="padding:4px 0;font-size:12px;color:#64748b;">Cliente</td>',
+      '            <td style="padding:4px 0;font-size:13px;font-weight:600;color:#1e293b;text-align:right;">' + invoice.clients.name + '</td>',
+      '          </tr>',
+      '        </table>',
+      '      </div>',
+      '      <p style="font-size:11px;font-weight:800;color:#12435E;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px;">Detalle de Paquetes y Servicios</p>',
+      '      <table role="presentation" style="width:100%;border-collapse:collapse;margin-bottom:24px;">',
+      '        <tbody>' + itemsHtml + '</tbody>',
+      '      </table>',
+      '      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-top:12px;">',
+      '        <table role="presentation" style="width:100%;border-collapse:collapse;">',
+      '          <tr>',
+      '            <td style="padding:4px 0;font-size:13px;color:#64748b;">Subtotal</td>',
+      '            <td style="padding:4px 0;font-size:14px;color:#1e293b;text-align:right;font-weight:600;">$' + subtotalVal.toFixed(2) + '</td>',
+      '          </tr>',
       discountHtml,
-      '<tr><td style="padding:4px 0;font-size:14px;font-weight:700;color:#12435E;">Total USD</td>',
-      '<td style="padding:4px 0;font-size:20px;font-weight:800;color:#12435E;text-align:right;">$' + invoice.total.toFixed(2) + '</td></tr>',
-      '<tr><td style="padding:2px 0;font-size:12px;color:#999;">Total Colones</td>',
-      '<td style="padding:2px 0;font-size:14px;font-weight:600;color:#666;text-align:right;">&#8353;' + totalColones + '</td></tr>',
-      '<tr><td colspan="2" style="padding:2px 0 0;font-size:10px;color:#ccc;text-align:right;">T.C. &#8353;' + exchangeRate + ' por $1 USD</td></tr>',
-      '</table></div>',
+      '          <tr>',
+      '            <td style="padding:10px 0 4px;font-size:15px;font-weight:800;color:#12435E;border-top:1px solid #e2e8f0;">Total USD</td>',
+      '            <td style="padding:10px 0 4px;font-size:22px;font-weight:900;color:#12435E;text-align:right;border-top:1px solid #e2e8f0;">$' + invoice.total.toFixed(2) + '</td>',
+      '          </tr>',
+      '          <tr>',
+      '            <td style="padding:2px 0;font-size:12px;color:#64748b;">Total Colones</td>',
+      '            <td style="padding:2px 0;font-size:14px;font-weight:700;color:#334155;text-align:right;">&#8353;' + totalColones + ' CRC</td>',
+      '          </tr>',
+      '          <tr>',
+      '            <td colspan="2" style="padding:4px 0 0;font-size:11px;color:#94a3b8;text-align:right;">Tipo de cambio: &#8353;' + exchangeRate + ' por $1 USD</td>',
+      '          </tr>',
+      '        </table>',
+      '      </div>',
       notesHtml,
-      '</div>',
-      '<div style="padding:24px 32px;margin-top:32px;border-top:1px solid #eee;text-align:center;">',
-      '<p style="margin:0 0 2px;font-size:12px;font-weight:700;color:#12435E;">JRS CARGO S.A.</p>',
-      '<p style="margin:0;font-size:10px;color:#ccc;">info@jrscargocr.com &nbsp;|&nbsp; +506 7260-1238 &nbsp;|&nbsp; jrscargocr.com</p>',
-      '</div></div>'
+      '      <div style="margin-top:24px;padding:12px 16px;background:#f1f5f9;border-radius:10px;text-align:center;">',
+      '        <p style="margin:0;font-size:12px;color:#64748b;">📎 Encontrarás el comprobante oficial en formato PDF adjunto a este mensaje.</p>',
+      '      </div>',
+      '    </td></tr>',
+      '    <tr><td style="padding:24px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">',
+      '      <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#12435E;">JRS CARGO S.A.</p>',
+      '      <p style="margin:0;font-size:11px;color:#94a3b8;line-height:1.5;">San Pablo de Heredia, Costa Rica &nbsp;|&nbsp; Tel: +506 7260-1238<br/>info@jrscargocr.com &nbsp;|&nbsp; www.jrscargocr.com</p>',
+      '    </td></tr>',
+      '  </table>',
+      '</body></html>'
     ].join('\n');
 
     // Generate PDF document buffer
@@ -163,7 +203,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const secondaryEmail = customCc || clientExtra.secondary_email?.trim();
 
     const mailOptions: nodemailer.SendMailOptions = {
-      from: '"JRS Cargo Facturación" <' + smtpUser + '>',
+      from: '"JRS CARGO" <' + smtpUser + '>',
       to: primaryEmail,
       subject: customSubject,
       html: htmlContent,
