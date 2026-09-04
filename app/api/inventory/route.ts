@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const data = await getInventory();
     const response = NextResponse.json({ success: true, data }, { status: 200 });
-    response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return response;
   } catch {
     return NextResponse.json({ success: false, error: 'Error fetching inventory' }, { status: 500 });

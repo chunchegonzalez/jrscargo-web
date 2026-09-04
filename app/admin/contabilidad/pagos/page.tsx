@@ -31,7 +31,7 @@ export default function HistorialPagosPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/payments');
+      const res = await fetch('/api/payments', { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
         setPayments(data.data);

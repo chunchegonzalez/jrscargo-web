@@ -25,9 +25,9 @@ export default function CuentasPorCobrarPage() {
     try {
       setLoading(true);
       const [clientsRes, invoicesRes, rateRes] = await Promise.all([
-        fetch('/api/clients'),
-        fetch('/api/invoices'),
-        fetch('/api/exchange-rate')
+        fetch('/api/clients', { cache: 'no-store' }),
+        fetch('/api/invoices', { cache: 'no-store' }),
+        fetch('/api/exchange-rate', { cache: 'no-store' })
       ]);
 
       const clientsData = await clientsRes.json();

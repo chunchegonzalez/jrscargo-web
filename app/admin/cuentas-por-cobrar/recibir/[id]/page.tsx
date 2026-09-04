@@ -36,8 +36,8 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     const loadData = async () => {
       try {
         const [res, rateRes] = await Promise.all([
-          fetch(`/api/clients/${clientId}`),
-          fetch('/api/exchange-rate')
+          fetch(`/api/clients/${clientId}`, { cache: 'no-store' }),
+          fetch('/api/exchange-rate', { cache: 'no-store' })
         ]);
         const data = await res.json();
 
@@ -231,7 +231,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         title: '¡Pago Registrado!',
         message: 'El pago ha sido registrado y aplicado a las facturas con éxito.',
         type: 'success',
-        onConfirm: () => router.push('/admin/cuentas-por-cobrar')
+        onConfirm: () => {
+          window.location.href = '/admin/cuentas-por-cobrar';
+        }
       });
     } catch (error) {
       console.error(error);

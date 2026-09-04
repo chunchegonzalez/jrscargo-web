@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const includeItems = searchParams.get('includeItems') === 'true';
     const data = await getInvoices({ includeItems });
     const response = NextResponse.json({ success: true, data }, { status: 200 });
-    response.headers.set('Cache-Control', 's-maxage=10, stale-while-revalidate=30');
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return response;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Error fetching invoices';
