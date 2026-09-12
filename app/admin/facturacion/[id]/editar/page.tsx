@@ -500,6 +500,11 @@ export default function EditarFacturaPage() {
 
             {items.map((item, index) => {
               const availableServices = catalogServices.length > 0 ? catalogServices : DEFAULT_SERVICES;
+              const isWeb = Boolean(item.service_name && (
+                item.service_name.toUpperCase().includes('COMPRA') ||
+                item.service_name.toUpperCase().includes('SITIO WEB')
+              ));
+
               return (
               <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
                 <div className="hidden md:flex justify-center items-center">
@@ -569,29 +574,29 @@ export default function EditarFacturaPage() {
                 <div className="md:col-span-3">
                   <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Nº Rastreo</div>
                   <input 
-                    required
-                    placeholder="Tracking (Obligatorio)" 
+                    required={!isWeb}
+                    placeholder={isWeb ? "Detalle / Referencia (Opcional)" : "Tracking (Obligatorio)"} 
                     value={item.tracking_number} 
                     onChange={e => handleItemChange(item.id, 'tracking_number', e.target.value)}
-                    onBlur={() => handleTrackingBlur(item.id, item.tracking_number || '')}
+                    onBlur={() => !isWeb && handleTrackingBlur(item.id, item.tracking_number || '')}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue font-mono"
                   />
                 </div>
                 <div className="md:col-span-1">
-                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Peso ({weightUnit})</div>
+                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">{isWeb ? 'Cantidad' : `Medida (${weightUnit})`}</div>
                   <input 
                     type="number" 
-                    placeholder={weightUnit} 
+                    placeholder={isWeb ? "Cant." : weightUnit} 
                     value={item.weight} 
                     onChange={e => handleItemChange(item.id, 'weight', e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"
                   />
                 </div>
                 <div className="md:col-span-1">
-                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Tarifa ($/{weightUnit})</div>
+                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">{isWeb ? 'Precio ($)' : `Tarifa ($/${weightUnit})`}</div>
                   <input 
                     type="number" 
-                    placeholder={`$/${weightUnit}`} 
+                    placeholder={isWeb ? "$/Und" : `$/${weightUnit}`} 
                     value={item.rate} 
                     onChange={e => handleItemChange(item.id, 'rate', e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"

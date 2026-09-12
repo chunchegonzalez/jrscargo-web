@@ -201,7 +201,9 @@ export default function InvoiceViewPage() {
             <tbody>
               {invoice.items?.map((item, index) => {
                 const sUpper = (item.service_name || '').toUpperCase();
-                const unit = (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE'))
+                const unit = (sUpper.includes('COMPRA') || sUpper.includes('SITIO WEB'))
+                  ? 'und'
+                  : (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE'))
                   ? 'ft³'
                   : (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') ? 'kg' : 'lb');
                 return (

@@ -269,7 +269,9 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     // Weight / Measure unit
     let unitLabel = 'lb';
     const sNameUpper = (item.service_name || '').toUpperCase();
-    if (sNameUpper.includes('MARITIMO') || sNameUpper.includes('MARÍTIMO') || sNameUpper.includes('FT3') || sNameUpper.includes('PIE')) {
+    if (sNameUpper.includes('COMPRA') || sNameUpper.includes('SITIO WEB')) {
+      unitLabel = 'und';
+    } else if (sNameUpper.includes('MARITIMO') || sNameUpper.includes('MARÍTIMO') || sNameUpper.includes('FT3') || sNameUpper.includes('PIE')) {
       unitLabel = 'ft3';
     } else if (sNameUpper.includes('MAYORISTA AEREO') || sNameUpper.includes('MAYORISTA AÉREO') || sNameUpper.includes('MADRID')) {
       unitLabel = 'kg';

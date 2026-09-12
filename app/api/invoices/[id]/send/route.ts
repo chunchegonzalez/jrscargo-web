@@ -19,7 +19,9 @@ function buildItemRow(item: InvoiceItem): string {
   
   let unitLabel = 'lb';
   const sUpper = (item.service_name || '').toUpperCase();
-  if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE')) {
+  if (sUpper.includes('COMPRA') || sUpper.includes('SITIO WEB')) {
+    unitLabel = 'und';
+  } else if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE')) {
     unitLabel = 'ft³';
   } else if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID')) {
     unitLabel = 'kg';
