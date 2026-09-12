@@ -229,7 +229,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
 
   page.drawText('PRODUCTO / SERVICIO', { x: colX.service, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText('NO. DE RASTREO', { x: colX.tracking, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
-  page.drawText('PESO', { x: colX.weight, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
+  page.drawText('PESO / MEDIDA', { x: colX.weight, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText('TARIFA', { x: colX.rate, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
   page.drawText('IMPORTE (USD)', { x: colX.amount - 65, y: tableTop - 10, size: 8, font: fontBold, color: rgb(1, 1, 1) });
 
@@ -266,8 +266,15 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
     const tracking = clean((item.tracking_number || '-').substring(0, 24));
     page.drawText(tracking, { x: colX.tracking, y: y - 9, size: 8, font: fontMono, color: brandNavy });
 
-    // Weight
-    const weightStr = item.weight !== undefined && item.weight !== null && item.weight !== '' ? `${item.weight} lb` : '-';
+    // Weight / Measure unit
+    let unitLabel = 'lb';
+    const sNameUpper = (item.service_name || '').toUpperCase();
+    if (sNameUpper.includes('MARITIMO') || sNameUpper.includes('MARÍTIMO') || sNameUpper.includes('FT3') || sNameUpper.includes('PIE')) {
+      unitLabel = 'ft3';
+    } else if (sNameUpper.includes('MAYORISTA AEREO') || sNameUpper.includes('MAYORISTA AÉREO') || sNameUpper.includes('MADRID')) {
+      unitLabel = 'kg';
+    }
+    const weightStr = item.weight !== undefined && item.weight !== null && item.weight !== '' ? `${item.weight} ${unitLabel}` : '-';
     page.drawText(clean(weightStr), { x: colX.weight, y: y - 9, size: 8.5, font: fontRegular, color: textGray });
 
     // Rate

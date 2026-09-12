@@ -193,22 +193,28 @@ export default function InvoiceViewPage() {
                 <th className="py-2 text-left font-bold text-gray-600 w-8">N.º</th>
                 <th className="py-2 text-left font-bold text-gray-600">Producto/servicio</th>
                 <th className="py-2 text-left font-bold text-gray-600">Numero de Rastreo</th>
-                <th className="py-2 text-right font-bold text-gray-600">Peso</th>
+                <th className="py-2 text-right font-bold text-gray-600">Peso / Medida</th>
                 <th className="py-2 text-right font-bold text-gray-600">Tarifa</th>
                 <th className="py-2 text-right font-bold text-gray-600">Importe</th>
               </tr>
             </thead>
             <tbody>
-              {invoice.items?.map((item, index) => (
-                <tr key={item.id} className="border-b border-gray-100">
-                  <td className="py-3 text-gray-400">{index + 1}.</td>
-                  <td className="py-3 text-gray-700">{item.service_name}</td>
-                  <td className="py-3 text-gray-500 font-mono">{item.tracking_number || '-'}</td>
-                  <td className="py-3 text-gray-500 text-right">{item.weight || '-'}</td>
-                  <td className="py-3 text-gray-500 text-right">{item.rate ? '$' + Number(item.rate).toFixed(2) : '-'}</td>
-                  <td className="py-3 text-gray-800 text-right font-bold">${Number(item.amount).toFixed(2)}</td>
-                </tr>
-              ))}
+              {invoice.items?.map((item, index) => {
+                const sUpper = (item.service_name || '').toUpperCase();
+                const unit = (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE'))
+                  ? 'ft³'
+                  : (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') ? 'kg' : 'lb');
+                return (
+                  <tr key={item.id} className="border-b border-gray-100">
+                    <td className="py-3 text-gray-400">{index + 1}.</td>
+                    <td className="py-3 text-gray-700">{item.service_name}</td>
+                    <td className="py-3 text-gray-500 font-mono">{item.tracking_number || '-'}</td>
+                    <td className="py-3 text-gray-500 text-right">{item.weight ? `${item.weight} ${unit}` : '-'}</td>
+                    <td className="py-3 text-gray-500 text-right">{item.rate ? '$' + Number(item.rate).toFixed(2) : '-'}</td>
+                    <td className="py-3 text-gray-800 text-right font-bold">${Number(item.amount).toFixed(2)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 

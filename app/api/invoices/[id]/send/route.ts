@@ -16,7 +16,16 @@ type InvoiceItem = {
 
 function buildItemRow(item: InvoiceItem): string {
   const trackingPart = item.tracking_number ? '<span style="font-family:Consolas,Monaco,monospace;color:#475569;word-break:break-all;font-size:12px;">📦 ' + item.tracking_number + '</span>' : '';
-  const weightPart = item.weight ? '<span style="font-weight:600;color:#334155;font-size:12px;">' + item.weight + ' lb</span>' : '';
+  
+  let unitLabel = 'lb';
+  const sUpper = (item.service_name || '').toUpperCase();
+  if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE')) {
+    unitLabel = 'ft³';
+  } else if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID')) {
+    unitLabel = 'kg';
+  }
+
+  const weightPart = item.weight ? '<span style="font-weight:600;color:#334155;font-size:12px;">' + item.weight + ' ' + unitLabel + '</span>' : '';
   const sep = (item.tracking_number && item.weight) ? ' &nbsp;•&nbsp; ' : '';
   const metaLine = (trackingPart || weightPart) ? '<p style="margin:4px 0 0;font-size:12px;color:#64748b;line-height:1.4;">' + trackingPart + sep + weightPart + '</p>' : '';
 

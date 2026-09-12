@@ -22,6 +22,8 @@ const DEFAULT_SERVICES: ServiceType[] = [
   { id: '8', name: 'COMPRA EN SITIO WEB', default_rate: 0 },
 ];
 
+export type WeightUnitType = 'Lb' | 'Kg' | 'ft³';
+
 export default function EditarFacturaPage() {
   const { showAlert } = useModal();
   const params = useParams();
@@ -41,7 +43,7 @@ export default function EditarFacturaPage() {
   const [invoiceNumber, setInvoiceNumber] = useState(`Cargando...`);
   const currency = 'USD';
   const [exchangeRate, setExchangeRate] = useState(500);
-  const [weightUnit, setWeightUnit] = useState<'Lb' | 'Kg'>('Lb');
+  const [weightUnit, setWeightUnit] = useState<WeightUnitType>('Lb');
   const [issueDate, setIssueDate] = useState(getLocalTodayDate());
   const [discountPercent, setDiscountPercent] = useState(0);
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -152,16 +154,23 @@ export default function EditarFacturaPage() {
     });
   };
 
-  const handleWeightUnitChange = (newUnit: 'Lb' | 'Kg') => {
+  const handleWeightUnitChange = (newUnit: WeightUnitType) => {
     if (newUnit === weightUnit) return;
+    const oldUnit = weightUnit;
     setWeightUnit(newUnit);
     
     setItems(prev => prev.map(item => {
       if (!item.weight) return item;
       const w = Number(item.weight);
-      const newWeight = newUnit === 'Kg' ? (w * 0.453592) : (w * 2.20462);
-      const updatedWeight = newWeight.toFixed(2).replace(/\.00$/, '');
-      
+      if (isNaN(w) || w <= 0) return item;
+
+      let updatedWeightNum = w;
+      if (oldUnit === 'Lb' && newUnit === 'Kg') {
+        updatedWeightNum = w * 0.453592;
+      } else if (oldUnit === 'Kg' && newUnit === 'Lb') {
+        updatedWeightNum = w * 2.20462;
+      }
+      const updatedWeight = updatedWeightNum.toFixed(2).replace(/\.00$/, '');
       const r = Number(item.rate) || 0;
       const amount = r > 0 ? Number((Number(updatedWeight) * r).toFixed(2)) : Number(item.amount);
       
@@ -191,28 +200,42 @@ export default function EditarFacturaPage() {
     }
   };
 
-  const isKiloService = (name: string): boolean => {
-    if (!name) return false;
+  const detectServiceUnit = (name: string): WeightUnitType | null => {
+    if (!name) return null;
     const norm = name
       .toUpperCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    return (
+    // 1. Marítimo -> Pies Cúbicos (ft³)
+    if (norm.includes('MARITIMO') || norm.includes('PIE CUBICO') || norm.includes('FT3')) {
+      return 'ft³';
+    }
+
+    // 2. Mayorista Aéreo / Madrid -> Kilos (Kg)
+    if (
+      norm.includes('MAYORISTA AEREO') ||
+      norm.includes('AEREO MADRID') ||
       (norm.includes('MAYORISTA') && norm.includes('AEREO')) ||
-      (norm.includes('MAYORISTA') && norm.includes('MADRID')) ||
-      (norm.includes('AEREO') && norm.includes('MADRID')) ||
-      norm.includes('MAYORISTA AEREO MIA') ||
-      norm.includes('MAYORISTA AEREO MADRID')
-    );
+      (norm.includes('MAYORISTA') && norm.includes('MADRID'))
+    ) {
+      return 'Kg';
+    }
+
+    // 3. Estándar Aéreo -> Libras (Lb)
+    if (norm.includes('ESTANDAR AEREO') || norm.includes('TRANSPORTE ESTANDAR')) {
+      return 'Lb';
+    }
+
+    return null;
   };
 
   const handleItemChange = (id: number, field: string, value: string) => {
-    // If selecting a kilo-based service (e.g. Mayorista Aéreo MIA/Madrid) and currently in Lb, switch entire invoice unit to Kg
-    let switchingToKg = false;
-    if (field === 'service_name' && isKiloService(value) && weightUnit === 'Lb') {
-      switchingToKg = true;
-      setWeightUnit('Kg');
+    if (field === 'service_name') {
+      const autoUnit = detectServiceUnit(value);
+      if (autoUnit && autoUnit !== weightUnit) {
+        handleWeightUnitChange(autoUnit);
+      }
     }
 
     setItems(prev => prev.map(item => {
@@ -225,13 +248,6 @@ export default function EditarFacturaPage() {
            const foundService = available.find(s => s.name.toUpperCase() === value.toUpperCase());
            if (foundService) {
              updatedItem.rate = foundService.default_rate.toString();
-           }
-
-           if (switchingToKg && updatedItem.weight) {
-             const w = Number(updatedItem.weight);
-             if (w > 0) {
-               updatedItem.weight = (w * 0.453592).toFixed(2).replace(/\.00$/, '');
-             }
            }
 
            // recalculate amount if weight is present
@@ -251,18 +267,6 @@ export default function EditarFacturaPage() {
         }
         return updatedItem;
       }
-
-      // If we switched to Kg, convert other items too
-      if (switchingToKg && item.weight) {
-        const w = Number(item.weight);
-        if (w > 0) {
-          const newWeight = (w * 0.453592).toFixed(2).replace(/\.00$/, '');
-          const r = Number(item.rate) || 0;
-          const amount = r > 0 ? Number((Number(newWeight) * r).toFixed(2)) : Number(item.amount);
-          return { ...item, weight: newWeight, amount };
-        }
-      }
-
       return item;
     }));
   };
@@ -417,56 +421,57 @@ export default function EditarFacturaPage() {
           </div>
 
           <div className="space-y-4 md:pl-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">N.º Factura</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">N.º Factura</label>
                 <input 
                   type="text" 
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue font-bold text-brand-blue" 
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white font-bold text-brand-blue text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs" 
                   required 
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Moneda</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Moneda</label>
                 <select 
                   value="USD"
                   disabled
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-gray-50 font-bold text-brand-blue cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 font-bold text-brand-blue text-sm cursor-not-allowed shadow-xs"
                 >
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">T. Cambio</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">T. Cambio</label>
                 <input 
                   type="number"
                   value={exchangeRate}
                   onChange={(e) => setExchangeRate(Number(e.target.value))}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white font-bold text-brand-blue text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs"
                   min="1"
                   step="1"
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Unidad</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Unidad</label>
                 <select 
                   value={weightUnit}
-                  onChange={(e) => handleWeightUnitChange(e.target.value as 'Lb' | 'Kg')}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue bg-white font-bold text-brand-blue"
+                  onChange={(e) => handleWeightUnitChange(e.target.value as WeightUnitType)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white font-bold text-brand-blue text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs cursor-pointer"
                 >
                   <option value="Lb">Libras (Lb)</option>
                   <option value="Kg">Kilos (Kg)</option>
+                  <option value="ft³">Pies Cúbicos (ft³)</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Emisión</label>
+              <div className="col-span-2 sm:col-span-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Fecha de Emisión</label>
                 <input 
                   type="date" 
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-brand-blue text-gray-700 font-medium" 
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs" 
                   required 
                 />
               </div>
@@ -488,7 +493,7 @@ export default function EditarFacturaPage() {
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-4">Producto/Servicio</div>
               <div className="col-span-3">Nº Rastreo</div>
-              <div className="col-span-1 text-center">Peso</div>
+              <div className="col-span-1 text-center">Peso / Medida</div>
               <div className="col-span-1 text-center">Tarifa</div>
               <div className="col-span-2 text-right pr-8">Importe ($)</div>
             </div>
