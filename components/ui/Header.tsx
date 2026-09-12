@@ -46,12 +46,12 @@ export default function Header() {
           <Image 
             src="/logo-patrio-clean.png" 
             alt="JRS CARGO - Mes de la Patria" 
-            width={280} 
-            height={96} 
+            width={200} 
+            height={68} 
             className={`w-auto object-contain transition-all duration-300 ease-out group-hover:scale-105 ${
               isScrolled && !isMobileMenuOpen 
-                ? 'h-12 sm:h-14 lg:h-[60px]' 
-                : 'h-14 sm:h-16 lg:h-[76px]'
+                ? 'h-8 sm:h-9 lg:h-10' 
+                : 'h-10 sm:h-11 lg:h-12'
             }`}
             priority
           />
