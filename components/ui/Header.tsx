@@ -17,12 +17,20 @@ const navLinks = [
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPatriotic, setIsPatriotic] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
+
+    // Mes patrio activo hasta el 20 de septiembre inclusive (mes 8 = Septiembre)
+    const now = new Date();
+    if (now.getMonth() === 8 && now.getDate() <= 20) {
+      setIsPatriotic(true);
+    }
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -44,14 +52,14 @@ export default function Header() {
         {/* Logo */}
         <Link href="/" className="flex-shrink-0 group" onClick={() => setIsMobileMenuOpen(false)}>
           <Image 
-            src="/logo-patrio-clean.png" 
-            alt="JRS CARGO - Mes de la Patria" 
-            width={200} 
-            height={68} 
-            className={`w-auto object-contain transition-all duration-300 ease-out group-hover:scale-105 ${
-              isScrolled && !isMobileMenuOpen 
-                ? 'h-8 sm:h-9 lg:h-10' 
-                : 'h-10 sm:h-11 lg:h-12'
+            src={isPatriotic ? "/logo-patrio-clean.png" : "/logo.png"} 
+            alt={isPatriotic ? "JRS CARGO - Mes de la Patria" : "JRS CARGO"} 
+            width={isPatriotic ? 200 : 240} 
+            height={isPatriotic ? 68 : 96} 
+            className={`w-auto object-contain transition-all duration-300 ease-out ${
+              isPatriotic 
+                ? (isScrolled && !isMobileMenuOpen ? 'h-8 sm:h-9 lg:h-10 group-hover:scale-105' : 'h-10 sm:h-11 lg:h-12 group-hover:scale-105')
+                : (isScrolled && !isMobileMenuOpen ? 'h-12 sm:h-14 lg:h-[56px]' : 'h-14 sm:h-16 lg:h-[72px]')
             }`}
             priority
           />

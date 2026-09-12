@@ -10,141 +10,7 @@ import {
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 
-const ChoneteHat = ({ isHovered = false }: { isHovered?: boolean }) => {
-  return (
-    <motion.div
-      animate={isHovered ? {
-        rotate: [-3, 4, -3],
-        y: [0, -3, 0],
-      } : {
-        rotate: [-1, 2, -1],
-        y: [0, -1, 0],
-      }}
-      transition={{
-        duration: isHovered ? 0.8 : 2.5,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-      className="absolute -top-7 sm:-top-8 left-1/2 -translate-x-1/2 z-30 pointer-events-none w-[78px] sm:w-[90px] filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.28)]"
-    >
-      <svg viewBox="0 0 100 62" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
-        {/* Shadow under brim */}
-        <ellipse cx="50" cy="49" rx="44" ry="7" fill="rgba(0,0,0,0.18)" />
-
-        {/* Chonete Brim */}
-        <path
-          d="M 5 46 C 18 36, 82 36, 95 46 C 97 50, 84 57, 50 57 C 16 57, 3 50, 5 46 Z"
-          fill="#F5E7CA"
-          stroke="#D1B683"
-          strokeWidth="1.2"
-        />
-        <path
-          d="M 10 45 C 24 38, 76 38, 90 45"
-          stroke="#C5A46A"
-          strokeWidth="1"
-          strokeDasharray="2.5 2"
-        />
-
-        {/* Chonete Crown (Dome) */}
-        <path
-          d="M 23 42 C 22 22, 30 7, 50 6 C 70 7, 78 22, 77 42 Z"
-          fill="#FAF1DC"
-          stroke="#D1B683"
-          strokeWidth="1.4"
-        />
-
-        {/* Crown Stitches / Panels */}
-        <path d="M 50 6 C 43 18, 35 32, 32 42" stroke="#DFC99E" strokeWidth="1" />
-        <path d="M 50 6 C 57 18, 65 32, 68 42" stroke="#DFC99E" strokeWidth="1" />
-        <path d="M 50 6 L 50 42" stroke="#DFC99E" strokeWidth="0.8" strokeDasharray="2 1.5" />
-
-        {/* Hat Base Band */}
-        <path
-          d="M 23.5 41 C 33 37, 67 37, 76.5 41 C 76.5 43.5, 67 45.5, 50 45.5 C 33 45.5, 23.5 43.5, 23.5 41 Z"
-          fill="#E8D2A7"
-          stroke="#C8AA74"
-          strokeWidth="0.8"
-        />
-
-        {/* Costa Rica Text */}
-        <text x="50" y="16" textAnchor="middle" fontSize="5" fontWeight="900" fill="#002B7F" fontFamily="sans-serif" letterSpacing="0.2">
-          Costa Rica
-        </text>
-
-        {/* Waving Costa Rica Flag on Chonete */}
-        <g transform="translate(35, 18) scale(0.8)">
-          {/* Blue top */}
-          <path d="M 0 3 Q 18 0 37 3 L 37 6.5 Q 18 3.5 0 6.5 Z" fill="#002B7F" />
-          {/* White top */}
-          <path d="M 0 6.5 Q 18 3.5 37 6.5 L 37 9.5 Q 18 6.5 0 9.5 Z" fill="#FFFFFF" />
-          {/* Red double middle */}
-          <path d="M 0 9.5 Q 18 6.5 37 9.5 L 37 17 Q 18 14 0 17 Z" fill="#CE1126" />
-          {/* Mini Gold Emblem Dot */}
-          <circle cx="11" cy="13" r="1.4" fill="#F59E0B" />
-          {/* White bottom */}
-          <path d="M 0 17 Q 18 14 37 17 L 37 20 Q 18 17 0 20 Z" fill="#FFFFFF" />
-          {/* Blue bottom */}
-          <path d="M 0 20 Q 18 17 37 20 L 37 23.5 Q 18 20.5 0 23.5 Z" fill="#002B7F" />
-        </g>
-
-        {/* Pura Vida Text */}
-        <text x="50" y="39.5" textAnchor="middle" fontSize="4.2" fontStyle="italic" fontWeight="800" fill="#002B7F" fontFamily="sans-serif">
-          Pura Vida
-        </text>
-      </svg>
-    </motion.div>
-  );
-};
-
-const WavingFlagHand = ({ isHovered = false }: { isHovered?: boolean }) => {
-  return (
-    <motion.div
-      className="absolute -right-7 sm:-right-8 -bottom-1 z-30 pointer-events-none origin-bottom-left"
-      animate={{
-        rotate: isHovered ? [0, 24, -12, 28, 0] : [0, 16, -6, 16, 0],
-        y: isHovered ? [0, -5, 0] : [0, -2, 0],
-      }}
-      transition={{
-        duration: isHovered ? 0.75 : 1.8,
-        repeat: Infinity,
-        ease: "easeInOut",
-      }}
-    >
-      <svg width="48" height="54" viewBox="0 0 48 54" fill="none" xmlns="http://www.w3.org/2000/svg" className="filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.32)]">
-        {/* Robotic Forearm */}
-        <path d="M 6 46 C 10 42, 16 38, 20 33" stroke="#E2E8F0" strokeWidth="5.5" strokeLinecap="round" />
-        <path d="M 6 46 C 10 42, 16 38, 20 33" stroke="#12435E" strokeWidth="3" strokeLinecap="round" />
-
-        {/* Hand Joint & Clamp */}
-        <circle cx="20" cy="32" r="4.5" fill="#0B1D2B" stroke="#FFFFFF" strokeWidth="1.5" />
-        <circle cx="20" cy="32" r="2.2" fill="#F9B233" />
-
-        {/* Flagpole Mast */}
-        <line x1="13" y1="49" x2="28" y2="4" stroke="#D4AF37" strokeWidth="2.4" strokeLinecap="round" />
-        {/* Golden Ball Top */}
-        <circle cx="28.5" cy="3.5" r="2.5" fill="#F59E0B" stroke="#B45309" strokeWidth="0.6" />
-
-        {/* Animated Costa Rican Waving Flag Banner */}
-        <g>
-          {/* Blue top stripe */}
-          <path d="M 28 5 Q 36 2 45 6 L 44 10.5 Q 35 6.5 27 9.5 Z" fill="#002B7F" />
-          {/* White top stripe */}
-          <path d="M 27 9.5 Q 35 6.5 44 10.5 L 43 13 Q 34 9 26 12 Z" fill="#FFFFFF" />
-          {/* Red double middle stripe */}
-          <path d="M 26 12 Q 34 9 43 13 L 42 19.5 Q 33 15.5 25 18.5 Z" fill="#CE1126" />
-          {/* Costa Rica Emblem (Escudo) */}
-          <circle cx="31.5" cy="15.5" r="1.8" fill="#F59E0B" stroke="#FFFFFF" strokeWidth="0.4" />
-          {/* White bottom stripe */}
-          <path d="M 25 18.5 Q 33 15.5 42 19.5 L 41 22 Q 32 18 24 21 Z" fill="#FFFFFF" />
-          {/* Blue bottom stripe */}
-          <path d="M 24 21 Q 32 18 41 22 L 40 26.5 Q 31 22.5 23 25.5 Z" fill="#002B7F" />
-        </g>
-      </svg>
-    </motion.div>
-  );
-};
-
-const AnimatedRobotFace = ({ isHovered = false }: { isHovered?: boolean }) => {
+const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHovered?: boolean; isPatriotic?: boolean }) => {
   const faceRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -178,6 +44,44 @@ const AnimatedRobotFace = ({ isHovered = false }: { isHovered?: boolean }) => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [mouseX, mouseY]);
 
+  // Edición 3D Mes Patrio (Costa Rica 🇨🇷) hasta el 20 de Septiembre
+  if (isPatriotic) {
+    return (
+      <motion.div
+        ref={faceRef}
+        animate={isHovered ? {
+          y: [0, -7, -2, -6, 0],
+          rotate: [0, -5, 5, -3, 0],
+          scale: 1.12,
+        } : {
+          y: [0, -3.5, 0],
+          rotate: [0, 1.8, -1.8, 0],
+          scale: 1,
+        }}
+        transition={isHovered ? {
+          duration: 0.9,
+          repeat: Infinity,
+          ease: "easeInOut",
+        } : {
+          duration: 3.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="w-[74px] h-[74px] sm:w-[82px] sm:h-[82px] flex items-center justify-center relative filter drop-shadow-[0_10px_22px_rgba(0,0,0,0.25)] select-none"
+      >
+        <Image
+          src="/bot-patrio.png"
+          alt="Clari AI - Costa Rica Mes Patrio"
+          width={160}
+          height={140}
+          className="w-full h-full object-contain pointer-events-none"
+          priority
+        />
+      </motion.div>
+    );
+  }
+
+  // Versión estándar normal
   return (
     <motion.div 
       animate={isHovered ? { 
@@ -199,80 +103,71 @@ const AnimatedRobotFace = ({ isHovered = false }: { isHovered?: boolean }) => {
         ease: "easeOut"
       }}
       ref={faceRef} 
-      className="relative flex items-center justify-center"
+      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center justify-center relative overflow-hidden border-2 border-white"
     >
-      {/* Costa Rican Chonete Hat atop the Bot Head */}
-      <ChoneteHat isHovered={isHovered} />
-
-      {/* Hand waving the Costa Rica Flag */}
-      <WavingFlagHand isHovered={isHovered} />
-
-      {/* Circular Robot Head */}
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center justify-center relative overflow-hidden border-2 border-white">
-        {/* Outer Multi-color Halo Ring - Accelerates on Hover */}
-        <motion.div 
-          animate={{ rotate: 360, scale: isHovered ? 1.3 : 1.05 }}
-          transition={{ 
-            rotate: { duration: isHovered ? 1.8 : 6, repeat: Infinity, ease: "linear" },
-            scale: { duration: 0.3 }
-          }}
-          className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
-        />
+      {/* Outer Multi-color Halo Ring - Accelerates on Hover */}
+      <motion.div 
+        animate={{ rotate: 360, scale: isHovered ? 1.3 : 1.05 }}
+        transition={{ 
+          rotate: { duration: isHovered ? 1.8 : 6, repeat: Infinity, ease: "linear" },
+          scale: { duration: 0.3 }
+        }}
+        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
+      />
+      
+      <div className="absolute inset-1 rounded-full bg-white z-0"></div>
+      
+      {/* Inner Visor */}
+      <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-900 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/40 z-10">
+        <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px]"></div>
         
-        <div className="absolute inset-1 rounded-full bg-white z-0"></div>
-        
-        {/* Inner Visor */}
-        <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-900 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/40 z-10">
-          <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px]"></div>
-          
-          {/* Animated Eyes */}
-          <motion.div style={{ x: eyeX, y: eyeY }} className="flex gap-2 relative z-10">
-            {/* Left Eye */}
-            <motion.div 
-              animate={isHovered ? {
-                scaleY: [1, 0.15, 1.2, 0.9, 1.1],
-                scaleX: [1, 1.1, 0.9, 1.1, 1],
-              } : {
-                scaleY: [1, 0.1, 1, 1, 1],
-                scaleX: 1
-              }}
-              transition={isHovered ? {
-                duration: 1.2,
-                repeat: Infinity,
-                times: [0, 0.1, 0.3, 0.6, 1]
-              } : {
-                duration: 3.5,
-                repeat: Infinity,
-                times: [0, 0.05, 0.1, 0.5, 1]
-              }}
-              className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
-                isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
-              }`}
-            />
-            {/* Right Eye */}
-            <motion.div 
-              animate={isHovered ? {
-                scaleY: [1, 0.15, 1.2, 0.9, 1.1],
-                scaleX: [1, 1.1, 0.9, 1.1, 1],
-              } : {
-                scaleY: [1, 0.1, 1, 1, 1],
-                scaleX: 1
-              }}
-              transition={isHovered ? {
-                duration: 1.2,
-                repeat: Infinity,
-                times: [0, 0.1, 0.3, 0.6, 1]
-              } : {
-                duration: 3.5,
-                repeat: Infinity,
-                times: [0, 0.05, 0.1, 0.5, 1]
-              }}
-              className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
-                isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
-              }`}
-            />
-          </motion.div>
-        </div>
+        {/* Animated Eyes */}
+        <motion.div style={{ x: eyeX, y: eyeY }} className="flex gap-2 relative z-10">
+          {/* Left Eye */}
+          <motion.div 
+            animate={isHovered ? {
+              scaleY: [1, 0.15, 1.2, 0.9, 1.1],
+              scaleX: [1, 1.1, 0.9, 1.1, 1],
+            } : {
+              scaleY: [1, 0.1, 1, 1, 1],
+              scaleX: 1
+            }}
+            transition={isHovered ? {
+              duration: 1.2,
+              repeat: Infinity,
+              times: [0, 0.1, 0.3, 0.6, 1]
+            } : {
+              duration: 3.5,
+              repeat: Infinity,
+              times: [0, 0.05, 0.1, 0.5, 1]
+            }}
+            className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
+              isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
+            }`}
+          />
+          {/* Right Eye */}
+          <motion.div 
+            animate={isHovered ? {
+              scaleY: [1, 0.15, 1.2, 0.9, 1.1],
+              scaleX: [1, 1.1, 0.9, 1.1, 1],
+            } : {
+              scaleY: [1, 0.1, 1, 1, 1],
+              scaleX: 1
+            }}
+            transition={isHovered ? {
+              duration: 1.2,
+              repeat: Infinity,
+              times: [0, 0.1, 0.3, 0.6, 1]
+            } : {
+              duration: 3.5,
+              repeat: Infinity,
+              times: [0, 0.05, 0.1, 0.5, 1]
+            }}
+            className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
+              isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
+            }`}
+          />
+        </motion.div>
       </div>
     </motion.div>
   );
@@ -288,6 +183,7 @@ const QUICK_ACTIONS = [
 export default function ChatBotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isTriggerHovered, setIsTriggerHovered] = useState(false);
+  const [isPatriotic, setIsPatriotic] = useState(false);
 
   // User details for Bot Leads in Admin Panel
   const [userName, setUserName] = useState('');
@@ -304,6 +200,12 @@ export default function ChatBotWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Mes patrio activo hasta el 20 de septiembre inclusive (mes 8 = Septiembre)
+    const now = new Date();
+    if (now.getMonth() === 8 && now.getDate() <= 20) {
+      setIsPatriotic(true);
+    }
+
     if (typeof window !== 'undefined') {
       const savedName = localStorage.getItem('clari_lead_name');
       const savedEmail = localStorage.getItem('clari_lead_email');
@@ -469,17 +371,25 @@ export default function ChatBotWidget() {
               <div className="flex items-center gap-3 relative z-10">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 p-1 flex items-center justify-center">
-                    <Image src="/logo-patrio-clean.png" alt="JRS Cargo" width={28} height={28} className="object-contain" />
+                    <Image 
+                      src={isPatriotic ? "/logo-patrio-clean.png" : "/logo.png"} 
+                      alt="JRS Cargo" 
+                      width={28} 
+                      height={28} 
+                      className="object-contain" 
+                    />
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0B1D2B] rounded-full animate-pulse" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-black text-sm tracking-tight text-white flex items-center gap-1">Clari 🇨🇷</h3>
+                    <h3 className="font-black text-sm tracking-tight text-white flex items-center gap-1">
+                      Clari {isPatriotic && '🇨🇷'}
+                    </h3>
                     <span className="text-[10px] px-1.5 py-0.2 bg-brand-yellow/20 text-brand-yellow rounded font-bold uppercase tracking-wider">AI</span>
                   </div>
                   <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Asistente Oficial JRS • ¡Mes Patrio!
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Asistente Oficial JRS {isPatriotic && '• ¡Mes Patrio!'}
                   </p>
                 </div>
               </div>
@@ -750,7 +660,7 @@ export default function ChatBotWidget() {
             whileTap={{ scale: 0.92 }}
             className="relative cursor-pointer"
           >
-            <AnimatedRobotFace isHovered={isTriggerHovered} />
+            <AnimatedRobotFace isHovered={isTriggerHovered} isPatriotic={isPatriotic} />
           </motion.div>
         </button>
       )}
