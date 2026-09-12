@@ -18,7 +18,8 @@ const DEFAULT_SERVICES: ServiceType[] = [
   { id: '4', name: 'MAYORISTA MARITIMO MIA - SJO TODO INCLUIDO', default_rate: 25 },
   { id: '5', name: 'TRANSPORTE ESTÁNDAR AÉREO CHINA - SJO', default_rate: 17 },
   { id: '6', name: 'TRANSPORTE ESTÁNDAR AÉREO MADRID - SJO', default_rate: 15 },
-  { id: '7', name: 'COMPRA EN SITIO WEB', default_rate: 0 },
+  { id: '7', name: 'MAYORISTA AÉREO MADRID - SJO', default_rate: 15 },
+  { id: '8', name: 'COMPRA EN SITIO WEB', default_rate: 0 },
 ];
 
 export default function EditarFacturaPage() {
@@ -190,21 +191,53 @@ export default function EditarFacturaPage() {
     }
   };
 
+  const isKiloService = (name: string): boolean => {
+    if (!name) return false;
+    const norm = name
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    return (
+      (norm.includes('MAYORISTA') && norm.includes('AEREO')) ||
+      (norm.includes('MAYORISTA') && norm.includes('MADRID')) ||
+      (norm.includes('AEREO') && norm.includes('MADRID')) ||
+      norm.includes('MAYORISTA AEREO MIA') ||
+      norm.includes('MAYORISTA AEREO MADRID')
+    );
+  };
+
   const handleItemChange = (id: number, field: string, value: string) => {
+    // If selecting a kilo-based service (e.g. Mayorista Aéreo MIA/Madrid) and currently in Lb, switch entire invoice unit to Kg
+    let switchingToKg = false;
+    if (field === 'service_name' && isKiloService(value) && weightUnit === 'Lb') {
+      switchingToKg = true;
+      setWeightUnit('Kg');
+    }
+
     setItems(prev => prev.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         
         // Auto-fill rate if a catalog service is selected
         if (field === 'service_name') {
-           const foundService = catalogServices.find(s => s.name.toUpperCase() === value.toUpperCase());
+           const available = catalogServices.length > 0 ? [...catalogServices, ...DEFAULT_SERVICES] : DEFAULT_SERVICES;
+           const foundService = available.find(s => s.name.toUpperCase() === value.toUpperCase());
            if (foundService) {
              updatedItem.rate = foundService.default_rate.toString();
-             // recalculate amount if weight is present
-             const w = Number(updatedItem.weight) || 0;
-             const r = Number(updatedItem.rate) || 0;
-             updatedItem.amount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : 0;
            }
+
+           if (switchingToKg && updatedItem.weight) {
+             const w = Number(updatedItem.weight);
+             if (w > 0) {
+               updatedItem.weight = (w * 0.453592).toFixed(2).replace(/\.00$/, '');
+             }
+           }
+
+           // recalculate amount if weight is present
+           const w = Number(updatedItem.weight) || 0;
+           const r = Number(updatedItem.rate) || 0;
+           updatedItem.amount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : 0;
         }
 
         // Auto calculate amount if rate and weight are present
@@ -218,6 +251,18 @@ export default function EditarFacturaPage() {
         }
         return updatedItem;
       }
+
+      // If we switched to Kg, convert other items too
+      if (switchingToKg && item.weight) {
+        const w = Number(item.weight);
+        if (w > 0) {
+          const newWeight = (w * 0.453592).toFixed(2).replace(/\.00$/, '');
+          const r = Number(item.rate) || 0;
+          const amount = r > 0 ? Number((Number(newWeight) * r).toFixed(2)) : Number(item.amount);
+          return { ...item, weight: newWeight, amount };
+        }
+      }
+
       return item;
     }));
   };
