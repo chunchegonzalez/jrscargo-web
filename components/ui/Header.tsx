@@ -42,16 +42,16 @@ export default function Header() {
         }`}
       >
         {/* Logo */}
-        <Link href="/" className="flex-shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
+        <Link href="/" className="flex-shrink-0 group" onClick={() => setIsMobileMenuOpen(false)}>
           <Image 
-            src="/logo.png" 
-            alt="JRS CARGO" 
-            width={240} 
+            src="/logo-patrio-clean.png" 
+            alt="JRS CARGO - Mes de la Patria" 
+            width={280} 
             height={96} 
-            className={`w-auto object-contain transition-all duration-300 ease-out ${
+            className={`w-auto object-contain transition-all duration-300 ease-out group-hover:scale-105 ${
               isScrolled && !isMobileMenuOpen 
-                ? 'h-12 sm:h-14 lg:h-[56px]' 
-                : 'h-14 sm:h-16 lg:h-[72px]'
+                ? 'h-12 sm:h-14 lg:h-[60px]' 
+                : 'h-14 sm:h-16 lg:h-[76px]'
             }`}
             priority
           />
