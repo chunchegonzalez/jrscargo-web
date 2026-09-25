@@ -3,10 +3,12 @@
 import { ArrowRight, Calculator, Plane, Container, Ship } from 'lucide-react';
 import { FaStar, FaWhatsapp } from 'react-icons/fa';
 import Image from 'next/image';
-
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function Hero() {
+  const { t } = useLanguage();
+
   return (
     <section className="relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden bg-brand-bg-section">
       {/* Abstract Background Elements */}
@@ -20,9 +22,9 @@ export default function Hero() {
           {/* Content */}
           <div className="max-w-2xl animate-slide-up">
             <h1 className="text-[2.5rem] sm:text-5xl lg:text-[4.5rem] font-black text-brand-blue leading-[1.1] mb-6 text-balance tracking-tight">
-              Tus compras del mundo, <br className="hidden lg:block"/>
-              <span className="text-brand-red">más cerca de</span> <br className="hidden lg:block"/>
-              Costa Rica.
+              {t.hero.titleLine1} <br className="hidden lg:block"/>
+              <span className="text-brand-red">{t.hero.titleHighlight}</span> <br className="hidden lg:block"/>
+              {t.hero.titleLine2}
             </h1>
             
             <div className="flex items-center gap-2 mb-6">
@@ -56,12 +58,12 @@ export default function Hero() {
                 transition={{ delay: 0.8, duration: 0.5 }}
                 className="text-sm font-semibold text-brand-text-gray ml-2"
               >
-                +10,000 entregas exitosas
+                {t.hero.deliveries}
               </motion.span>
             </div>
 
             <p className="text-lg sm:text-xl text-brand-text-gray mb-10 text-balance leading-relaxed">
-              Compra en Estados Unidos, España o China y nosotros nos encargamos de traer tus paquetes a Costa Rica de forma sencilla, rápida y segura.
+              {t.hero.description}
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
@@ -71,7 +73,7 @@ export default function Hero() {
                 rel="noopener noreferrer"
                 className="btn-primary py-4 px-8 text-base shadow-xl shadow-brand-blue/20"
               >
-                Abrir mi casillero gratis
+                {t.hero.openLocker}
                 <ArrowRight size={20} />
               </a>
               <a 
@@ -79,7 +81,7 @@ export default function Hero() {
                 className="btn-white border-2 border-gray-200 py-4 px-8 text-base hover:border-brand-blue/30"
               >
                 <Calculator size={20} className="text-brand-blue" />
-                Cotizar mi envío
+                {t.hero.quoteShipment}
               </a>
             </div>
 
@@ -92,7 +94,7 @@ export default function Hero() {
             </div>
 
             <div className="flex items-center flex-wrap gap-2 text-sm font-bold text-brand-text-gray">
-              <span>¿Tienes dudas?</span>
+              <span>{t.hero.doubts}</span>
               <a 
                 href="https://wa.me/50672601238" 
                 target="_blank" 
@@ -100,7 +102,7 @@ export default function Hero() {
                 className="text-brand-text-gray hover:text-[#25D366] flex items-center gap-2 transition-colors group bg-white/60 px-4 py-2 rounded-full border border-gray-200 shadow-sm"
               >
                 <FaWhatsapp size={20} className="text-[#25D366] group-hover:scale-110 transition-transform" />
-                Hablar por WhatsApp (+506 7260 1238)
+                {t.hero.whatsappBtn}
               </a>
             </div>
           </div>
@@ -242,8 +244,8 @@ export default function Hero() {
                   <Plane size={22} className="relative z-10" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">Miami → SJ</p>
-                  <p className="text-sm font-black text-brand-blue leading-none">Aéreo</p>
+                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">{t.hero.boxAirMiami}</p>
+                  <p className="text-sm font-black text-brand-blue leading-none">{t.hero.serviceAir}</p>
                 </div>
               </motion.div>
 
@@ -258,8 +260,8 @@ export default function Hero() {
                   <Plane size={22} className="relative z-10" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">España → SJ</p>
-                  <p className="text-sm font-black text-brand-blue leading-none">Aéreo</p>
+                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">{t.hero.boxAirSpain}</p>
+                  <p className="text-sm font-black text-brand-blue leading-none">{t.hero.serviceAir}</p>
                 </div>
               </motion.div>
 
@@ -274,8 +276,8 @@ export default function Hero() {
                   <Plane size={22} className="relative z-10" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">China → SJ</p>
-                  <p className="text-sm font-black text-brand-blue leading-none">Aéreo</p>
+                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">{t.hero.boxAirChina}</p>
+                  <p className="text-sm font-black text-brand-blue leading-none">{t.hero.serviceAir}</p>
                 </div>
               </motion.div>
 
@@ -290,8 +292,8 @@ export default function Hero() {
                   <Ship size={22} className="relative z-10" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">Miami → SJ</p>
-                  <p className="text-sm font-black text-brand-blue leading-none">Marítimo</p>
+                  <p className="text-[10px] font-bold text-brand-text-light uppercase tracking-wider mb-0.5">{t.hero.boxSeaMiami}</p>
+                  <p className="text-sm font-black text-brand-blue leading-none">{t.hero.serviceSea}</p>
                 </div>
               </motion.div>
 

@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Building2, User, Mail, Phone, PackageSearch, MessageSquare, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function CorporateClients() {
+  const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -64,23 +66,23 @@ export default function CorporateClients() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-blue/10 text-brand-blue font-bold text-sm mb-6">
               <Building2 size={16} />
-              <span>Clientes Mayoristas</span>
+              <span>{t.corporate.badge}</span>
             </div>
             
             <h2 className="text-4xl md:text-5xl font-black text-brand-blue mb-6 leading-tight">
-              Soluciones logísticas a la medida de tu <span className="text-brand-red">empresa</span>.
+              {t.corporate.title} <span className="text-brand-red">{t.corporate.titleHighlight}</span>.
             </h2>
             
             <p className="text-lg text-brand-text-gray mb-8">
-              Ofrecemos tarifas preferenciales y un servicio prioritario para negocios, importadores y mayoristas. Optimiza tus costos y tiempos de entrega con JRS Cargo.
+              {t.corporate.subtitle}
             </p>
 
             <ul className="space-y-4 mb-10">
               {[
-                'Tarifas reducidas por volumen de importación.',
-                'Asesoría aduanal y manejo de trámites.',
-                'Soporte prioritario y atención personalizada.',
-                'Consolidación de carga en Miami, España y China.'
+                t.corporate.benefit1,
+                t.corporate.benefit2,
+                t.corporate.benefit3,
+                t.corporate.benefit4
               ].map((item, idx) => (
                 <li key={idx} className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-[#fdc151]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -100,7 +102,7 @@ export default function CorporateClients() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="bg-white/80 backdrop-blur-xl p-6 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 relative"
           >
-            <h3 className="text-2xl font-bold text-brand-blue mb-6">Solicitar cotización corporativa</h3>
+            <h3 className="text-2xl font-bold text-brand-blue mb-6">{t.corporate.formTitle}</h3>
             
             {submitStatus === 'success' ? (
               <motion.div 
@@ -112,90 +114,90 @@ export default function CorporateClients() {
                   <CheckCircle2 size={32} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-xl mb-2">¡Solicitud Enviada!</h4>
-                  <p className="text-sm">Hemos recibido tus datos correctamente. Nuestro equipo comercial se pondrá en contacto contigo a la brevedad posible.</p>
+                  <h4 className="font-bold text-xl mb-2">{t.corporate.successTitle}</h4>
+                  <p className="text-sm">{t.corporate.successDesc}</p>
                 </div>
                 <button 
                   onClick={() => setSubmitStatus('idle')}
                   className="mt-4 text-green-700 font-semibold text-sm hover:underline"
                 >
-                  Enviar otra solicitud
+                  {t.corporate.submitBtn}
                 </button>
               </motion.div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-brand-text-gray block">Nombre de la Empresa</label>
+                    <label className="text-sm font-semibold text-brand-text-gray block">{t.corporate.formCompany}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                         <Building2 size={18} />
                       </div>
-                      <input required type="text" name="companyName" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder="Ej: Importaciones CR" />
+                      <input required type="text" name="companyName" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder={t.corporate.formCompanyPlaceholder} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-brand-text-gray block">Nombre del Contacto</label>
+                    <label className="text-sm font-semibold text-brand-text-gray block">{t.corporate.formContact}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                         <User size={18} />
                       </div>
-                      <input required type="text" name="contactName" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder="Tu nombre" />
+                      <input required type="text" name="contactName" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder={t.corporate.formContactPlaceholder} />
                     </div>
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-brand-text-gray block">Correo Electrónico</label>
+                    <label className="text-sm font-semibold text-brand-text-gray block">{t.corporate.formEmail}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                         <Mail size={18} />
                       </div>
-                      <input required type="email" name="email" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder="correo@empresa.com" />
+                      <input required type="email" name="email" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder={t.corporate.formEmailPlaceholder} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-brand-text-gray block">Teléfono / WhatsApp</label>
+                    <label className="text-sm font-semibold text-brand-text-gray block">{t.corporate.formPhone}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                         <Phone size={18} />
                       </div>
-                      <input required type="tel" name="phone" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder="+506 0000 0000" />
+                      <input required type="tel" name="phone" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none" placeholder={t.corporate.formPhonePlaceholder} />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-brand-text-gray block">Volumen Mensual Estimado</label>
+                  <label className="text-sm font-semibold text-brand-text-gray block">{t.corporate.formVolume}</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                       <PackageSearch size={18} />
                     </div>
                     <select required name="volume" className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none appearance-none">
-                      <option value="">Selecciona un rango...</option>
-                      <option value="10-50">10 a 50 lbs</option>
-                      <option value="51-200">51 a 200 lbs</option>
-                      <option value="201-500">201 a 500 lbs</option>
-                      <option value="500+">Más de 500 lbs</option>
+                      <option value="">{t.corporate.formVolumePlaceholder}</option>
+                      <option value="10-50">10 - 50 lbs / 5 - 20 kg</option>
+                      <option value="51-200">51 - 200 lbs / 20 - 90 kg</option>
+                      <option value="201-500">201 - 500 lbs / 90 - 220 kg</option>
+                      <option value="500+">500+ lbs / 220+ kg / 20+ ft³</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-brand-text-gray block">Cuéntanos sobre tus necesidades</label>
+                  <label className="text-sm font-semibold text-brand-text-gray block">{t.corporate.formMessage}</label>
                   <div className="relative">
                     <div className="absolute top-3 left-0 pl-4 pointer-events-none text-gray-400">
                       <MessageSquare size={18} />
                     </div>
-                    <textarea name="message" rows={3} className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none resize-none" placeholder="Tipo de mercadería, frecuencia de envíos, requerimientos..."></textarea>
+                    <textarea name="message" rows={3} className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-all outline-none resize-none" placeholder={t.corporate.formMessagePlaceholder}></textarea>
                   </div>
                 </div>
 
                 {submitStatus === 'error' && (
                   <div className="p-3 bg-red-50 text-red-600 rounded-xl flex items-center gap-2 text-sm font-medium">
                     <AlertCircle size={16} />
-                    Ocurrió un error. Por favor intenta de nuevo.
+                    {t.corporate.errorDesc}
                   </div>
                 )}
 
@@ -208,7 +210,7 @@ export default function CorporateClients() {
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                   ) : (
                     <>
-                      Enviar Solicitud
+                      {t.corporate.submitBtn}
                       <Send size={18} />
                     </>
                   )}

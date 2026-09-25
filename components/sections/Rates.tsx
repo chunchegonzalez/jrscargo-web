@@ -2,65 +2,72 @@
 
 import { rates } from '@/data/rates';
 import { Plane, Ship } from 'lucide-react';
-
-const ratesData = [
-  {
-    id: 'usa-air',
-    origin: 'Estados Unidos',
-    shortOrigin: 'EE. UU.',
-    service: 'Aéreo',
-    price: rates.usaAir,
-    unit: 'libra',
-    icon: Plane,
-    flagUrl: 'https://flagcdn.com/us.svg',
-    note: 'Vuelos diarios desde Miami. Entregas de 3 a 5 días hábiles. Ideal para paquetería rápida.',
-  },
-  {
-    id: 'usa-sea',
-    origin: 'Estados Unidos',
-    shortOrigin: 'EE. UU.',
-    service: 'Marítimo',
-    price: rates.usaSea,
-    unit: 'pie cúbico',
-    icon: Ship,
-    flagUrl: 'https://flagcdn.com/us.svg',
-    note: [
-      'Importante: No se pueden enviar cargamentos que requieran permisos especiales.',
-      'Se debe adjuntar la factura de cada producto enviado marítimo para la declaración de aduanas.',
-      'Todo envío marítimo tiene que realizarse una prealerta en nuestro sistema.'
-    ],
-  },
-  {
-    id: 'spain-air',
-    origin: 'España',
-    shortOrigin: 'ESPAÑA',
-    service: 'Aéreo',
-    price: rates.spainAir,
-    unit: 'libra',
-    icon: Plane,
-    flagUrl: 'https://flagcdn.com/es.svg',
-    note: 'Tu puerta de entrada a Europa. Consolidamos tus compras europeas con salidas semanales.',
-  },
-  {
-    id: 'china-air',
-    origin: 'China',
-    shortOrigin: 'CHINA',
-    service: 'Aéreo',
-    price: rates.chinaAir,
-    unit: 'libra',
-    icon: Plane,
-    flagUrl: 'https://flagcdn.com/cn.svg',
-    note: 'Ideal para Shein, AliExpress y tecnología. Tránsito estimado de 12 a 15 días hábiles.',
-  },
-];
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function Rates() {
+  const { t, language } = useLanguage();
+
+  const ratesData = [
+    {
+      id: 'usa-air',
+      origin: t.rates.usaAirTitle,
+      shortOrigin: language === 'en' ? 'USA' : 'EE. UU.',
+      service: language === 'en' ? 'Air' : 'Aéreo',
+      price: rates.usaAir,
+      unit: t.rates.perLb,
+      icon: Plane,
+      flagUrl: 'https://flagcdn.com/us.svg',
+      note: t.rates.usaAirNote,
+      calcOrigin: 'USA',
+      calcService: 'Air',
+    },
+    {
+      id: 'usa-sea',
+      origin: t.rates.usaSeaTitle,
+      shortOrigin: language === 'en' ? 'USA' : 'EE. UU.',
+      service: language === 'en' ? 'Ocean' : 'Marítimo',
+      price: rates.usaSea,
+      unit: t.rates.perFt3,
+      icon: Ship,
+      flagUrl: 'https://flagcdn.com/us.svg',
+      note: t.rates.usaSeaNotes,
+      calcOrigin: 'USA',
+      calcService: 'Sea',
+    },
+    {
+      id: 'spain-air',
+      origin: t.rates.spainAirTitle,
+      shortOrigin: language === 'en' ? 'SPAIN' : 'ESPAÑA',
+      service: language === 'en' ? 'Air' : 'Aéreo',
+      price: rates.spainAir,
+      unit: t.rates.perLb,
+      icon: Plane,
+      flagUrl: 'https://flagcdn.com/es.svg',
+      note: t.rates.spainAirNote,
+      calcOrigin: 'Spain',
+      calcService: 'Air',
+    },
+    {
+      id: 'china-air',
+      origin: t.rates.chinaAirTitle,
+      shortOrigin: 'CHINA',
+      service: language === 'en' ? 'Air' : 'Aéreo',
+      price: rates.chinaAir,
+      unit: t.rates.perLb,
+      icon: Plane,
+      flagUrl: 'https://flagcdn.com/cn.svg',
+      note: t.rates.chinaAirNote,
+      calcOrigin: 'China',
+      calcService: 'Air',
+    },
+  ];
+
   return (
     <section id="tarifas" className="section-padding bg-white relative">
       <div className="container-max text-center mb-16">
-        <h2 className="section-title">Tarifas simples y transparentes</h2>
+        <h2 className="section-title">{t.rates.title}</h2>
         <p className="section-subtitle max-w-2xl mx-auto">
-          Sin costos ocultos ni sorpresas. Conoce exactamente cuánto pagarás por traer tus compras al país.
+          {t.rates.subtitle}
         </p>
       </div>
 
@@ -73,12 +80,10 @@ export default function Rates() {
                 key={rate.id} 
                 className="bg-white rounded-2xl shadow-card hover:shadow-lg border border-gray-50 border-b-4 border-b-brand-blue p-6 flex flex-col group cursor-pointer transition-all hover:-translate-y-1"
                 onClick={() => {
-                  const originMap: Record<string, string> = { 'Estados Unidos': 'USA', 'España': 'Spain', 'China': 'China' };
-                  const serviceMap: Record<string, string> = { 'Aéreo': 'Air', 'Marítimo': 'Sea' };
                   window.dispatchEvent(new CustomEvent('setQuoteCalculator', {
                     detail: { 
-                      origin: originMap[rate.origin], 
-                      service: serviceMap[rate.service] 
+                      origin: rate.calcOrigin, 
+                      service: rate.calcService 
                     }
                   }));
                   document.getElementById('cotizador')?.scrollIntoView({ behavior: 'smooth' });
@@ -91,7 +96,7 @@ export default function Rates() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={rate.flagUrl} 
-                        alt={`Bandera de ${rate.origin}`} 
+                        alt={`Flag of ${rate.origin}`} 
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -112,7 +117,7 @@ export default function Rates() {
                       </span>
                     </div>
                     <p className="text-xs sm:text-sm text-brand-text-gray/80 font-medium">
-                      por {rate.unit}
+                      {rate.unit}
                     </p>
                   </div>
                 </div>
@@ -137,7 +142,9 @@ export default function Rates() {
         
         <div className="mt-12 text-center">
           <p className="text-sm text-brand-text-light bg-brand-bg-light inline-block px-6 py-3 rounded-xl">
-            Las cotizaciones mostradas son estimaciones basadas en las tarifas publicadas. Para mercancía especial o condiciones particulares, consulta con un asesor.
+            {language === 'en' 
+              ? 'Quotes displayed are estimates based on published rates. For special cargo or specific terms, please consult with an advisor.'
+              : 'Las cotizaciones mostradas son estimaciones basadas en las tarifas publicadas. Para mercancía especial o condiciones particulares, consulta con un asesor.'}
           </p>
         </div>
       </div>

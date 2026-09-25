@@ -1,17 +1,22 @@
 'use client';
 
 import { MapPin, ExternalLink } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function LocationMap() {
+  const { t, language } = useLanguage();
+  const isEn = language === 'en';
   const mapUrl = "https://maps.google.com/maps?q=2W23%2B2P4%2C+Heredia%2C+San+Pablo&t=&z=16&ie=UTF8&iwloc=&output=embed";
 
   return (
     <section className="py-12 bg-white relative">
       <div className="container-max">
         <div className="text-center mb-8">
-          <h2 className="section-title">Encuéntranos</h2>
+          <h2 className="section-title">{isEn ? 'Find Us' : 'Encuéntranos'}</h2>
           <p className="section-subtitle">
-            Ubicados estratégicamente en Heredia para facilitar el procesamiento de tus envíos.
+            {isEn 
+              ? 'Strategically located in Heredia, Costa Rica to expedite your parcel processing and dispatch.' 
+              : 'Ubicados estratégicamente en Heredia para facilitar el procesamiento de tus envíos.'}
           </p>
         </div>
 
@@ -21,7 +26,7 @@ export default function LocationMap() {
             <div className="w-14 h-14 bg-brand-bg-light rounded-full flex items-center justify-center text-brand-blue mb-4">
               <MapPin size={28} />
             </div>
-            <h3 className="text-xl sm:text-2xl font-black text-brand-blue mb-2">Oficina JRS Cargo</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-brand-blue mb-2">{t.location.officeCR}</h3>
             <p className="text-brand-text-gray mb-6 text-sm sm:text-base text-balance leading-relaxed">
               2W23+2P4, Heredia, San Pablo<br />
               Urb. Nueva Jerusalén
@@ -33,7 +38,7 @@ export default function LocationMap() {
               rel="noopener noreferrer"
               className="btn-outline w-full sm:w-auto flex items-center justify-center gap-2 py-2"
             >
-              Abrir en Google Maps
+              {t.location.viewOnGoogleMaps}
               <ExternalLink size={18} />
             </a>
           </div>

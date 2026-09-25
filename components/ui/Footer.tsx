@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, Phone, Camera, MapPin } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-brand-blue text-white pt-16 pb-8">
       <div className="container-max px-4 sm:px-6 lg:px-8">
@@ -22,32 +25,32 @@ export default function Footer() {
               />
             </Link>
             <p className="text-white/80 text-sm leading-relaxed text-balance">
-              Conectamos Costa Rica con el mundo mediante soluciones de transporte aéreo y marítimo diseñadas para hacer tus compras internacionales más simples.
+              {t.footer.description}
             </p>
           </div>
 
           {/* Services */}
           <div className="text-center md:text-left">
-            <h3 className="text-white font-semibold text-lg mb-6">Servicios</h3>
+            <h3 className="text-white font-semibold text-lg mb-6">{t.footer.services}</h3>
             <ul className="space-y-4">
               <li>
                 <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Aéreo Estados Unidos
+                  {t.footer.serviceAirUSA}
                 </Link>
               </li>
               <li>
                 <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Marítimo Estados Unidos
+                  {t.footer.serviceSeaUSA}
                 </Link>
               </li>
               <li>
                 <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Aéreo España
+                  {t.footer.serviceAirSpain}
                 </Link>
               </li>
               <li>
                 <Link href="/#tarifas" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Aéreo China
+                  {t.footer.serviceAirChina}
                 </Link>
               </li>
             </ul>
@@ -55,26 +58,26 @@ export default function Footer() {
 
           {/* Customers */}
           <div className="text-center md:text-left">
-            <h3 className="text-white font-semibold text-lg mb-6">Clientes</h3>
+            <h3 className="text-white font-semibold text-lg mb-6">{t.footer.clients}</h3>
             <ul className="space-y-4">
               <li>
                 <a href="https://worldboxcr.com/jrscargo/register" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Crear casillero
+                  {t.footer.createLocker}
                 </a>
               </li>
               <li>
                 <a href="https://worldboxcr.com/jrscargo/login" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Iniciar sesión
+                  {t.footer.loginClient}
                 </a>
               </li>
               <li>
                 <Link href="/#tracking" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Tracking
+                  {t.footer.trackingLink}
                 </Link>
               </li>
               <li>
                 <Link href="/#cotizador" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
-                  Cotizador
+                  {t.footer.calculatorLink}
                 </Link>
               </li>
             </ul>
@@ -82,7 +85,7 @@ export default function Footer() {
 
           {/* Contact */}
           <div className="text-center md:text-left flex flex-col items-center md:items-start">
-            <h3 className="text-white font-semibold text-lg mb-6">Contacto</h3>
+            <h3 className="text-white font-semibold text-lg mb-6">{t.footer.contact}</h3>
             <ul className="space-y-4">
               <li>
                 <a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center md:justify-start gap-3 text-white/80 hover:text-brand-yellow transition-colors text-sm group">
@@ -116,14 +119,14 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-white/10 pt-8 mt-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <p className="text-sm text-white/60 text-center md:text-left">
-            JRS CARGO CR &copy; 2026. Todos los derechos reservados.
+            JRS CARGO CR &copy; 2026. {t.footer.rights}
           </p>
           <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 md:pr-20">
             <Link href="/politica-de-privacidad" className="text-sm text-white/60 hover:text-white transition-colors p-2 -m-2">
-              Política de privacidad
+              {t.footer.privacyPolicy}
             </Link>
             <Link href="/terminos-y-condiciones" className="text-sm text-white/60 hover:text-white transition-colors p-2 -m-2">
-              Términos y condiciones
+              {t.footer.terms}
             </Link>
           </div>
         </div>

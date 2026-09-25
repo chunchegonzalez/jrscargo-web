@@ -3,45 +3,7 @@
 import { ArrowRight, Laptop, Smartphone, Shirt, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { FaAmazon } from 'react-icons/fa';
 import { motion, Variants } from 'framer-motion';
-
-const deals = [
-  {
-    title: 'Ofertas del Día',
-    discount: 'Hasta 50% de descuento',
-    icon: Zap,
-    color: 'from-brand-red to-rose-500',
-    link: 'https://www.amazon.com/deals',
-  },
-  {
-    title: 'Electrónica',
-    discount: 'Lo más buscado',
-    icon: Laptop,
-    color: 'from-brand-yellow to-amber-400',
-    link: 'https://www.amazon.com/b?node=16225009011',
-  },
-  {
-    title: 'Celulares',
-    discount: 'Accesorios y más',
-    icon: Smartphone,
-    color: 'from-brand-blue-light to-blue-400',
-    link: 'https://www.amazon.com/b?node=2335752011',
-  },
-  {
-    title: 'Moda y Ropa',
-    discount: 'Tendencias actuales',
-    icon: Shirt,
-    color: 'from-brand-red to-orange-500',
-    link: 'https://www.amazon.com/b?node=7141123011',
-  },
-];
-
-const tickerItems = [
-  { icon: FaAmazon, text: 'AMAZON BUSINESS PARTNER', highlight: true },
-  { icon: ShieldCheck, text: 'DESPACHOS PRIORITARIOS EN MIAMI', highlight: false },
-  { icon: Sparkles, text: 'TARIFAS EXCLUSIVAS DE IMPORTACIÓN', highlight: false },
-  { icon: Zap, text: 'CONEXIÓN DIRECTA A COSTA RICA', highlight: false },
-  { icon: ShieldCheck, text: 'ENVÍOS 100% GARANTIZADOS', highlight: false },
-];
+import { useLanguage } from '@/context/LanguageContext';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -57,6 +19,48 @@ const itemVariants: Variants = {
 };
 
 export default function AmazonDeals() {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+
+  const deals = [
+    {
+      title: isEn ? 'Deals of the Day' : 'Ofertas del Día',
+      discount: isEn ? 'Up to 50% discount' : 'Hasta 50% de descuento',
+      icon: Zap,
+      color: 'from-brand-red to-rose-500',
+      link: 'https://www.amazon.com/deals',
+    },
+    {
+      title: isEn ? 'Electronics' : 'Electrónica',
+      discount: isEn ? 'Top trending tech' : 'Lo más buscado',
+      icon: Laptop,
+      color: 'from-brand-yellow to-amber-400',
+      link: 'https://www.amazon.com/b?node=16225009011',
+    },
+    {
+      title: isEn ? 'Smartphones' : 'Celulares',
+      discount: isEn ? 'Accessories & gadgets' : 'Accesorios y más',
+      icon: Smartphone,
+      color: 'from-brand-blue-light to-blue-400',
+      link: 'https://www.amazon.com/b?node=2335752011',
+    },
+    {
+      title: isEn ? 'Fashion & Apparel' : 'Moda y Ropa',
+      discount: isEn ? 'Seasonal collections' : 'Tendencias actuales',
+      icon: Shirt,
+      color: 'from-brand-red to-orange-500',
+      link: 'https://www.amazon.com/b?node=7141123011',
+    },
+  ];
+
+  const tickerItems = [
+    { icon: FaAmazon, text: isEn ? 'AMAZON BUSINESS PARTNER' : 'AMAZON BUSINESS PARTNER', highlight: true },
+    { icon: ShieldCheck, text: isEn ? 'PRIORITY DISPATCH IN MIAMI' : 'DESPACHOS PRIORITARIOS EN MIAMI', highlight: false },
+    { icon: Sparkles, text: isEn ? 'EXCLUSIVE IMPORT RATES' : 'TARIFAS EXCLUSIVAS DE IMPORTACIÓN', highlight: false },
+    { icon: Zap, text: isEn ? 'DIRECT CONNECTION TO COSTA RICA' : 'CONEXIÓN DIRECTA A COSTA RICA', highlight: false },
+    { icon: ShieldCheck, text: isEn ? '100% GUARANTEED SHIPMENTS' : 'ENVÍOS 100% GARANTIZADOS', highlight: false },
+  ];
+
   return (
     <section className="py-20 bg-[#0B1D2B] relative overflow-hidden">
       {/* Ambient background glows */}
@@ -120,13 +124,15 @@ export default function AmazonDeals() {
                 viewport={{ once: true }}
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF9900]/15 border border-[#FF9900]/30 text-amber-300 text-xs font-bold mb-3 shadow-sm"
               >
-                <ShieldCheck size={14} className="text-[#FF9900]" /> Socio Oficial Amazon Business Partner
+                <ShieldCheck size={14} className="text-[#FF9900]" /> {isEn ? 'Official Amazon Business Partner' : 'Socio Oficial Amazon Business Partner'}
               </motion.div>
               <h2 className="text-3xl md:text-5xl font-black text-white mb-3 tracking-tight">
-                Promociones <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF9900] via-amber-300 to-brand-red">Exclusivas</span>
+                {isEn ? 'Exclusive' : 'Promociones'} <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF9900] via-amber-300 to-brand-red">{isEn ? 'Offers & Deals' : 'Exclusivas'}</span>
               </h2>
               <p className="text-gray-300 text-sm md:text-base max-w-md text-balance font-medium">
-                Aprovecha los mejores descuentos de Amazon y trae tus compras a Costa Rica de forma rápida y segura con JRS Cargo.
+                {isEn 
+                  ? 'Take advantage of daily Amazon savings and ship your purchases directly to Costa Rica quickly and securely with JRS Cargo.'
+                  : 'Aprovecha los mejores descuentos de Amazon y trae tus compras a Costa Rica de forma rápida y segura con JRS Cargo.'}
               </p>
             </div>
           </div>
@@ -140,7 +146,7 @@ export default function AmazonDeals() {
             rel="noopener noreferrer"
             className="group flex items-center gap-2.5 bg-gradient-to-r from-[#FF9900] to-amber-500 hover:from-amber-400 hover:to-[#FF9900] text-[#0B1D2B] px-6 py-3.5 rounded-xl font-black transition-all duration-300 shadow-lg shadow-[#FF9900]/25 hover:shadow-[#FF9900]/40 hover:scale-[1.02]"
           >
-            Ver todas las ofertas <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            {isEn ? 'View all deals' : 'Ver todas las ofertas'} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
           </motion.a>
         </div>
 

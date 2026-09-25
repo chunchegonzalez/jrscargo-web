@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { Search, Calendar, AlertCircle, MessageCircle, Package, Plane, CheckCircle2, Warehouse, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface PackagePhoto {
   id: number;
@@ -40,6 +41,7 @@ interface TrackingData {
 }
 
 export default function TrackingSearch() {
+  const { t, language } = useLanguage();
   const [trackingNumber, setTrackingNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<TrackingData | null>(null);
@@ -96,7 +98,7 @@ export default function TrackingSearch() {
   const formatDate = (isoString: string) => {
     try {
       const d = new Date(isoString);
-      return new Intl.DateTimeFormat('es-CR', {
+      return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'es-CR', {
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', hour12: true
       }).format(d);
@@ -117,13 +119,17 @@ export default function TrackingSearch() {
       <div className="container-max max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-brand-blue font-bold text-sm mb-6">
-            <Package size={16} className="text-brand-red" /> Rastrear Envío
+            <Package size={16} className="text-brand-red" /> {t.tracking.searchBtn}
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-brand-blue mb-4 tracking-tight">
-            ¿Dónde está mi <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red to-brand-yellow">paquete?</span>
+            {language === 'en' ? (
+              <>Where is my <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red to-brand-yellow">package?</span></>
+            ) : (
+              <>¿Dónde está mi <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red to-brand-yellow">paquete?</span></>
+            )}
           </h2>
           <p className="text-brand-text-gray text-lg max-w-2xl mx-auto text-balance">
-            Consulta el estado de tu envío en tiempo real. Solo necesitas tu número de tracking.
+            {t.tracking.subtitle}
           </p>
         </div>
 
@@ -141,7 +147,7 @@ export default function TrackingSearch() {
                 type="text"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="Ingresa tu número de tracking..."
+                placeholder={t.tracking.inputPlaceholder}
                 className="w-full pl-16 pr-6 py-4 rounded-2xl bg-transparent border-transparent text-brand-blue font-bold text-lg placeholder:text-gray-400 placeholder:font-medium focus:ring-0 focus:outline-none"
               />
             </div>
@@ -154,7 +160,7 @@ export default function TrackingSearch() {
               {isLoading ? (
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                <>Rastrear <ChevronRight size={20} className="group-hover/btn:translate-x-1 transition-transform" /></>
+                <>{t.tracking.searchBtn} <ChevronRight size={20} className="group-hover/btn:translate-x-1 transition-transform" /></>
               )}
             </button>
           </form>
@@ -174,31 +180,39 @@ export default function TrackingSearch() {
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-black text-brand-blue mb-4">Aún no registramos tu paquete</h3>
+                <h3 className="text-2xl font-black text-brand-blue mb-4">{t.tracking.notFoundTitle}</h3>
                 
                 <p className="text-brand-text-gray mb-6 text-balance text-lg">
-                  El paquete <strong>{result.trackingNumber}</strong> aún no ha llegado a nuestras bodegas en Miami.
+                  {language === 'en'
+                    ? <>Package <strong>{result.trackingNumber}</strong> has not arrived at our Miami warehouse yet or the number is being processed.</>
+                    : <>El paquete <strong>{result.trackingNumber}</strong> aún no ha llegado a nuestras bodegas en Miami.</>}
                 </p>
                 
                 <div className="bg-brand-blue/5 border border-brand-blue/10 rounded-2xl p-4 sm:px-6 mb-8 inline-block max-w-md mx-auto">
                   <p className="text-sm text-brand-blue font-semibold flex items-start sm:items-center gap-3 text-left">
                     <Calendar size={24} className="shrink-0 text-brand-blue/60" /> 
-                    El registro dura aproximadamente 72h en visualizarse en nuestro sistema.
+                    {language === 'en'
+                      ? 'Package check-in takes approximately 24 to 48 hours to appear in our system.'
+                      : 'El registro dura aproximadamente 72h en visualizarse en nuestro sistema.'}
                   </p>
                 </div>
                 
                 <div className="space-y-4">
                   <p className="text-brand-text-light text-sm font-medium">
-                    O bien, consulta con un ejecutivo para averiguar sobre el paquete:
+                    {language === 'en' ? 'Or contact an advisor directly for immediate support:' : 'O bien, consulta con un ejecutivo para averiguar sobre el paquete:'}
                   </p>
                   <a
-                    href={`https://wa.me/50672601238?text=Hola,%20me%20gustar%C3%ADa%20averiguar%20sobre%20mi%20paquete%20con%20tracking:%20${result.trackingNumber}`}
+                    href={`https://wa.me/50672601238?text=${encodeURIComponent(
+                      language === 'en'
+                        ? `Hello, I would like to inquire about my package with tracking: ${result.trackingNumber}`
+                        : `Hola, me gustaría averiguar sobre mi paquete con tracking: ${result.trackingNumber}`
+                    )}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-whatsapp inline-flex w-full sm:w-auto text-base shadow-lg hover:shadow-xl wa-pulse"
                   >
                     <MessageCircle size={22} />
-                    Consultar por WhatsApp
+                    {language === 'en' ? 'Inquire on WhatsApp' : 'Consultar por WhatsApp'}
                   </a>
                 </div>
               </div>

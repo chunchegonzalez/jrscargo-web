@@ -1,41 +1,8 @@
 'use client';
 
 import { UserPlus, ShoppingBag, Box, Truck, ArrowRight, MapPin, PlaneTakeoff } from 'lucide-react';
-
 import { motion, Variants } from 'framer-motion';
-
-const steps = [
-  {
-    icon: UserPlus,
-    title: 'Abre tu casillero',
-    description: 'Regístrate y obtén tu dirección única de casillero para utilizarla en tus compras.',
-    color: 'bg-brand-blue',
-    textColor: 'text-brand-blue',
-  },
-  {
-    icon: ShoppingBag,
-    title: 'Haz tus compras',
-    description: 'Compra en tus tiendas en línea y utiliza tu dirección de casillero como dirección de entrega. Selecciona el servicio que deseas utilizar para transportar tu paquete.',
-    color: 'bg-brand-red',
-    textColor: 'text-brand-red',
-  },
-  {
-    icon: Box,
-    title: 'Nosotros recibimos tu paquete',
-    description: 'Cuando tu paquete llegue a nuestra bodega, JRS CARGO lo procesará de acuerdo con el servicio seleccionado. Podrás consultar la información correspondiente a tu paquete desde tu cuenta.',
-    color: 'bg-brand-yellow',
-    textColor: 'text-brand-yellow',
-  },
-  {
-    icon: Truck,
-    title: 'Tu paquete llega a Costa Rica',
-    description: 'Cuando tu paquete llegue a Costa Rica recibirás la información correspondiente y podrás continuar con el proceso de entrega definido por JRS CARGO.',
-    color: 'bg-brand-blue',
-    textColor: 'text-brand-blue',
-  },
-];
-
-
+import { useLanguage } from '@/context/LanguageContext';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -55,6 +22,39 @@ const itemVariants: Variants = {
 };
 
 export default function HowItWorks() {
+  const { t, language } = useLanguage();
+
+  const steps = [
+    {
+      icon: UserPlus,
+      title: t.howItWorks.step1Title,
+      description: t.howItWorks.step1Desc,
+      color: 'bg-brand-blue',
+      textColor: 'text-brand-blue',
+    },
+    {
+      icon: ShoppingBag,
+      title: t.howItWorks.step2Title,
+      description: t.howItWorks.step2Desc,
+      color: 'bg-brand-red',
+      textColor: 'text-brand-red',
+    },
+    {
+      icon: Box,
+      title: t.howItWorks.step3Title,
+      description: t.howItWorks.step3Desc,
+      color: 'bg-brand-yellow',
+      textColor: 'text-brand-yellow',
+    },
+    {
+      icon: Truck,
+      title: t.howItWorks.step4Title,
+      description: t.howItWorks.step4Desc,
+      color: 'bg-brand-blue',
+      textColor: 'text-brand-blue',
+    },
+  ];
+
   return (
     <section id="como-funciona" className="section-padding bg-brand-bg-light relative overflow-hidden">
       <div className="container-max relative z-10">
@@ -64,9 +64,9 @@ export default function HowItWorks() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="section-title">Trae lo que quieras del mundo, sin complicaciones</h2>
+          <h2 className="section-title">{t.howItWorks.title}</h2>
           <p className="section-subtitle max-w-2xl mx-auto">
-            Sigue esta guía rápida y recibe tus paquetes directo en casa.
+            {t.howItWorks.subtitle}
           </p>
         </motion.div>
 
@@ -128,7 +128,7 @@ export default function HowItWorks() {
                       rel="noopener noreferrer"
                       className="mt-6 btn-primary py-3 px-6 text-sm shadow-lg shadow-brand-blue/20 transition-colors inline-block text-center"
                     >
-                      Crear casillero
+                      {t.footer.createLocker}
                     </a>
                   )}
                 </motion.div>
@@ -146,19 +146,19 @@ export default function HowItWorks() {
         >
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 font-bold text-brand-text-gray">
             <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
-              <ShoppingBag size={18} className="text-brand-red" /> Compra
+              <ShoppingBag size={18} className="text-brand-red" /> {language === 'en' ? 'Shop' : 'Compra'}
             </motion.span>
             <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
               <ArrowRight className="text-brand-blue/50" />
             </motion.div>
             <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
-              <UserPlus size={18} className="text-brand-blue" /> Casillero
+              <UserPlus size={18} className="text-brand-blue" /> {language === 'en' ? 'Locker' : 'Casillero'}
             </motion.span>
             <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
               <ArrowRight className="text-brand-blue/50" />
             </motion.div>
             <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
-              <PlaneTakeoff size={18} className="text-brand-yellow" /> Transporte
+              <PlaneTakeoff size={18} className="text-brand-yellow" /> {language === 'en' ? 'Shipping' : 'Transporte'}
             </motion.span>
             <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
               <ArrowRight className="text-brand-blue/50" />

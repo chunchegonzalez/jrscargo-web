@@ -3,35 +3,39 @@
 import { Mail, ArrowRight } from 'lucide-react';
 import { FaWhatsapp, FaInstagram } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-
-const contactMethods = [
-  {
-    icon: FaWhatsapp,
-    label: 'WhatsApp',
-    value: '+506 7260 1238',
-    href: 'https://wa.me/50672601238',
-    color: 'bg-gradient-to-tr from-green-400 to-green-600',
-    shadow: 'shadow-green-500/30',
-  },
-  {
-    icon: Mail,
-    label: 'Correo Electrónico',
-    value: 'info@jrscargocr.com',
-    href: 'mailto:info@jrscargocr.com',
-    color: 'bg-gradient-to-tr from-brand-blue to-blue-800',
-    shadow: 'shadow-brand-blue/30',
-  },
-  {
-    icon: FaInstagram,
-    label: 'Instagram',
-    value: '@jrscargocr',
-    href: 'https://www.instagram.com/jrscargocr/',
-    color: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600',
-    shadow: 'shadow-pink-500/30',
-  },
-];
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ContactSection() {
+  const { t, language } = useLanguage();
+  const isEn = language === 'en';
+
+  const contactMethods = [
+    {
+      icon: FaWhatsapp,
+      label: isEn ? 'WhatsApp Support' : 'WhatsApp Oficial',
+      value: '+506 7260 1238',
+      href: 'https://wa.me/50672601238',
+      color: 'bg-gradient-to-tr from-green-400 to-green-600',
+      shadow: 'shadow-green-500/30',
+    },
+    {
+      icon: Mail,
+      label: isEn ? 'Email Support' : 'Correo Electrónico',
+      value: 'info@jrscargocr.com',
+      href: 'mailto:info@jrscargocr.com',
+      color: 'bg-gradient-to-tr from-brand-blue to-blue-800',
+      shadow: 'shadow-brand-blue/30',
+    },
+    {
+      icon: FaInstagram,
+      label: 'Instagram',
+      value: '@jrscargocr',
+      href: 'https://www.instagram.com/jrscargocr/',
+      color: 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600',
+      shadow: 'shadow-pink-500/30',
+    },
+  ];
+
   return (
     <section id="contacto" className="section-padding relative overflow-hidden bg-brand-bg-section">
       {/* Background blobs for premium feel */}
@@ -40,10 +44,12 @@ export default function ContactSection() {
 
       <div className="container-max text-center mb-16 relative z-10">
         <h2 className="text-3xl md:text-5xl font-black text-brand-blue mb-4">
-          ¿Necesitas ayuda con tu envío?
+          {isEn ? 'Need help with your shipment?' : '¿Necesitas ayuda con tu envío?'}
         </h2>
         <p className="text-lg text-brand-text-gray max-w-2xl mx-auto">
-          Nuestro equipo de atención al cliente está siempre listo para asesorarte de forma personalizada.
+          {isEn
+            ? 'Our customer service team is always ready to provide personalized guidance.'
+            : 'Nuestro equipo de atención al cliente está siempre listo para asesorarte de forma personalizada.'}
         </p>
       </div>
 
@@ -73,7 +79,7 @@ export default function ContactSection() {
                   {method.value}
                 </p>
                 <div className="mt-auto flex items-center gap-2 text-sm font-bold text-brand-red opacity-0 group-hover:opacity-100 transition-opacity">
-                  Contactar ahora <ArrowRight size={16} />
+                  {isEn ? 'Contact now' : 'Contactar ahora'} <ArrowRight size={16} />
                 </div>
               </motion.a>
             );

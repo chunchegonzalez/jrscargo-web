@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
 
 const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHovered?: boolean; isPatriotic?: boolean }) => {
   const faceRef = useRef<HTMLDivElement>(null);
@@ -173,14 +174,10 @@ const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHover
   );
 };
 
-const QUICK_ACTIONS = [
-  { id: 'tarifas', label: 'Tarifas y Precios', icon: DollarSign, query: '¿Cuáles son las tarifas aéreas y marítimas?' },
-  { id: 'tracking', label: 'Rastrear mi paquete', icon: Package, query: 'Quiero rastrear un paquete' },
-  { id: 'casillero', label: 'Dirección de Casillero', icon: MapPin, query: '¿Cuál es la dirección del casillero en Miami y cómo registrarme?' },
-  { id: 'tiempos', label: 'Tiempos de entrega', icon: Clock, query: '¿Cuánto tiempo tardan los envíos a Costa Rica?' },
-];
-
 export default function ChatBotWidget() {
+  const { t, language } = useLanguage();
+  const isEn = language === 'en';
+
   const [isOpen, setIsOpen] = useState(false);
   const [isTriggerHovered, setIsTriggerHovered] = useState(false);
   const [isPatriotic, setIsPatriotic] = useState(false);
@@ -191,6 +188,13 @@ export default function ChatBotWidget() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [registerError, setRegisterError] = useState('');
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
+
+  const quickActions = [
+    { id: 'tarifas', label: t.chat.faqRates, icon: DollarSign, query: t.chat.faqRatesQuery },
+    { id: 'tracking', label: t.chat.faqTracking, icon: Package, query: t.chat.faqTrackingQuery },
+    { id: 'casillero', label: t.chat.faqLocker, icon: MapPin, query: t.chat.faqLockerQuery },
+    { id: 'tiempos', label: t.chat.faqTimes, icon: Clock, query: t.chat.faqTimesQuery },
+  ];
 
   const { messages, input, handleInputChange, handleSubmit, setInput, isLoading, error, setMessages } = useChat({
     maxSteps: 4,
@@ -230,11 +234,11 @@ export default function ChatBotWidget() {
     const trimmedEmail = userEmail.trim().toLowerCase();
 
     if (!trimmedName) {
-      setRegisterError('Por favor ingresa tu nombre');
+      setRegisterError(isEn ? 'Please enter your name' : 'Por favor ingresa tu nombre');
       return;
     }
     if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setRegisterError('Por favor ingresa un correo válido');
+      setRegisterError(isEn ? 'Please enter a valid email' : 'Por favor ingresa un correo válido');
       return;
     }
 
@@ -299,7 +303,7 @@ export default function ChatBotWidget() {
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-blue text-white font-bold rounded-xl text-xs hover:bg-brand-blue/90 hover:shadow-md transition-all active:scale-95"
                 >
                   <Package size={15} className="text-brand-yellow" />
-                  <span>Ver Seguimiento en Vivo ({trkNumber})</span>
+                  <span>{isEn ? `View Live Tracking (${trkNumber})` : `Ver Seguimiento en Vivo (${trkNumber})`}</span>
                   <ExternalLink size={13} className="opacity-80" />
                 </a>
               </div>
@@ -316,7 +320,7 @@ export default function ChatBotWidget() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-yellow text-brand-blue font-bold rounded-xl text-xs hover:bg-brand-yellow/90 transition-transform active:scale-95 shadow-sm"
                 >
-                  <ExternalLink size={14} /> Abrir Casillero Gratis
+                  <ExternalLink size={14} /> {t.footer.createLocker}
                 </a>
               </div>
             );
@@ -331,7 +335,7 @@ export default function ChatBotWidget() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#25D366] text-white font-bold rounded-xl text-xs hover:bg-[#20b858] transition-transform active:scale-95 shadow-sm"
                 >
-                  <MessageCircle size={14} /> Contactar por WhatsApp
+                  <MessageCircle size={14} /> {isEn ? 'Contact on WhatsApp' : 'Contactar por WhatsApp'}
                 </a>
               </div>
             );
@@ -384,12 +388,12 @@ export default function ChatBotWidget() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="font-black text-sm tracking-tight text-white flex items-center gap-1">
-                      Clari {isPatriotic && '🇨🇷'}
+                      {t.chat.title} {isPatriotic && '🇨🇷'}
                     </h3>
                     <span className="text-[10px] px-1.5 py-0.2 bg-brand-yellow/20 text-brand-yellow rounded font-bold uppercase tracking-wider">AI</span>
                   </div>
                   <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Asistente Oficial JRS {isPatriotic && '• ¡Mes Patrio!'}
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> {t.chat.subtitle} {isPatriotic && '• ¡Mes Patrio!'}
                   </p>
                 </div>
               </div>
@@ -400,7 +404,7 @@ export default function ChatBotWidget() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 text-gray-400 hover:text-green-400 hover:bg-white/10 rounded-xl transition-colors"
-                  title="Abrir WhatsApp oficial"
+                  title="WhatsApp"
                 >
                   <MessageCircle size={18} />
                 </a>
@@ -431,21 +435,23 @@ export default function ChatBotWidget() {
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-left animate-fade-in space-y-3">
                   <div className="flex items-center gap-2 text-brand-blue font-black text-sm">
                     <Sparkles size={16} className="text-brand-yellow" />
-                    ¡Bienvenido a JRS CARGO!
+                    {isEn ? 'Welcome to JRS CARGO!' : '¡Bienvenido a JRS CARGO!'}
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Soy <strong>Clari</strong>. Para brindarte una atención rápida y registrar tu consulta en el sistema, por favor indícanos tus datos:
+                    {isEn 
+                      ? "I'm Clari. To provide you with fast guidance and register your inquiry, please provide your details:" 
+                      : "Soy Clari. Para brindarte una atención rápida y registrar tu consulta en el sistema, por favor indícanos tus datos:"}
                   </p>
 
                   <form onSubmit={handleRegisterSubmit} className="space-y-2.5 pt-1">
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1">Nombre Completo</label>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">{isEn ? 'Full Name' : 'Nombre Completo'}</label>
                       <div className="relative">
                         <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                           type="text"
                           required
-                          placeholder="Ej. Carlos Mora"
+                          placeholder={isEn ? "E.g. John Doe" : "Ej. Carlos Mora"}
                           value={userName}
                           onChange={(e) => setUserName(e.target.value)}
                           className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
@@ -454,13 +460,13 @@ export default function ChatBotWidget() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1">Correo Electrónico</label>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">{isEn ? 'Email Address' : 'Correo Electrónico'}</label>
                       <div className="relative">
                         <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                           type="email"
                           required
-                          placeholder="Ej. carlos@gmail.com"
+                          placeholder={isEn ? "E.g. john@gmail.com" : "Ej. carlos@gmail.com"}
                           value={userEmail}
                           onChange={(e) => setUserEmail(e.target.value)}
                           className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
@@ -477,7 +483,7 @@ export default function ChatBotWidget() {
                       disabled={isSubmittingLead}
                       className="w-full mt-1 py-2.5 bg-brand-blue hover:bg-brand-blue/95 active:scale-[0.98] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
                     >
-                      <span>{isSubmittingLead ? 'Conectando...' : 'Iniciar Atención'}</span>
+                      <span>{isSubmittingLead ? (isEn ? 'Connecting...' : 'Conectando...') : (isEn ? 'Start Chat' : 'Iniciar Atención')}</span>
                       <ArrowRight size={14} />
                     </button>
                   </form>
@@ -490,22 +496,22 @@ export default function ChatBotWidget() {
                   <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left">
                     <div className="flex items-center gap-2 text-brand-blue font-bold text-xs mb-1">
                       <Sparkles size={14} className="text-brand-yellow" />
-                      ¡Hola, {userName.split(' ')[0]}!
+                      {isEn ? `Hello, ${userName.split(' ')[0]}!` : `¡Hola, ${userName.split(' ')[0]}!`}
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                      Te puedo orientar sobre tarifas aéreas ($7/lb), marítimas ($30/ft³), abrir tu casillero o rastrear tus paquetes en tiempo real.
+                      {t.chat.greetingDesc}
                     </p>
                     <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>⚡ Respuesta inmediata</span>
+                      <span>{isEn ? '⚡ Instant response' : '⚡ Respuesta inmediata'}</span>
                       <span className="font-bold text-brand-blue">Miami • España • China</span>
                     </div>
                   </div>
 
                   {/* Quick Action Buttons */}
                   <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">Preguntas frecuentes:</p>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">{t.chat.faqTitle}</p>
                     <div className="grid grid-cols-1 gap-2">
-                      {QUICK_ACTIONS.map(action => {
+                      {quickActions.map(action => {
                         const Icon = action.icon;
                         return (
                           <button
@@ -574,8 +580,8 @@ export default function ChatBotWidget() {
 
               {error && (
                 <div className="p-3 bg-red-50 text-red-700 rounded-2xl text-xs text-center border border-red-100">
-                  <p className="font-bold mb-1">Estamos experimentando una alta demanda.</p>
-                  <p>Por favor contáctanos directamente a nuestro <a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="font-bold underline text-green-700">WhatsApp Oficial (+506 7260 1238)</a>.</p>
+                  <p className="font-bold mb-1">{isEn ? 'We are experiencing high demand.' : 'Estamos experimentando una alta demanda.'}</p>
+                  <p>{isEn ? 'Please contact us directly on our ' : 'Por favor contáctanos directamente a nuestro '}<a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="font-bold underline text-green-700">{isEn ? 'Official WhatsApp (+506 7260 1238)' : 'WhatsApp Oficial (+506 7260 1238)'}</a>.</p>
                 </div>
               )}
 
@@ -586,22 +592,22 @@ export default function ChatBotWidget() {
             {messages.length > 0 && (
               <div className="px-3 py-1.5 bg-white border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
                 <button
-                  onClick={() => handleQuickAction('¿Cuáles son las tarifas aéreas y marítimas?')}
+                  onClick={() => handleQuickAction(t.chat.faqRatesQuery)}
                   className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
                 >
-                  💰 Tarifas
+                  {t.chat.pillRates}
                 </button>
                 <button
-                  onClick={() => handleQuickAction('¿Cómo abro un casillero en Miami?')}
+                  onClick={() => handleQuickAction(t.chat.faqLockerQuery)}
                   className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
                 >
-                  🏢 Casillero Miami
+                  {t.chat.pillLocker}
                 </button>
                 <button
-                  onClick={() => handleQuickAction('¿Cuánto tiempo tardan los envíos?')}
+                  onClick={() => handleQuickAction(t.chat.faqTimesQuery)}
                   className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
                 >
-                  ⏱️ Tiempos
+                  {t.chat.pillTimes}
                 </button>
                 <a
                   href="https://wa.me/50672601238"
@@ -609,7 +615,7 @@ export default function ChatBotWidget() {
                   rel="noopener noreferrer"
                   className="px-2.5 py-1 rounded-full bg-green-50 hover:bg-green-100 text-green-700 text-[11px] font-semibold whitespace-nowrap transition-colors flex items-center gap-1"
                 >
-                  <MessageCircle size={12} /> WhatsApp
+                  <MessageCircle size={12} /> {t.chat.pillWhatsApp}
                 </a>
               </div>
             )}
@@ -621,7 +627,7 @@ export default function ChatBotWidget() {
                   ref={inputRef}
                   value={input}
                   onChange={handleInputChange}
-                  placeholder="Escribe tu consulta o número de tracking..."
+                  placeholder={t.chat.inputPlaceholder}
                   className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
                   disabled={isLoading}
                 />
@@ -653,7 +659,7 @@ export default function ChatBotWidget() {
             className="bg-[#0B1D2B] text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 text-xs font-bold whitespace-nowrap hidden sm:flex items-center gap-2 pointer-events-none"
           >
             <Sparkles size={14} className="text-brand-yellow animate-spin" />
-            <span>👋 ¡Hola! Habla con <strong className="text-brand-yellow font-black">Clari</strong></span>
+            <span>👋 {isEn ? 'Hi! Talk with' : '¡Hola! Habla con'} <strong className="text-brand-yellow font-black">Clari</strong></span>
           </motion.div>
 
           <motion.div

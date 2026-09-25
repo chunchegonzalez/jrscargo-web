@@ -3,21 +3,23 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, X, UserCircle, PackageOpen } from 'lucide-react';
-
-const navLinks = [
-  { name: 'Inicio', href: '/' },
-  { name: 'Tracking', href: '/#tracking' },
-  { name: 'Tarifas', href: '/#tarifas' },
-  { name: 'Cotizador', href: '/#cotizador' },
-  { name: '¿Cómo funciona?', href: '/#como-funciona' },
-  { name: 'Contacto', href: '/#contacto' },
-];
+import { Menu, X, UserCircle, PackageOpen, Globe } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPatriotic, setIsPatriotic] = useState(false);
+  const { language, toggleLanguage, setLanguage, t } = useLanguage();
+
+  const navLinks = [
+    { name: t.nav.home, href: '/' },
+    { name: t.nav.tracking, href: '/#tracking' },
+    { name: t.nav.rates, href: '/#tarifas' },
+    { name: t.nav.calculator, href: '/#cotizador' },
+    { name: t.nav.howItWorks, href: '/#como-funciona' },
+    { name: t.nav.contact, href: '/#contacto' },
+  ];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -66,7 +68,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden xl:flex items-center space-x-8">
+        <nav className="hidden xl:flex items-center space-x-7">
           {navLinks.map((link) => (
             <Link 
               key={link.name} 
@@ -79,15 +81,41 @@ export default function Header() {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden lg:flex items-center space-x-4">
+        <div className="hidden lg:flex items-center space-x-3">
+          {/* Language Selector Pill */}
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-full border border-gray-200 text-xs font-bold mr-1">
+            <button
+              onClick={() => setLanguage('es')}
+              className={`px-2.5 py-1 rounded-full transition-all flex items-center gap-1 ${
+                language === 'es'
+                  ? 'bg-white text-brand-blue shadow-sm font-black'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Cambiar a Español"
+            >
+              <span className="text-[11px]">🇨🇷</span> ES
+            </button>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-2.5 py-1 rounded-full transition-all flex items-center gap-1 ${
+                language === 'en'
+                  ? 'bg-brand-blue text-white shadow-sm font-black'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Switch to English"
+            >
+              <span className="text-[11px]">🇺🇸</span> EN
+            </button>
+          </div>
+
           <a 
             href="https://worldboxcr.com/jrscargo/login" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-sm font-semibold text-brand-blue hover:text-brand-red transition-colors flex items-center gap-2"
+            className="text-sm font-semibold text-brand-blue hover:text-brand-red transition-colors flex items-center gap-1.5 px-2"
           >
             <UserCircle size={18} />
-            Iniciar sesión
+            {t.nav.login}
           </a>
           <a 
             href="https://worldboxcr.com/jrscargo/register" 
@@ -96,18 +124,29 @@ export default function Header() {
             className="btn-primary text-sm py-2.5 px-5"
           >
             <PackageOpen size={18} />
-            Crear mi casillero
+            {t.nav.register}
           </a>
         </div>
 
-        {/* Mobile menu button */}
-        <button 
-          className="xl:hidden p-2 text-brand-blue hover:bg-gray-100 rounded-lg transition-colors"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile Controls (Language + Menu Button) */}
+        <div className="xl:hidden flex items-center gap-2">
+          {/* Mobile Language Button */}
+          <button
+            onClick={toggleLanguage}
+            className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 border border-gray-200 text-xs font-black text-brand-blue flex items-center gap-1 transition-colors"
+            title="Cambiar Idioma / Switch Language"
+          >
+            <span>{language === 'es' ? '🇨🇷 ES' : '🇺🇸 EN'}</span>
+          </button>
+
+          <button 
+            className="p-2 text-brand-blue hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
@@ -124,27 +163,52 @@ export default function Header() {
                 {link.name}
               </Link>
             ))}
+
+            {/* Mobile Language Switch Options */}
+            <div className="pt-3 pb-2 px-3 flex items-center justify-between border-t border-gray-100">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Globe size={14} /> Idioma / Language
+              </span>
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+                <button
+                  onClick={() => setLanguage('es')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    language === 'es' ? 'bg-white text-brand-blue shadow-sm font-black' : 'text-gray-500'
+                  }`}
+                >
+                  🇨🇷 Español
+                </button>
+                <button
+                  onClick={() => setLanguage('en')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    language === 'en' ? 'bg-brand-blue text-white shadow-sm font-black' : 'text-gray-500'
+                  }`}
+                >
+                  🇺🇸 English
+                </button>
+              </div>
+            </div>
             
-            <div className="mt-6 pt-6 border-t border-gray-100 grid gap-4">
+            <div className="mt-4 pt-4 border-t border-gray-100 grid gap-3">
               <a 
                 href="https://worldboxcr.com/jrscargo/login" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full btn-outline py-3"
+                className="flex items-center justify-center gap-2 w-full btn-outline py-3 text-sm font-bold"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <UserCircle size={20} />
-                Iniciar sesión
+                {t.nav.login}
               </a>
               <a 
                 href="https://worldboxcr.com/jrscargo/register" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full btn-primary py-3"
+                className="flex items-center justify-center gap-2 w-full btn-primary py-3 text-sm font-bold"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <PackageOpen size={20} />
-                Crear mi casillero
+                {t.nav.register}
               </a>
             </div>
           </div>

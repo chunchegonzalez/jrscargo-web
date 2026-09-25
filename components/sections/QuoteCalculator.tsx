@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { MessageCircle, Box, Scale } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
 
 const LOCAL_RATES = {
   usaAir: 7,
@@ -17,6 +18,7 @@ type WeightUnit = 'lb' | 'kg';
 type SeaMethod = 'ft3' | 'dimensions';
 
 export default function QuoteCalculator() {
+  const { t, language } = useLanguage();
   const [origin, setOrigin] = useState<Origin>('USA');
   const [service, setService] = useState<Service>('Air');
   
@@ -103,12 +105,16 @@ export default function QuoteCalculator() {
     };
   }, [origin, service, weight, weightUnit, seaMethod, ft3, length, width, height]);
 
-  const originName = origin === 'USA' ? 'Estados Unidos' : origin === 'Spain' ? 'España' : 'China';
-  const serviceName = service === 'Air' ? 'Aéreo' : 'Marítimo';
+  const originName = origin === 'USA' 
+    ? (language === 'en' ? 'United States' : 'Estados Unidos')
+    : origin === 'Spain' ? (language === 'en' ? 'Spain' : 'España') : 'China';
+  const serviceName = service === 'Air' ? (language === 'en' ? 'Air Freight' : 'Aéreo') : (language === 'en' ? 'Ocean Freight' : 'Marítimo');
   const rateLabel = service === 'Air' ? `US$${quoteResult.rateApplied}/lb` : `US$${quoteResult.rateApplied}/ft³`;
 
   // WhatsApp Message
-  const waMessage = `Hola JRS CARGO 👋\nQuiero confirmar una cotización.\n\nOrigen: ${originName}\nServicio: ${serviceName}\nPeso/Dimensiones: ${quoteResult.appliedDimensionStr}\nTarifa: ${rateLabel}\nEstimado web: US$${quoteResult.total}\n\n¿Me pueden ayudar a confirmar el envío?`;
+  const waMessage = language === 'en'
+    ? `Hello JRS CARGO 👋\nI would like to confirm a shipping quote.\n\nOrigin: ${originName}\nService: ${serviceName}\nWeight/Dimensions: ${quoteResult.appliedDimensionStr}\nRate: ${rateLabel}\nWeb Estimate: US$${quoteResult.total}\n\nCould you please help me proceed?`
+    : `Hola JRS CARGO 👋\nQuiero confirmar una cotización.\n\nOrigen: ${originName}\nServicio: ${serviceName}\nPeso/Dimensiones: ${quoteResult.appliedDimensionStr}\nTarifa: ${rateLabel}\nEstimado web: US$${quoteResult.total}\n\n¿Me pueden ayudar a confirmar el envío?`;
   const waUrl = `https://wa.me/50672601238?text=${encodeURIComponent(waMessage)}`;
 
   return (
@@ -117,8 +123,8 @@ export default function QuoteCalculator() {
       
       <div className="container-max relative z-10">
         <div className="text-center mb-12">
-          <h2 className="section-title">¿Cuánto cuesta traer mi paquete?</h2>
-          <p className="section-subtitle">Obtén una estimación en segundos.</p>
+          <h2 className="section-title">{t.calculator.title}</h2>
+          <p className="section-subtitle">{t.calculator.subtitle}</p>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8 max-w-5xl mx-auto">
@@ -128,7 +134,7 @@ export default function QuoteCalculator() {
             <div className="mb-8 relative z-20">
               <h3 className="text-lg font-bold text-brand-blue mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-sm">1</span>
-                Origen
+                {t.calculator.tabOrigin}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {(['USA', 'Spain', 'China'] as Origin[]).map((o) => (
@@ -145,7 +151,7 @@ export default function QuoteCalculator() {
                         : 'border-gray-200 text-brand-text-gray hover:border-brand-blue/30 hover:bg-gray-50'
                     }`}
                   >
-                    {o === 'USA' ? 'EE. UU.' : o === 'Spain' ? 'España' : 'China'}
+                    {o === 'USA' ? (language === 'en' ? 'USA' : 'EE. UU.') : o === 'Spain' ? (language === 'en' ? 'Spain' : 'España') : 'China'}
                   </button>
                 ))}
               </div>
@@ -155,7 +161,7 @@ export default function QuoteCalculator() {
             <div className="mb-8 relative z-20">
               <h3 className="text-lg font-bold text-brand-blue mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-sm">2</span>
-                Tipo de envío
+                {t.calculator.tabService}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
@@ -170,7 +176,7 @@ export default function QuoteCalculator() {
                       : 'border-gray-200 text-brand-text-gray hover:border-brand-blue/30 hover:bg-gray-50'
                   }`}
                 >
-                  Aéreo
+                  {t.calculator.serviceAir}
                 </button>
                 {origin === 'USA' && (
                   <button
@@ -185,7 +191,7 @@ export default function QuoteCalculator() {
                         : 'border-gray-200 text-brand-text-gray hover:border-brand-blue/30 hover:bg-gray-50'
                     }`}
                   >
-                    Marítimo
+                    {t.calculator.serviceSea}
                   </button>
                 )}
               </div>
@@ -195,13 +201,13 @@ export default function QuoteCalculator() {
             <div className="relative z-20">
               <h3 className="text-lg font-bold text-brand-blue mb-4 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-brand-blue text-white flex items-center justify-center text-sm">3</span>
-                Detalles del paquete
+                {t.calculator.tabDetails}
               </h3>
               
               {service === 'Air' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-brand-text-gray mb-2">Peso</label>
+                    <label className="block text-sm font-medium text-brand-text-gray mb-2">{t.calculator.weightLabel}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-text-light">
                         <Scale size={18} />
@@ -218,14 +224,14 @@ export default function QuoteCalculator() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-brand-text-gray mb-2">Unidad</label>
+                    <label className="block text-sm font-medium text-brand-text-gray mb-2">{language === 'en' ? 'Unit' : 'Unidad'}</label>
                     <select 
                       value={weightUnit}
                       onChange={(e) => setWeightUnit(e.target.value as WeightUnit)}
                       className="select-field w-full relative z-30"
                     >
-                      <option value="lb">Libras (lb)</option>
-                      <option value="kg">Kilogramos (kg)</option>
+                      <option value="lb">{t.calculator.unitLb}</option>
+                      <option value="kg">{t.calculator.unitKg}</option>
                     </select>
                   </div>
                 </div>
@@ -240,7 +246,7 @@ export default function QuoteCalculator() {
                       }}
                       className={`text-sm font-medium pb-2 border-b-2 transition-colors cursor-pointer ${seaMethod === 'ft3' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-brand-text-gray'}`}
                     >
-                      Ingresar volumen (ft³)
+                      {t.calculator.seaMethodFt3}
                     </button>
                     <button 
                       type="button"
@@ -250,13 +256,13 @@ export default function QuoteCalculator() {
                       }}
                       className={`text-sm font-medium pb-2 border-b-2 transition-colors cursor-pointer ${seaMethod === 'dimensions' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-brand-text-gray'}`}
                     >
-                      Ingresar dimensiones (cm)
+                      {t.calculator.seaMethodDim}
                     </button>
                   </div>
 
                   {seaMethod === 'ft3' ? (
                     <div>
-                      <label className="block text-sm font-medium text-brand-text-gray mb-2">Volumen en pies cúbicos</label>
+                      <label className="block text-sm font-medium text-brand-text-gray mb-2">{t.calculator.seaMethodFt3}</label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-text-light">
                           <Box size={18} />
@@ -267,7 +273,7 @@ export default function QuoteCalculator() {
                           step="0.1"
                           value={ft3}
                           onChange={(e) => setFt3(e.target.value)}
-                          placeholder="Ej. 2.5"
+                          placeholder={t.calculator.ft3Placeholder}
                           className="input-field pl-11 w-full relative z-30"
                         />
                       </div>
@@ -275,7 +281,7 @@ export default function QuoteCalculator() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-brand-text-gray mb-2">Largo (cm)</label>
+                        <label className="block text-sm font-medium text-brand-text-gray mb-2">{t.calculator.lengthCm}</label>
                         <input 
                           type="number" 
                           min="0"
@@ -286,7 +292,7 @@ export default function QuoteCalculator() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-brand-text-gray mb-2">Ancho (cm)</label>
+                        <label className="block text-sm font-medium text-brand-text-gray mb-2">{t.calculator.widthCm}</label>
                         <input 
                           type="number" 
                           min="0"
@@ -297,7 +303,7 @@ export default function QuoteCalculator() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-brand-text-gray mb-2">Alto (cm)</label>
+                        <label className="block text-sm font-medium text-brand-text-gray mb-2">{t.calculator.heightCm}</label>
                         <input 
                           type="number" 
                           min="0"
@@ -323,20 +329,20 @@ export default function QuoteCalculator() {
             >
               
               <h3 className="text-xl font-bold mb-6 text-brand-yellow z-10 flex items-center gap-2">
-                Tu envío estimado
+                {language === 'en' ? 'Estimated Shipping' : 'Tu envío estimado'}
               </h3>
               
               <div className="space-y-4 mb-8 flex-1 z-10">
                 <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                  <span className="text-brand-light/70 text-sm">Origen</span>
+                  <span className="text-brand-light/70 text-sm">{language === 'en' ? 'Origin' : 'Origen'}</span>
                   <span className="font-semibold">{originName}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                  <span className="text-brand-light/70 text-sm">Servicio</span>
+                  <span className="text-brand-light/70 text-sm">{language === 'en' ? 'Service' : 'Servicio'}</span>
                   <span className="font-semibold">{serviceName}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                  <span className="text-brand-light/70 text-sm">Tarifa aplicada</span>
+                  <span className="text-brand-light/70 text-sm">{t.calculator.rateApplied}</span>
                   <span className="font-semibold">{rateLabel}</span>
                 </div>
                 <AnimatePresence>
@@ -347,7 +353,7 @@ export default function QuoteCalculator() {
                       exit={{ opacity: 0, height: 0 }}
                       className="flex justify-between items-center border-b border-white/10 pb-3 overflow-hidden"
                     >
-                      <span className="text-brand-light/70 text-sm">Peso/Volumen</span>
+                      <span className="text-brand-light/70 text-sm">{language === 'en' ? 'Weight / Dimensions' : 'Peso/Volumen'}</span>
                       <span className="font-semibold text-right max-w-[150px]">{quoteResult.appliedDimensionStr}</span>
                     </motion.div>
                   )}
@@ -355,7 +361,7 @@ export default function QuoteCalculator() {
               </div>
 
               <div className="bg-white/10 rounded-2xl p-5 mb-6 backdrop-blur-sm z-10 relative overflow-hidden border border-white/10 shadow-inner">
-                <span className="block text-brand-light/80 text-sm mb-1">TOTAL ESTIMADO</span>
+                <span className="block text-brand-light/80 text-sm mb-1">{t.calculator.estimatedTotal}</span>
                 <div className="text-4xl font-black h-[40px] flex items-center">
                   <AnimatePresence mode="popLayout">
                     <motion.div
@@ -379,7 +385,7 @@ export default function QuoteCalculator() {
                   className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all duration-300 z-30 bg-[#25D366] hover:bg-[#128C7E] text-white shadow-[0_0_15px_rgba(37,211,102,0.4)] hover:shadow-[0_0_25px_rgba(37,211,102,0.6)] transform hover:-translate-y-1 relative cursor-pointer pointer-events-auto wa-pulse"
                 >
                   <MessageCircle size={22} />
-                  Confirmar por WhatsApp
+                  {language === 'en' ? 'Confirm on WhatsApp' : 'Confirmar por WhatsApp'}
                 </a>
               ) : (
                 <button
@@ -388,7 +394,7 @@ export default function QuoteCalculator() {
                   className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all duration-300 z-30 bg-white/10 text-white/40 cursor-not-allowed relative pointer-events-none border border-white/5"
                 >
                   <MessageCircle size={22} className="opacity-50" />
-                  Ingresa datos para cotizar
+                  {language === 'en' ? 'Enter info to estimate' : 'Ingresa datos para cotizar'}
                 </button>
               )}
             </motion.div>
