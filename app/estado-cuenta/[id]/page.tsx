@@ -585,7 +585,7 @@ export default function PublicEstadoCuentaPage() {
 
         {/* Footer info (Official disclaimer) */}
         <div className="mt-8 text-center text-xs text-gray-400 space-y-1">
-          <p className="font-bold text-gray-500">JRS CARGO S.A. • Cédula Jurídica: 3-101-XXXXXX</p>
+          <p className="font-bold text-gray-500">JRS CARGO S.A.</p>
           <p>San Pablo de Heredia, Costa Rica • WhatsApp Soporte: +506 7260-1238 • info@jrscargocr.com</p>
           <p className="text-[11px] text-gray-400 pt-2">
             Este enlace es único y seguro para tu cuenta. No compartas información confidencial con terceros.
