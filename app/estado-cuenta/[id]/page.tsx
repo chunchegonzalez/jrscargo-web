@@ -7,7 +7,7 @@ import {
   DollarSign, CheckCircle2, Clock, FileText, Printer, 
   Copy, Check, ExternalLink, ShieldCheck, AlertCircle, 
   ChevronDown, ChevronUp, Phone, Mail, Package, MessageCircle,
-  HelpCircle
+  HelpCircle, Building2
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
 
