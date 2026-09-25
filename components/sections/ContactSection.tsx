@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function ContactSection() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isEn = language === 'en';
 
   const contactMethods = [

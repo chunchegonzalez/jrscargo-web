@@ -500,4 +500,6 @@ export const translations = {
       floatingTrigger: '👋 Hi! Talk with Clari',
     }
   }
-} as const;
+};
+
+export type Translations = typeof translations['es'];
