@@ -6,28 +6,28 @@ import ChatBotWidget from './ChatBotWidget';
 
 export function HeaderWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
   return <Header />;
 }
 
 export function FooterWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
   return <Footer />;
 }
 
 export function ChatBotWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
   return <ChatBotWidget />;
 }
 
 export function MainWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin');
+  const isExcluded = pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta');
   
   return (
-    <main className={`flex-1 relative z-10 ${isAdmin ? '' : 'pt-[72px] sm:pt-[88px]'}`}>
+    <main className={`flex-1 relative z-10 ${isExcluded ? '' : 'pt-[72px] sm:pt-[88px]'}`}>
       {children}
     </main>
   );

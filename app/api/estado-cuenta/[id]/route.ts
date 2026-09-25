@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getHeaders, getStoredExchangeRate } from '@/lib/supabase';
+import { getInvoiceStats } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,66 +33,72 @@ export async function GET(
     }
     const client = clients[0];
 
-    // 2. Fetch Invoices and Payments in parallel
-    const [resInvoices, resPayments, exchangeRate] = await Promise.all([
-      fetch(`${url}/rest/v1/invoices?client_id=eq.${encodeURIComponent(clientId)}&select=id,invoice_number,issue_date,due_date,total,subtotal,discount_percent,discount_amount,status,notes,created_at,invoice_payments(amount_applied)&order=issue_date.desc,created_at.desc`, {
+    // 2. Fetch Invoices, Invoice Payments, Payments, and Exchange Rate in parallel
+    const [resInvoices, resInvoicePayments, resPayments, exchangeRate] = await Promise.all([
+      fetch(`${url}/rest/v1/invoices?client_id=eq.${encodeURIComponent(clientId)}&select=id,invoice_number,issue_date,total,status,client_id,currency,exchange_rate,created_at,notes&order=issue_date.desc,created_at.desc`, {
         headers,
         cache: 'no-store'
       }),
+      fetch(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
+        headers,
+        cache: 'no-store'
+      }).catch(() => null),
       fetch(`${url}/rest/v1/payments?client_id=eq.${encodeURIComponent(clientId)}&select=id,payment_date,amount,payment_method,reference_number,notes,created_at&order=payment_date.desc,created_at.desc`, {
         headers,
         cache: 'no-store'
-      }),
+      }).catch(() => null),
       getStoredExchangeRate().catch(() => 500)
     ]);
 
     const invoicesRaw: Record<string, unknown>[] = resInvoices.ok ? await resInvoices.json() : [];
-    const paymentsRaw: Record<string, unknown>[] = resPayments.ok ? await resPayments.json() : [];
+    const invoicePaymentsRaw: Record<string, unknown>[] = resInvoicePayments && resInvoicePayments.ok ? await resInvoicePayments.json() : [];
+    const paymentsRaw: Record<string, unknown>[] = resPayments && resPayments.ok ? await resPayments.json() : [];
+
+    // Map payments to invoices
+    const paymentsMap = new Map<string, Array<Record<string, unknown>>>();
+    for (const p of invoicePaymentsRaw) {
+      const invId = String(p.invoice_id);
+      if (!paymentsMap.has(invId)) paymentsMap.set(invId, []);
+      paymentsMap.get(invId)!.push(p);
+    }
 
     // 3. Fetch invoice items for these invoices
     const invoiceIds = invoicesRaw.map(inv => String(inv.id));
-    const itemsByInvoice: Record<string, Array<Record<string, unknown>>> = {};
+    const itemsMap = new Map<string, Array<Record<string, unknown>>>();
 
     if (invoiceIds.length > 0) {
       const filterInvoices = invoiceIds.map(id => `"${id}"`).join(',');
       const resItems = await fetch(`${url}/rest/v1/invoice_items?invoice_id=in.(${filterInvoices})&select=invoice_id,service_name,tracking_number,weight,rate,amount`, {
         headers,
         cache: 'no-store'
-      });
-      if (resItems.ok) {
+      }).catch(() => null);
+
+      if (resItems && resItems.ok) {
         const items = await resItems.json();
-        items.forEach((it: Record<string, unknown>) => {
+        for (const it of items) {
           const invId = String(it.invoice_id);
-          if (!itemsByInvoice[invId]) itemsByInvoice[invId] = [];
-          itemsByInvoice[invId].push(it);
-        });
+          if (!itemsMap.has(invId)) itemsMap.set(invId, []);
+          itemsMap.get(invId)!.push(it);
+        }
       }
     }
 
-    // 4. Process invoices and compute pending balances
+    // 4. Process invoices and compute pending balances with getInvoiceStats
     let totalBalanceUSD = 0;
     let totalInvoicedUSD = 0;
     let totalPaidUSD = 0;
     let pendingCount = 0;
 
     const invoices = invoicesRaw.map(inv => {
-      const total = Number(inv.total || 0);
-      const isAnulada = inv.status === 'Anulada';
+      inv.invoice_payments = paymentsMap.get(String(inv.id)) || [];
+      const items = itemsMap.get(String(inv.id)) || [];
 
-      let paid = 0;
-      if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
-        paid = (inv.invoice_payments as Record<string, unknown>[]).reduce(
-          (acc: number, p: Record<string, unknown>) => acc + Number(p.amount_applied || 0),
-          0
-        );
-      }
+      const stats = getInvoiceStats(inv);
 
-      const pending = isAnulada ? 0 : Math.max(0, total - paid);
-
-      if (!isAnulada) {
-        totalInvoicedUSD += total;
-        totalBalanceUSD += pending;
-        if (pending > 0.01) {
+      if (!stats.isAnulada) {
+        totalInvoicedUSD += stats.total;
+        totalBalanceUSD += stats.pending;
+        if (stats.pending > 0.01) {
           pendingCount++;
         }
       }
@@ -100,13 +107,12 @@ export async function GET(
         id: inv.id,
         invoice_number: inv.invoice_number,
         issue_date: inv.issue_date,
-        due_date: inv.due_date,
-        total,
-        paid,
-        pending,
-        status: isAnulada ? 'Anulada' : pending <= 0.01 ? 'Pagada' : paid > 0 ? 'Parcial' : 'Pendiente',
+        total: stats.total,
+        paid: stats.paid,
+        pending: stats.pending,
+        status: stats.isAnulada ? 'Anulada' : stats.pending <= 0.01 ? 'Pagada' : stats.paid > 0 ? 'Parcial' : 'Pendiente',
         notes: inv.notes,
-        items: itemsByInvoice[String(inv.id)] || []
+        items
       };
     });
 
