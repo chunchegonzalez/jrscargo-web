@@ -125,9 +125,82 @@ export async function POST(request: Request, { params }: { params: { id: string 
       '</tr>'
     ) : '';
 
-    const notesHtml = invoice.notes ? (
-      '<div style="margin-top:20px;padding:14px 18px;background:#f8fafc;border-left:4px solid #12435E;border-radius:0 10px 10px 0;">' +
-        '<p style="margin:0;font-size:12px;color:#475569;line-height:1.6;font-style:italic;">' + invoice.notes.replace(/\n/g, '<br/>') + '</p>' +
+    const clientId = String(invoice.client_id || invoice.clients?.id || '');
+    const clientName = String(invoice.clients?.name || 'Cliente');
+    const clientStatementUrl = 'https://www.jrscargocr.com/estado-cuenta/' + encodeURIComponent(clientId);
+
+    let clientPendingUSD = Number(invoice.total || 0);
+
+    if (clientId) {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        const headers = {
+          'apikey': supabaseKey,
+          'Authorization': 'Bearer ' + supabaseKey,
+          'Content-Type': 'application/json'
+        };
+
+        const [resClientInvs, resAllPayments] = await Promise.all([
+          fetch(`${supabaseUrl}/rest/v1/invoices?client_id=eq.${encodeURIComponent(clientId)}&select=id,total,status`, {
+            headers,
+            cache: 'no-store'
+          }),
+          fetch(`${supabaseUrl}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
+            headers,
+            cache: 'no-store'
+          }).catch(() => null)
+        ]);
+
+        if (resClientInvs.ok) {
+          const clientInvs = await resClientInvs.json();
+          const payments = resAllPayments && resAllPayments.ok ? await resAllPayments.json() : [];
+
+          const paymentsMap = new Map<string, number>();
+          for (const p of payments) {
+            const invId = String(p.invoice_id);
+            paymentsMap.set(invId, (paymentsMap.get(invId) || 0) + Number(p.amount_applied || 0));
+          }
+
+          let calculatedPending = 0;
+          for (const inv of clientInvs) {
+            if (inv.status === 'Anulada') continue;
+            const t = Number(inv.total || 0);
+            const paid = paymentsMap.get(String(inv.id)) || 0;
+            calculatedPending += Math.max(0, t - paid);
+          }
+          clientPendingUSD = calculatedPending;
+        }
+      } catch (e) {
+        console.error('Error calculating client pending balance for email:', e);
+      }
+    }
+
+    const clientPendingCRC = Math.round(clientPendingUSD * exchangeRate).toLocaleString('es-CR');
+
+    const statementBoxHtml = clientId ? (
+      '<div style="margin-top:24px;padding:20px 22px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:14px;text-align:center;">' +
+        '<span style="display:inline-block;background:#e2e8f0;color:#0f172a;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;padding:3px 10px;border-radius:6px;margin-bottom:8px;">' +
+          'Estado de Cuenta Individual' +
+        '</span>' +
+        '<p style="margin:4px 0 0;font-size:13px;color:#475569;">' +
+          'Estimado(a) <strong>' + clientName + '</strong>, tu saldo total pendiente a la fecha es de:' +
+        '</p>' +
+        '<p style="margin:6px 0 10px;font-size:24px;font-weight:900;color:#12435E;">' +
+          '$' + clientPendingUSD.toFixed(2) + ' USD ' +
+          '<span style="font-size:14px;font-weight:600;color:#475569;">(&#8776; &#8353;' + clientPendingCRC + ' CRC)</span>' +
+        '</p>' +
+        '<p style="margin:0 0 16px;font-size:13px;color:#334155;line-height:1.6;">' +
+          'Para consultar el detalle de tu saldo, facturas pendientes y medios de pago (SINPE M&oacute;vil), <a href="' + clientStatementUrl + '" style="color:#12435E;font-weight:800;text-decoration:underline;">presione aqu&iacute;</a>.' +
+        '</p>' +
+        '<div>' +
+          '<a href="' + clientStatementUrl + '" style="display:inline-block;background-color:#12435E;color:#ffffff;font-family:sans-serif;font-size:13px;font-weight:700;line-height:40px;text-align:center;text-decoration:none;padding:0 24px;border-radius:10px;box-shadow:0 2px 8px rgba(18,67,94,0.25);">' +
+            'Ver Mi Estado de Cuenta Online &rarr;' +
+          '</a>' +
+        '</div>' +
+        '<p style="margin:14px 0 0;font-size:11px;color:#94a3b8;line-height:1.4;">' +
+          '&#128274; Este enlace es exclusivo e individual para tu cuenta. No compartas este enlace con terceros.' +
+        '</p>' +
       '</div>'
     ) : '';
 
@@ -191,6 +264,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       '        </table>',
       '      </div>',
       notesHtml,
+      statementBoxHtml,
       '      <div style="margin-top:24px;padding:12px 16px;background:#f1f5f9;border-radius:10px;text-align:center;">',
       '        <p style="margin:0;font-size:12px;color:#64748b;">📎 Encontrarás el comprobante oficial en formato PDF adjunto a este mensaje.</p>',
       '      </div>',

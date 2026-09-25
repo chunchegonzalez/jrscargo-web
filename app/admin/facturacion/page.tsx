@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
+import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -578,7 +578,14 @@ export default function FacturacionDashboard() {
                 <p className="text-xs text-gray-400 mt-2">Este mensaje aparecerá en el cuerpo del correo. La factura se adjuntará automáticamente.</p>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">
+              <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-brand-blue flex items-start gap-2.5">
+                <ShieldCheck size={18} className="text-brand-blue shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  Este correo incluirá automáticamente el <strong>saldo pendiente total</strong> del cliente y un enlace directo y exclusivo a su <strong>estado de cuenta personal</strong> online (sin contraseña).
+                </p>
+              </div>
+
+              <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
                 <button type="button" onClick={() => setEmailModalOpen(false)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
                   Cancelar
                 </button>
