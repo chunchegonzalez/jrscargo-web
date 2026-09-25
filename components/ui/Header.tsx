@@ -40,19 +40,19 @@ export default function Header() {
     <header 
       className={`fixed left-0 right-0 z-50 transition-all duration-300 ease-out ${
         isScrolled && !isMobileMenuOpen
-          ? 'top-4 px-0 pointer-events-none' 
-          : 'top-0 px-0'
+          ? 'top-3 sm:top-4 px-4 sm:px-6 pointer-events-none' 
+          : 'top-0 px-0 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs'
       }`}
     >
       <div 
-        className={`mx-auto transition-all duration-300 ease-out pointer-events-auto flex items-center justify-between ${
+        className={`mx-auto transition-all duration-300 ease-out flex items-center justify-between gap-4 lg:gap-8 ${
           isScrolled && !isMobileMenuOpen
-            ? 'w-[calc(100%-2rem)] max-w-6xl bg-white/90 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-full py-1.5 px-6 sm:px-8 border border-white/60' 
-            : 'w-full max-w-full bg-white/95 backdrop-blur-sm rounded-none py-4 px-4 sm:px-6 lg:px-8 border border-transparent'
+            ? 'w-full max-w-7xl bg-white/95 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-full py-2 px-6 sm:px-8 border border-slate-200/70 pointer-events-auto' 
+            : 'w-full max-w-7xl py-3 px-4 sm:px-6 lg:px-8 pointer-events-auto'
         }`}
       >
-        {/* Logo */}
-        <Link href="/" className="flex-shrink-0 group" onClick={() => setIsMobileMenuOpen(false)}>
+        {/* Left: Brand Logo */}
+        <Link href="/" className="flex-shrink-0 group flex items-center" onClick={() => setIsMobileMenuOpen(false)}>
           <Image 
             src={isPatriotic ? "/logo-patrio-clean.png" : "/logo.png"} 
             alt={isPatriotic ? "JRS CARGO - Mes de la Patria" : "JRS CARGO"} 
@@ -60,87 +60,91 @@ export default function Header() {
             height={isPatriotic ? 68 : 96} 
             className={`w-auto object-contain transition-all duration-300 ease-out ${
               isPatriotic 
-                ? (isScrolled && !isMobileMenuOpen ? 'h-8 sm:h-9 lg:h-10 group-hover:scale-105' : 'h-10 sm:h-11 lg:h-12 group-hover:scale-105')
-                : (isScrolled && !isMobileMenuOpen ? 'h-12 sm:h-14 lg:h-[56px]' : 'h-14 sm:h-16 lg:h-[72px]')
+                ? (isScrolled && !isMobileMenuOpen ? 'h-8 sm:h-9 lg:h-10 group-hover:scale-105' : 'h-9 sm:h-10 lg:h-11 group-hover:scale-105')
+                : (isScrolled && !isMobileMenuOpen ? 'h-10 sm:h-12 lg:h-[48px]' : 'h-12 sm:h-14 lg:h-[58px]')
             }`}
             priority
           />
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden xl:flex items-center space-x-7">
+        {/* Center: Desktop Nav */}
+        <nav className="hidden lg:flex items-center space-x-1 xl:space-x-2">
           {navLinks.map((link) => (
             <Link 
               key={link.name} 
               href={link.href}
-              className="text-sm font-medium text-brand-text-gray hover:text-brand-blue transition-colors"
+              className="text-[13px] xl:text-[14px] font-semibold text-slate-600 hover:text-brand-blue hover:bg-slate-100/70 px-3.5 py-1.5 rounded-full transition-all"
             >
               {link.name}
             </Link>
           ))}
         </nav>
 
-        {/* Desktop Actions */}
-        <div className="hidden lg:flex items-center space-x-3">
-          {/* Language Selector Pill */}
-          <div className="flex items-center bg-gray-100 p-0.5 rounded-full border border-gray-200 text-xs font-bold mr-1">
+        {/* Right: Desktop Actions */}
+        <div className="hidden lg:flex items-center space-x-2.5 xl:space-x-3 shrink-0">
+          
+          {/* Segmented Language Switcher */}
+          <div className="flex items-center bg-slate-100/90 p-1 rounded-full border border-slate-200/80 text-xs font-bold shadow-inner">
             <button
               onClick={() => setLanguage('es')}
-              className={`px-2.5 py-1 rounded-full transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-full transition-all duration-200 flex items-center gap-1.5 text-xs ${
                 language === 'es'
-                  ? 'bg-white text-brand-blue shadow-sm font-black'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-white text-brand-blue shadow-sm font-black scale-[1.02]'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
               title="Cambiar a Español"
             >
-              <span className="text-[11px]">🇨🇷</span> ES
+              <span className="text-xs leading-none">🇨🇷</span> <span>ES</span>
             </button>
             <button
               onClick={() => setLanguage('en')}
-              className={`px-2.5 py-1 rounded-full transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-full transition-all duration-200 flex items-center gap-1.5 text-xs ${
                 language === 'en'
-                  ? 'bg-brand-blue text-white shadow-sm font-black'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-brand-blue text-white shadow-sm font-black scale-[1.02]'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
               title="Switch to English"
             >
-              <span className="text-[11px]">🇺🇸</span> EN
+              <span className="text-xs leading-none">🇺🇸</span> <span>EN</span>
             </button>
           </div>
 
+          {/* Iniciar sesión (Ghost Button) */}
           <a 
             href="https://worldboxcr.com/jrscargo/login" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-sm font-semibold text-brand-blue hover:text-brand-red transition-colors flex items-center gap-1.5 px-2"
+            className="text-xs sm:text-sm font-bold text-slate-700 hover:text-brand-blue hover:bg-slate-100/80 px-3.5 py-2 rounded-full transition-all flex items-center gap-1.5"
           >
-            <UserCircle size={18} />
-            {t.nav.login}
+            <UserCircle size={18} className="text-slate-500" />
+            <span>{t.nav.login}</span>
           </a>
+
+          {/* CTA: Crear mi casillero */}
           <a 
             href="https://worldboxcr.com/jrscargo/register" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="btn-primary text-sm py-2.5 px-5"
+            className="inline-flex items-center gap-2 bg-brand-blue hover:bg-[#0A2636] text-white font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full shadow-md shadow-brand-blue/20 hover:shadow-lg hover:shadow-brand-blue/25 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
           >
-            <PackageOpen size={18} />
-            {t.nav.register}
+            <PackageOpen size={17} className="text-brand-yellow" />
+            <span>{t.nav.register}</span>
           </a>
         </div>
 
-        {/* Mobile Controls (Language + Menu Button) */}
-        <div className="xl:hidden flex items-center gap-2">
+        {/* Mobile Controls (Language + Hamburger Button) */}
+        <div className="lg:hidden flex items-center gap-2">
           {/* Mobile Language Button */}
           <button
             onClick={toggleLanguage}
-            className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 border border-gray-200 text-xs font-black text-brand-blue flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-xs font-black text-brand-blue flex items-center gap-1 transition-colors"
             title="Cambiar Idioma / Switch Language"
           >
             <span>{language === 'es' ? '🇨🇷 ES' : '🇺🇸 EN'}</span>
           </button>
 
           <button 
-            className="p-2 text-brand-blue hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-brand-blue hover:bg-slate-100 rounded-xl transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -149,15 +153,15 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="xl:hidden absolute top-full left-0 right-0 bg-white shadow-lg border-t border-gray-100 animate-slide-up">
-          <div className="px-4 pt-2 pb-6 space-y-1 sm:px-6">
+        <div className="lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-md shadow-xl border-t border-slate-100 animate-slide-up">
+          <div className="px-4 pt-3 pb-6 space-y-1 sm:px-6">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className="block px-3 py-3 text-base font-medium text-brand-text-gray hover:text-brand-blue hover:bg-gray-50 rounded-lg"
+                className="block px-3.5 py-3 text-base font-semibold text-slate-700 hover:text-brand-blue hover:bg-slate-50 rounded-xl transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.name}
@@ -165,15 +169,15 @@ export default function Header() {
             ))}
 
             {/* Mobile Language Switch Options */}
-            <div className="pt-3 pb-2 px-3 flex items-center justify-between border-t border-gray-100">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="pt-3 pb-2 px-3 flex items-center justify-between border-t border-slate-100">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Globe size={14} /> Idioma / Language
               </span>
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                 <button
                   onClick={() => setLanguage('es')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    language === 'es' ? 'bg-white text-brand-blue shadow-sm font-black' : 'text-gray-500'
+                    language === 'es' ? 'bg-white text-brand-blue shadow-sm font-black' : 'text-slate-500'
                   }`}
                 >
                   🇨🇷 Español
@@ -181,7 +185,7 @@ export default function Header() {
                 <button
                   onClick={() => setLanguage('en')}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    language === 'en' ? 'bg-brand-blue text-white shadow-sm font-black' : 'text-gray-500'
+                    language === 'en' ? 'bg-brand-blue text-white shadow-sm font-black' : 'text-slate-500'
                   }`}
                 >
                   🇺🇸 English
@@ -189,12 +193,12 @@ export default function Header() {
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-gray-100 grid gap-3">
+            <div className="mt-4 pt-4 border-t border-slate-100 grid gap-3">
               <a 
                 href="https://worldboxcr.com/jrscargo/login" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full btn-outline py-3 text-sm font-bold"
+                className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <UserCircle size={20} />
@@ -204,7 +208,7 @@ export default function Header() {
                 href="https://worldboxcr.com/jrscargo/register" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full btn-primary py-3 text-sm font-bold"
+                className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-brand-blue hover:bg-[#0A2636] rounded-xl shadow-md transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <PackageOpen size={20} />
