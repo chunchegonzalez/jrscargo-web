@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getHeaders, getStoredExchangeRate } from '@/lib/supabase';
+import { getHeaders, getStoredExchangeRate, getClientPayments } from '@/lib/supabase';
 import { getInvoiceStats } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ export async function GET(
     const client = clients[0];
 
     // 2. Fetch Invoices, Invoice Payments, Payments, and Exchange Rate in parallel
-    const [resInvoices, resInvoicePayments, resPayments, exchangeRate] = await Promise.all([
+    const [resInvoices, resInvoicePayments, paymentsData, exchangeRate] = await Promise.all([
       fetch(`${url}/rest/v1/invoices?client_id=eq.${encodeURIComponent(clientId)}&select=id,invoice_number,issue_date,total,status,client_id,currency,exchange_rate,created_at,notes&order=issue_date.desc,created_at.desc`, {
         headers,
         cache: 'no-store'
@@ -43,16 +43,13 @@ export async function GET(
         headers,
         cache: 'no-store'
       }).catch(() => null),
-      fetch(`${url}/rest/v1/payments?client_id=eq.${encodeURIComponent(clientId)}&select=id,payment_date,amount,payment_method,reference_number,notes,created_at&order=payment_date.desc,created_at.desc`, {
-        headers,
-        cache: 'no-store'
-      }).catch(() => null),
+      getClientPayments(clientId).catch(() => []),
       getStoredExchangeRate().catch(() => 500)
     ]);
 
     const invoicesRaw: Record<string, unknown>[] = resInvoices.ok ? await resInvoices.json() : [];
     const invoicePaymentsRaw: Record<string, unknown>[] = resInvoicePayments && resInvoicePayments.ok ? await resInvoicePayments.json() : [];
-    const paymentsRaw: Record<string, unknown>[] = resPayments && resPayments.ok ? await resPayments.json() : [];
+    const paymentsRaw: Record<string, unknown>[] = Array.isArray(paymentsData) ? paymentsData : [];
 
     // Map payments to invoices
     const paymentsMap = new Map<string, Array<Record<string, unknown>>>();
@@ -86,7 +83,6 @@ export async function GET(
     // 4. Process invoices and compute pending balances with getInvoiceStats
     let totalBalanceUSD = 0;
     let totalInvoicedUSD = 0;
-    let totalPaidUSD = 0;
     let pendingCount = 0;
 
     const invoices = invoicesRaw.map(inv => {
@@ -117,6 +113,7 @@ export async function GET(
     });
 
     // Compute payments total
+    let totalPaidUSD = 0;
     paymentsRaw.forEach(p => {
       totalPaidUSD += Number(p.amount || 0);
     });

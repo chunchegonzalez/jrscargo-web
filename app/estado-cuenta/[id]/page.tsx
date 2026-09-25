@@ -40,6 +40,13 @@ interface Payment {
   payment_method?: string;
   reference_number?: string;
   notes?: string;
+  invoice_payments?: Array<{
+    invoice_id: string;
+    amount_applied: number;
+    invoices?: {
+      invoice_number: string;
+    };
+  }>;
 }
 
 interface StatementData {
@@ -553,8 +560,9 @@ export default function PublicEstadoCuentaPage() {
                       <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider border-b border-gray-100">
                         <th className="p-3 font-bold">Fecha</th>
                         <th className="p-3 font-bold">Método</th>
-                        <th className="p-3 font-bold">Referencia / Comprobante</th>
-                        <th className="p-3 font-bold text-right">Monto Aplicado</th>
+                        <th className="p-3 font-bold">Referencia</th>
+                        <th className="p-3 font-bold">Facturas Aplicadas</th>
+                        <th className="p-3 font-bold text-right">Monto</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -563,11 +571,25 @@ export default function PublicEstadoCuentaPage() {
                           <td className="p-3 font-semibold text-gray-700">{formatDisplayDate(p.payment_date)}</td>
                           <td className="p-3">
                             <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold rounded-md">
-                              {p.payment_method || 'Transferencia'}
+                              {p.payment_method || '—'}
                             </span>
                           </td>
                           <td className="p-3 font-mono text-gray-600">
-                            {p.reference_number || p.notes || '—'}
+                            {p.reference_number || '—'}
+                          </td>
+                          <td className="p-3 text-gray-700">
+                            {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 ? (
+                              p.invoice_payments.map((ip) => (
+                                <div key={ip.invoice_id} className="font-semibold text-brand-blue">
+                                  #{ip.invoices?.invoice_number || 'Factura'}{' '}
+                                  <span className="text-[11px] font-normal text-gray-400">
+                                    (${Number(ip.amount_applied).toFixed(2)})
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </td>
                           <td className="p-3 text-right font-black text-green-600 text-sm">
                             +${Number(p.amount || 0).toFixed(2)} USD
