@@ -125,6 +125,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       '</tr>'
     ) : '';
 
+    const notesHtml = invoice.notes ? (
+      '<div style="margin-top:20px;padding:14px 18px;background:#f8fafc;border-left:4px solid #12435E;border-radius:0 10px 10px 0;">' +
+        '<p style="margin:0;font-size:12px;color:#475569;line-height:1.6;font-style:italic;">' + invoice.notes.replace(/\n/g, '<br/>') + '</p>' +
+      '</div>'
+    ) : '';
+
     const clientId = String(invoice.client_id || invoice.clients?.id || '');
     const clientName = String(invoice.clients?.name || 'Cliente');
     const clientStatementUrl = 'https://www.jrscargocr.com/estado-cuenta/' + encodeURIComponent(clientId);
