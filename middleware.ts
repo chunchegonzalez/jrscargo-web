@@ -12,6 +12,8 @@ const PUBLIC_API_ROUTES = [
   '/api/tracking',
   '/api/monitor',
   '/api/monitor/quotes',
+  '/api/estado-cuenta',
+  '/api/exchange-rate',
 ];
 
 function isPublicApiRoute(pathname: string): boolean {

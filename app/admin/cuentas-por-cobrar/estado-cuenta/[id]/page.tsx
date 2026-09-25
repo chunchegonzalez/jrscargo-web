@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, Link2, Check, ExternalLink } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { formatDisplayDate, parseLocalDate } from '@/lib/billing';
 
@@ -19,6 +19,7 @@ export default function EstadoDeCuentaPage() {
   const params = useParams();
   const clientId = params.id as string;
   const [loading, setLoading] = useState(true);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [client, setClient] = useState<Record<string, unknown> | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [startDate, setStartDate] = useState('');
@@ -155,7 +156,30 @@ export default function EstadoDeCuentaPage() {
           </Link>
           <h1 className="text-xl font-bold text-gray-800">Estado de Cuenta</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.jrscargocr.com';
+              const publicUrl = `${origin}/estado-cuenta/${clientId}`;
+              navigator.clipboard.writeText(publicUrl);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 2500);
+            }}
+            className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-brand-blue font-bold rounded-lg text-sm shadow-sm flex items-center gap-1.5 transition-colors"
+            title="Copiar enlace público para el cliente"
+          >
+            {copiedLink ? <Check size={16} className="text-green-600" /> : <Link2 size={16} />}
+            <span>{copiedLink ? '¡Enlace copiado!' : 'Copiar Enlace Cliente'}</span>
+          </button>
+          <a
+            href={`/estado-cuenta/${clientId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition-colors"
+            title="Abrir vista pública del cliente en nueva pestaña"
+          >
+            <ExternalLink size={18} />
+          </a>
           <button onClick={() => router.push('/admin/cuentas-por-cobrar/recibir/' + clientId)} className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold rounded-lg text-sm shadow-sm">
             Recibir Pago
           </button>
