@@ -152,7 +152,7 @@ export default function HowItWorks() {
               <ArrowRight className="text-brand-blue/50" />
             </motion.div>
             <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
-              <UserPlus size={18} className="text-brand-blue" /> {language === 'en' ? 'Locker' : 'Casillero'}
+              <UserPlus size={18} className="text-brand-blue" /> {language === 'en' ? 'Warehouse' : 'Casillero'}
             </motion.span>
             <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
               <ArrowRight className="text-brand-blue/50" />
