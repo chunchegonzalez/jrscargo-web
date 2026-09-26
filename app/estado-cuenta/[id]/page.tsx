@@ -169,22 +169,22 @@ export default function PublicEstadoCuentaPage() {
       
       {/* Top Banner (Hidden in print) */}
       <div className="bg-[#0A2636] text-white border-b border-white/10 print:hidden">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-white/80">
-            <ShieldCheck size={16} className="text-green-400" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+          <div className="flex items-center gap-2 text-white/80 text-center sm:text-left">
+            <ShieldCheck size={16} className="text-green-400 shrink-0" />
             <span>Portal Seguro de Consulta de Saldos • JRS CARGO S.A.</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="w-full sm:w-auto grid grid-cols-2 sm:flex items-center gap-2">
             <button
               onClick={copyShareLink}
-              className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium text-white"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium text-white"
             >
               {copiedLink ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-              <span>{copiedLink ? '¡Enlace copiado!' : 'Copiar enlace'}</span>
+              <span>{copiedLink ? '¡Copiado!' : 'Copiar enlace'}</span>
             </button>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1 bg-brand-yellow hover:bg-amber-400 text-brand-blue font-bold rounded-lg transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1 bg-brand-yellow hover:bg-amber-400 text-brand-blue font-bold rounded-lg transition-colors"
             >
               <Printer size={14} />
               <span>Imprimir / PDF</span>
@@ -193,60 +193,62 @@ export default function PublicEstadoCuentaPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 print:p-0 print:max-w-none">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 pt-4 sm:pt-8 print:p-0 print:max-w-none">
         
         {/* Document Header */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm mb-6 print:border-none print:shadow-none print:p-0 print:mb-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-gray-100 pb-6 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-brand-bg-light rounded-2xl p-2 border border-gray-100 flex items-center justify-center shrink-0">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-gray-100 shadow-sm mb-4 sm:mb-6 print:border-none print:shadow-none print:p-0 print:mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 border-b border-gray-100 pb-5 sm:pb-6 mb-5 sm:mb-6">
+            <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 bg-brand-bg-light rounded-2xl p-2 border border-gray-100 flex items-center justify-center shrink-0">
                 <Image
                   src="/logo.png"
                   alt="JRS CARGO"
                   width={140}
                   height={60}
-                  className="object-contain w-auto h-auto max-h-12"
+                  className="object-contain w-auto h-auto max-h-10 sm:max-h-12"
                   priority
                 />
               </div>
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-brand-blue-light bg-brand-blue/5 px-2.5 py-0.5 rounded-full inline-block mb-1">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-brand-blue bg-brand-blue/5 px-2.5 py-0.5 rounded-full inline-block mb-1">
                   Estado de Cuenta Oficial
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-black text-brand-blue">
+                <h1 className="text-xl sm:text-3xl font-black text-brand-blue break-words">
                   {client.name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-gray-500 mt-1">
                   {client.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail size={13} className="text-gray-400" /> {client.email}
+                    <span className="flex items-center gap-1 truncate max-w-full">
+                      <Mail size={13} className="text-gray-400 shrink-0" /> <span className="truncate">{client.email}</span>
                     </span>
                   )}
                   {client.phone && (
                     <span className="flex items-center gap-1">
-                      <Phone size={13} className="text-gray-400" /> {client.phone}
+                      <Phone size={13} className="text-gray-400 shrink-0" /> {client.phone}
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="text-left sm:text-right bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-2xl w-full sm:w-auto">
-              <p className="text-xs text-gray-400 font-bold uppercase">Fecha de emisión</p>
-              <p className="text-sm font-bold text-gray-800">
-                {new Date().toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' })}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                T.C. Oficial: <span className="font-bold text-gray-700">₡{stats.exchangeRate}</span> / $1 USD
+            <div className="text-left sm:text-right bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-xl w-full sm:w-auto flex sm:flex-col justify-between items-center sm:items-end">
+              <div>
+                <p className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase">Fecha de emisión</p>
+                <p className="text-xs sm:text-sm font-bold text-gray-800">
+                  {new Date().toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+              <p className="text-xs text-gray-400 sm:mt-1">
+                T.C.: <span className="font-bold text-gray-700">₡{stats.exchangeRate}</span> / $1
               </p>
             </div>
           </div>
 
           {/* Balance Spotlight Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             
             {/* Card Saldo Pendiente */}
-            <div className="sm:col-span-2 bg-gradient-to-br from-brand-blue to-[#0A2636] text-white p-6 sm:p-7 rounded-2xl relative overflow-hidden shadow-md">
+            <div className="sm:col-span-2 bg-gradient-to-br from-brand-blue to-[#0A2636] text-white p-5 sm:p-7 rounded-2xl relative overflow-hidden shadow-md">
               <div className="absolute right-0 top-0 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none -translate-y-1/2 translate-x-1/2" />
               <div className="relative z-10 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -255,28 +257,28 @@ export default function PublicEstadoCuentaPage() {
                   </span>
                   {stats.totalBalanceUSD > 0.01 ? (
                     <span className="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Clock size={12} /> {stats.pendingInvoicesCount} factura(s) pendiente(s)
+                      <Clock size={12} /> {stats.pendingInvoicesCount} pend.
                     </span>
                   ) : (
                     <span className="text-[11px] font-bold bg-green-500/20 text-green-300 border border-green-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <CheckCircle2 size={12} /> ¡Cuenta al día!
+                      <CheckCircle2 size={12} /> ¡Al día!
                     </span>
                   )}
                 </div>
 
                 <div className="my-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl sm:text-5xl font-black tracking-tight">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-3xl sm:text-5xl font-black tracking-tight">
                       ${stats.totalBalanceUSD.toFixed(2)}
                     </span>
-                    <span className="text-xl font-bold text-brand-blue-light">USD</span>
+                    <span className="text-lg sm:text-xl font-bold text-brand-blue-light">USD</span>
                   </div>
-                  <div className="text-lg sm:text-xl font-black text-brand-yellow mt-1">
+                  <div className="text-base sm:text-xl font-black text-brand-yellow mt-1">
                     ≈ ₡{stats.totalBalanceCRC.toLocaleString('es-CR')} <span className="text-xs font-semibold text-white/70">CRC</span>
                   </div>
                 </div>
 
-                <p className="text-xs text-white/70 mt-2">
+                <p className="text-xs text-white/70 mt-1 sm:mt-2">
                   {stats.totalBalanceUSD > 0.01 
                     ? 'Por favor cancela tu saldo para agilizar el despacho y entrega de tus paquetes.'
                     : 'No tienes saldos pendientes en este momento. ¡Muchas gracias por tu preferencia!'}
@@ -284,40 +286,40 @@ export default function PublicEstadoCuentaPage() {
               </div>
             </div>
 
-            {/* Quick Summary Numbers */}
-            <div className="bg-slate-50 p-6 rounded-2xl border border-gray-100 flex flex-col justify-between gap-4">
+            {/* Quick Summary Numbers: 2 columnas en móvil, apiladas en escritorio */}
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-gray-100 grid grid-cols-2 sm:grid-cols-1 gap-3 sm:gap-4">
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Facturado Histórico</p>
-                <p className="text-2xl font-black text-gray-800">${stats.totalInvoicedUSD.toFixed(2)} <span className="text-xs font-bold text-gray-400">USD</span></p>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">Total Facturado</p>
+                <p className="text-base sm:text-2xl font-black text-gray-800">${stats.totalInvoicedUSD.toFixed(2)} <span className="text-[10px] sm:text-xs font-bold text-gray-400">USD</span></p>
               </div>
-              <div className="border-t border-gray-200/80 pt-4">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pagos Aplicados</p>
-                <p className="text-2xl font-black text-green-600">${stats.totalPaidUSD.toFixed(2)} <span className="text-xs font-bold text-gray-400">USD</span></p>
+              <div className="border-l sm:border-l-0 sm:border-t border-gray-200/80 pl-3 sm:pl-0 sm:pt-4">
+                <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">Total Pagos</p>
+                <p className="text-base sm:text-2xl font-black text-green-600">${stats.totalPaidUSD.toFixed(2)} <span className="text-[10px] sm:text-xs font-bold text-gray-400">USD</span></p>
               </div>
             </div>
 
           </div>
 
-          {/* Payment Instructions Box (Only show prominently if has pending balance) */}
+          {/* Payment Instructions Box */}
           {stats.totalBalanceUSD > 0.01 && (
-            <div className="mt-6 p-5 sm:p-6 bg-amber-50/70 border border-amber-200/70 rounded-2xl print:border-gray-200">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1.5">
+            <div className="mt-4 sm:mt-6 p-4 sm:p-6 bg-amber-50/70 border border-amber-200/70 rounded-2xl print:border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 min-w-0 flex-1">
                   <h2 className="text-sm font-black text-amber-900 flex items-center gap-2">
-                    <Building2 size={18} className="text-amber-700" />
+                    <Building2 size={18} className="text-amber-700 shrink-0" />
                     ¿Cómo pagar tu saldo pendiente?
                   </h2>
-                  <p className="text-xs text-amber-800 leading-relaxed max-w-2xl">
+                  <p className="text-xs text-amber-800 leading-relaxed">
                     Puedes cancelar mediante <strong>SINPE Móvil</strong> al número oficial de JRS Cargo. Al transferir, incluye tu nombre en el detalle.
                   </p>
-                  <div className="flex flex-wrap items-center gap-3 pt-1">
-                    <div className="bg-white border border-amber-300 rounded-xl px-3.5 py-1.5 flex items-center gap-2 shadow-sm">
-                      <span className="text-xs text-gray-500 font-bold">SINPE Móvil:</span>
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
+                    <div className="bg-white border border-amber-300 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-xs">
+                      <span className="text-xs text-gray-500 font-bold">SINPE:</span>
                       <span className="text-sm font-black text-brand-blue tracking-wider">7260-1238</span>
                       <span className="text-[11px] text-gray-400">(JRS Cargo)</span>
                       <button
                         onClick={copySinpeNumber}
-                        className="ml-2 p-1 text-gray-400 hover:text-brand-blue transition-colors"
+                        className="ml-1 p-1 text-gray-400 hover:text-brand-blue transition-colors"
                         title="Copiar número de SINPE Móvil"
                       >
                         {copiedSinpe ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
@@ -325,18 +327,18 @@ export default function PublicEstadoCuentaPage() {
                     </div>
                     {copiedSinpe && (
                       <span className="text-xs font-bold text-green-700 animate-fade-in">
-                        ¡Número copiado!
+                        ¡Copiado!
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex-shrink-0 print:hidden">
+                <div className="w-full sm:w-auto shrink-0 print:hidden">
                   <a
                     href={`https://wa.me/50672601238?text=${encodeURIComponent(whatsappPaymentMsg)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white px-5 py-3 rounded-xl font-black text-xs sm:text-sm shadow-md shadow-green-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white px-5 py-3.5 sm:py-3 rounded-xl font-black text-sm shadow-md shadow-green-500/20 active:scale-95 transition-all text-center"
                   >
                     <MessageCircle size={18} />
                     <span>Reportar Comprobante</span>
@@ -488,12 +490,44 @@ export default function PublicEstadoCuentaPage() {
 
                         {/* Invoice Items details (Expandable) */}
                         {hasItems && (isExpanded || typeof window === 'undefined') && (
-                          <div className="bg-slate-50/80 p-4 border-t border-gray-100 rounded-b-2xl">
+                          <div className="bg-slate-50/80 p-3 sm:p-4 border-t border-gray-100 rounded-b-2xl">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                               <Package size={14} className="text-brand-blue" />
                               Paquetes y servicios incluidos:
                             </p>
-                            <div className="overflow-x-auto">
+
+                            {/* Mobile Items List */}
+                            <div className="sm:hidden divide-y divide-gray-100 space-y-2">
+                              {inv.items.map((it, idx) => (
+                                <div key={idx} className="pt-2 first:pt-0 flex items-start justify-between gap-2 text-xs">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-semibold text-gray-800 truncate">{it.service_name}</p>
+                                    {it.tracking_number ? (
+                                      <a
+                                        href={`/tracking?number=${encodeURIComponent(it.tracking_number)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[11px] font-mono text-brand-blue font-bold hover:underline inline-flex items-center gap-1 mt-0.5 truncate max-w-full"
+                                      >
+                                        <span className="truncate">{it.tracking_number}</span>
+                                        <ExternalLink size={10} className="opacity-60 shrink-0" />
+                                      </a>
+                                    ) : (
+                                      <span className="text-[11px] text-gray-400">Sin guía</span>
+                                    )}
+                                    {it.weight && (
+                                      <span className="text-[11px] text-gray-400 ml-2">({it.weight} lbs)</span>
+                                    )}
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <span className="font-black text-gray-900">${Number(it.amount || 0).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Desktop Items Table */}
+                            <div className="hidden sm:block overflow-x-auto">
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="text-gray-400 border-b border-gray-200/60 text-left">
@@ -554,51 +588,88 @@ export default function PublicEstadoCuentaPage() {
                   <p className="text-xs text-gray-400 mt-1">Tus abonos y transferencias se reflejarán aquí una vez verificados.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                        <th className="p-3 font-bold">Fecha</th>
-                        <th className="p-3 font-bold">Método</th>
-                        <th className="p-3 font-bold">Referencia</th>
-                        <th className="p-3 font-bold">Facturas Aplicadas</th>
-                        <th className="p-3 font-bold text-right">Monto</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {payments.map(p => (
-                        <tr key={p.id} className="hover:bg-gray-50/50">
-                          <td className="p-3 font-semibold text-gray-700">{formatDisplayDate(p.payment_date)}</td>
-                          <td className="p-3">
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold rounded-md">
-                              {p.payment_method || '—'}
+                <>
+                  {/* Vista móvil de pagos */}
+                  <div className="sm:hidden divide-y divide-gray-100">
+                    {payments.map(p => (
+                      <div key={p.id} className="py-3 flex items-start justify-between gap-3 text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-gray-800">{formatDisplayDate(p.payment_date)}</span>
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold text-[10px] rounded">
+                              {p.payment_method || 'Pago'}
                             </span>
-                          </td>
-                          <td className="p-3 font-mono text-gray-600">
-                            {p.reference_number || '—'}
-                          </td>
-                          <td className="p-3 text-gray-700">
-                            {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 ? (
-                              p.invoice_payments.map((ip) => (
-                                <div key={ip.invoice_id} className="font-semibold text-brand-blue">
-                                  #{ip.invoices?.invoice_number || 'Factura'}{' '}
-                                  <span className="text-[11px] font-normal text-gray-400">
-                                    (${Number(ip.amount_applied).toFixed(2)})
-                                  </span>
-                                </div>
-                              ))
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right font-black text-green-600 text-sm">
-                            +${Number(p.amount || 0).toFixed(2)} USD
-                          </td>
+                          </div>
+                          {p.reference_number && (
+                            <p className="text-[11px] text-gray-500 font-mono mt-0.5">Ref: {p.reference_number}</p>
+                          )}
+                          {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 && (
+                            <div className="text-[11px] text-brand-blue font-semibold mt-1 flex flex-wrap gap-1">
+                              {p.invoice_payments.map(ip => (
+                                <span key={ip.invoice_id} className="bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                                  #{ip.invoices?.invoice_number || 'Factura'} (${Number(ip.amount_applied).toFixed(2)})
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-black text-green-600 text-sm">
+                            +${Number(p.amount || 0).toFixed(2)}
+                          </span>
+                          <span className="block text-[10px] text-gray-400">USD</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Vista escritorio de pagos */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                          <th className="p-3 font-bold">Fecha</th>
+                          <th className="p-3 font-bold">Método</th>
+                          <th className="p-3 font-bold">Referencia</th>
+                          <th className="p-3 font-bold">Facturas Aplicadas</th>
+                          <th className="p-3 font-bold text-right">Monto</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {payments.map(p => (
+                          <tr key={p.id} className="hover:bg-gray-50/50">
+                            <td className="p-3 font-semibold text-gray-700">{formatDisplayDate(p.payment_date)}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold rounded-md">
+                                {p.payment_method || '—'}
+                              </span>
+                            </td>
+                            <td className="p-3 font-mono text-gray-600">
+                              {p.reference_number || '—'}
+                            </td>
+                            <td className="p-3 text-gray-700">
+                              {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 ? (
+                                p.invoice_payments.map((ip) => (
+                                  <div key={ip.invoice_id} className="font-semibold text-brand-blue">
+                                    #{ip.invoices?.invoice_number || 'Factura'}{' '}
+                                    <span className="text-[11px] font-normal text-gray-400">
+                                      (${Number(ip.amount_applied).toFixed(2)})
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right font-black text-green-600 text-sm">
+                              +${Number(p.amount || 0).toFixed(2)} USD
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}
