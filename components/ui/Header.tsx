@@ -132,8 +132,8 @@ export default function Header() {
             />
           </Link>
 
-          {/* Center: Desktop Navigation with clean active indicator */}
-          <nav className="hidden lg:flex items-center space-x-1 xl:space-x-1.5">
+          {/* Center: Desktop Navigation */}
+          <nav className="hidden lg:flex items-center space-x-1 xl:space-x-2">
             {navLinks.map((link) => {
               const isActive = activeSection === link.id;
               return (
@@ -141,16 +141,13 @@ export default function Header() {
                   key={link.id}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`relative px-3.5 py-2 text-[14px] xl:text-[15px] font-semibold transition-colors duration-150 rounded-full ${
+                  className={`px-3 py-1.5 text-[14px] xl:text-[15px] rounded-full transition-colors duration-150 outline-none focus:outline-none ${
                     isActive
-                      ? 'text-brand-blue font-bold bg-slate-100/60'
-                      : 'text-slate-700 hover:text-brand-blue hover:bg-slate-50'
+                      ? 'text-brand-blue font-bold'
+                      : 'text-slate-600 font-medium hover:text-brand-blue'
                   }`}
                 >
                   {link.name}
-                  {isActive && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-[2.5px] bg-brand-blue rounded-full" />
-                  )}
                 </a>
               );
             })}
@@ -262,7 +259,7 @@ export default function Header() {
                     key={link.id}
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
-                    className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-base font-semibold transition-colors ${
+                    className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-base font-semibold transition-colors outline-none focus:outline-none ${
                       isActive
                         ? 'text-brand-blue bg-slate-100 font-bold'
                         : 'text-slate-700 hover:text-brand-blue hover:bg-slate-50'
