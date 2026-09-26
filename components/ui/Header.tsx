@@ -121,12 +121,12 @@ export default function Header() {
             <Image
               src="/logo.png"
               alt="JRS CARGO"
-              width={240}
-              height={96}
+              width={819}
+              height={1024}
               className={`w-auto object-contain transition-all duration-300 ${
                 isScrolled && !isMobileMenuOpen
-                  ? 'h-10 sm:h-12 lg:h-[46px]'
-                  : 'h-12 sm:h-14 lg:h-[54px]'
+                  ? 'h-11 sm:h-12 lg:h-[50px]'
+                  : 'h-14 sm:h-16 lg:h-[64px]'
               }`}
               priority
             />
