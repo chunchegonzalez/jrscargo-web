@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Menu, X, UserCircle, PackageOpen, ChevronRight, MessageCircle } from 'lucide-react';
+import { Menu, X, UserCircle, PackageOpen, ChevronRight, MessageCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isPatriotic, setIsPatriotic] = useState(false);
   const { language, setLanguage, t } = useLanguage();
 
   const navLinks = [
@@ -63,12 +62,6 @@ export default function Header() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
 
-    // Mes patrio activo hasta el 20 de septiembre inclusive (mes 8 = Septiembre)
-    const now = new Date();
-    if (now.getMonth() === 8 && now.getDate() <= 20) {
-      setIsPatriotic(true);
-    }
-
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -119,21 +112,21 @@ export default function Header() {
               : 'w-full max-w-7xl py-3 px-4 sm:px-6 lg:px-8'
           }`}
         >
-          {/* Logo */}
+          {/* Logo Normal (sin efectos ni distorsiones) */}
           <Link
             href="/"
-            className="flex-shrink-0 flex items-center transition-transform duration-200 hover:scale-[1.02]"
+            className="flex-shrink-0 flex items-center"
             onClick={(e) => handleNavClick(e, '/')}
           >
             <Image
-              src={isPatriotic ? "/logo-patrio-clean.png" : "/logo.png"}
-              alt={isPatriotic ? "JRS CARGO - Mes de la Patria" : "JRS CARGO"}
-              width={isPatriotic ? 240 : 260}
-              height={isPatriotic ? 80 : 100}
+              src="/logo.png"
+              alt="JRS CARGO"
+              width={240}
+              height={96}
               className={`w-auto object-contain transition-all duration-300 ${
                 isScrolled && !isMobileMenuOpen
-                  ? 'h-10 sm:h-12 lg:h-[48px]'
-                  : 'h-12 sm:h-14 lg:h-[56px]'
+                  ? 'h-10 sm:h-12 lg:h-[46px]'
+                  : 'h-12 sm:h-14 lg:h-[54px]'
               }`}
               priority
             />
@@ -165,33 +158,31 @@ export default function Header() {
 
           {/* Right: Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-3 xl:space-x-4 shrink-0">
-            {/* Language Switcher */}
-            <div className="flex items-center bg-slate-100/90 rounded-full p-1 border border-slate-200/80">
+            {/* Language Switcher: Compacto, discreto, sin banderas */}
+            <div className="inline-flex items-center bg-slate-100/80 rounded-full p-0.5 border border-slate-200/80 text-[11px] font-bold">
               <button
                 type="button"
                 onClick={() => setLanguage('es')}
-                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                className={`px-2 py-0.5 rounded-full transition-all ${
                   language === 'es'
-                    ? 'bg-white text-brand-blue shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 font-semibold'
+                    ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="Español"
               >
-                <span>🇨🇷</span>
-                <span>ES</span>
+                ES
               </button>
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
-                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                className={`px-2 py-0.5 rounded-full transition-all ${
                   language === 'en'
-                    ? 'bg-white text-brand-blue shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 font-semibold'
+                    ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="English"
               >
-                <span>🇺🇸</span>
-                <span>EN</span>
+                EN
               </button>
             </div>
 
@@ -220,29 +211,29 @@ export default function Header() {
 
           {/* Mobile Right Controls */}
           <div className="lg:hidden flex items-center gap-2">
-            {/* Quick Mobile Language Toggle */}
-            <div className="flex items-center bg-slate-100 rounded-full p-0.5 border border-slate-200 text-xs">
+            {/* Quick Mobile Language Toggle: sin banderas, ultra compacto */}
+            <div className="flex items-center bg-slate-100 rounded-full p-0.5 border border-slate-200 text-[11px] font-bold">
               <button
                 type="button"
                 onClick={() => setLanguage('es')}
-                className={`px-2.5 py-1 rounded-full transition-all ${
+                className={`px-2 py-0.5 rounded-full transition-all ${
                   language === 'es'
-                    ? 'bg-white text-brand-blue shadow-2xs font-bold'
-                    : 'text-slate-600 font-medium'
+                    ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
+                    : 'text-slate-500'
                 }`}
               >
-                🇨🇷 ES
+                ES
               </button>
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
-                className={`px-2.5 py-1 rounded-full transition-all ${
+                className={`px-2 py-0.5 rounded-full transition-all ${
                   language === 'en'
-                    ? 'bg-white text-brand-blue shadow-2xs font-bold'
-                    : 'text-slate-600 font-medium'
+                    ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
+                    : 'text-slate-500'
                 }`}
               >
-                🇺🇸 EN
+                EN
               </button>
             </div>
 
@@ -283,33 +274,33 @@ export default function Header() {
                 );
               })}
 
-              {/* Language Selector Row inside Drawer */}
+              {/* Language Selector Row inside Drawer: Sin banderas */}
               <div className="pt-3 pb-2 px-3 flex items-center justify-between border-t border-slate-100 mt-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  {language === 'es' ? 'Idioma' : 'Language'}
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Globe size={14} /> {language === 'es' ? 'Idioma' : 'Language'}
                 </span>
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-full">
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-full border border-slate-200 text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setLanguage('es')}
-                    className={`px-3 py-1.5 rounded-full text-xs transition-all ${
+                    className={`px-3 py-1 rounded-full transition-all ${
                       language === 'es'
-                        ? 'bg-white text-brand-blue shadow-2xs font-bold'
-                        : 'text-slate-600 font-medium'
+                        ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
+                        : 'text-slate-600'
                     }`}
                   >
-                    🇨🇷 Español
+                    Español
                   </button>
                   <button
                     type="button"
                     onClick={() => setLanguage('en')}
-                    className={`px-3 py-1.5 rounded-full text-xs transition-all ${
+                    className={`px-3 py-1 rounded-full transition-all ${
                       language === 'en'
-                        ? 'bg-white text-brand-blue shadow-2xs font-bold'
-                        : 'text-slate-600 font-medium'
+                        ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
+                        : 'text-slate-600'
                     }`}
                   >
-                    🇺🇸 English
+                    English
                   </button>
                 </div>
               </div>
