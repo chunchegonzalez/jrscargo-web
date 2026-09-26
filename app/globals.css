@@ -30,6 +30,24 @@
   * {
     box-sizing: border-box;
   }
+
+  header a,
+  header a:focus,
+  header a:focus-visible,
+  header a:active,
+  header a:focus-within,
+  header button,
+  header button:focus,
+  header button:focus-visible,
+  header button:active,
+  header button:focus-within {
+    outline: none !important;
+    outline-style: none !important;
+    outline-width: 0 !important;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-focus-ring-color: transparent !important;
+  }
 }
 
 @layer components {

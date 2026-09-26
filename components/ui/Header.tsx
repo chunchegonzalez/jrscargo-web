@@ -66,6 +66,7 @@ export default function Header() {
   }, []);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    (e.currentTarget as HTMLElement)?.blur();
     setIsMobileMenuOpen(false);
 
     if (href === '/') {
@@ -115,7 +116,8 @@ export default function Header() {
           {/* Logo Normal (sin efectos ni distorsiones) */}
           <Link
             href="/"
-            className="flex-shrink-0 flex items-center"
+            className="flex-shrink-0 flex items-center outline-none focus:outline-none"
+            style={{ outline: 'none', WebkitTapHighlightColor: 'transparent' }}
             onClick={(e) => handleNavClick(e, '/')}
           >
             <Image
@@ -141,7 +143,8 @@ export default function Header() {
                   key={link.id}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`px-3 py-1.5 text-[14px] xl:text-[15px] rounded-full transition-colors duration-150 outline-none focus:outline-none ${
+                  style={{ outline: 'none', WebkitTapHighlightColor: 'transparent', boxShadow: 'none' }}
+                  className={`px-3.5 py-1.5 text-[14px] xl:text-[15px] transition-colors duration-150 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 select-none cursor-pointer ${
                     isActive
                       ? 'text-brand-blue font-bold'
                       : 'text-slate-600 font-medium hover:text-brand-blue'
@@ -259,7 +262,8 @@ export default function Header() {
                     key={link.id}
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
-                    className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-base font-semibold transition-colors outline-none focus:outline-none ${
+                    style={{ outline: 'none', WebkitTapHighlightColor: 'transparent', boxShadow: 'none' }}
+                    className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-base font-semibold transition-colors outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 select-none ${
                       isActive
                         ? 'text-brand-blue bg-slate-100 font-bold'
                         : 'text-slate-700 hover:text-brand-blue hover:bg-slate-50'
