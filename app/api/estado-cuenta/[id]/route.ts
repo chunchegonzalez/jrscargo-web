@@ -148,6 +148,34 @@ export async function GET(
       totalPaidUSD += Number(p.amount || 0);
     });
 
+    // Current month calculation (for monthly stats)
+    const now = new Date();
+    const currYear: number = now.getFullYear();
+    const currMonth: number = now.getMonth();
+
+    let monthlyInvoicedUSD = 0;
+    for (const inv of invoicesRaw) {
+      if (inv.issue_date) {
+        const d = new Date(String(inv.issue_date));
+        if (!isNaN(d.getTime()) && d.getFullYear() === currYear && d.getMonth() === currMonth) {
+          const stats = getInvoiceStats(inv);
+          if (!stats.isAnulada) {
+            monthlyInvoicedUSD += stats.total;
+          }
+        }
+      }
+    }
+
+    let monthlyPaidUSD = 0;
+    for (const p of paymentsRaw) {
+      if (p.payment_date) {
+        const d = new Date(String(p.payment_date));
+        if (!isNaN(d.getTime()) && d.getFullYear() === currYear && d.getMonth() === currMonth) {
+          monthlyPaidUSD += Number(p.amount || 0);
+        }
+      }
+    }
+
     // 5. Index tracking numbers across client's invoices
     interface ClientInvoiceItemRef {
       invoice_id: string;
@@ -310,6 +338,8 @@ export async function GET(
         pendingPackagesWeight: Math.round(pendingWeightTotal * 10) / 10,
         totalInvoicedUSD: Math.round(totalInvoicedUSD * 100) / 100,
         totalPaidUSD: Math.round(totalPaidUSD * 100) / 100,
+        monthlyInvoicedUSD: Math.round(monthlyInvoicedUSD * 100) / 100,
+        monthlyPaidUSD: Math.round(monthlyPaidUSD * 100) / 100,
         exchangeRate: rate
       },
       pendingPackages,

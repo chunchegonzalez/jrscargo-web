@@ -7,7 +7,7 @@ import {
   DollarSign, CheckCircle2, Clock, FileText, Printer, 
   Copy, Check, ShieldCheck, AlertCircle, 
   ChevronDown, ChevronUp, Phone, Mail, Package, MessageCircle,
-  HelpCircle, Building2, X, Send, Smartphone, Banknote
+  HelpCircle, Building2, X, Send, Smartphone, Banknote, Calendar
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
 
@@ -34,6 +34,37 @@ function formatWeightWithUnit(weight?: string | number, serviceName?: string): s
   }
   const unit = getItemUnit(serviceName, weight);
   return `${wStr} ${unit}`;
+}
+
+function getMonthKey(dateStr?: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function formatMonthName(monthKey: string): string {
+  if (!monthKey || monthKey === 'all') return 'Histórico Total';
+  const parts = monthKey.split('-');
+  if (parts.length < 2) return monthKey;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = new Date(y, m, 1);
+  const monthName = d.toLocaleDateString('es-CR', { month: 'long' });
+  return monthName.charAt(0).toUpperCase() + monthName.slice(1) + ` ${y}`;
+}
+
+function formatMonthShort(monthKey: string): string {
+  if (!monthKey || monthKey === 'all') return 'Total';
+  const parts = monthKey.split('-');
+  if (parts.length < 2) return '';
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = new Date(y, m, 1);
+  const monthName = d.toLocaleDateString('es-CR', { month: 'short' });
+  return monthName.charAt(0).toUpperCase() + monthName.slice(1);
 }
 
 interface InvoiceItem {
@@ -120,6 +151,12 @@ export default function PublicEstadoCuentaPage() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Record<string, boolean>>({});
 
+  // Selected month for Quick Summary (defaults to current month: YYYY-MM)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
   // States for Reenviar Factura modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
@@ -127,6 +164,53 @@ export default function PublicEstadoCuentaPage() {
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+
+  // Extract all available months from invoices & payments
+  const availableMonths = React.useMemo(() => {
+    const set = new Set<string>();
+    const nowKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    set.add(nowKey);
+
+    (data?.invoices || []).forEach(inv => {
+      const k = getMonthKey(inv.issue_date);
+      if (k) set.add(k);
+    });
+    (data?.payments || []).forEach(p => {
+      const k = getMonthKey(p.payment_date);
+      if (k) set.add(k);
+    });
+
+    return Array.from(set).sort().reverse();
+  }, [data?.invoices, data?.payments]);
+
+  // Compute invoiced and paid for the selected month
+  const { monthInvoiced, monthPaid, monthLabel } = React.useMemo(() => {
+    if (!data) return { monthInvoiced: 0, monthPaid: 0, monthLabel: '' };
+
+    if (selectedMonth === 'all') {
+      return {
+        monthInvoiced: data.stats.totalInvoicedUSD,
+        monthPaid: data.stats.totalPaidUSD,
+        monthLabel: 'Total'
+      };
+    }
+
+    const invoiced = (data.invoices || [])
+      .filter(inv => inv.status !== 'Anulada' && getMonthKey(inv.issue_date) === selectedMonth)
+      .reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+
+    const paid = (data.payments || [])
+      .filter(p => getMonthKey(p.payment_date) === selectedMonth)
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    const label = formatMonthShort(selectedMonth);
+
+    return {
+      monthInvoiced: Math.round(invoiced * 100) / 100,
+      monthPaid: Math.round(paid * 100) / 100,
+      monthLabel: label ? `(${label})` : ''
+    };
+  }, [data, selectedMonth]);
 
   const loadStatement = useCallback(async () => {
     if (!clientId) return;
@@ -464,21 +548,54 @@ export default function PublicEstadoCuentaPage() {
               </div>
             </div>
 
-            {/* Quick Summary Numbers */}
+            {/* Quick Summary Numbers (Mensual) */}
             <div className="md:col-span-6 lg:col-span-3 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between gap-2.5">
-              <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex-1 flex flex-col justify-center">
-                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Facturado</p>
-                <div className="flex items-baseline justify-between">
-                  <p className="text-lg sm:text-xl font-black text-slate-800">${stats.totalInvoicedUSD.toFixed(2)}</p>
-                  <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.2 rounded border border-slate-200/60">USD</span>
+              {/* Header con selector de mes */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Calendar size={13} className="text-brand-blue shrink-0" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 truncate">
+                    Resumen del Mes
+                  </span>
+                </div>
+
+                <div className="relative shrink-0">
+                  <select
+                    value={selectedMonth}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMonth(e.target.value)}
+                    aria-label="Seleccionar mes para el resumen de facturación y pagos"
+                    className="text-[10px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/70 border border-slate-200/80 rounded-lg pl-2 pr-5 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-blue appearance-none transition-colors"
+                  >
+                    {availableMonths.map((m: string) => (
+                      <option key={m} value={m}>
+                        {formatMonthName(m)}
+                      </option>
+                    ))}
+                    <option value="all">Histórico Total</option>
+                  </select>
+                  <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
-              <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/70 flex-1 flex flex-col justify-center">
-                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-700/80 uppercase tracking-wider mb-0.5">Total Pagos Realizados</p>
+              {/* Facturado en el mes */}
+              <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex-1 flex flex-col justify-center">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 truncate">
+                  Facturado {monthLabel}
+                </p>
                 <div className="flex items-baseline justify-between">
-                  <p className="text-lg sm:text-xl font-black text-emerald-700">${stats.totalPaidUSD.toFixed(2)}</p>
-                  <span className="text-[10px] font-bold text-emerald-700/70 bg-white px-1.5 py-0.2 rounded border border-emerald-200/60">USD</span>
+                  <p className="text-lg sm:text-xl font-black text-slate-800">${monthInvoiced.toFixed(2)}</p>
+                  <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200/60">USD</span>
+                </div>
+              </div>
+
+              {/* Pagos en el mes */}
+              <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/70 flex-1 flex flex-col justify-center">
+                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5 truncate">
+                  Pagos {monthLabel}
+                </p>
+                <div className="flex items-baseline justify-between">
+                  <p className="text-lg sm:text-xl font-black text-emerald-700">${monthPaid.toFixed(2)}</p>
+                  <span className="text-[10px] font-bold text-emerald-700/80 bg-white px-1.5 py-0.5 rounded border border-emerald-200/60">USD</span>
                 </div>
               </div>
             </div>
