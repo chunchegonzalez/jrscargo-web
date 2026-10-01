@@ -670,13 +670,9 @@ export default function ChatBotWidget() {
             className="relative cursor-pointer"
           >
             {isHalloween && (
-              <motion.div
-                animate={isTriggerHovered ? { y: [0, -3, 0], rotate: [12, 16, 12] } : { y: 0, rotate: 12 }}
-                transition={{ duration: 0.8, repeat: isTriggerHovered ? Infinity : 0, ease: "easeInOut" }}
-                className="absolute -top-3.5 sm:-top-4 -right-1 z-20 pointer-events-none drop-shadow-md select-none"
-              >
-                <HalloweenWitchHat size={28} />
-              </motion.div>
+              <div className="absolute -top-7 sm:-top-8 -right-1 sm:-right-2 z-20 pointer-events-none drop-shadow-md select-none">
+                <HalloweenWitchHat size={48} />
+              </div>
             )}
             <AnimatedRobotFace isHovered={isTriggerHovered} isPatriotic={isPatriotic} />
           </motion.div>

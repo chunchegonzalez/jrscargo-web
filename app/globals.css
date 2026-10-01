@@ -237,7 +237,7 @@
 /* ==========================================================================
    HALLOWEEN THEME (Scoped strictly to .halloween-mode)
    Active until Nov 1, 2026 23:59:59 (America/Costa_Rica)
-   Subtle & Elegant (95% Brand / 5% Halloween)
+   Matches the reference mockup (95% Brand / 5% Halloween)
    ========================================================================== */
 
 .halloween-mode .halloween-decor {
@@ -245,12 +245,15 @@
   user-select: none !important;
 }
 
-/* 9. Botón principal: mantener azul, solo glow naranja muy tenue en hover */
+/* Botón principal: sutil y cálido resplandor naranja como en la imagen de referencia */
+.halloween-mode .btn-primary {
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.38), 0 4px 14px rgba(18, 67, 94, 0.28) !important;
+}
 .halloween-mode .btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.22), 0 4px 14px rgba(18, 67, 94, 0.3) !important;
+  box-shadow: 0 10px 30px rgba(249, 115, 22, 0.55), 0 6px 18px rgba(18, 67, 94, 0.35) !important;
 }
 
-/* 8. Cards: translateY(-3px), transition 300ms, sombra ligeramente cálida solo en Halloween */
+/* Cards: translateY(-3px), transition 300ms, sombra ligeramente cálida */
 .halloween-mode .route-card-halloween {
   transition: transform 300ms ease, box-shadow 300ms ease !important;
 }
@@ -259,7 +262,7 @@
   box-shadow: 0 12px 28px -4px rgba(249, 115, 22, 0.12), 0 4px 12px rgba(18, 67, 94, 0.06) !important;
 }
 
-/* 6. Logo central del panel: halo muy suave (coral, naranja, lavanda) con respiración 7s */
+/* Logo central del panel: halo muy suave (coral, naranja, lavanda) con respiración lenta */
 @keyframes halo-breathe {
   0% {
     transform: scale(1);
@@ -278,9 +281,9 @@
 .halloween-hub-halo {
   background: radial-gradient(
     circle,
-    rgba(253, 78, 100, 0.16) 0%,     /* Coral */
-    rgba(249, 115, 22, 0.12) 38%,    /* Naranja */
-    rgba(192, 132, 252, 0.08) 65%,   /* Lavanda */
+    rgba(253, 78, 100, 0.18) 0%,     /* Coral */
+    rgba(249, 115, 22, 0.14) 38%,    /* Naranja */
+    rgba(192, 132, 252, 0.09) 65%,   /* Lavanda */
     transparent 78%
   );
   filter: blur(14px);
@@ -289,80 +292,19 @@
   pointer-events: none;
 }
 
-/* 2. Murciélagos: solo uno animado ocasionalmente, lento y sutil */
-@keyframes bat-glide-occasional {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-  20% {
-    transform: translate3d(8px, -6px, 0) rotate(2deg);
-  }
-  40% {
-    transform: translate3d(14px, 2px, 0) rotate(-1deg);
-  }
-  60% {
-    transform: translate3d(6px, 8px, 0) rotate(1deg);
-  }
-  80% {
-    transform: translate3d(-3px, 3px, 0) rotate(-2deg);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-}
-
-.bat-anim-occasional {
-  animation: bat-glide-occasional 14s ease-in-out infinite;
-  will-change: transform;
-}
-
-/* 5. Niebla: gradients + blur, movimiento lento 20-30s, opacidad baja */
-@keyframes mist-drift-slow {
-  0% { transform: translate3d(-1.5%, 0, 0); }
-  50% { transform: translate3d(1.5%, -2px, 0); }
-  100% { transform: translate3d(-1.5%, 0, 0); }
-}
-
-.halloween-mist-slow {
-  animation: mist-drift-slow 25s ease-in-out infinite;
-  will-change: transform;
-}
-
-/* Pocas partículas tenues y sutiles */
-@keyframes subtle-particle-float {
-  0% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0;
-  }
-  30% {
-    opacity: 0.35;
-  }
-  70% {
-    opacity: 0.25;
-    transform: translate3d(4px, -24px, 0);
-  }
-  100% {
-    transform: translate3d(-2px, -45px, 0);
-    opacity: 0;
-  }
-}
-
-.halloween-subtle-particle {
+/* Puntos de luz cálidos / chispas como en la imagen de referencia */
+.halloween-firefly {
   position: absolute;
   border-radius: 9999px;
-  background: radial-gradient(circle, #fba73a 0%, #ea580c 70%, transparent 100%);
-  box-shadow: 0 0 6px rgba(249, 115, 22, 0.4);
-  animation: subtle-particle-float linear infinite;
-  will-change: transform, opacity;
+  background: #fef08a;
+  box-shadow: 0 0 7px 1px #f97316, 0 0 2px #ea580c;
+  opacity: 0.75;
   pointer-events: none;
 }
 
-/* 14. Accesibilidad: @media (prefers-reduced-motion: reduce) */
+/* Accesibilidad: @media (prefers-reduced-motion: reduce) */
 @media (prefers-reduced-motion: reduce) {
-  .bat-anim-occasional,
   .halloween-hub-halo,
-  .halloween-mist-slow,
-  .halloween-subtle-particle,
   .halloween-mode .route-card-halloween {
     animation: none !important;
     transform: none !important;

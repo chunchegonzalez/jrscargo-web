@@ -1,8 +1,8 @@
 import React from 'react';
 
 /**
- * Lightweight SVG vector assets for subtle, elegant Halloween theme
- * Minimal file size, zero external dependencies, 100% resolution independent
+ * Lightweight SVG & Image assets for Halloween theme
+ * Matches the user-provided design reference images exactly
  */
 
 export function HalloweenBat({
@@ -76,11 +76,14 @@ export function HalloweenSpiderweb({
 }
 
 /**
- * Faint, subtle Crescent Moon with soft warm glow
- * Designed for low opacity (0.10 - 0.15) behind content
+ * Realistic glowing crescent moon matching the mockup exactly:
+ * - Luminous cream/warm golden crescent on the left
+ * - Subtle shaded disc body
+ * - Soft warm ambient aura
+ * - Soft wispy cloud layer passing in front
  */
 export function HalloweenSubtleMoon({
-  size = 90,
+  size = 140,
   className = '',
   style = {},
 }: {
@@ -94,31 +97,60 @@ export function HalloweenSubtleMoon({
       style={{ width: size, height: size, ...style }}
       aria-hidden="true"
     >
-      {/* Soft ambient blur glow */}
+      {/* Outer ambient warm glow */}
       <div
-        className="absolute inset-0 rounded-full pointer-events-none blur-xl opacity-60"
+        className="absolute inset-0 rounded-full pointer-events-none blur-2xl"
         style={{
-          background: 'radial-gradient(circle, rgba(254, 240, 199, 0.4) 0%, rgba(253, 224, 71, 0.15) 50%, transparent 80%)',
-          transform: 'scale(1.5)',
+          background: 'radial-gradient(circle, rgba(254, 243, 199, 0.45) 0%, rgba(253, 230, 138, 0.2) 45%, transparent 75%)',
+          transform: 'scale(1.6)',
         }}
       />
+
       <svg
         width={size}
         height={size}
-        viewBox="0 0 100 100"
+        viewBox="0 0 120 120"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className="relative z-10"
       >
         <defs>
-          <linearGradient id="crescentMoonGlow" x1="20%" y1="10%" x2="80%" y2="90%">
-            <stop offset="0%" stopColor="#fef3c7" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#fde68a" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#fcd34d" stopOpacity="0.4" />
+          {/* Crescent luminous gradient */}
+          <linearGradient id="moonArcGrad" x1="10%" y1="10%" x2="90%" y2="90%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="35%" stopColor="#fef3c7" stopOpacity="0.9" />
+            <stop offset="70%" stopColor="#fde68a" stopOpacity="0.75" />
+            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.4" />
           </linearGradient>
+
+          {/* Faint dark body disc */}
+          <radialGradient id="moonBodyShade" cx="45%" cy="45%" r="50%">
+            <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.12" />
+            <stop offset="70%" stopColor="#cbd5e1" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#94a3b8" stopOpacity="0.02" />
+          </radialGradient>
         </defs>
+
+        {/* Faint circular silhouette of full moon sphere */}
+        <circle cx="55" cy="55" r="42" fill="url(#moonBodyShade)" />
+
+        {/* Bright Crescent Moon Arc (curve on the left wrapping around top/bottom) */}
         <path
-          d="M 68 12 C 34 22, 20 62, 48 90 C 22 84, 12 50, 32 20 C 42 6, 56 6, 68 12 Z"
-          fill="url(#crescentMoonGlow)"
+          d="M 58 13 C 28 20, 15 52, 28 82 C 34 94, 45 101, 56 102 C 36 94, 30 70, 36 48 C 41 33, 49 21, 58 13 Z"
+          fill="url(#moonArcGrad)"
+          filter="drop-shadow(0 0 8px rgba(254, 240, 138, 0.6))"
+        />
+
+        {/* Soft wispy cloud drifting across lower part of moon */}
+        <path
+          d="M 10 85 C 22 75, 42 78, 55 82 C 68 85, 82 80, 95 84 C 82 92, 50 94, 25 92 Z"
+          fill="#d8d3e4"
+          fillOpacity="0.35"
+        />
+        <path
+          d="M 2 92 C 16 86, 32 88, 48 90 C 62 92, 75 90, 90 94 C 70 98, 35 98, 12 96 Z"
+          fill="#c8c1da"
+          fillOpacity="0.25"
         />
       </svg>
     </div>
@@ -161,10 +193,9 @@ export function HalloweenMiniPumpkin({
       <ellipse cx="16" cy="18" rx="8" ry="10.5" fill="#f97316" />
       <ellipse cx="16" cy="18" rx="4" ry="10.8" fill="#fb923c" />
 
-      {/* Jack-o'-lantern Eyes & Smile (cute, not scary) */}
+      {/* Jack-o'-lantern Eyes & Smile */}
       <polygon points="11,15 13,18 9,18" fill="#431407" />
       <polygon points="21,15 23,18 19,18" fill="#431407" />
-      {/* Friendly Smile */}
       <path
         d="M12 21 C14 24, 18 24, 20 21 C18 23, 14 23, 12 21 Z"
         fill="#431407"
@@ -173,8 +204,12 @@ export function HalloweenMiniPumpkin({
   );
 }
 
+/**
+ * Witch hat rendered from the user reference screenshot
+ * Transparent PNG with exact purple color, curled tip, orange band, and gold buckle
+ */
 export function HalloweenWitchHat({
-  size = 32,
+  size = 46,
   className = '',
   style = {},
 }: {
@@ -183,65 +218,14 @@ export function HalloweenWitchHat({
   style?: React.CSSProperties;
 }) {
   return (
-    <svg
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/halloween-witch-hat.png"
+      alt="Halloween Witch Hat"
       width={size}
-      height={(size * 34) / 40}
-      viewBox="0 0 40 34"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      height={Math.round((size * 90) / 110)}
+      className={`object-contain pointer-events-none select-none ${className}`}
       style={style}
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="hatDarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4c3a5e" />
-          <stop offset="60%" stopColor="#2c1e3d" />
-          <stop offset="100%" stopColor="#1a0f26" />
-        </linearGradient>
-      </defs>
-
-      {/* Cone / Top of Hat */}
-      <path
-        d="M23 4 C24 3, 26 2, 28 3 C27 5, 23 8, 22 10 L31 24 C31 24, 18 25, 9 24 L19 9 Z"
-        fill="url(#hatDarkGrad)"
-      />
-
-      {/* Orange Ribbon Band */}
-      <path
-        d="M10 23.5 C16 25 24 25 30 23.5 L30.5 25.5 C24.5 27 15.5 27 9.5 25.5 Z"
-        fill="#f97316"
-      />
-
-      {/* Gold Buckle */}
-      <rect
-        x="18.5"
-        y="23.2"
-        width="3.5"
-        height="3"
-        rx="0.5"
-        fill="#fbbf24"
-        stroke="#78350f"
-        strokeWidth="0.5"
-      />
-
-      {/* Curved Brim */}
-      <ellipse
-        cx="20"
-        cy="28"
-        rx="18"
-        ry="4.5"
-        fill="#261738"
-        transform="rotate(-5 20 28)"
-      />
-      <ellipse
-        cx="20"
-        cy="27.5"
-        rx="16"
-        ry="3.5"
-        fill="#3d2a52"
-        transform="rotate(-5 20 27.5)"
-      />
-    </svg>
+    />
   );
 }
