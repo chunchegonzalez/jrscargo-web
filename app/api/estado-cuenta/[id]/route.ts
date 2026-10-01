@@ -90,11 +90,11 @@ export async function GET(
     }
 
     // 3. Fetch invoice items for these invoices
-    const invoiceIds = invoicesRaw.map(inv => String(inv.id));
+    const invoiceIds: string[] = invoicesRaw.map((inv: Record<string, unknown>) => String(inv.id));
     const itemsMap = new Map<string, Array<Record<string, unknown>>>();
 
     if (invoiceIds.length > 0) {
-      const filterInvoices = invoiceIds.map(id => `"${id}"`).join(',');
+      const filterInvoices = invoiceIds.map((id: string) => `"${id}"`).join(',');
       const resItems = await fetch(`${url}/rest/v1/invoice_items?invoice_id=in.(${filterInvoices})&select=invoice_id,service_name,tracking_number,weight,rate,amount`, {
         headers,
         cache: 'no-store'
@@ -115,7 +115,7 @@ export async function GET(
     let totalInvoicedUSD = 0;
     let pendingCount = 0;
 
-    const invoices = invoicesRaw.map(inv => {
+    const invoices = invoicesRaw.map((inv: Record<string, unknown>) => {
       inv.invoice_payments = paymentsMap.get(String(inv.id)) || [];
       const items = itemsMap.get(String(inv.id)) || [];
 
@@ -144,7 +144,7 @@ export async function GET(
 
     // Compute payments total
     let totalPaidUSD = 0;
-    paymentsRaw.forEach(p => {
+    paymentsRaw.forEach((p: Record<string, unknown>) => {
       totalPaidUSD += Number(p.amount || 0);
     });
 
@@ -159,7 +159,7 @@ export async function GET(
       is_pending: boolean;
     }
     const invoiceItemsByTracking = new Map<string, ClientInvoiceItemRef>();
-    invoices.forEach(inv => {
+    for (const inv of invoices) {
       const isPending = inv.pending > 0.01;
       (inv.items || []).forEach((it: Record<string, unknown>) => {
         const trk = String(it.tracking_number || '').trim().toUpperCase();
@@ -175,11 +175,11 @@ export async function GET(
           });
         }
       });
-    });
+    }
 
     // Index local_inventory by tracking
     const inventoryMap = new Map<string, Record<string, unknown>>();
-    localInventoryItems.forEach(item => {
+    localInventoryItems.forEach((item: Record<string, unknown>) => {
       const trk = String(item.id || '').trim().toUpperCase();
       if (trk) {
         inventoryMap.set(trk, item);
@@ -187,13 +187,13 @@ export async function GET(
     });
 
     // Client name matching helper
-    const clientNameNorm = (client.name || '').toLowerCase().trim();
+    const clientNameNorm: string = String(client.name || '').toLowerCase().trim();
     const isClientMatch = (invClientName?: string): boolean => {
       if (!invClientName || !clientNameNorm) return false;
-      const target = invClientName.toLowerCase().trim();
+      const target: string = invClientName.toLowerCase().trim();
       if (target === clientNameNorm) return true;
-      const parts = clientNameNorm.split(/\s+/).filter(p => p.length >= 3);
-      if (parts.length >= 2 && parts.every(p => target.includes(p))) return true;
+      const parts: string[] = clientNameNorm.split(/\s+/).filter((p: string) => p.length >= 3);
+      if (parts.length >= 2 && parts.every((p: string) => target.includes(p))) return true;
       return target.includes(clientNameNorm);
     };
 
@@ -213,7 +213,7 @@ export async function GET(
     const processedTrackings = new Set<string>();
 
     // A. Check local_inventory for packages belonging to this client that are in bodega
-    localInventoryItems.forEach(item => {
+    localInventoryItems.forEach((item: Record<string, unknown>) => {
       const trk = String(item.id || '').trim().toUpperCase();
       if (!trk || processedTrackings.has(trk)) return;
 
@@ -257,7 +257,7 @@ export async function GET(
 
     // B. Check pending invoices: If localInventory had 0 records (fallback), list pending invoice items
     if (localInventoryItems.length === 0) {
-      invoices.forEach(inv => {
+      for (const inv of invoices) {
         if (inv.pending > 0.01) {
           (inv.items || []).forEach((it: Record<string, unknown>, idx: number) => {
             const trk = String(it.tracking_number || '').trim().toUpperCase();
@@ -280,16 +280,16 @@ export async function GET(
             }
           });
         }
-      });
+      }
     }
 
     let pendingWeightTotal = 0;
-    pendingPackages.forEach(p => {
+    for (const p of pendingPackages) {
       if (p.weight) {
         const num = typeof p.weight === 'number' ? p.weight : parseFloat(String(p.weight));
         if (!isNaN(num)) pendingWeightTotal += num;
       }
-    });
+    }
 
     const rate = Number(exchangeRate) > 0 ? Number(exchangeRate) : 500;
     const totalBalanceCRC = Math.round(totalBalanceUSD * rate);
