@@ -237,6 +237,7 @@
 /* ==========================================================================
    HALLOWEEN THEME (Scoped strictly to .halloween-mode)
    Active until Nov 1, 2026 23:59:59 (America/Costa_Rica)
+   Atmospheric purple-grey misty theme with subtle bats, fog, and silhouettes
    ========================================================================== */
 
 .halloween-mode .halloween-decor {
@@ -244,17 +245,17 @@
   user-select: none !important;
 }
 
-/* Subtle warm orange hover accent on primary buttons */
+/* Subtle purple-grey hover accent on primary buttons */
 .halloween-mode .btn-primary:hover {
-  box-shadow: 0 6px 22px rgba(249, 115, 22, 0.4), 0 4px 14px rgba(18, 67, 94, 0.3) !important;
+  box-shadow: 0 6px 22px rgba(160, 140, 200, 0.35), 0 4px 14px rgba(18, 67, 94, 0.3) !important;
 }
 
-/* Subtle hover elevation and warm glow on route cards in hero */
+/* Subtle hover elevation with atmospheric purple glow on route cards */
 .halloween-mode .route-card-halloween:hover {
-  box-shadow: 0 10px 28px -5px rgba(249, 115, 22, 0.18), 0 4px 10px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 10px 28px -5px rgba(160, 140, 200, 0.15), 0 4px 10px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Floating animation for subtle background bats */
+/* ─── BAT GLIDE ANIMATIONS ─── */
 @keyframes bat-glide-1 {
   0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
   25% { transform: translate3d(12px, -8px, 0) rotate(3deg) scale(1.03); }
@@ -292,55 +293,67 @@
   will-change: transform;
 }
 
-/* Floating orange ember sparkles */
-@keyframes ember-rise {
-  0% {
-    transform: translate3d(0, 0, 0) scale(0.6);
-    opacity: 0;
-  }
-  30% {
-    opacity: 0.85;
-    transform: translate3d(4px, -15px, 0) scale(1);
-  }
-  70% {
-    opacity: 0.6;
-    transform: translate3d(-6px, -35px, 0) scale(0.9);
-  }
-  100% {
-    transform: translate3d(2px, -55px, 0) scale(0.4);
-    opacity: 0;
-  }
-}
+/* ─── FOG / MIST DRIFT ANIMATIONS ─── */
 
-.halloween-ember {
-  position: absolute;
-  border-radius: 9999px;
-  background: radial-gradient(circle, #fba73a 0%, #ea580c 70%, transparent 100%);
-  box-shadow: 0 0 8px rgba(249, 115, 22, 0.7);
-  animation: ember-rise linear infinite;
-  will-change: transform, opacity;
-  pointer-events: none;
-}
-
-/* Gentle fog drift */
+/* Main mist layer — slow lateral drift */
 @keyframes mist-drift {
   0% { transform: translate3d(-2%, 0, 0); }
   50% { transform: translate3d(2%, -3px, 0); }
   100% { transform: translate3d(-2%, 0, 0); }
 }
 
+/* Fog bank 1 — drifts right */
+@keyframes fog-drift-1 {
+  0% { transform: translate3d(-3%, 0, 0) scaleX(1); }
+  33% { transform: translate3d(1%, -2px, 0) scaleX(1.02); }
+  66% { transform: translate3d(3%, 1px, 0) scaleX(0.98); }
+  100% { transform: translate3d(-3%, 0, 0) scaleX(1); }
+}
+
+/* Fog bank 2 — drifts left */
+@keyframes fog-drift-2 {
+  0% { transform: translate3d(2%, 0, 0) scaleX(1); }
+  50% { transform: translate3d(-3%, -2px, 0) scaleX(1.03); }
+  100% { transform: translate3d(2%, 0, 0) scaleX(1); }
+}
+
+/* Fog bank 3 — gentle vertical bob */
+@keyframes fog-drift-3 {
+  0% { transform: translate3d(0, 0, 0); }
+  40% { transform: translate3d(2%, -4px, 0); }
+  80% { transform: translate3d(-1%, 2px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
 .halloween-mist {
-  animation: mist-drift 18s ease-in-out infinite;
+  animation: mist-drift 20s ease-in-out infinite;
   will-change: transform;
 }
 
-/* Respect user motion preferences */
+.halloween-fog-1 {
+  animation: fog-drift-1 25s ease-in-out infinite;
+  will-change: transform;
+}
+
+.halloween-fog-2 {
+  animation: fog-drift-2 22s ease-in-out infinite 3s;
+  will-change: transform;
+}
+
+.halloween-fog-3 {
+  animation: fog-drift-3 28s ease-in-out infinite 5s;
+  will-change: transform;
+}
+
+/* ─── RESPECT USER MOTION PREFERENCES ─── */
 @media (prefers-reduced-motion: reduce) {
   .bat-anim-1,
   .bat-anim-2,
   .bat-anim-3,
-  .halloween-ember,
-  .halloween-mist {
+  .halloween-mist,
+  .halloween-fog-1,
+  .halloween-fog-2,
+  .halloween-fog-3 {
     animation: none !important;
     transform: none !important;
   }
