@@ -4,6 +4,31 @@ import { getInvoiceStats } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
+function detectPackageUnit(serviceName?: string, weight?: string | number): string {
+  const wStr = String(weight || '').toLowerCase();
+  if (wStr.includes('kg') || wStr.includes('kilo')) return 'kg';
+  if (wStr.includes('ft') || wStr.includes('pie')) return 'ft³';
+  if (wStr.includes('und') || wStr.includes('unidad')) return 'und';
+  if (wStr.includes('lb')) return 'lb';
+
+  const sUpper = String(serviceName || '').toUpperCase();
+  if (sUpper.includes('COMPRA') || sUpper.includes('SITIO WEB')) return 'und';
+  if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE') || sUpper.includes('CUBIC')) return 'ft³';
+  if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') || sUpper.includes('KILO') || sUpper.includes('KG')) return 'kg';
+  return 'lb';
+}
+
+function parseNumericWeight(weight?: string | number): number | undefined {
+  if (weight === undefined || weight === null || weight === '') return undefined;
+  if (typeof weight === 'number') return isNaN(weight) ? undefined : weight;
+  const match = String(weight).match(/[\d.]+/);
+  if (match) {
+    const num = parseFloat(match[0]);
+    return isNaN(num) ? undefined : num;
+  }
+  return undefined;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -34,7 +59,7 @@ export async function GET(
     const client = clients[0];
 
     // 2. Fetch Invoices, Invoice Payments, Payments, and Exchange Rate in parallel
-    const [resInvoices, resInvoicePayments, paymentsData, exchangeRate] = await Promise.all([
+    const [resInvoices, resInvoicePayments, paymentsData, exchangeRate, resInventory] = await Promise.all([
       fetch(`${url}/rest/v1/invoices?client_id=eq.${encodeURIComponent(clientId)}&select=id,invoice_number,issue_date,total,status,client_id,currency,exchange_rate,created_at,notes&order=issue_date.desc,created_at.desc`, {
         headers,
         cache: 'no-store'
@@ -44,12 +69,17 @@ export async function GET(
         cache: 'no-store'
       }).catch(() => null),
       getClientPayments(clientId).catch(() => []),
-      getStoredExchangeRate().catch(() => 500)
+      getStoredExchangeRate().catch(() => 500),
+      fetch(`${url}/rest/v1/local_inventory?select=id,client,status,weight,company,created_at&order=created_at.desc`, {
+        headers,
+        cache: 'no-store'
+      }).catch(() => null)
     ]);
 
     const invoicesRaw: Record<string, unknown>[] = resInvoices.ok ? await resInvoices.json() : [];
     const invoicePaymentsRaw: Record<string, unknown>[] = resInvoicePayments && resInvoicePayments.ok ? await resInvoicePayments.json() : [];
     const paymentsRaw: Record<string, unknown>[] = Array.isArray(paymentsData) ? paymentsData : [];
+    const localInventoryItems: Record<string, unknown>[] = resInventory && resInventory.ok ? await resInventory.json() : [];
 
     // Map payments to invoices
     const paymentsMap = new Map<string, Array<Record<string, unknown>>>();
@@ -118,88 +148,139 @@ export async function GET(
       totalPaidUSD += Number(p.amount || 0);
     });
 
-    // 5. Compute packages awaiting pickup / delivery
+    // 5. Index tracking numbers across client's invoices
+    interface ClientInvoiceItemRef {
+      invoice_id: string;
+      invoice_number: string;
+      service_name: string;
+      weight?: number | string;
+      rate?: number | string;
+      amount: number;
+      is_pending: boolean;
+    }
+    const invoiceItemsByTracking = new Map<string, ClientInvoiceItemRef>();
+    invoices.forEach(inv => {
+      const isPending = inv.pending > 0.01;
+      (inv.items || []).forEach((it: Record<string, unknown>) => {
+        const trk = String(it.tracking_number || '').trim().toUpperCase();
+        if (trk) {
+          invoiceItemsByTracking.set(trk, {
+            invoice_id: String(inv.id),
+            invoice_number: String(inv.invoice_number),
+            service_name: String(it.service_name || 'Paquete Internacional'),
+            weight: it.weight !== undefined ? (it.weight as string | number) : undefined,
+            rate: it.rate !== undefined ? (it.rate as string | number) : undefined,
+            amount: Number(it.amount || 0),
+            is_pending: isPending
+          });
+        }
+      });
+    });
+
+    // Index local_inventory by tracking
+    const inventoryMap = new Map<string, Record<string, unknown>>();
+    localInventoryItems.forEach(item => {
+      const trk = String(item.id || '').trim().toUpperCase();
+      if (trk) {
+        inventoryMap.set(trk, item);
+      }
+    });
+
+    // Client name matching helper
+    const clientNameNorm = (client.name || '').toLowerCase().trim();
+    const isClientMatch = (invClientName?: string): boolean => {
+      if (!invClientName || !clientNameNorm) return false;
+      const target = invClientName.toLowerCase().trim();
+      if (target === clientNameNorm) return true;
+      const parts = clientNameNorm.split(/\s+/).filter(p => p.length >= 3);
+      if (parts.length >= 2 && parts.every(p => target.includes(p))) return true;
+      return target.includes(clientNameNorm);
+    };
+
+    // 6. Compute packages awaiting pickup (strictly in bodega, NOT delivered)
     const pendingPackages: Array<{
       id: string;
       tracking_number?: string;
       service_name: string;
       weight?: number | string;
+      unit: string;
       amount?: number;
       invoice_number?: string;
       invoice_id?: string;
       status: string;
     }> = [];
 
-    const seenTracking = new Set<string>();
+    const processedTrackings = new Set<string>();
 
-    // From pending invoices
-    invoices.forEach(inv => {
-      if (inv.pending > 0.01) {
-        if (inv.items && inv.items.length > 0) {
-          inv.items.forEach((it: Record<string, unknown>, idx: number) => {
-            const trk = String(it.tracking_number || '').trim();
-            if (trk) seenTracking.add(trk.toUpperCase());
-            pendingPackages.push({
-              id: `${inv.id}-${idx}`,
-              tracking_number: trk || undefined,
-              service_name: String(it.service_name || 'Paquete Internacional'),
-              weight: it.weight ? Number(it.weight) || String(it.weight) : undefined,
-              amount: Number(it.amount || 0),
-              invoice_number: String(inv.invoice_number || ''),
-              invoice_id: String(inv.id || ''),
-              status: 'Listo para retiro al cancelar'
-            });
-          });
-        } else {
-          // If invoice has no line items, count invoice as 1 package
-          pendingPackages.push({
-            id: String(inv.id || ''),
-            service_name: `Paquetes de Factura #${inv.invoice_number}`,
-            amount: Number(inv.total || 0),
-            invoice_number: String(inv.invoice_number || ''),
-            invoice_id: String(inv.id || ''),
-            status: 'Listo para retiro al cancelar'
-          });
-        }
+    // A. Check local_inventory for packages belonging to this client that are in bodega
+    localInventoryItems.forEach(item => {
+      const trk = String(item.id || '').trim().toUpperCase();
+      if (!trk || processedTrackings.has(trk)) return;
+
+      const rawStatus = String(item.status || '').trim();
+      const stLower = rawStatus.toLowerCase();
+
+      // If status is 'Entregado' or 'Eliminado', it has already been delivered / removed
+      if (stLower.includes('entregad') || stLower.includes('eliminad')) {
+        processedTrackings.add(trk);
+        return;
+      }
+
+      // Check if package is physically in bodega
+      const isInBodega = stLower.includes('bodega') || rawStatus === 'En Bodega';
+
+      // Verify that this package belongs to the client (by invoice tracking or client name)
+      const matchedInvoiceItem = invoiceItemsByTracking.get(trk);
+      const matchedByName = isClientMatch(String(item.client || ''));
+
+      if ((matchedInvoiceItem || matchedByName) && isInBodega) {
+        processedTrackings.add(trk);
+
+        const sName = matchedInvoiceItem?.service_name || (item.company ? `Paquete (${item.company})` : 'Paquete en Bodega');
+        const rawWeight = item.weight || matchedInvoiceItem?.weight;
+        const numWeight = parseNumericWeight(rawWeight as string | number);
+        const unit = detectPackageUnit(sName, rawWeight as string | number);
+
+        pendingPackages.push({
+          id: trk,
+          tracking_number: trk,
+          service_name: sName,
+          weight: numWeight !== undefined ? numWeight : (rawWeight ? String(rawWeight) : undefined),
+          unit,
+          amount: matchedInvoiceItem?.amount,
+          invoice_number: matchedInvoiceItem?.invoice_number,
+          invoice_id: matchedInvoiceItem?.invoice_id,
+          status: 'En Bodega'
+        });
       }
     });
 
-    // Also check local_inventory for packages in bodega for this client
-    try {
-      if (client.name) {
-        const resInventory = await fetch(
-          `${url}/rest/v1/local_inventory?client=ilike.*${encodeURIComponent(client.name)}*&select=id,client,status,weight,company,created_at`,
-          { headers, cache: 'no-store' }
-        );
-        if (resInventory.ok) {
-          const invData = await resInventory.json();
-          if (Array.isArray(invData)) {
-            invData.forEach((item: Record<string, unknown>) => {
-              const trk = String(item.id || '').trim();
-              const st = String(item.status || 'En Bodega');
-              if (st !== 'Entregado' && st !== 'Eliminado') {
-                if (!trk || !seenTracking.has(trk.toUpperCase())) {
-                  if (trk) seenTracking.add(trk.toUpperCase());
-                  let parsedWeight: number | undefined;
-                  if (item.weight) {
-                    const match = String(item.weight).match(/[\d.]+/);
-                    if (match) parsedWeight = parseFloat(match[0]);
-                  }
-                  pendingPackages.push({
-                    id: trk || `inv-${Math.random()}`,
-                    tracking_number: trk || undefined,
-                    service_name: item.company ? `Paquete (${item.company})` : 'Paquete en Bodega',
-                    weight: parsedWeight,
-                    status: st
-                  });
-                }
-              }
-            });
-          }
+    // B. Check pending invoices: If localInventory had 0 records (fallback), list pending invoice items
+    if (localInventoryItems.length === 0) {
+      invoices.forEach(inv => {
+        if (inv.pending > 0.01) {
+          (inv.items || []).forEach((it: Record<string, unknown>, idx: number) => {
+            const trk = String(it.tracking_number || '').trim().toUpperCase();
+            if (trk && !processedTrackings.has(trk)) {
+              processedTrackings.add(trk);
+              const sName = String(it.service_name || 'Paquete Internacional');
+              const numWeight = parseNumericWeight(it.weight as string | number);
+              const unit = detectPackageUnit(sName, it.weight as string | number);
+              pendingPackages.push({
+                id: `${inv.id}-${idx}`,
+                tracking_number: trk,
+                service_name: sName,
+                weight: numWeight !== undefined ? numWeight : (it.weight ? String(it.weight) : undefined),
+                unit,
+                amount: Number(it.amount || 0),
+                invoice_number: String(inv.invoice_number || ''),
+                invoice_id: String(inv.id || ''),
+                status: 'En Bodega'
+              });
+            }
+          });
         }
-      }
-    } catch (e) {
-      console.error('Error fetching local inventory for statement:', e);
+      });
     }
 
     let pendingWeightTotal = 0;

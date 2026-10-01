@@ -5,11 +5,36 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { 
   DollarSign, CheckCircle2, Clock, FileText, Printer, 
-  Copy, Check, ExternalLink, ShieldCheck, AlertCircle, 
+  Copy, Check, ShieldCheck, AlertCircle, 
   ChevronDown, ChevronUp, Phone, Mail, Package, MessageCircle,
-  HelpCircle, Building2, X, Send
+  HelpCircle, Building2, X, Send, Smartphone, Banknote
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
+
+export function getItemUnit(serviceName?: string, weight?: string | number): string {
+  const wStr = String(weight || '').toLowerCase();
+  if (wStr.includes('kg') || wStr.includes('kilo')) return 'kg';
+  if (wStr.includes('ft') || wStr.includes('pie')) return 'ft³';
+  if (wStr.includes('und') || wStr.includes('unidad')) return 'und';
+  if (wStr.includes('lb')) return 'lb';
+
+  const sUpper = String(serviceName || '').toUpperCase();
+  if (sUpper.includes('COMPRA') || sUpper.includes('SITIO WEB')) return 'und';
+  if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE') || sUpper.includes('CUBIC')) return 'ft³';
+  if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') || sUpper.includes('KILO') || sUpper.includes('KG')) return 'kg';
+  return 'lb';
+}
+
+export function formatWeightWithUnit(weight?: string | number, serviceName?: string): string {
+  if (weight === undefined || weight === null || weight === '') return '—';
+  const wStr = String(weight).trim();
+  if (!wStr || wStr === '0') return '—';
+  if (/[a-zA-Z³]/.test(wStr)) {
+    return wStr;
+  }
+  const unit = getItemUnit(serviceName, weight);
+  return `${wStr} ${unit}`;
+}
 
 interface InvoiceItem {
   invoice_id: string;
@@ -54,6 +79,7 @@ export interface PendingPackage {
   tracking_number?: string;
   service_name: string;
   weight?: number | string;
+  unit?: string;
   amount?: number;
   invoice_number?: string;
   invoice_id?: string;
@@ -410,50 +436,137 @@ export default function PublicEstadoCuentaPage() {
 
           </div>
 
-          {/* Payment Instructions Box */}
+          {/* Payment Instructions Box: Multiple Payment Options */}
           {stats.totalBalanceUSD > 0.01 && (
-            <div className="mt-4 sm:mt-6 p-4 sm:p-6 bg-amber-50/70 border border-amber-200/70 rounded-2xl print:border-gray-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1.5 min-w-0 flex-1">
-                  <h2 className="text-sm font-black text-amber-900 flex items-center gap-2">
-                    <Building2 size={18} className="text-amber-700 shrink-0" />
-                    ¿Cómo pagar tu saldo pendiente?
+            <div className="mt-4 sm:mt-6 p-5 sm:p-7 bg-amber-50/70 border border-amber-200/80 rounded-2xl print:border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-amber-200/60">
+                <div>
+                  <h2 className="text-base font-black text-amber-950 flex items-center gap-2">
+                    <Building2 size={20} className="text-amber-700 shrink-0" />
+                    Formas de Pago Disponibles
                   </h2>
-                  <p className="text-xs text-amber-800 leading-relaxed">
-                    Puedes cancelar mediante <strong>SINPE Móvil</strong> al número oficial de JRS Cargo. Al transferir, incluye tu nombre en el detalle.
+                  <p className="text-xs text-amber-800/90 mt-0.5">
+                    Puedes cancelar tu saldo pendiente mediante cualquiera de nuestros 3 canales autorizados:
                   </p>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
-                    <div className="bg-white border border-amber-300 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-xs">
-                      <span className="text-xs text-gray-500 font-bold">SINPE:</span>
-                      <span className="text-sm font-black text-brand-blue tracking-wider">7260-1238</span>
-                      <span className="text-[11px] text-gray-400">(JRS Cargo)</span>
-                      <button
-                        onClick={copySinpeNumber}
-                        className="ml-1 p-1 text-gray-400 hover:text-brand-blue transition-colors"
-                        title="Copiar número de SINPE Móvil"
-                      >
-                        {copiedSinpe ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
-                      </button>
-                    </div>
-                    {copiedSinpe && (
-                      <span className="text-xs font-bold text-green-700 animate-fade-in">
-                        ¡Copiado!
-                      </span>
-                    )}
-                  </div>
                 </div>
-
-                <div className="w-full sm:w-auto shrink-0 print:hidden">
+                <div className="shrink-0 print:hidden">
                   <a
                     href={`https://wa.me/50672601238?text=${encodeURIComponent(whatsappPaymentMsg)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white px-5 py-3.5 sm:py-3 rounded-xl font-black text-sm shadow-md shadow-green-500/20 active:scale-95 transition-all text-center"
+                    className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20b858] text-white px-4 py-2.5 rounded-xl font-black text-xs shadow-md shadow-green-500/20 active:scale-95 transition-all text-center"
                   >
-                    <MessageCircle size={18} />
+                    <MessageCircle size={16} />
                     <span>Reportar Comprobante</span>
                   </a>
                 </div>
+              </div>
+
+              {/* 3 Columns: SINPE Móvil, Transferencia, Efectivo */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
+                
+                {/* 1. SINPE Móvil */}
+                <div className="bg-white p-4 rounded-xl border border-amber-200/70 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-2">
+                      <span className="font-black text-slate-800 text-sm flex items-center gap-1.5">
+                        <Smartphone size={16} className="text-brand-blue" />
+                        SINPE Móvil
+                      </span>
+                      <span className="text-[10px] font-bold bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                        Inmediato
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-xs mb-3">
+                      Transferencia inmediata desde tu app bancaria a nuestro número oficial:
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold">NÚMERO SINPE</span>
+                        <span className="font-mono font-black text-brand-blue text-sm">7260-1238</span>
+                        <span className="text-[10px] text-slate-500 block">JRS Cargo S.A.</span>
+                      </div>
+                      <button
+                        onClick={copySinpeNumber}
+                        className="px-2.5 py-1.5 bg-brand-blue hover:bg-[#0c2f42] text-white rounded-lg font-bold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Copiar número de SINPE Móvil"
+                      >
+                        {copiedSinpe ? <Check size={12} className="text-green-300" /> : <Copy size={12} />}
+                        <span>{copiedSinpe ? '¡Copiado!' : 'Copiar'}</span>
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-amber-800/80 mt-2 italic">
+                      * Por favor incluir tu nombre en el detalle del comprobante.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Transferencia Bancaria */}
+                <div className="bg-white p-4 rounded-xl border border-amber-200/70 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-2">
+                      <span className="font-black text-slate-800 text-sm flex items-center gap-1.5">
+                        <Building2 size={16} className="text-brand-blue" />
+                        Transferencia
+                      </span>
+                      <span className="text-[10px] font-bold bg-blue-50 text-brand-blue px-2 py-0.5 rounded-full">
+                        Colones / USD
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-xs mb-2">
+                      Transferencias directas a cuentas bancarias de <strong>JRS Cargo S.A.</strong>
+                    </p>
+                    <div className="space-y-1 text-[11px] text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <p className="font-bold text-slate-800">• BAC Credomatic</p>
+                      <p className="font-bold text-slate-800">• Banco Nacional (BNCR)</p>
+                      <p className="text-slate-500 text-[10px]">Cuentas disponibles en colones y dólares.</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 mt-2 border-t border-slate-100">
+                    <a
+                      href={`https://wa.me/50672601238?text=${encodeURIComponent('Hola JRS Cargo, me gustaría solicitar las cuentas IBAN para realizar una transferencia bancaria.')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg transition-colors"
+                    >
+                      <MessageCircle size={12} className="text-green-600" />
+                      <span>Solicitar cuentas IBAN</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3. Efectivo en Bodega */}
+                <div className="bg-white p-4 rounded-xl border border-amber-200/70 shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-2">
+                      <span className="font-black text-slate-800 text-sm flex items-center gap-1.5">
+                        <Banknote size={16} className="text-brand-blue" />
+                        Efectivo
+                      </span>
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
+                        En Bodega
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-xs mb-2">
+                      Puedes cancelar en <strong>efectivo</strong> al momento de retirar tus paquetes en bodega o sucursal.
+                    </p>
+                    <div className="space-y-1 text-[11px] text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <p className="font-semibold text-slate-800">• Pago presencial en mostrador</p>
+                      <p className="font-semibold text-slate-800">• En colones o dólares exactos</p>
+                      <p className="text-slate-500 text-[10px]">Entrega inmediata contra pago.</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Ubicación:</span>
+                    <span className="font-bold text-slate-700">Bodega San Pablo, Heredia</span>
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
@@ -648,20 +761,16 @@ export default function PublicEstadoCuentaPage() {
                                   <div className="min-w-0 flex-1">
                                     <p className="font-semibold text-gray-800 truncate">{it.service_name}</p>
                                     {it.tracking_number ? (
-                                      <a
-                                        href={`/tracking?number=${encodeURIComponent(it.tracking_number)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-[11px] font-mono text-brand-blue font-bold hover:underline inline-flex items-center gap-1 mt-0.5 truncate max-w-full"
-                                      >
-                                        <span className="truncate">{it.tracking_number}</span>
-                                        <ExternalLink size={10} className="opacity-60 shrink-0" />
-                                      </a>
+                                      <span className="text-[11px] font-mono text-slate-800 font-bold block mt-0.5 select-all truncate">
+                                        {it.tracking_number}
+                                      </span>
                                     ) : (
                                       <span className="text-[11px] text-gray-400">Sin guía</span>
                                     )}
                                     {it.weight && (
-                                      <span className="text-[11px] text-gray-400 ml-2">({it.weight} lbs)</span>
+                                      <span className="text-[11px] text-gray-500 font-medium">
+                                        ({formatWeightWithUnit(it.weight, it.service_name)})
+                                      </span>
                                     )}
                                   </div>
                                   <div className="text-right shrink-0">
@@ -678,7 +787,7 @@ export default function PublicEstadoCuentaPage() {
                                   <tr className="text-gray-400 border-b border-gray-200/60 text-left">
                                     <th className="py-1.5 font-bold">Servicio</th>
                                     <th className="py-1.5 font-bold">Tracking / Guía</th>
-                                    <th className="py-1.5 font-bold text-right">Peso</th>
+                                    <th className="py-1.5 font-bold text-right">Peso / Medida</th>
                                     <th className="py-1.5 font-bold text-right">Monto</th>
                                   </tr>
                                 </thead>
@@ -686,22 +795,12 @@ export default function PublicEstadoCuentaPage() {
                                   {inv.items.map((it, idx) => (
                                     <tr key={idx} className="text-gray-700">
                                       <td className="py-1.5 font-medium">{it.service_name}</td>
-                                      <td className="py-1.5 font-mono text-brand-blue font-bold">
-                                        {it.tracking_number ? (
-                                          <a
-                                            href={`/tracking?number=${encodeURIComponent(it.tracking_number)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="hover:underline inline-flex items-center gap-1"
-                                          >
-                                            {it.tracking_number}
-                                            <ExternalLink size={10} className="opacity-60" />
-                                          </a>
-                                        ) : (
-                                          '—'
-                                        )}
+                                      <td className="py-1.5 font-mono text-slate-800 font-bold select-all">
+                                        {it.tracking_number || '—'}
                                       </td>
-                                      <td className="py-1.5 text-right font-medium">{it.weight ? `${it.weight} lbs` : '—'}</td>
+                                      <td className="py-1.5 text-right font-medium">
+                                        {it.weight ? formatWeightWithUnit(it.weight, it.service_name) : '—'}
+                                      </td>
                                       <td className="py-1.5 text-right font-black">${Number(it.amount || 0).toFixed(2)}</td>
                                     </tr>
                                   ))}
@@ -772,24 +871,18 @@ export default function PublicEstadoCuentaPage() {
 
                           <div className="flex items-center gap-3 text-xs text-gray-500 mt-1.5 flex-wrap">
                             {pkg.tracking_number ? (
-                              <span className="flex items-center gap-1">
-                                <span className="text-gray-400">Tracking:</span>
-                                <a
-                                  href={`/tracking?number=${encodeURIComponent(pkg.tracking_number)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="font-mono font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
-                                >
+                              <span className="flex items-center gap-1.5">
+                                <span className="text-gray-400 font-medium">Tracking:</span>
+                                <span className="font-mono font-bold text-slate-800 select-all tracking-wide">
                                   {pkg.tracking_number}
-                                  <ExternalLink size={11} className="opacity-60" />
-                                </a>
+                                </span>
                               </span>
                             ) : (
                               <span className="text-gray-400">Sin tracking registrado</span>
                             )}
 
                             {pkg.weight && (
-                              <span>• Peso: <strong className="text-gray-700">{pkg.weight} lbs</strong></span>
+                              <span>• Peso / Medida: <strong className="text-gray-700">{formatWeightWithUnit(pkg.weight, pkg.service_name)}</strong></span>
                             )}
 
                             {pkg.invoice_number && (
