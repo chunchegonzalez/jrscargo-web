@@ -5,12 +5,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X, UserCircle, PackageOpen, ChevronRight, MessageCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { useHalloween } from '@/components/ui/HalloweenProvider';
+import { HalloweenMiniPumpkin } from '@/components/ui/HalloweenIcons';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { isHalloween } = useHalloween();
 
   const navLinks = [
     { id: 'inicio', name: t.nav.home, href: '/' },
@@ -202,8 +205,15 @@ export default function Header() {
               href="https://worldboxcr.com/jrscargo/register"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-brand-blue hover:bg-[#0c2f42] text-white font-bold text-[14px] px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
+              className={`relative group inline-flex items-center gap-2 bg-brand-blue hover:bg-[#0c2f42] text-white font-bold text-[14px] px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all ${
+                isHalloween ? 'hover:shadow-[0_4px_18px_rgba(249,115,22,0.35)]' : ''
+              }`}
             >
+              {isHalloween && (
+                <span className="absolute -top-3 -right-2 pointer-events-none transform rotate-12 transition-transform duration-300 group-hover:scale-115 group-hover:rotate-6 drop-shadow-xs">
+                  <HalloweenMiniPumpkin size={22} />
+                </span>
+              )}
               <PackageOpen size={18} className="text-brand-yellow" />
               <span>{t.nav.register}</span>
             </a>
@@ -324,8 +334,15 @@ export default function Header() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full py-3.5 px-4 text-sm font-bold text-white bg-brand-blue hover:bg-[#0c2f42] rounded-xl shadow-md transition-colors"
+                  className={`relative group flex items-center justify-center gap-2 w-full py-3.5 px-4 text-sm font-bold text-white bg-brand-blue hover:bg-[#0c2f42] rounded-xl shadow-md transition-colors ${
+                    isHalloween ? 'hover:shadow-[0_4px_18px_rgba(249,115,22,0.35)]' : ''
+                  }`}
                 >
+                  {isHalloween && (
+                    <span className="absolute -top-2.5 right-4 pointer-events-none transform rotate-12 drop-shadow-xs">
+                      <HalloweenMiniPumpkin size={22} />
+                    </span>
+                  )}
                   <PackageOpen size={19} className="text-brand-yellow" />
                   <span>{t.nav.register}</span>
                 </a>

@@ -233,3 +233,115 @@
     min-height: 0 !important;
   }
 }
+
+/* ==========================================================================
+   HALLOWEEN THEME (Scoped strictly to .halloween-mode)
+   Active until Nov 1, 2026 23:59:59 (America/Costa_Rica)
+   ========================================================================== */
+
+.halloween-mode .halloween-decor {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* Subtle warm orange hover accent on primary buttons */
+.halloween-mode .btn-primary:hover {
+  box-shadow: 0 6px 22px rgba(249, 115, 22, 0.4), 0 4px 14px rgba(18, 67, 94, 0.3) !important;
+}
+
+/* Subtle hover elevation and warm glow on route cards in hero */
+.halloween-mode .route-card-halloween:hover {
+  box-shadow: 0 10px 28px -5px rgba(249, 115, 22, 0.18), 0 4px 10px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Floating animation for subtle background bats */
+@keyframes bat-glide-1 {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  25% { transform: translate3d(12px, -8px, 0) rotate(3deg) scale(1.03); }
+  50% { transform: translate3d(24px, 4px, 0) rotate(-2deg) scale(0.98); }
+  75% { transform: translate3d(10px, 12px, 0) rotate(2deg) scale(1.02); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+}
+
+@keyframes bat-glide-2 {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  30% { transform: translate3d(-18px, 10px, 0) rotate(-4deg) scale(0.96); }
+  60% { transform: translate3d(-8px, -12px, 0) rotate(3deg) scale(1.04); }
+  85% { transform: translate3d(8px, -4px, 0) rotate(-1deg) scale(1); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+}
+
+@keyframes bat-glide-3 {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(15px, -15px, 0) rotate(4deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+
+.bat-anim-1 {
+  animation: bat-glide-1 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+.bat-anim-2 {
+  animation: bat-glide-2 11s ease-in-out infinite 1.5s;
+  will-change: transform;
+}
+
+.bat-anim-3 {
+  animation: bat-glide-3 8s ease-in-out infinite 3s;
+  will-change: transform;
+}
+
+/* Floating orange ember sparkles */
+@keyframes ember-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+    transform: translate3d(4px, -15px, 0) scale(1);
+  }
+  70% {
+    opacity: 0.6;
+    transform: translate3d(-6px, -35px, 0) scale(0.9);
+  }
+  100% {
+    transform: translate3d(2px, -55px, 0) scale(0.4);
+    opacity: 0;
+  }
+}
+
+.halloween-ember {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #fba73a 0%, #ea580c 70%, transparent 100%);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.7);
+  animation: ember-rise linear infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* Gentle fog drift */
+@keyframes mist-drift {
+  0% { transform: translate3d(-2%, 0, 0); }
+  50% { transform: translate3d(2%, -3px, 0); }
+  100% { transform: translate3d(-2%, 0, 0); }
+}
+
+.halloween-mist {
+  animation: mist-drift 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .bat-anim-1,
+  .bat-anim-2,
+  .bat-anim-3,
+  .halloween-ember,
+  .halloween-mist {
+    animation: none !important;
+    transform: none !important;
+  }
+}

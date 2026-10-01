@@ -10,6 +10,8 @@ import {
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
+import { useHalloween } from '@/components/ui/HalloweenProvider';
+import { HalloweenWitchHat } from '@/components/ui/HalloweenIcons';
 
 const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHovered?: boolean; isPatriotic?: boolean }) => {
   const faceRef = useRef<HTMLDivElement>(null);
@@ -177,6 +179,7 @@ const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHover
 export default function ChatBotWidget() {
   const { t, language } = useLanguage();
   const isEn = language === 'en';
+  const { isHalloween } = useHalloween();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isTriggerHovered, setIsTriggerHovered] = useState(false);
@@ -666,6 +669,15 @@ export default function ChatBotWidget() {
             whileTap={{ scale: 0.92 }}
             className="relative cursor-pointer"
           >
+            {isHalloween && (
+              <motion.div
+                animate={isTriggerHovered ? { y: [0, -3, 0], rotate: [12, 16, 12] } : { y: 0, rotate: 12 }}
+                transition={{ duration: 0.8, repeat: isTriggerHovered ? Infinity : 0, ease: "easeInOut" }}
+                className="absolute -top-3.5 sm:-top-4 -right-1 z-20 pointer-events-none drop-shadow-md select-none"
+              >
+                <HalloweenWitchHat size={28} />
+              </motion.div>
+            )}
             <AnimatedRobotFace isHovered={isTriggerHovered} isPatriotic={isPatriotic} />
           </motion.div>
         </button>

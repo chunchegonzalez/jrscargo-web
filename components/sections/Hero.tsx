@@ -5,12 +5,16 @@ import { FaStar, FaWhatsapp } from 'react-icons/fa';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
+import { HalloweenHeroBackground, HalloweenRouteMapDecorations } from '@/components/ui/HalloweenHeroDecorations';
 
 export default function Hero() {
   const { t } = useLanguage();
 
   return (
     <section className="relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden bg-brand-bg-section">
+      {/* Halloween Subtle Background Layer */}
+      <HalloweenHeroBackground />
+
       {/* Abstract Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-blue/5 blur-3xl opacity-60 mix-blend-multiply" />
@@ -110,6 +114,8 @@ export default function Hero() {
           {/* Visual/Image */}
           <div className="relative lg:h-[600px] hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/5 via-white/40 to-brand-red/5 rounded-[3rem] border border-white/80 shadow-[0_20px_40px_rgb(0,0,0,0.05)] overflow-hidden flex items-center justify-center backdrop-blur-sm">
+              {/* Halloween Spiderweb & subtle bats inside panel */}
+              <HalloweenRouteMapDecorations />
               
               {/* Radar Rings - Rotating */}
               <motion.div 
@@ -237,7 +243,7 @@ export default function Hero() {
               <motion.div 
                 animate={{ y: [0, -10, 0], x: [0, 5, 0], rotate: [0, 1, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
+                className="route-card-halloween absolute top-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-brand-blue to-[#1e5c82] rounded-xl flex items-center justify-center text-brand-yellow shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>
@@ -253,7 +259,7 @@ export default function Hero() {
               <motion.div 
                 animate={{ y: [0, 10, 0], x: [0, -5, 0], rotate: [0, -1, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute top-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#fdc151]/10 transition-all cursor-default"
+                className="route-card-halloween absolute top-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#fdc151]/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-[#fdc151] to-[#f4a920] rounded-xl flex items-center justify-center text-brand-blue shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/20 mix-blend-overlay"></div>
@@ -269,7 +275,7 @@ export default function Hero() {
               <motion.div 
                 animate={{ y: [0, -8, 0], x: [0, -8, 0], rotate: [0, 2, 0] }}
                 transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                className="absolute bottom-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-red/10 transition-all cursor-default"
+                className="route-card-halloween absolute bottom-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-red/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-brand-red to-[#e23046] rounded-xl flex items-center justify-center text-white shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>
@@ -285,7 +291,7 @@ export default function Hero() {
               <motion.div 
                 animate={{ y: [0, 8, 0], x: [0, 8, 0], rotate: [0, -2, 0] }}
                 transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                className="absolute bottom-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
+                className="route-card-halloween absolute bottom-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-brand-blue to-[#1e5c82] rounded-xl flex items-center justify-center text-white shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>

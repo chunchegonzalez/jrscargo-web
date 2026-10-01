@@ -137,6 +137,7 @@ const jsonLd = {
 };
 
 import { LanguageProvider } from '@/context/LanguageContext';
+import { HalloweenProvider } from '@/components/ui/HalloweenProvider';
 
 export default function RootLayout({
   children,
@@ -154,14 +155,16 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} antialiased flex flex-col min-h-screen`}>
-        <LanguageProvider>
-          <HeaderWrapper />
-          <MainWrapper>
-            {children}
-          </MainWrapper>
-          <FooterWrapper />
-          <ChatBotWrapper />
-        </LanguageProvider>
+        <HalloweenProvider>
+          <LanguageProvider>
+            <HeaderWrapper />
+            <MainWrapper>
+              {children}
+            </MainWrapper>
+            <FooterWrapper />
+            <ChatBotWrapper />
+          </LanguageProvider>
+        </HalloweenProvider>
         <Analytics />
       </body>
     </html>
