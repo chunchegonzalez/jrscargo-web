@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 import Header from './Header';
 import Footer from './Footer';
 import ChatBotWidget from './ChatBotWidget';
+import PrimeBigDealPopup from './PrimeBigDealPopup';
 
 export function HeaderWrapper() {
   const pathname = usePathname();
@@ -20,6 +21,12 @@ export function ChatBotWrapper() {
   const pathname = usePathname();
   if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
   return <ChatBotWidget />;
+}
+
+export function PrimeBigDealPopupWrapper() {
+  const pathname = usePathname();
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
+  return <PrimeBigDealPopup />;
 }
 
 export function MainWrapper({ children }: { children: React.ReactNode }) {

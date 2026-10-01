@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { HeaderWrapper, FooterWrapper, ChatBotWrapper, MainWrapper } from '@/components/ui/LayoutWrapper'
+import { HeaderWrapper, FooterWrapper, ChatBotWrapper, MainWrapper, PrimeBigDealPopupWrapper } from '@/components/ui/LayoutWrapper'
 import { Analytics } from "@vercel/analytics/react"
 
 const inter = Inter({ subsets: ['latin'] })
@@ -163,6 +163,7 @@ export default function RootLayout({
             </MainWrapper>
             <FooterWrapper />
             <ChatBotWrapper />
+            <PrimeBigDealPopupWrapper />
           </LanguageProvider>
         </HalloweenProvider>
         <Analytics />
