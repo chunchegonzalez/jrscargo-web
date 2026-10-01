@@ -377,60 +377,109 @@ export default function PublicEstadoCuentaPage() {
             </div>
 
             {/* Card Paquetes por Retirar: Prominent Package Counter */}
-            <div className="md:col-span-6 lg:col-span-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between relative overflow-hidden">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Package size={16} className="text-brand-blue" /> Paquetes por Retirar
-                </span>
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue border border-blue-200/80 flex items-center gap-1">
-                  Bodega JRS
-                </span>
-              </div>
+            {/* Card Paquetes por Retirar: Prominent Package Counter */}
+            <div className={`md:col-span-6 lg:col-span-4 rounded-2xl sm:rounded-3xl p-5 sm:p-6 border transition-all flex flex-col justify-between relative overflow-hidden ${
+              stats.pendingPackagesCount > 0
+                ? 'bg-gradient-to-br from-white via-amber-50/20 to-amber-50/40 border-amber-200/90 shadow-xs'
+                : 'bg-gradient-to-br from-white via-slate-50/40 to-slate-100/30 border-slate-200/80 shadow-xs'
+            }`}>
+              <div className="relative z-10">
+                {/* Header row */}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                      stats.pendingPackagesCount > 0
+                        ? 'bg-amber-100 text-amber-800 border-amber-200/80'
+                        : 'bg-blue-50 text-brand-blue border-blue-100/70'
+                    }`}>
+                      <Package size={17} />
+                    </div>
+                    <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Paquetes por Retirar
+                    </span>
+                  </div>
 
-              <div className="my-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl sm:text-5xl font-black text-brand-blue tracking-tight">
-                    {stats.pendingPackagesCount}
-                  </span>
-                  <span className="text-sm sm:text-base font-bold text-slate-600 uppercase">
-                    {stats.pendingPackagesCount === 1 ? 'paquete' : 'paquetes'}
+                  <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 border shrink-0 ${
+                    stats.pendingPackagesCount > 0
+                      ? 'bg-amber-100 text-amber-900 border-amber-300/80'
+                      : 'bg-slate-100 text-slate-700 border-slate-200/80'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      stats.pendingPackagesCount > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                    }`} />
+                    {stats.pendingPackagesCount > 0 ? 'Bodega CR' : 'Al día'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
-                  {stats.pendingPackagesCount > 0 
-                    ? 'Disponibles para entrega inmediata en bodega una vez cancelado tu saldo.' 
-                    : 'No tienes paquetes pendientes de entrega en este momento.'}
-                </p>
+
+                {/* Counter & Status */}
+                <div className="my-2.5">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className={`text-4xl sm:text-5xl font-black tracking-tight ${
+                      stats.pendingPackagesCount > 0 ? 'text-amber-950' : 'text-slate-800'
+                    }`}>
+                      {stats.pendingPackagesCount}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wide">
+                      {stats.pendingPackagesCount === 1 ? 'paquete disponible' : stats.pendingPackagesCount === 0 ? 'paquetes pendientes' : 'paquetes disponibles'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 mt-2 leading-relaxed font-normal">
+                    {stats.pendingPackagesCount > 0 
+                      ? 'Disponibles para entrega inmediata en bodega una vez cancelado tu saldo.' 
+                      : 'No tienes paquetes pendientes de entrega en este momento.'}
+                  </p>
+                </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                {stats.pendingPackagesWeight > 0 ? (
-                  <span className="text-slate-500">
-                    Peso total: <strong className="text-slate-800 font-bold">{stats.pendingPackagesWeight} lbs</strong>
-                  </span>
+              {/* Card Footer */}
+              <div className="pt-3.5 mt-2 border-t border-slate-100/90 flex items-center justify-between text-xs relative z-10">
+                {stats.pendingPackagesCount > 0 ? (
+                  stats.pendingPackagesWeight > 0 ? (
+                    <span className="text-slate-500 text-[11px]">
+                      Peso reg.: <strong className="text-slate-800 font-bold">{stats.pendingPackagesWeight} lbs</strong>
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 text-[11px]">Listo en recepción</span>
+                  )
                 ) : (
-                  <span className="text-slate-400">Verificados en recepción</span>
+                  <span className="text-[11px] text-emerald-700 font-bold inline-flex items-center gap-1.5 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100/80">
+                    <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                    Inventario al día
+                  </span>
                 )}
-                {stats.pendingPackagesCount > 0 && (
+
+                {stats.pendingPackagesCount > 0 ? (
                   <button
                     onClick={() => setActiveTab('paquetes')}
-                    className="text-[11px] font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
+                    className="text-xs font-black text-brand-blue hover:text-[#0c2f42] inline-flex items-center gap-1 py-1 px-2.5 rounded-lg hover:bg-blue-50 transition-colors"
                   >
                     <span>Ver detalle</span> &rarr;
                   </button>
+                ) : (
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Bodega Central JRS
+                  </span>
                 )}
               </div>
             </div>
 
             {/* Quick Summary Numbers */}
-            <div className="md:col-span-6 lg:col-span-3 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-gray-100 grid grid-cols-2 md:grid-cols-1 gap-3 sm:gap-4 justify-between">
-              <div>
-                <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">Total Facturado</p>
-                <p className="text-base sm:text-xl font-black text-gray-800">${stats.totalInvoicedUSD.toFixed(2)} <span className="text-[10px] font-bold text-gray-400">USD</span></p>
+            <div className="md:col-span-6 lg:col-span-3 bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between gap-2.5">
+              <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex-1 flex flex-col justify-center">
+                <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Facturado</p>
+                <div className="flex items-baseline justify-between">
+                  <p className="text-lg sm:text-xl font-black text-slate-800">${stats.totalInvoicedUSD.toFixed(2)}</p>
+                  <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.2 rounded border border-slate-200/60">USD</span>
+                </div>
               </div>
-              <div className="border-l md:border-l-0 md:border-t border-gray-200/80 pl-3 md:pl-0 md:pt-4">
-                <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">Total Pagos</p>
-                <p className="text-base sm:text-xl font-black text-green-600">${stats.totalPaidUSD.toFixed(2)} <span className="text-[10px] font-bold text-gray-400">USD</span></p>
+
+              <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100/70 flex-1 flex flex-col justify-center">
+                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-700/80 uppercase tracking-wider mb-0.5">Total Pagos Realizados</p>
+                <div className="flex items-baseline justify-between">
+                  <p className="text-lg sm:text-xl font-black text-emerald-700">${stats.totalPaidUSD.toFixed(2)}</p>
+                  <span className="text-[10px] font-bold text-emerald-700/70 bg-white px-1.5 py-0.2 rounded border border-emerald-200/60">USD</span>
+                </div>
               </div>
             </div>
 
