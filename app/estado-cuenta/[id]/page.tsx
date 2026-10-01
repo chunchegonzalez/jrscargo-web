@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
 
-export function getItemUnit(serviceName?: string, weight?: string | number): string {
+function getItemUnit(serviceName?: string, weight?: string | number): string {
   const wStr = String(weight || '').toLowerCase();
   if (wStr.includes('kg') || wStr.includes('kilo')) return 'kg';
   if (wStr.includes('ft') || wStr.includes('pie')) return 'ft³';
@@ -25,7 +25,7 @@ export function getItemUnit(serviceName?: string, weight?: string | number): str
   return 'lb';
 }
 
-export function formatWeightWithUnit(weight?: string | number, serviceName?: string): string {
+function formatWeightWithUnit(weight?: string | number, serviceName?: string): string {
   if (weight === undefined || weight === null || weight === '') return '—';
   const wStr = String(weight).trim();
   if (!wStr || wStr === '0') return '—';
@@ -74,7 +74,7 @@ interface Payment {
   }>;
 }
 
-export interface PendingPackage {
+interface PendingPackage {
   id: string;
   tracking_number?: string;
   service_name: string;
@@ -521,7 +521,7 @@ export default function PublicEstadoCuentaPage() {
                     </p>
                     <div className="space-y-1 text-[11px] text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                       <p className="font-bold text-slate-800">• BAC Credomatic</p>
-                      <p className="font-bold text-slate-800">• Banco Nacional (BNCR)</p>
+                      <p className="font-bold text-slate-800">• Banco de Costa Rica (BCR)</p>
                       <p className="text-slate-500 text-[10px]">Cuentas disponibles en colones y dólares.</p>
                     </div>
                   </div>
