@@ -205,12 +205,10 @@ export default function Header() {
               href="https://worldboxcr.com/jrscargo/register"
               target="_blank"
               rel="noopener noreferrer"
-              className={`relative group inline-flex items-center gap-2 bg-brand-blue hover:bg-[#0c2f42] text-white font-bold text-[14px] px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all ${
-                isHalloween ? 'hover:shadow-[0_4px_18px_rgba(249,115,22,0.35)]' : ''
-              }`}
+              className="relative group inline-flex items-center gap-2 bg-brand-blue hover:bg-[#0c2f42] text-white font-bold text-[14px] px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
             >
               {isHalloween && (
-                <span className="absolute -top-2 -right-1.5 pointer-events-none transform rotate-12 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 drop-shadow-xs">
+                <span className="absolute -top-2 -right-1.5 pointer-events-none transform rotate-12 drop-shadow-xs">
                   <HalloweenMiniPumpkin size={15} />
                 </span>
               )}
@@ -334,9 +332,7 @@ export default function Header() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`relative group flex items-center justify-center gap-2 w-full py-3.5 px-4 text-sm font-bold text-white bg-brand-blue hover:bg-[#0c2f42] rounded-xl shadow-md transition-colors ${
-                    isHalloween ? 'hover:shadow-[0_4px_18px_rgba(249,115,22,0.35)]' : ''
-                  }`}
+                  className="relative group flex items-center justify-center gap-2 w-full py-3.5 px-4 text-sm font-bold text-white bg-brand-blue hover:bg-[#0c2f42] rounded-xl shadow-md transition-colors"
                 >
                   {isHalloween && (
                     <span className="absolute -top-2 right-4 pointer-events-none transform rotate-12 drop-shadow-xs">

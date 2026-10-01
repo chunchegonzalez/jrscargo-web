@@ -4,17 +4,17 @@ import React from 'react';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
 import {
   HalloweenBat,
-  HalloweenSubtleMoon,
-  HalloweenSpiderweb,
+  HalloweenSoftFullMoon,
+  HalloweenSpiderwebWithSpider,
 } from '@/components/ui/HalloweenIcons';
 
 /**
  * Halloween Hero Background
- * Matched to the user reference images:
- * - Glowing crescent moon in top-left with soft cloud wisps
- * - Exactly 2 bats flying right above the title text
- * - Subtle warm fireflies/sparks around text
- * - Clean, non-distracting, almost static layout
+ * Strictly static, light, and matching media_1790829032126.png:
+ * - Soft full moon with clouds in top-left
+ * - Exactly 2 small static bats
+ * - Soft lavender/grey mist along bottom
+ * - Zero animations, zero heavy decor
  */
 export function HalloweenHeroBackground() {
   const { isHalloween } = useHalloween();
@@ -26,58 +26,28 @@ export function HalloweenHeroBackground() {
       className="halloween-decor absolute inset-0 overflow-hidden pointer-events-none select-none z-0"
       aria-hidden="true"
     >
-      {/* 1. Luminous Crescent Moon with soft clouds (Top-Left) */}
-      <div className="absolute top-2 sm:top-4 left-3 sm:left-8 lg:left-12 opacity-90 transition-opacity">
-        <HalloweenSubtleMoon size={135} />
+      {/* 1. Soft Full Moon with cloud in front (Top-Left) */}
+      <div className="absolute top-1 sm:top-2 left-1 sm:left-5 lg:left-8 opacity-85 pointer-events-none">
+        <HalloweenSoftFullMoon size={165} className="w-[115px] h-[115px] sm:w-[165px] sm:h-[165px]" />
       </div>
 
-      {/* 2. Exactly 2 Bats beside the Moon (Above the title "Tus compras") */}
-      {/* Bat 1: Larger, flying right */}
-      <div className="absolute top-3 sm:top-5 left-[210px] sm:left-[265px] lg:left-[290px] text-[#243547] opacity-80">
-        <HalloweenBat size={30} />
+      {/* 2. Exactly 2 Small Static Bats near the moon (above title "Tus compras") */}
+      {/* Bat 1: flying right, completely static */}
+      <div className="hidden sm:block absolute top-4 sm:top-6 left-[215px] sm:left-[265px] lg:left-[290px] text-[#1e293b] opacity-55 pointer-events-none">
+        <HalloweenBat size={28} />
       </div>
 
-      {/* Bat 2: Slightly lower and to the left */}
-      <div className="absolute top-8 sm:top-10 left-[180px] sm:left-[225px] lg:left-[245px] text-[#344659] opacity-75">
-        <HalloweenBat size={22} />
+      {/* Bat 2: slightly lower and left, completely static */}
+      <div className="hidden sm:block absolute top-9 sm:top-12 left-[180px] sm:left-[225px] lg:left-[245px] text-[#334155] opacity-48 pointer-events-none">
+        <HalloweenBat size={20} />
       </div>
 
-      {/* 3. Subtle Warm Fireflies / Sparks around the hero content (matching the image) */}
+      {/* 3. Soft, static lavender-grey mist along the bottom of the hero */}
       <div
-        className="halloween-firefly w-1.5 h-1.5"
-        style={{ top: '16%', left: '38%' }}
-      />
-      <div
-        className="halloween-firefly w-2 h-2"
-        style={{ top: '24%', left: '46%' }}
-      />
-      <div
-        className="halloween-firefly w-1 h-1"
-        style={{ top: '34%', left: '42%' }}
-      />
-      <div
-        className="halloween-firefly w-1.5 h-1.5 hidden sm:block"
-        style={{ top: '28%', left: '8%' }}
-      />
-      <div
-        className="halloween-firefly w-1.5 h-1.5 hidden sm:block"
-        style={{ top: '48%', left: '45%' }}
-      />
-      <div
-        className="halloween-firefly w-1 h-1 hidden sm:block"
-        style={{ top: '65%', left: '12%' }}
-      />
-      <div
-        className="halloween-firefly w-2 h-2 hidden sm:block"
-        style={{ top: '72%', left: '44%' }}
-      />
-
-      {/* 4. Soft atmospheric cloud haze along bottom left */}
-      <div
-        className="absolute bottom-0 left-0 w-full sm:w-[60%] h-24 pointer-events-none"
+        className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none"
         style={{
-          background: 'linear-gradient(to top, rgba(226, 222, 238, 0.3) 0%, transparent 100%)',
-          filter: 'blur(10px)',
+          background: 'linear-gradient(to top, rgba(226, 220, 240, 0.45) 0%, rgba(236, 232, 246, 0.20) 45%, transparent 100%)',
+          filter: 'blur(8px)',
         }}
       />
     </div>
@@ -87,9 +57,10 @@ export function HalloweenHeroBackground() {
 /**
  * Route Map / Radar Panel Decorations
  * Matches the reference mockup:
- * - Spiderweb in top-right corner
- * - Soft warm halo behind center logo hub
- * - 2 small subtle bats in the panel sky
+ * - Spiderweb with hanging spider in top-right corner
+ * - Soft, nearly imperceptible pastel halo behind center hub (coral/orange/lavender)
+ * - Soft static mist in bottom of the panel
+ * - Zero animations
  */
 export function HalloweenRouteMapDecorations() {
   const { isHalloween } = useHalloween();
@@ -101,30 +72,28 @@ export function HalloweenRouteMapDecorations() {
       className="halloween-decor absolute inset-0 pointer-events-none select-none z-10 overflow-hidden rounded-[3rem]"
       aria-hidden="true"
     >
-      {/* 1. Spiderweb in top-right corner of radar panel */}
-      <div className="absolute -top-1 -right-1 text-slate-500 opacity-20 z-30">
-        <HalloweenSpiderweb size={125} />
+      {/* 1. Spiderweb with tiny hanging spider in top-right corner (opacity ~0.15) */}
+      <div className="absolute -top-1 -right-1 text-slate-600 opacity-[0.14] z-30 pointer-events-none">
+        <HalloweenSpiderwebWithSpider size={135} />
       </div>
 
-      {/* 2. Soft Breathing Halo behind the Center Hub Logo */}
+      {/* 2. Soft, almost imperceptible static halo behind the center logo hub */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-        <div className="halloween-hub-halo w-56 h-56 rounded-full" />
+        <div
+          className="w-56 h-56 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(253, 78, 100, 0.08) 0%, rgba(249, 115, 22, 0.06) 40%, rgba(192, 132, 252, 0.05) 65%, transparent 75%)',
+            filter: 'blur(16px)',
+          }}
+        />
       </div>
 
-      {/* 3. Two subtle bats in panel sky */}
-      <div className="absolute top-[16%] left-[32%] text-[#2d3f52] opacity-50">
-        <HalloweenBat size={24} />
-      </div>
-      <div className="absolute top-[48%] right-[12%] text-[#34485c] opacity-45">
-        <HalloweenBat size={18} />
-      </div>
-
-      {/* 4. Soft mist inside bottom of radar panel */}
+      {/* 3. Soft static mist inside bottom of radar panel (doesn't cover cards or routes) */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+        className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none"
         style={{
-          background: 'linear-gradient(to top, rgba(215, 210, 230, 0.18) 0%, transparent 100%)',
-          filter: 'blur(8px)',
+          background: 'linear-gradient(to top, rgba(220, 214, 235, 0.28) 0%, rgba(232, 228, 244, 0.12) 50%, transparent 100%)',
+          filter: 'blur(6px)',
         }}
       />
     </div>

@@ -237,76 +237,10 @@
 /* ==========================================================================
    HALLOWEEN THEME (Scoped strictly to .halloween-mode)
    Active until Nov 1, 2026 23:59:59 (America/Costa_Rica)
-   Matches the reference mockup (95% Brand / 5% Halloween)
+   100% static, subtle & matching media_1790829032126.png exactly
    ========================================================================== */
 
 .halloween-mode .halloween-decor {
   pointer-events: none !important;
   user-select: none !important;
-}
-
-/* Botón principal: sutil y cálido resplandor naranja como en la imagen de referencia */
-.halloween-mode .btn-primary {
-  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.38), 0 4px 14px rgba(18, 67, 94, 0.28) !important;
-}
-.halloween-mode .btn-primary:hover {
-  box-shadow: 0 10px 30px rgba(249, 115, 22, 0.55), 0 6px 18px rgba(18, 67, 94, 0.35) !important;
-}
-
-/* Cards: translateY(-3px), transition 300ms, sombra ligeramente cálida */
-.halloween-mode .route-card-halloween {
-  transition: transform 300ms ease, box-shadow 300ms ease !important;
-}
-.halloween-mode .route-card-halloween:hover {
-  transform: translateY(-3px) !important;
-  box-shadow: 0 12px 28px -4px rgba(249, 115, 22, 0.12), 0 4px 12px rgba(18, 67, 94, 0.06) !important;
-}
-
-/* Logo central del panel: halo muy suave (coral, naranja, lavanda) con respiración lenta */
-@keyframes halo-breathe {
-  0% {
-    transform: scale(1);
-    opacity: 0.75;
-  }
-  50% {
-    transform: scale(1.025);
-    opacity: 0.95;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.75;
-  }
-}
-
-.halloween-hub-halo {
-  background: radial-gradient(
-    circle,
-    rgba(253, 78, 100, 0.18) 0%,     /* Coral */
-    rgba(249, 115, 22, 0.14) 38%,    /* Naranja */
-    rgba(192, 132, 252, 0.09) 65%,   /* Lavanda */
-    transparent 78%
-  );
-  filter: blur(14px);
-  animation: halo-breathe 7s ease-in-out infinite;
-  will-change: transform, opacity;
-  pointer-events: none;
-}
-
-/* Puntos de luz cálidos / chispas como en la imagen de referencia */
-.halloween-firefly {
-  position: absolute;
-  border-radius: 9999px;
-  background: #fef08a;
-  box-shadow: 0 0 7px 1px #f97316, 0 0 2px #ea580c;
-  opacity: 0.75;
-  pointer-events: none;
-}
-
-/* Accesibilidad: @media (prefers-reduced-motion: reduce) */
-@media (prefers-reduced-motion: reduce) {
-  .halloween-hub-halo,
-  .halloween-mode .route-card-halloween {
-    animation: none !important;
-    transform: none !important;
-  }
 }

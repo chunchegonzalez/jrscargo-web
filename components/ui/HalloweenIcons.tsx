@@ -2,7 +2,12 @@ import React from 'react';
 
 /**
  * Lightweight SVG & Image assets for Halloween theme
- * Matches the user-provided design reference images exactly
+ * Matches the reference mockup exactly:
+ * - Soft full moon with clouds
+ * - Delicate spiderweb with hanging spider
+ * - 2 small static bats
+ * - Mini pumpkin easter egg
+ * - Witch hat for chatbot
  */
 
 export function HalloweenBat({
@@ -30,8 +35,12 @@ export function HalloweenBat({
   );
 }
 
-export function HalloweenSpiderweb({
-  size = 120,
+/**
+ * Spiderweb pinned to top-right corner with a tiny spider hanging down
+ * Matches the reference mockup exactly
+ */
+export function HalloweenSpiderwebWithSpider({
+  size = 130,
   className = '',
   style = {},
 }: {
@@ -42,11 +51,10 @@ export function HalloweenSpiderweb({
   return (
     <svg
       width={size}
-      height={size}
-      viewBox="0 0 100 100"
+      height={size * 1.25}
+      viewBox="0 0 100 125"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.2"
       strokeLinecap="round"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
@@ -54,36 +62,52 @@ export function HalloweenSpiderweb({
       aria-hidden="true"
     >
       {/* Radial anchor threads */}
-      <line x1="100" y1="0" x2="0" y2="0" strokeWidth="1.5" />
-      <line x1="100" y1="0" x2="100" y2="100" strokeWidth="1.5" />
-      <line x1="100" y1="0" x2="0" y2="100" strokeWidth="1.2" />
-      <line x1="100" y1="0" x2="20" y2="60" strokeWidth="1" />
-      <line x1="100" y1="0" x2="60" y2="20" strokeWidth="1" />
-      <line x1="100" y1="0" x2="40" y2="90" strokeWidth="0.8" />
-      <line x1="100" y1="0" x2="90" y2="40" strokeWidth="0.8" />
+      <line x1="100" y1="0" x2="0" y2="0" strokeWidth="1.2" />
+      <line x1="100" y1="0" x2="100" y2="90" strokeWidth="1.2" />
+      <line x1="100" y1="0" x2="15" y2="85" strokeWidth="1.0" />
+      <line x1="100" y1="0" x2="30" y2="50" strokeWidth="0.8" />
+      <line x1="100" y1="0" x2="65" y2="18" strokeWidth="0.8" />
+      <line x1="100" y1="0" x2="50" y2="78" strokeWidth="0.7" />
+      <line x1="100" y1="0" x2="85" y2="35" strokeWidth="0.7" />
 
-      {/* Spiral concentric arches */}
-      <path d="M90 0 C 85 15, 85 15, 100 10" strokeWidth="0.8" />
-      <path d="M80 0 C 75 25, 75 25, 100 20" strokeWidth="0.8" />
-      <path d="M70 0 C 60 38, 62 38, 100 30" strokeWidth="0.9" />
-      <path d="M60 0 C 48 50, 50 50, 100 40" strokeWidth="1" />
-      <path d="M50 0 C 35 62, 38 62, 100 50" strokeWidth="1" />
-      <path d="M40 0 C 22 75, 25 75, 100 60" strokeWidth="1" />
-      <path d="M30 0 C 10 88, 12 88, 100 70" strokeWidth="1.1" />
-      <path d="M20 0 C 0 98, 2 98, 100 80" strokeWidth="1.1" />
+      {/* Concentric spiral arches */}
+      <path d="M92 0 C 88 12, 88 12, 100 8" strokeWidth="0.7" />
+      <path d="M82 0 C 76 22, 76 22, 100 18" strokeWidth="0.7" />
+      <path d="M72 0 C 62 34, 62 34, 100 28" strokeWidth="0.8" />
+      <path d="M60 0 C 48 46, 50 46, 100 38" strokeWidth="0.8" />
+      <path d="M48 0 C 35 58, 38 58, 100 50" strokeWidth="0.9" />
+      <path d="M35 0 C 20 70, 24 70, 100 62" strokeWidth="0.9" />
+      <path d="M22 0 C 8 82, 12 82, 100 75" strokeWidth="1.0" />
+
+      {/* Vertical hanging thread */}
+      <line x1="68" y1="28" x2="68" y2="102" strokeWidth="0.8" strokeDasharray="1 1" />
+
+      {/* Tiny hanging spider */}
+      <g transform="translate(68, 105)" stroke="none" fill="currentColor">
+        {/* Spider abdomen & head */}
+        <circle cx="0" cy="0" r="3.2" />
+        <circle cx="0" cy="-2.5" r="2.0" />
+        {/* Legs */}
+        <path
+          d="M -2.5 -1.5 Q -6 -4 -7 -1 M -2.5 0 Q -7 0 -8 3 M -2.5 1.5 Q -6 5 -5 8
+             M 2.5 -1.5 Q 6 -4 7 -1 M 2.5 0 Q 7 0 8 3 M 2.5 1.5 Q 6 5 5 8"
+          stroke="currentColor"
+          strokeWidth="0.75"
+          fill="none"
+        />
+      </g>
     </svg>
   );
 }
 
 /**
- * Realistic glowing crescent moon matching the mockup exactly:
- * - Luminous cream/warm golden crescent on the left
- * - Subtle shaded disc body
- * - Soft warm ambient aura
- * - Soft wispy cloud layer passing in front
+ * Soft full moon matching the reference mockup:
+ * - Large circular pale moon disc (cream/warm peach)
+ * - Soft blurred edges
+ * - Soft puffy cloud in front of the lower-left portion
  */
-export function HalloweenSubtleMoon({
-  size = 140,
+export function HalloweenSoftFullMoon({
+  size = 160,
   className = '',
   style = {},
 }: {
@@ -97,61 +121,57 @@ export function HalloweenSubtleMoon({
       style={{ width: size, height: size, ...style }}
       aria-hidden="true"
     >
-      {/* Outer ambient warm glow */}
+      {/* Outer ambient blur glow */}
       <div
-        className="absolute inset-0 rounded-full pointer-events-none blur-2xl"
+        className="absolute inset-0 rounded-full pointer-events-none blur-2xl opacity-60"
         style={{
-          background: 'radial-gradient(circle, rgba(254, 243, 199, 0.45) 0%, rgba(253, 230, 138, 0.2) 45%, transparent 75%)',
-          transform: 'scale(1.6)',
+          background: 'radial-gradient(circle, rgba(254, 243, 199, 0.4) 0%, rgba(253, 230, 138, 0.15) 50%, transparent 75%)',
+          transform: 'scale(1.5)',
         }}
       />
 
       <svg
         width={size}
         height={size}
-        viewBox="0 0 120 120"
+        viewBox="0 0 140 140"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="relative z-10"
       >
         <defs>
-          {/* Crescent luminous gradient */}
-          <linearGradient id="moonArcGrad" x1="10%" y1="10%" x2="90%" y2="90%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="35%" stopColor="#fef3c7" stopOpacity="0.9" />
-            <stop offset="70%" stopColor="#fde68a" stopOpacity="0.75" />
-            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.4" />
-          </linearGradient>
-
-          {/* Faint dark body disc */}
-          <radialGradient id="moonBodyShade" cx="45%" cy="45%" r="50%">
-            <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.12" />
-            <stop offset="70%" stopColor="#cbd5e1" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="#94a3b8" stopOpacity="0.02" />
+          {/* Moon disc gradient (warm cream to soft peach) */}
+          <radialGradient id="fullMoonGrad" cx="45%" cy="40%" r="52%">
+            <stop offset="0%" stopColor="#fffdfa" stopOpacity="0.85" />
+            <stop offset="45%" stopColor="#fef3c7" stopOpacity="0.75" />
+            <stop offset="80%" stopColor="#fed7aa" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#fdba74" stopOpacity="0.30" />
           </radialGradient>
+
+          {/* Cloud gradient (soft lavender-grey) */}
+          <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#e2dcee" stopOpacity="0.75" />
+            <stop offset="60%" stopColor="#d4cde3" stopOpacity="0.65" />
+            <stop offset="100%" stopColor="#c5bdd8" stopOpacity="0.45" />
+          </linearGradient>
         </defs>
 
-        {/* Faint circular silhouette of full moon sphere */}
-        <circle cx="55" cy="55" r="42" fill="url(#moonBodyShade)" />
+        {/* Moon circular body */}
+        <circle cx="68" cy="62" r="50" fill="url(#fullMoonGrad)" />
 
-        {/* Bright Crescent Moon Arc (curve on the left wrapping around top/bottom) */}
-        <path
-          d="M 58 13 C 28 20, 15 52, 28 82 C 34 94, 45 101, 56 102 C 36 94, 30 70, 36 48 C 41 33, 49 21, 58 13 Z"
-          fill="url(#moonArcGrad)"
-          filter="drop-shadow(0 0 8px rgba(254, 240, 138, 0.6))"
-        />
+        {/* Soft subtle crater markings */}
+        <circle cx="52" cy="48" r="9" fill="#fde68a" fillOpacity="0.25" />
+        <circle cx="78" cy="40" r="12" fill="#fed7aa" fillOpacity="0.20" />
+        <circle cx="85" cy="68" r="8" fill="#fed7aa" fillOpacity="0.22" />
+        <circle cx="60" cy="78" r="14" fill="#fde68a" fillOpacity="0.20" />
 
-        {/* Soft wispy cloud drifting across lower part of moon */}
-        <path
-          d="M 10 85 C 22 75, 42 78, 55 82 C 68 85, 82 80, 95 84 C 82 92, 50 94, 25 92 Z"
-          fill="#d8d3e4"
-          fillOpacity="0.35"
-        />
-        <path
-          d="M 2 92 C 16 86, 32 88, 48 90 C 62 92, 75 90, 90 94 C 70 98, 35 98, 12 96 Z"
-          fill="#c8c1da"
-          fillOpacity="0.25"
-        />
+        {/* Puffy soft cloud passing across lower-left of moon */}
+        <g fill="url(#cloudGrad)">
+          <ellipse cx="28" cy="98" rx="24" ry="14" />
+          <ellipse cx="48" cy="90" rx="22" ry="18" />
+          <ellipse cx="72" cy="94" rx="24" ry="16" />
+          <ellipse cx="92" cy="102" rx="18" ry="12" />
+          <ellipse cx="38" cy="104" rx="30" ry="12" />
+        </g>
       </svg>
     </div>
   );
