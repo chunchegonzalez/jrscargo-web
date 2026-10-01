@@ -191,8 +191,8 @@ export default function Hero() {
                 transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 className="absolute z-10 text-brand-blue drop-shadow-md"
                 style={{
-                  top: isHalloween ? '39%' : undefined,
-                  left: isHalloween ? '79%' : undefined,
+                  top: isHalloween ? '34%' : undefined,
+                  left: isHalloween ? '67.5%' : undefined,
                   opacity: isHalloween ? 0.85 : undefined,
                   transform: 'translate(-50%, -50%)',
                 }}
@@ -208,8 +208,8 @@ export default function Hero() {
                 transition={{ duration: 4.5, repeat: Infinity, ease: "linear", delay: 0.8 }}
                 className="absolute z-10 text-[#fdc151] drop-shadow-md"
                 style={{
-                  top: isHalloween ? '44%' : undefined,
-                  left: isHalloween ? '61%' : undefined,
+                  top: isHalloween ? '36.5%' : undefined,
+                  left: isHalloween ? '32.5%' : undefined,
                   opacity: isHalloween ? 0.95 : undefined,
                   transform: 'translate(-50%, -50%)',
                 }}
@@ -225,8 +225,8 @@ export default function Hero() {
                 transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 1.5 }}
                 className="absolute z-10 text-brand-red drop-shadow-md"
                 style={{
-                  top: isHalloween ? '67%' : undefined,
-                  left: isHalloween ? '61%' : undefined,
+                  top: isHalloween ? '64.5%' : undefined,
+                  left: isHalloween ? '32.5%' : undefined,
                   opacity: isHalloween ? 0.95 : undefined,
                   transform: 'translate(-50%, -50%)',
                 }}
@@ -242,8 +242,8 @@ export default function Hero() {
                 transition={{ duration: 6, repeat: Infinity, ease: "linear", delay: 2.2 }}
                 className="absolute z-10 text-brand-blue drop-shadow-md"
                 style={{
-                  top: isHalloween ? '71%' : undefined,
-                  left: isHalloween ? '81%' : undefined,
+                  top: isHalloween ? '67.5%' : undefined,
+                  left: isHalloween ? '70%' : undefined,
                   opacity: isHalloween ? 0.85 : undefined,
                   transform: 'translate(-50%, -50%)',
                 }}

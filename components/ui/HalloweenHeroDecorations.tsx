@@ -72,10 +72,13 @@ export function HalloweenRouteMapDecorations() {
       className="halloween-decor absolute inset-0 pointer-events-none select-none z-10 overflow-hidden rounded-[3rem]"
       aria-hidden="true"
     >
-      {/* 1. Spiderweb with tiny hanging spider in top-right corner (opacity ~0.15) */}
-      <div className="absolute -top-1 -right-1 text-slate-600 opacity-[0.14] z-30 pointer-events-none">
-        <HalloweenSpiderwebWithSpider size={135} />
-      </div>
+      {/* 1. Spiderweb with tiny hanging spider in top-right corner */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/halloween-web-spider.png"
+        alt="Halloween Spiderweb"
+        className="absolute top-0 right-0 w-[105px] sm:w-[125px] h-auto z-20 pointer-events-none select-none opacity-80"
+      />
 
       {/* 2. Soft, almost imperceptible static halo behind the center logo hub */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
