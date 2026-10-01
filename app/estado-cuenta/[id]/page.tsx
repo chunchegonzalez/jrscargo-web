@@ -7,7 +7,7 @@ import {
   DollarSign, CheckCircle2, Clock, FileText, Printer, 
   Copy, Check, ExternalLink, ShieldCheck, AlertCircle, 
   ChevronDown, ChevronUp, Phone, Mail, Package, MessageCircle,
-  HelpCircle, Building2
+  HelpCircle, Building2, X, Send
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
 
@@ -49,6 +49,17 @@ interface Payment {
   }>;
 }
 
+export interface PendingPackage {
+  id: string;
+  tracking_number?: string;
+  service_name: string;
+  weight?: number | string;
+  amount?: number;
+  invoice_number?: string;
+  invoice_id?: string;
+  status: string;
+}
+
 interface StatementData {
   client: {
     id: string;
@@ -60,10 +71,13 @@ interface StatementData {
     totalBalanceUSD: number;
     totalBalanceCRC: number;
     pendingInvoicesCount: number;
+    pendingPackagesCount: number;
+    pendingPackagesWeight: number;
     totalInvoicedUSD: number;
     totalPaidUSD: number;
     exchangeRate: number;
   };
+  pendingPackages?: PendingPackage[];
   invoices: Invoice[];
   payments: Payment[];
 }
@@ -75,10 +89,18 @@ export default function PublicEstadoCuentaPage() {
   const [data, setData] = useState<StatementData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pendientes' | 'todas' | 'pagos'>('pendientes');
+  const [activeTab, setActiveTab] = useState<'pendientes' | 'paquetes' | 'todas' | 'pagos'>('pendientes');
   const [copiedSinpe, setCopiedSinpe] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Record<string, boolean>>({});
+
+  // States for Reenviar Factura modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const loadStatement = useCallback(async () => {
     if (!clientId) return;
@@ -124,6 +146,47 @@ export default function PublicEstadoCuentaPage() {
       ...prev,
       [invId]: !prev[invId]
     }));
+  };
+
+  const handleOpenSendModal = (inv: Invoice) => {
+    setEmailInvoice(inv);
+    setRecipientEmail(data?.client?.email || '');
+    setEmailSuccess(false);
+    setSendError(null);
+    setEmailModalOpen(true);
+  };
+
+  const handleSendInvoiceEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailInvoice || !recipientEmail) return;
+
+    try {
+      setIsSending(true);
+      setSendError(null);
+
+      const res = await fetch(`/api/invoices/${emailInvoice.id}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: recipientEmail
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'No se pudo enviar la factura');
+      }
+
+      setEmailSuccess(true);
+      setTimeout(() => {
+        setEmailModalOpen(false);
+        setEmailSuccess(false);
+      }, 3500);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Error al enviar correo');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (loading) {
@@ -244,11 +307,11 @@ export default function PublicEstadoCuentaPage() {
             </div>
           </div>
 
-          {/* Balance Spotlight Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* Balance & Packages Spotlight Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
             
-            {/* Card Saldo Pendiente */}
-            <div className="sm:col-span-2 bg-gradient-to-br from-brand-blue to-[#0A2636] text-white p-5 sm:p-7 rounded-2xl relative overflow-hidden shadow-md">
+            {/* Card Saldo Pendiente: Hero Card */}
+            <div className="md:col-span-12 lg:col-span-5 bg-gradient-to-br from-brand-blue to-[#0A2636] text-white p-5 sm:p-6 rounded-2xl relative overflow-hidden shadow-md flex flex-col justify-between">
               <div className="absolute right-0 top-0 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none -translate-y-1/2 translate-x-1/2" />
               <div className="relative z-10 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -257,7 +320,7 @@ export default function PublicEstadoCuentaPage() {
                   </span>
                   {stats.totalBalanceUSD > 0.01 ? (
                     <span className="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Clock size={12} /> {stats.pendingInvoicesCount} pend.
+                      <Clock size={12} /> {stats.pendingInvoicesCount} {stats.pendingInvoicesCount === 1 ? 'pend.' : 'pendientes'}
                     </span>
                   ) : (
                     <span className="text-[11px] font-bold bg-green-500/20 text-green-300 border border-green-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
@@ -268,33 +331,80 @@ export default function PublicEstadoCuentaPage() {
 
                 <div className="my-2">
                   <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-3xl sm:text-5xl font-black tracking-tight">
+                    <span className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight">
                       ${stats.totalBalanceUSD.toFixed(2)}
                     </span>
                     <span className="text-lg sm:text-xl font-bold text-brand-blue-light">USD</span>
                   </div>
-                  <div className="text-base sm:text-xl font-black text-brand-yellow mt-1">
+                  <div className="text-base sm:text-lg lg:text-xl font-black text-brand-yellow mt-1">
                     ≈ ₡{stats.totalBalanceCRC.toLocaleString('es-CR')} <span className="text-xs font-semibold text-white/70">CRC</span>
                   </div>
                 </div>
 
-                <p className="text-xs text-white/70 mt-1 sm:mt-2">
-                  {stats.totalBalanceUSD > 0.01 
-                    ? 'Por favor cancela tu saldo para agilizar el despacho y entrega de tus paquetes.'
-                    : 'No tienes saldos pendientes en este momento. ¡Muchas gracias por tu preferencia!'}
-                </p>
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-white/80">
+                  <span>Estado de cuenta:</span>
+                  <span className="font-bold text-amber-300">
+                    {stats.totalBalanceUSD > 0.01 ? 'Pendiente de pago' : 'Al día / Cancelado'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Quick Summary Numbers: 2 columnas en móvil, apiladas en escritorio */}
-            <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-gray-100 grid grid-cols-2 sm:grid-cols-1 gap-3 sm:gap-4">
+            {/* Card Paquetes por Retirar: Prominent Package Counter */}
+            <div className="md:col-span-6 lg:col-span-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between relative overflow-hidden">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Package size={16} className="text-brand-blue" /> Paquetes por Retirar
+                </span>
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue border border-blue-200/80 flex items-center gap-1">
+                  Bodega JRS
+                </span>
+              </div>
+
+              <div className="my-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl sm:text-5xl font-black text-brand-blue tracking-tight">
+                    {stats.pendingPackagesCount}
+                  </span>
+                  <span className="text-sm sm:text-base font-bold text-slate-600 uppercase">
+                    {stats.pendingPackagesCount === 1 ? 'paquete' : 'paquetes'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
+                  {stats.pendingPackagesCount > 0 
+                    ? 'Disponibles para entrega inmediata en bodega una vez cancelado tu saldo.' 
+                    : 'No tienes paquetes pendientes de entrega en este momento.'}
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                {stats.pendingPackagesWeight > 0 ? (
+                  <span className="text-slate-500">
+                    Peso total: <strong className="text-slate-800 font-bold">{stats.pendingPackagesWeight} lbs</strong>
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Verificados en recepción</span>
+                )}
+                {stats.pendingPackagesCount > 0 && (
+                  <button
+                    onClick={() => setActiveTab('paquetes')}
+                    className="text-[11px] font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Ver detalle</span> &rarr;
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Summary Numbers */}
+            <div className="md:col-span-6 lg:col-span-3 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-gray-100 grid grid-cols-2 md:grid-cols-1 gap-3 sm:gap-4 justify-between">
               <div>
                 <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">Total Facturado</p>
-                <p className="text-base sm:text-2xl font-black text-gray-800">${stats.totalInvoicedUSD.toFixed(2)} <span className="text-[10px] sm:text-xs font-bold text-gray-400">USD</span></p>
+                <p className="text-base sm:text-xl font-black text-gray-800">${stats.totalInvoicedUSD.toFixed(2)} <span className="text-[10px] font-bold text-gray-400">USD</span></p>
               </div>
-              <div className="border-l sm:border-l-0 sm:border-t border-gray-200/80 pl-3 sm:pl-0 sm:pt-4">
+              <div className="border-l md:border-l-0 md:border-t border-gray-200/80 pl-3 md:pl-0 md:pt-4">
                 <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1 truncate">Total Pagos</p>
-                <p className="text-base sm:text-2xl font-black text-green-600">${stats.totalPaidUSD.toFixed(2)} <span className="text-[10px] sm:text-xs font-bold text-gray-400">USD</span></p>
+                <p className="text-base sm:text-xl font-black text-green-600">${stats.totalPaidUSD.toFixed(2)} <span className="text-[10px] font-bold text-gray-400">USD</span></p>
               </div>
             </div>
 
@@ -365,6 +475,17 @@ export default function PublicEstadoCuentaPage() {
             >
               <Clock size={16} />
               <span>Facturas Pendientes ({pendingInvoices.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('paquetes')}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+                activeTab === 'paquetes'
+                  ? 'bg-brand-blue text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
+              }`}
+            >
+              <Package size={16} />
+              <span>Paquetes por Retirar ({stats.pendingPackagesCount})</span>
             </button>
             <button
               onClick={() => setActiveTab('todas')}
@@ -463,8 +584,8 @@ export default function PublicEstadoCuentaPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between md:justify-end gap-6 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
-                            <div className="text-right">
+                          <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 flex-wrap">
+                            <div className="text-left md:text-right">
                               <p className="text-[11px] text-gray-400 font-bold uppercase">Saldo a Pagar</p>
                               <p className="text-lg font-black text-brand-blue">
                                 ${inv.pending.toFixed(2)} <span className="text-xs font-normal text-gray-400">USD</span>
@@ -476,15 +597,39 @@ export default function PublicEstadoCuentaPage() {
                               )}
                             </div>
 
-                            {hasItems && (
+                            {/* Actions: Reenviar Factura, PDF y Expandir */}
+                            <div className="flex items-center gap-2 print:hidden">
                               <button
-                                onClick={() => toggleInvoiceExpand(inv.id)}
-                                className="p-2 text-gray-400 hover:text-brand-blue hover:bg-gray-100 rounded-xl transition-colors print:hidden"
-                                title="Ver detalles de paquetes"
+                                onClick={() => handleOpenSendModal(inv)}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white border border-blue-200/90 transition-all shadow-2xs hover:shadow active:scale-95"
+                                title="Reenviar factura por correo electrónico"
                               >
-                                {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                <Mail size={14} className="shrink-0" />
+                                <span className="hidden sm:inline">Reenviar Factura</span>
+                                <span className="sm:hidden">Reenviar</span>
                               </button>
-                            )}
+
+                              <a
+                                href={`/api/invoices/${inv.id}/pdf`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all"
+                                title="Descargar comprobante oficial en PDF"
+                              >
+                                <FileText size={14} className="shrink-0" />
+                                <span className="hidden sm:inline">PDF</span>
+                              </a>
+
+                              {hasItems && (
+                                <button
+                                  onClick={() => toggleInvoiceExpand(inv.id)}
+                                  className="p-2 text-gray-400 hover:text-brand-blue hover:bg-gray-100 rounded-xl transition-colors"
+                                  title="Ver detalles de paquetes"
+                                >
+                                  {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -568,6 +713,100 @@ export default function PublicEstadoCuentaPage() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ================= PAQUETES POR RETIRAR ================= */}
+          {activeTab === 'paquetes' && (
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-100">
+                <div>
+                  <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <Package size={18} className="text-brand-blue" />
+                    Paquetes Pendientes de Retiro y Entrega
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Detalle de los paquetes que se encuentran en bodega o asociados a tus facturas pendientes.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-brand-blue rounded-full border border-blue-200/80">
+                    {stats.pendingPackagesCount} {stats.pendingPackagesCount === 1 ? 'paquete' : 'paquetes'}
+                  </span>
+                  {stats.pendingPackagesWeight > 0 && (
+                    <span className="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                      {stats.pendingPackagesWeight} lbs
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {(!data.pendingPackages || data.pendingPackages.length === 0) ? (
+                <div className="p-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  <CheckCircle2 size={40} className="text-green-500 mx-auto mb-2" />
+                  <p className="font-bold text-gray-700">No tienes paquetes pendientes por retirar</p>
+                  <p className="text-xs text-gray-400 mt-1">Todos tus paquetes han sido retirados o entregados satisfactoriamente.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {data.pendingPackages.map((pkg, idx) => (
+                    <div
+                      key={pkg.id || idx}
+                      className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs hover:shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center shrink-0 border border-blue-100 mt-0.5">
+                          <Package size={20} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-black text-gray-900 text-sm sm:text-base">
+                              {pkg.service_name}
+                            </h3>
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                              {pkg.status}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1.5 flex-wrap">
+                            {pkg.tracking_number ? (
+                              <span className="flex items-center gap-1">
+                                <span className="text-gray-400">Tracking:</span>
+                                <a
+                                  href={`/tracking?number=${encodeURIComponent(pkg.tracking_number)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
+                                >
+                                  {pkg.tracking_number}
+                                  <ExternalLink size={11} className="opacity-60" />
+                                </a>
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">Sin tracking registrado</span>
+                            )}
+
+                            {pkg.weight && (
+                              <span>• Peso: <strong className="text-gray-700">{pkg.weight} lbs</strong></span>
+                            )}
+
+                            {pkg.invoice_number && (
+                              <span>• Factura: <strong className="text-brand-blue">#{pkg.invoice_number}</strong></span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {pkg.amount !== undefined && pkg.amount > 0 && (
+                        <div className="text-left sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                          <span className="text-[10px] font-bold uppercase text-gray-400 block">Monto</span>
+                          <span className="text-sm sm:text-base font-black text-brand-blue">${Number(pkg.amount).toFixed(2)} USD</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -686,6 +925,146 @@ export default function PublicEstadoCuentaPage() {
         </div>
 
       </div>
+
+      {/* Modal para Reenviar Factura */}
+      {emailModalOpen && emailInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 relative animate-fade-in">
+            <button
+              onClick={() => {
+                if (!isSending) {
+                  setEmailModalOpen(false);
+                  setEmailSuccess(false);
+                  setSendError(null);
+                }
+              }}
+              className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              title="Cerrar ventana"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex items-center gap-3.5 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-brand-blue flex items-center justify-center shrink-0 border border-blue-100">
+                <Mail size={24} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-black text-slate-900 truncate">
+                  Reenviar Factura
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Comprobante #{emailInvoice.invoice_number} • ${emailInvoice.total.toFixed(2)} USD
+                </p>
+              </div>
+            </div>
+
+            {emailSuccess ? (
+              <div className="py-6 text-center space-y-3">
+                <div className="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                  <CheckCircle2 size={32} />
+                </div>
+                <h4 className="text-base font-black text-slate-900">
+                  ¡Factura enviada con éxito!
+                </h4>
+                <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
+                  Hemos enviado el comprobante oficial en formato PDF a: <br />
+                  <strong className="text-brand-blue font-bold break-all">{recipientEmail}</strong>
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Por favor revisa tu bandeja de entrada o carpeta de correo no deseado (spam).
+                </p>
+                <div className="pt-2">
+                  <button
+                    onClick={() => { setEmailModalOpen(false); setEmailSuccess(false); }}
+                    className="px-6 py-2.5 rounded-xl bg-brand-blue text-white font-bold text-xs hover:bg-[#0c2f42] transition-colors"
+                  >
+                    Aceptar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSendInvoiceEmail} className="space-y-4">
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  ¿No recibiste tu factura o necesitas una copia? Te la enviaremos de inmediato con el comprobante PDF oficial adjunto.
+                </p>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Número de factura:</span>
+                    <strong className="text-slate-800 font-bold">#{emailInvoice.invoice_number}</strong>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Monto total:</span>
+                    <strong className="text-brand-blue font-bold">${emailInvoice.total.toFixed(2)} USD</strong>
+                  </div>
+                  {emailInvoice.items && emailInvoice.items.length > 0 && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>Paquetes incluidos:</span>
+                      <strong className="text-slate-800 font-bold">{emailInvoice.items.length} {emailInvoice.items.length === 1 ? 'paquete' : 'paquetes'}</strong>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5">
+                    Enviar al correo electrónico:
+                  </label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="email"
+                      required
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="ejemplo@correo.com"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Puedes verificar o cambiar el correo si deseas recibirlo en otra dirección.
+                  </p>
+                </div>
+
+                {sendError && (
+                  <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl flex items-center gap-2 border border-red-100">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>{sendError}</span>
+                  </div>
+                )}
+
+                <div className="pt-2 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setEmailModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+                    disabled={isSending}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSending || !recipientEmail}
+                    className="px-5 py-2.5 rounded-xl bg-brand-blue hover:bg-[#0c2f42] disabled:opacity-50 text-white font-black text-xs inline-flex items-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
+                  >
+                    {isSending ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Enviando comprobante...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={14} />
+                        <span>Enviar por Correo</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

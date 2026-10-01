@@ -118,6 +118,98 @@ export async function GET(
       totalPaidUSD += Number(p.amount || 0);
     });
 
+    // 5. Compute packages awaiting pickup / delivery
+    const pendingPackages: Array<{
+      id: string;
+      tracking_number?: string;
+      service_name: string;
+      weight?: number | string;
+      amount?: number;
+      invoice_number?: string;
+      invoice_id?: string;
+      status: string;
+    }> = [];
+
+    const seenTracking = new Set<string>();
+
+    // From pending invoices
+    invoices.forEach(inv => {
+      if (inv.pending > 0.01) {
+        if (inv.items && inv.items.length > 0) {
+          inv.items.forEach((it, idx) => {
+            const trk = String(it.tracking_number || '').trim();
+            if (trk) seenTracking.add(trk.toUpperCase());
+            pendingPackages.push({
+              id: `${inv.id}-${idx}`,
+              tracking_number: trk || undefined,
+              service_name: String(it.service_name || 'Paquete Internacional'),
+              weight: it.weight ? Number(it.weight) || String(it.weight) : undefined,
+              amount: Number(it.amount || 0),
+              invoice_number: inv.invoice_number,
+              invoice_id: inv.id,
+              status: 'Listo para retiro al cancelar'
+            });
+          });
+        } else {
+          // If invoice has no line items, count invoice as 1 package
+          pendingPackages.push({
+            id: inv.id,
+            service_name: `Paquetes de Factura #${inv.invoice_number}`,
+            amount: inv.total,
+            invoice_number: inv.invoice_number,
+            invoice_id: inv.id,
+            status: 'Listo para retiro al cancelar'
+          });
+        }
+      }
+    });
+
+    // Also check local_inventory for packages in bodega for this client
+    try {
+      if (client.name) {
+        const resInventory = await fetch(
+          `${url}/rest/v1/local_inventory?client=ilike.*${encodeURIComponent(client.name)}*&select=id,client,status,weight,company,created_at`,
+          { headers, cache: 'no-store' }
+        );
+        if (resInventory.ok) {
+          const invData = await resInventory.json();
+          if (Array.isArray(invData)) {
+            invData.forEach(item => {
+              const trk = String(item.id || '').trim();
+              const st = String(item.status || 'En Bodega');
+              if (st !== 'Entregado' && st !== 'Eliminado') {
+                if (!trk || !seenTracking.has(trk.toUpperCase())) {
+                  if (trk) seenTracking.add(trk.toUpperCase());
+                  let parsedWeight: number | undefined;
+                  if (item.weight) {
+                    const match = String(item.weight).match(/[\d.]+/);
+                    if (match) parsedWeight = parseFloat(match[0]);
+                  }
+                  pendingPackages.push({
+                    id: trk || `inv-${Math.random()}`,
+                    tracking_number: trk || undefined,
+                    service_name: item.company ? `Paquete (${item.company})` : 'Paquete en Bodega',
+                    weight: parsedWeight,
+                    status: st
+                  });
+                }
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching local inventory for statement:', e);
+    }
+
+    let pendingWeightTotal = 0;
+    pendingPackages.forEach(p => {
+      if (p.weight) {
+        const num = typeof p.weight === 'number' ? p.weight : parseFloat(String(p.weight));
+        if (!isNaN(num)) pendingWeightTotal += num;
+      }
+    });
+
     const rate = Number(exchangeRate) > 0 ? Number(exchangeRate) : 500;
     const totalBalanceCRC = Math.round(totalBalanceUSD * rate);
 
@@ -133,10 +225,13 @@ export async function GET(
         totalBalanceUSD: Math.round(totalBalanceUSD * 100) / 100,
         totalBalanceCRC,
         pendingInvoicesCount: pendingCount,
+        pendingPackagesCount: pendingPackages.length,
+        pendingPackagesWeight: Math.round(pendingWeightTotal * 10) / 10,
         totalInvoicedUSD: Math.round(totalInvoicedUSD * 100) / 100,
         totalPaidUSD: Math.round(totalPaidUSD * 100) / 100,
         exchangeRate: rate
       },
+      pendingPackages,
       invoices,
       payments: paymentsRaw
     });

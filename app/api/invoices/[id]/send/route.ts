@@ -70,13 +70,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ success: false, error: 'Invoice not found' }, { status: 404 });
     }
 
-    if (!invoice.clients || !invoice.clients.email) {
-      return NextResponse.json({ success: false, error: 'Client email not found' }, { status: 400 });
-    }
-
     let customSubject = 'Comprobante de Compra #' + invoice.invoice_number + ' - JRS CARGO';
     let customMessage = 'Adjunto a este correo encontrarás los detalles de tu comprobante de compra reciente. Por favor, revisa la información a continuación.';
     let customCc = '';
+    let customTo = '';
 
     try {
       const body = await request.json();
@@ -87,8 +84,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
       if (body.cc !== undefined) {
         customCc = String(body.cc).trim();
       }
+      if (body.to !== undefined && String(body.to).trim()) {
+        customTo = String(body.to).trim();
+      }
     } catch {
       // Ignorar si no hay body
+    }
+
+    const defaultClientEmail = invoice.clients?.email?.trim() || '';
+    const destinationEmail = (customTo && customTo.includes('@')) ? customTo : defaultClientEmail;
+
+    if (!destinationEmail || !destinationEmail.includes('@')) {
+      return NextResponse.json({ success: false, error: 'Correo de destino no encontrado o inválido' }, { status: 400 });
     }
 
     const exchangeRate = invoice.exchange_rate || 530;
@@ -292,7 +299,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const mailOptions: nodemailer.SendMailOptions = {
       from: '"JRS CARGO" <' + smtpUser + '>',
-      to: primaryEmail,
+      to: destinationEmail,
       subject: customSubject,
       html: htmlContent,
       attachments: [{
