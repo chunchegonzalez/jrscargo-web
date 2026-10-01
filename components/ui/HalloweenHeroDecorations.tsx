@@ -4,20 +4,18 @@ import React from 'react';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
 import {
   HalloweenBat,
-  HalloweenFullMoon,
+  HalloweenSubtleMoon,
   HalloweenSpiderweb,
-  HalloweenSpookyTree,
-  HalloweenCastleSilhouette,
 } from '@/components/ui/HalloweenIcons';
 
 /**
- * Atmospheric Halloween decorative layer for the Hero section.
- * Matches the mockup: purple-grey misty atmosphere, thick fog clouds,
- * dark tree silhouette on left, castle silhouette on right,
- * scattered dark bats, faint moon behind mist.
- *
- * Rendered ONLY when isHalloweenActive() is true.
- * Entirely behind content (z-0) with pointer-events-none.
+ * Subtle, elegant Halloween decorative layer for the Hero section.
+ * Strictly adheres to 95% brand / 5% Halloween:
+ * - No tree or castle silhouettes
+ * - Max 2 faint bats outside panel (desktop only, 0.15-0.25 opacity, brand-blue/slate)
+ * - Single faint crescent moon top-left (0.10-0.12 opacity, soft blur, non-competing)
+ * - Soft CSS gradient mist at the bottom
+ * - Mobile hides outside bats, mist, and particles for maximum performance & clarity
  */
 export function HalloweenHeroBackground() {
   const { isHalloween } = useHalloween();
@@ -29,139 +27,28 @@ export function HalloweenHeroBackground() {
       className="halloween-decor absolute inset-0 overflow-hidden pointer-events-none select-none z-0"
       aria-hidden="true"
     >
-      {/* ═══════════════════════════════════════════
-          1. ATMOSPHERIC PURPLE-GREY BACKGROUND TINT
-          The mockup shows a subtle lavender/purple haze over the hero
-          ═══════════════════════════════════════════ */}
+      {/* 1. FAINT CRESCENT MOON (Top Left behind Title) - Desktop only */}
+      <div className="hidden md:block absolute top-6 sm:top-10 left-6 sm:left-12 lg:left-16 opacity-[0.12] transition-opacity">
+        <HalloweenSubtleMoon size={110} />
+      </div>
+
+      {/* 2. MAX 2 BATS OUTSIDE PANEL - Desktop only, Brand Blue/Slate tone, low opacity */}
+      {/* Bat 1: Gentle occasional slow float */}
+      <div className="hidden md:block absolute top-[12%] left-[15%] lg:left-[17%] text-brand-blue opacity-[0.22] bat-anim-occasional">
+        <HalloweenBat size={24} />
+      </div>
+
+      {/* Bat 2: Static subtle silhouette, smaller */}
+      <div className="hidden md:block absolute top-[7%] left-[19%] lg:left-[21%] text-slate-700 opacity-[0.16]">
+        <HalloweenBat size={17} />
+      </div>
+
+      {/* 3. LIGHT MIST / FOG AT BOTTOM - CSS gradient + blur, slow 25s transform, desktop only */}
       <div
-        className="absolute inset-0"
+        className="hidden md:block absolute bottom-0 left-0 right-0 h-28 halloween-mist-slow pointer-events-none"
         style={{
-          background: 'linear-gradient(180deg, rgba(180,170,200,0.15) 0%, rgba(200,195,215,0.12) 30%, rgba(210,205,220,0.08) 60%, rgba(220,215,230,0.18) 100%)',
-        }}
-      />
-      {/* Side vignette for depth */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(ellipse 120% 100% at 50% 40%, transparent 40%, rgba(160,150,185,0.08) 100%)',
-        }}
-      />
-
-      {/* ═══════════════════════════════════════════
-          2. FAINT FULL MOON (upper area, very subtle)
-          ═══════════════════════════════════════════ */}
-      <div className="absolute top-4 left-[15%] sm:left-[20%] lg:left-[25%] opacity-40 sm:opacity-50">
-        <HalloweenFullMoon size={100} className="sm:w-[130px] sm:h-[130px]" />
-      </div>
-
-      {/* ═══════════════════════════════════════════
-          3. DARK BATS SCATTERED IN THE SKY
-          Dark silhouettes against the misty background
-          ═══════════════════════════════════════════ */}
-
-      {/* Bat cluster near upper center */}
-      <div className="absolute top-[8%] left-[35%] sm:left-[30%] lg:left-[38%] text-[#2d3748] bat-anim-1">
-        <HalloweenBat size={26} />
-      </div>
-      <div className="absolute top-[5%] left-[42%] sm:left-[38%] lg:left-[44%] text-[#374151] bat-anim-2 hidden sm:block">
-        <HalloweenBat size={18} />
-      </div>
-      <div className="absolute top-[14%] left-[48%] lg:left-[50%] text-[#2d3748] bat-anim-3">
-        <HalloweenBat size={22} />
-      </div>
-
-      {/* Bats near the tree on the left */}
-      <div className="absolute top-[20%] left-[8%] sm:left-[12%] text-[#374151] bat-anim-2 hidden lg:block">
-        <HalloweenBat size={20} />
-      </div>
-      <div className="absolute top-[28%] left-[15%] text-[#2d3748] bat-anim-1 hidden lg:block">
-        <HalloweenBat size={16} />
-      </div>
-
-      {/* Bats near the right / castle area */}
-      <div className="absolute top-[18%] right-[12%] text-[#374151] bat-anim-3 hidden lg:block">
-        <HalloweenBat size={20} />
-      </div>
-      <div className="absolute top-[30%] right-[20%] text-[#2d3748] bat-anim-1 hidden lg:block">
-        <HalloweenBat size={15} />
-      </div>
-
-      {/* Mobile-visible bats (fewer) */}
-      <div className="absolute top-[12%] right-[15%] text-[#374151] bat-anim-3 lg:hidden">
-        <HalloweenBat size={20} />
-      </div>
-
-      {/* ═══════════════════════════════════════════
-          4. DARK TREE SILHOUETTE (Left Side)
-          Very prominent in the mockup
-          ═══════════════════════════════════════════ */}
-      <div className="absolute bottom-0 -left-8 sm:-left-4 lg:left-0 opacity-60 sm:opacity-70 lg:opacity-75">
-        <HalloweenSpookyTree className="w-[120px] h-[280px] sm:w-[150px] sm:h-[340px] lg:w-[200px] lg:h-[420px]" />
-      </div>
-
-      {/* ═══════════════════════════════════════════
-          5. CASTLE SILHOUETTE (Bottom Right)
-          Clearly visible against the mist in the mockup
-          ═══════════════════════════════════════════ */}
-      <div className="absolute bottom-0 right-0 opacity-50 sm:opacity-60 lg:opacity-70 hidden sm:block">
-        <HalloweenCastleSilhouette className="w-[200px] h-[190px] sm:w-[250px] sm:h-[240px] lg:w-[320px] lg:h-[300px]" />
-      </div>
-
-      {/* ═══════════════════════════════════════════
-          6. THICK FOG / CLOUD LAYERS (Bottom)
-          The mockup shows substantial wispy white-grey clouds
-          Multiple layers for depth
-          ═══════════════════════════════════════════ */}
-
-      {/* Layer 1: Deep background mist (purple tint) */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-[40%] halloween-mist"
-        style={{
-          background: 'linear-gradient(to top, rgba(200,195,220,0.35) 0%, rgba(210,205,225,0.2) 30%, rgba(220,215,235,0.08) 60%, transparent 100%)',
-        }}
-      />
-
-      {/* Layer 2: Wispy fog — left cloud bank */}
-      <div
-        className="absolute bottom-[5%] -left-[10%] w-[70%] h-[30%] halloween-fog-1"
-        style={{
-          background: 'radial-gradient(ellipse 100% 80% at 40% 70%, rgba(240,238,245,0.55) 0%, rgba(230,225,240,0.3) 40%, transparent 70%)',
-          filter: 'blur(12px)',
-        }}
-      />
-
-      {/* Layer 3: Wispy fog — right cloud bank */}
-      <div
-        className="absolute bottom-[2%] -right-[5%] w-[65%] h-[28%] halloween-fog-2"
-        style={{
-          background: 'radial-gradient(ellipse 100% 80% at 60% 75%, rgba(245,242,248,0.5) 0%, rgba(235,230,245,0.25) 40%, transparent 70%)',
-          filter: 'blur(14px)',
-        }}
-      />
-
-      {/* Layer 4: Wispy fog — center overlap */}
-      <div
-        className="absolute bottom-[8%] left-[20%] w-[60%] h-[25%] halloween-fog-3"
-        style={{
-          background: 'radial-gradient(ellipse 100% 70% at 50% 65%, rgba(255,253,255,0.4) 0%, rgba(240,235,250,0.2) 45%, transparent 70%)',
-          filter: 'blur(16px)',
-        }}
-      />
-
-      {/* Layer 5: Bottom edge solid cloud cover */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-[15%]"
-        style={{
-          background: 'linear-gradient(to top, rgba(235,230,245,0.5) 0%, rgba(240,237,248,0.3) 40%, transparent 100%)',
-          filter: 'blur(4px)',
-        }}
-      />
-
-      {/* Layer 6: Very bottom edge for seamless blend */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-[8%]"
-        style={{
-          background: 'linear-gradient(to top, rgba(243,244,246,0.8) 0%, rgba(243,244,246,0.4) 50%, transparent 100%)',
+          background: 'linear-gradient(to top, rgba(200, 195, 215, 0.18) 0%, rgba(220, 215, 230, 0.08) 50%, transparent 100%)',
+          filter: 'blur(8px)',
         }}
       />
     </div>
@@ -169,8 +56,13 @@ export function HalloweenHeroBackground() {
 }
 
 /**
- * Subtle Halloween accents specifically for the Routes Card / Radar container.
- * Top-right corner spiderweb and subtle floating bats inside the panel.
+ * Halloween accents specifically for the Routes Card / Radar container.
+ * Concentrates the core Halloween experience:
+ * - Spiderweb in top-right corner (0.08–0.12 opacity)
+ * - Soft breathing halo behind central hub (coral, orange, lavender)
+ * - 1 occasional subtle bat
+ * - Light fog at the bottom
+ * - Few tiny faint particles
  */
 export function HalloweenRouteMapDecorations() {
   const { isHalloween } = useHalloween();
@@ -179,30 +71,45 @@ export function HalloweenRouteMapDecorations() {
 
   return (
     <div
-      className="halloween-decor absolute inset-0 pointer-events-none select-none z-20 overflow-hidden rounded-[3rem]"
+      className="halloween-decor absolute inset-0 pointer-events-none select-none z-10 overflow-hidden rounded-[3rem]"
       aria-hidden="true"
     >
-      {/* Delicate semi-transparent spiderweb in top-right corner of radar panel */}
-      <div className="absolute -top-1 -right-1 text-[#6b7280]/40">
-        <HalloweenSpiderweb size={120} />
+      {/* 1. Spiderweb in top-right corner (Opacity 0.08 - 0.12, visible on both desktop & mobile) */}
+      <div className="absolute -top-1 -right-1 text-slate-600 opacity-[0.10] z-30">
+        <HalloweenSpiderweb size={115} />
       </div>
 
-      {/* Tiny subtle bats inside map radar */}
-      <div className="absolute top-[20%] right-[20%] text-[#374151]/40 bat-anim-2">
-        <HalloweenBat size={18} />
-      </div>
-      <div className="absolute bottom-[22%] right-[24%] text-[#374151]/35 bat-anim-1">
-        <HalloweenBat size={15} />
-      </div>
-      <div className="absolute top-[35%] left-[18%] text-[#374151]/30 bat-anim-3">
-        <HalloweenBat size={14} />
+      {/* 2. Central Logo Halo - Soft breathing halo behind the center hub (z-10, behind hub at z-20) */}
+      {/* Coral, Orange, Lavender with low opacity, scale(1) to scale(1.025) over 7s */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="halloween-hub-halo w-56 h-56 rounded-full" />
       </div>
 
-      {/* Very faint purple mist inside bottom of radar panel */}
+      {/* 3. Single occasional subtle bat inside panel (Desktop only) */}
+      <div className="hidden md:block absolute top-[48%] right-[14%] text-brand-blue opacity-[0.20] bat-anim-occasional">
+        <HalloweenBat size={17} />
+      </div>
+
+      {/* 4. Few faint warm particles (Desktop only) */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-24"
+        className="hidden md:block halloween-subtle-particle w-1.5 h-1.5"
+        style={{ top: '65%', left: '30%', animationDelay: '0s', animationDuration: '9s' }}
+      />
+      <div
+        className="hidden md:block halloween-subtle-particle w-1 h-1"
+        style={{ top: '35%', left: '72%', animationDelay: '2.5s', animationDuration: '8s' }}
+      />
+      <div
+        className="hidden md:block halloween-subtle-particle w-1.5 h-1.5"
+        style={{ top: '78%', left: '55%', animationDelay: '4.5s', animationDuration: '10s' }}
+      />
+
+      {/* 5. Light fog at the bottom of the radar panel (Desktop only) */}
+      <div
+        className="hidden md:block absolute bottom-0 left-0 right-0 h-20 halloween-mist-slow pointer-events-none"
         style={{
-          background: 'linear-gradient(to top, rgba(200,195,220,0.1) 0%, transparent 100%)',
+          background: 'linear-gradient(to top, rgba(200, 195, 220, 0.12) 0%, transparent 100%)',
+          filter: 'blur(6px)',
         }}
       />
     </div>

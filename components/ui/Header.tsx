@@ -210,8 +210,8 @@ export default function Header() {
               }`}
             >
               {isHalloween && (
-                <span className="absolute -top-3 -right-2 pointer-events-none transform rotate-12 transition-transform duration-300 group-hover:scale-115 group-hover:rotate-6 drop-shadow-xs">
-                  <HalloweenMiniPumpkin size={22} />
+                <span className="absolute -top-2 -right-1.5 pointer-events-none transform rotate-12 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 drop-shadow-xs">
+                  <HalloweenMiniPumpkin size={15} />
                 </span>
               )}
               <PackageOpen size={18} className="text-brand-yellow" />
@@ -339,8 +339,8 @@ export default function Header() {
                   }`}
                 >
                   {isHalloween && (
-                    <span className="absolute -top-2.5 right-4 pointer-events-none transform rotate-12 drop-shadow-xs">
-                      <HalloweenMiniPumpkin size={22} />
+                    <span className="absolute -top-2 right-4 pointer-events-none transform rotate-12 drop-shadow-xs">
+                      <HalloweenMiniPumpkin size={15} />
                     </span>
                   )}
                   <PackageOpen size={19} className="text-brand-yellow" />

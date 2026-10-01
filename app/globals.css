@@ -237,7 +237,7 @@
 /* ==========================================================================
    HALLOWEEN THEME (Scoped strictly to .halloween-mode)
    Active until Nov 1, 2026 23:59:59 (America/Costa_Rica)
-   Atmospheric purple-grey misty theme with subtle bats, fog, and silhouettes
+   Subtle & Elegant (95% Brand / 5% Halloween)
    ========================================================================== */
 
 .halloween-mode .halloween-decor {
@@ -245,115 +245,125 @@
   user-select: none !important;
 }
 
-/* Subtle purple-grey hover accent on primary buttons */
+/* 9. Botón principal: mantener azul, solo glow naranja muy tenue en hover */
 .halloween-mode .btn-primary:hover {
-  box-shadow: 0 6px 22px rgba(160, 140, 200, 0.35), 0 4px 14px rgba(18, 67, 94, 0.3) !important;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.22), 0 4px 14px rgba(18, 67, 94, 0.3) !important;
 }
 
-/* Subtle hover elevation with atmospheric purple glow on route cards */
+/* 8. Cards: translateY(-3px), transition 300ms, sombra ligeramente cálida solo en Halloween */
+.halloween-mode .route-card-halloween {
+  transition: transform 300ms ease, box-shadow 300ms ease !important;
+}
 .halloween-mode .route-card-halloween:hover {
-  box-shadow: 0 10px 28px -5px rgba(160, 140, 200, 0.15), 0 4px 10px rgba(0, 0, 0, 0.04) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 28px -4px rgba(249, 115, 22, 0.12), 0 4px 12px rgba(18, 67, 94, 0.06) !important;
 }
 
-/* ─── BAT GLIDE ANIMATIONS ─── */
-@keyframes bat-glide-1 {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  25% { transform: translate3d(12px, -8px, 0) rotate(3deg) scale(1.03); }
-  50% { transform: translate3d(24px, 4px, 0) rotate(-2deg) scale(0.98); }
-  75% { transform: translate3d(10px, 12px, 0) rotate(2deg) scale(1.02); }
-  100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+/* 6. Logo central del panel: halo muy suave (coral, naranja, lavanda) con respiración 7s */
+@keyframes halo-breathe {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.025);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
 }
 
-@keyframes bat-glide-2 {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  30% { transform: translate3d(-18px, 10px, 0) rotate(-4deg) scale(0.96); }
-  60% { transform: translate3d(-8px, -12px, 0) rotate(3deg) scale(1.04); }
-  85% { transform: translate3d(8px, -4px, 0) rotate(-1deg) scale(1); }
-  100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+.halloween-hub-halo {
+  background: radial-gradient(
+    circle,
+    rgba(253, 78, 100, 0.16) 0%,     /* Coral */
+    rgba(249, 115, 22, 0.12) 38%,    /* Naranja */
+    rgba(192, 132, 252, 0.08) 65%,   /* Lavanda */
+    transparent 78%
+  );
+  filter: blur(14px);
+  animation: halo-breathe 7s ease-in-out infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
 }
 
-@keyframes bat-glide-3 {
-  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50% { transform: translate3d(15px, -15px, 0) rotate(4deg); }
-  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+/* 2. Murciélagos: solo uno animado ocasionalmente, lento y sutil */
+@keyframes bat-glide-occasional {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  20% {
+    transform: translate3d(8px, -6px, 0) rotate(2deg);
+  }
+  40% {
+    transform: translate3d(14px, 2px, 0) rotate(-1deg);
+  }
+  60% {
+    transform: translate3d(6px, 8px, 0) rotate(1deg);
+  }
+  80% {
+    transform: translate3d(-3px, 3px, 0) rotate(-2deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
 }
 
-.bat-anim-1 {
-  animation: bat-glide-1 9s ease-in-out infinite;
+.bat-anim-occasional {
+  animation: bat-glide-occasional 14s ease-in-out infinite;
   will-change: transform;
 }
 
-.bat-anim-2 {
-  animation: bat-glide-2 11s ease-in-out infinite 1.5s;
+/* 5. Niebla: gradients + blur, movimiento lento 20-30s, opacidad baja */
+@keyframes mist-drift-slow {
+  0% { transform: translate3d(-1.5%, 0, 0); }
+  50% { transform: translate3d(1.5%, -2px, 0); }
+  100% { transform: translate3d(-1.5%, 0, 0); }
+}
+
+.halloween-mist-slow {
+  animation: mist-drift-slow 25s ease-in-out infinite;
   will-change: transform;
 }
 
-.bat-anim-3 {
-  animation: bat-glide-3 8s ease-in-out infinite 3s;
-  will-change: transform;
+/* Pocas partículas tenues y sutiles */
+@keyframes subtle-particle-float {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.35;
+  }
+  70% {
+    opacity: 0.25;
+    transform: translate3d(4px, -24px, 0);
+  }
+  100% {
+    transform: translate3d(-2px, -45px, 0);
+    opacity: 0;
+  }
 }
 
-/* ─── FOG / MIST DRIFT ANIMATIONS ─── */
-
-/* Main mist layer — slow lateral drift */
-@keyframes mist-drift {
-  0% { transform: translate3d(-2%, 0, 0); }
-  50% { transform: translate3d(2%, -3px, 0); }
-  100% { transform: translate3d(-2%, 0, 0); }
+.halloween-subtle-particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #fba73a 0%, #ea580c 70%, transparent 100%);
+  box-shadow: 0 0 6px rgba(249, 115, 22, 0.4);
+  animation: subtle-particle-float linear infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
 }
 
-/* Fog bank 1 — drifts right */
-@keyframes fog-drift-1 {
-  0% { transform: translate3d(-3%, 0, 0) scaleX(1); }
-  33% { transform: translate3d(1%, -2px, 0) scaleX(1.02); }
-  66% { transform: translate3d(3%, 1px, 0) scaleX(0.98); }
-  100% { transform: translate3d(-3%, 0, 0) scaleX(1); }
-}
-
-/* Fog bank 2 — drifts left */
-@keyframes fog-drift-2 {
-  0% { transform: translate3d(2%, 0, 0) scaleX(1); }
-  50% { transform: translate3d(-3%, -2px, 0) scaleX(1.03); }
-  100% { transform: translate3d(2%, 0, 0) scaleX(1); }
-}
-
-/* Fog bank 3 — gentle vertical bob */
-@keyframes fog-drift-3 {
-  0% { transform: translate3d(0, 0, 0); }
-  40% { transform: translate3d(2%, -4px, 0); }
-  80% { transform: translate3d(-1%, 2px, 0); }
-  100% { transform: translate3d(0, 0, 0); }
-}
-
-.halloween-mist {
-  animation: mist-drift 20s ease-in-out infinite;
-  will-change: transform;
-}
-
-.halloween-fog-1 {
-  animation: fog-drift-1 25s ease-in-out infinite;
-  will-change: transform;
-}
-
-.halloween-fog-2 {
-  animation: fog-drift-2 22s ease-in-out infinite 3s;
-  will-change: transform;
-}
-
-.halloween-fog-3 {
-  animation: fog-drift-3 28s ease-in-out infinite 5s;
-  will-change: transform;
-}
-
-/* ─── RESPECT USER MOTION PREFERENCES ─── */
+/* 14. Accesibilidad: @media (prefers-reduced-motion: reduce) */
 @media (prefers-reduced-motion: reduce) {
-  .bat-anim-1,
-  .bat-anim-2,
-  .bat-anim-3,
-  .halloween-mist,
-  .halloween-fog-1,
-  .halloween-fog-2,
-  .halloween-fog-3 {
+  .bat-anim-occasional,
+  .halloween-hub-halo,
+  .halloween-mist-slow,
+  .halloween-subtle-particle,
+  .halloween-mode .route-card-halloween {
     animation: none !important;
     transform: none !important;
   }
