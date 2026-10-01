@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDate, formatCostaRicaISO, extractCompanyAndClient } from '@/lib/billing';
@@ -74,58 +74,63 @@ export default function BodegaInventario() {
   const [filterCompany, setFilterCompany] = useState('Todas');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterDate, setFilterDate] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadInventory = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      const res = await fetch('/api/inventory', { cache: 'no-store' });
+      if (res.ok) {
+        const { data } = await res.json();
+        // Transform from DB format
+        const formatted = (data || [])
+          .filter((item: { status: string }) => item.status !== 'Eliminado')
+          .map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => {
+            let comp = item.company;
+            if (!comp || comp === 'N/A' || comp === 'Independiente' || comp === 'OTRO') {
+              const extracted = extractCompanyAndClient(item.client);
+              comp = extracted.company || 'JRS CARGO';
+            }
+            return {
+              id: item.id,
+              client: item.client,
+              company: comp,
+              weight: item.weight,
+              status: item.status,
+              date: formatCostaRicaDate(item.created_at),
+              createdAt: item.created_at
+            };
+          });
+        setInventory(formatted);
+      }
+
+      // Fetch invoices to build tracking -> invoice map
+      const invRes = await fetch('/api/invoices?includeItems=true', { cache: 'no-store' });
+      if (invRes.ok) {
+        const invData = await invRes.json();
+        const map = new Map<string, { number: string; id: string }>();
+        (invData.data || []).forEach((inv: { id: string; invoice_number: string; invoice_items?: { tracking_number?: string }[] }) => {
+          if (inv.invoice_items) {
+            inv.invoice_items.forEach(item => {
+              if (item.tracking_number) {
+                map.set(item.tracking_number.trim().toUpperCase(), { number: inv.invoice_number, id: inv.id });
+              }
+            });
+          }
+        });
+        setInvoiceMap(map);
+      }
+    } catch (error) {
+      console.error('Error fetching inventory', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    const loadInventory = async () => {
-      try {
-        const res = await fetch('/api/inventory', { cache: 'no-store' });
-        if (res.ok) {
-          const { data } = await res.json();
-          // Transform from DB format
-          const formatted = data
-            .filter((item: { status: string }) => item.status !== 'Eliminado')
-            .map((item: { id: string, client: string, weight: string, status: string, company?: string, created_at: string }) => {
-              let comp = item.company;
-              if (!comp || comp === 'N/A' || comp === 'Independiente' || comp === 'OTRO') {
-                const extracted = extractCompanyAndClient(item.client);
-                comp = extracted.company || 'JRS CARGO';
-              }
-              return {
-                id: item.id,
-                client: item.client,
-                company: comp,
-                weight: item.weight,
-                status: item.status,
-                date: formatCostaRicaDate(item.created_at),
-                createdAt: item.created_at
-              };
-            });
-          setInventory(formatted);
-        }
-
-        // Fetch invoices to build tracking -> invoice map
-        const invRes = await fetch('/api/invoices?includeItems=true');
-        if (invRes.ok) {
-          const invData = await invRes.json();
-          const map = new Map<string, { number: string; id: string }>();
-          (invData.data || []).forEach((inv: { id: string; invoice_number: string; invoice_items?: { tracking_number?: string }[] }) => {
-            if (inv.invoice_items) {
-              inv.invoice_items.forEach(item => {
-                if (item.tracking_number) {
-                  map.set(item.tracking_number.trim().toUpperCase(), { number: inv.invoice_number, id: inv.id });
-                }
-              });
-            }
-          });
-          setInvoiceMap(map);
-        }
-      } catch (error) {
-        console.error('Error fetching inventory', error);
-      }
-    };
     loadInventory();
-  }, []);
+  }, [loadInventory]);
 
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = (item.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -158,7 +163,17 @@ export default function BodegaInventario() {
           <p className="text-gray-500">Gestión de paquetes físicos en la bodega de Costa Rica.</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+          <button 
+            onClick={() => loadInventory()}
+            disabled={isRefreshing}
+            className="px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-brand-blue shadow-xs flex items-center gap-2 font-bold text-sm transition-all active:scale-95 disabled:opacity-60 cursor-pointer"
+            title="Refrescar inventario sin recargar la página"
+          >
+            <RefreshCw size={16} className={`text-brand-blue ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{isRefreshing ? 'Actualizando...' : 'Refrescar'}</span>
+          </button>
+
           <button 
             onClick={() => setFilterStatus(filterStatus === 'En Bodega' ? 'Todos' : 'En Bodega')}
             className={'px-5 py-2.5 rounded-2xl shadow-[0_4px_15px_-3px_rgba(18,67,94,0.3)] border flex items-center gap-3 hover:scale-105 transition-all select-none ' + (
@@ -238,6 +253,15 @@ export default function BodegaInventario() {
             <span className="px-3.5 py-2 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-xl shrink-0">
               {filteredInventory.length} {filteredInventory.length === 1 ? 'Línea' : 'Líneas'}
             </span>
+
+            <button
+              onClick={() => loadInventory()}
+              disabled={isRefreshing}
+              className="p-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-brand-blue rounded-xl transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+              title="Refrescar datos"
+            >
+              <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-brand-blue' : ''} />
+            </button>
           </div>
         </div>
 
