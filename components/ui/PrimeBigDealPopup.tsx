@@ -2,11 +2,27 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { X, Clock, ExternalLink, ShoppingBag, PackageOpen, Plane } from 'lucide-react';
+import { X, ExternalLink, ShoppingBag, PackageOpen, Plane } from 'lucide-react';
 
-const STORAGE_KEY = 'jrs_prime_big_deal_october_2026_seen';
+const STORAGE_KEY = 'jrs_prime_big_deal_last_seen_date';
 // Promotion cutoff: October 7, 2026 at 23:59:59 (America/Costa_Rica timezone: UTC-6)
 export const PRIME_PROMO_EXPIRATION_ISO = '2026-10-07T23:59:59-06:00';
+
+/**
+ * Returns current date string (YYYY-MM-DD) in America/Costa_Rica timezone
+ */
+export function getCostaRicaDateString(): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Costa_Rica',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
 
 /**
  * Validates if the Amazon Prime Big Deal Days promo is currently active.
@@ -28,40 +44,47 @@ export default function PrimeBigDealPopup() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
-  // Close handler: sets state and immediately persists to localStorage
-  const handleClose = useCallback(() => {
+  // Mark popup as seen for today (Costa Rica timezone)
+  const markAsSeenToday = useCallback(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, 'true');
+      localStorage.setItem(STORAGE_KEY, getCostaRicaDateString());
     } catch {
       // Ignore storage errors in restricted contexts
     }
-    setIsOpen(false);
   }, []);
 
-  // Check eligibility and schedule popup display 1 second after page load
+  // Close handler: sets state and marks as seen today
+  const handleClose = useCallback(() => {
+    markAsSeenToday();
+    setIsOpen(false);
+  }, [markAsSeenToday]);
+
+  // Check eligibility and schedule popup display when entering the page
   useEffect(() => {
-    // 1. Verify promotion is currently active
+    // 1. Verify promotion is currently active (before Oct 7, 2026 23:59:59 Costa Rica time)
     if (!isPrimePromoActive()) return;
 
-    // 2. Check localStorage (client-side safe)
+    // 2. Check if user already saw the popup today in Costa Rica time
     try {
-      const hasSeen = localStorage.getItem(STORAGE_KEY);
-      if (hasSeen === 'true') return;
+      const lastSeenDate = localStorage.getItem(STORAGE_KEY);
+      const todayCR = getCostaRicaDateString();
+      if (lastSeenDate === todayCR) return;
     } catch {
       return;
     }
 
-    // 3. Show approximately 1 second after load
+    // 3. Show when entering the page (smooth 600ms delay after hydration)
     const timer = setTimeout(() => {
       // Re-verify in case cutoff expired during delay
       if (isPrimePromoActive()) {
         previousActiveElementRef.current = document.activeElement as HTMLElement;
         setIsOpen(true);
+        markAsSeenToday();
       }
-    }, 1000);
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [markAsSeenToday]);
 
   // Lock background body scroll when open and restore when closed
   useEffect(() => {
@@ -225,13 +248,6 @@ export default function PrimeBigDealPopup() {
             </div>
           </div>
 
-          {/* Vigencia Badge */}
-          <div className="flex items-center justify-center mb-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-900 text-xs font-semibold shadow-xs">
-              <Clock size={14} className="text-amber-600 shrink-0" />
-              <span>Promoción válida hasta el 7 de octubre a las 11:59 p.m. (hora de Costa Rica).</span>
-            </div>
-          </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3 mb-5">
