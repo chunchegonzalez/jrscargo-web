@@ -157,7 +157,7 @@ export default function PublicEstadoCuentaPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // States for Reenviar Factura modal
+  // States for Reenviar Comprobante modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const [recipientEmail, setRecipientEmail] = useState('');
@@ -284,7 +284,7 @@ export default function PublicEstadoCuentaPage() {
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.error || 'No se pudo enviar la factura');
+        throw new Error(json.error || 'No se pudo enviar el comprobante');
       }
 
       setEmailSuccess(true);
@@ -563,7 +563,7 @@ export default function PublicEstadoCuentaPage() {
                   <select
                     value={selectedMonth}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMonth(e.target.value)}
-                    aria-label="Seleccionar mes para el resumen de facturación y pagos"
+                    aria-label="Seleccionar mes para el resumen de comprobantes y pagos"
                     className="text-[10px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/70 border border-slate-200/80 rounded-lg pl-2 pr-5 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-blue appearance-none transition-colors"
                   >
                     {availableMonths.map((m: string) => (
@@ -577,10 +577,10 @@ export default function PublicEstadoCuentaPage() {
                 </div>
               </div>
 
-              {/* Facturado en el mes */}
+              {/* Emitido en el mes */}
               <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex-1 flex flex-col justify-center">
                 <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-0.5 truncate">
-                  Facturado {monthLabel}
+                  Emitido {monthLabel}
                 </p>
                 <div className="flex items-baseline justify-between">
                   <p className="text-lg sm:text-xl font-black text-slate-800">${monthInvoiced.toFixed(2)}</p>
@@ -753,7 +753,7 @@ export default function PublicEstadoCuentaPage() {
               }`}
             >
               <Clock size={16} />
-              <span>Facturas Pendientes ({pendingInvoices.length})</span>
+              <span>Comprobantes Pendientes ({pendingInvoices.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('paquetes')}
@@ -775,7 +775,7 @@ export default function PublicEstadoCuentaPage() {
               }`}
             >
               <FileText size={16} />
-              <span>Todas las Facturas ({invoices.length})</span>
+              <span>Todos los Comprobantes ({invoices.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('pagos')}
@@ -795,17 +795,17 @@ export default function PublicEstadoCuentaPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold text-gray-800">
-                  {activeTab === 'pendientes' ? 'Facturas Pendientes de Pago' : 'Historial Completo de Facturación'}
+                  {activeTab === 'pendientes' ? 'Comprobantes Pendientes de Pago' : 'Historial Completo de Comprobantes'}
                 </h2>
                 <span className="text-xs text-gray-400">
-                  Total mostradas: {activeTab === 'pendientes' ? pendingInvoices.length : invoices.length}
+                  Total mostrados: {activeTab === 'pendientes' ? pendingInvoices.length : invoices.length}
                 </span>
               </div>
 
               {(activeTab === 'pendientes' ? pendingInvoices : invoices).length === 0 ? (
                 <div className="p-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                   <CheckCircle2 size={40} className="text-green-500 mx-auto mb-2" />
-                  <p className="font-bold text-gray-700">No hay facturas en esta sección</p>
+                  <p className="font-bold text-gray-700">No hay comprobantes en esta sección</p>
                   <p className="text-xs text-gray-400 mt-1">Tu cuenta se encuentra al día.</p>
                 </div>
               ) : (
@@ -835,7 +835,7 @@ export default function PublicEstadoCuentaPage() {
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-black text-gray-900 text-base">
-                                  Factura #{inv.invoice_number}
+                                  Comprobante #{inv.invoice_number}
                                 </h3>
                                 <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                                   inv.status === 'Pagada'
@@ -876,15 +876,15 @@ export default function PublicEstadoCuentaPage() {
                               )}
                             </div>
 
-                            {/* Actions: Reenviar Factura, PDF y Expandir */}
+                            {/* Actions: Reenviar Comprobante, PDF y Expandir */}
                             <div className="flex items-center gap-2 print:hidden">
                               <button
                                 onClick={() => handleOpenSendModal(inv)}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white border border-blue-200/90 transition-all shadow-2xs hover:shadow active:scale-95"
-                                title="Reenviar factura por correo electrónico"
+                                title="Reenviar comprobante por correo electrónico"
                               >
                                 <Mail size={14} className="shrink-0" />
-                                <span className="hidden sm:inline">Reenviar Factura</span>
+                                <span className="hidden sm:inline">Reenviar Comprobante</span>
                                 <span className="sm:hidden">Reenviar</span>
                               </button>
 
@@ -993,7 +993,7 @@ export default function PublicEstadoCuentaPage() {
                     Paquetes Pendientes de Retiro y Entrega
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Detalle de los paquetes que se encuentran en bodega o asociados a tus facturas pendientes.
+                    Detalle de los paquetes que se encuentran en bodega o asociados a tus comprobantes pendientes.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1052,7 +1052,7 @@ export default function PublicEstadoCuentaPage() {
                             )}
 
                             {pkg.invoice_number && (
-                              <span>• Factura: <strong className="text-brand-blue">#{pkg.invoice_number}</strong></span>
+                              <span>• Comprobante: <strong className="text-brand-blue">#{pkg.invoice_number}</strong></span>
                             )}
                           </div>
                         </div>
@@ -1105,7 +1105,7 @@ export default function PublicEstadoCuentaPage() {
                             <div className="text-[11px] text-brand-blue font-semibold mt-1 flex flex-wrap gap-1">
                               {p.invoice_payments.map(ip => (
                                 <span key={ip.invoice_id} className="bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
-                                  #{ip.invoices?.invoice_number || 'Factura'} (${Number(ip.amount_applied).toFixed(2)})
+                                  #{ip.invoices?.invoice_number || 'Comprobante'} (${Number(ip.amount_applied).toFixed(2)})
                                 </span>
                               ))}
                             </div>
@@ -1129,7 +1129,7 @@ export default function PublicEstadoCuentaPage() {
                           <th className="p-3 font-bold">Fecha</th>
                           <th className="p-3 font-bold">Método</th>
                           <th className="p-3 font-bold">Referencia</th>
-                          <th className="p-3 font-bold">Facturas Aplicadas</th>
+                          <th className="p-3 font-bold">Comprobantes Aplicados</th>
                           <th className="p-3 font-bold text-right">Monto</th>
                         </tr>
                       </thead>
@@ -1149,7 +1149,7 @@ export default function PublicEstadoCuentaPage() {
                               {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 ? (
                                 p.invoice_payments.map((ip) => (
                                   <div key={ip.invoice_id} className="font-semibold text-brand-blue">
-                                    #{ip.invoices?.invoice_number || 'Factura'}{' '}
+                                    #{ip.invoices?.invoice_number || 'Comprobante'}{' '}
                                     <span className="text-[11px] font-normal text-gray-400">
                                       (${Number(ip.amount_applied).toFixed(2)})
                                     </span>
@@ -1185,7 +1185,7 @@ export default function PublicEstadoCuentaPage() {
 
       </div>
 
-      {/* Modal para Reenviar Factura */}
+      {/* Modal para Reenviar Comprobante */}
       {emailModalOpen && emailInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 relative animate-fade-in">
@@ -1210,7 +1210,7 @@ export default function PublicEstadoCuentaPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-black text-slate-900 truncate">
-                  Reenviar Factura
+                  Reenviar Comprobante
                 </h3>
                 <p className="text-xs text-slate-500">
                   Comprobante #{emailInvoice.invoice_number} • ${emailInvoice.total.toFixed(2)} USD
@@ -1224,7 +1224,7 @@ export default function PublicEstadoCuentaPage() {
                   <CheckCircle2 size={32} />
                 </div>
                 <h4 className="text-base font-black text-slate-900">
-                  ¡Factura enviada con éxito!
+                  ¡Comprobante enviado con éxito!
                 </h4>
                 <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
                   Hemos enviado el comprobante oficial en formato PDF a: <br />
@@ -1245,12 +1245,12 @@ export default function PublicEstadoCuentaPage() {
             ) : (
               <form onSubmit={handleSendInvoiceEmail} className="space-y-4">
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  ¿No recibiste tu factura o necesitas una copia? Te la enviaremos de inmediato con el comprobante PDF oficial adjunto.
+                  ¿No recibiste tu comprobante o necesitas una copia? Te lo enviaremos de inmediato con el archivo PDF oficial adjunto.
                 </p>
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1">
                   <div className="flex justify-between text-slate-500">
-                    <span>Número de factura:</span>
+                    <span>Número de comprobante:</span>
                     <strong className="text-slate-800 font-bold">#{emailInvoice.invoice_number}</strong>
                   </div>
                   <div className="flex justify-between text-slate-500">
