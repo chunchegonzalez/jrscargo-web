@@ -53,43 +53,4 @@ export function HalloweenHeroBackground() {
   );
 }
 
-/**
- * Route Map / Radar Panel Decorations
- * Matches the reference mockup:
- * - Spiderweb with hanging spider in top-right corner
- * - Soft, nearly imperceptible pastel halo behind center hub (coral/orange/lavender)
- * - Soft static mist in bottom of the panel
- * - Zero animations
- */
-export function HalloweenRouteMapDecorations() {
-  const { isHalloween } = useHalloween();
 
-  if (!isHalloween) return null;
-
-  return (
-    <div
-      className="halloween-decor absolute inset-0 pointer-events-none select-none z-10 overflow-hidden rounded-[3rem]"
-      aria-hidden="true"
-    >
-      {/* 1. Soft, almost imperceptible static halo behind the center logo hub */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-        <div
-          className="w-56 h-56 rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(253, 78, 100, 0.08) 0%, rgba(249, 115, 22, 0.06) 40%, rgba(192, 132, 252, 0.05) 65%, transparent 75%)',
-            filter: 'blur(16px)',
-          }}
-        />
-      </div>
-
-      {/* 3. Soft static mist inside bottom of radar panel (doesn't cover cards or routes) */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none"
-        style={{
-          background: 'linear-gradient(to top, rgba(220, 214, 235, 0.28) 0%, rgba(232, 228, 244, 0.12) 50%, transparent 100%)',
-          filter: 'blur(6px)',
-        }}
-      />
-    </div>
-  );
-}

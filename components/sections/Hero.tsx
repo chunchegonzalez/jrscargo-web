@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
-import { HalloweenHeroBackground, HalloweenRouteMapDecorations } from '@/components/ui/HalloweenHeroDecorations';
+import { HalloweenHeroBackground } from '@/components/ui/HalloweenHeroDecorations';
 
 export default function Hero() {
   const { t } = useLanguage();
@@ -25,8 +25,6 @@ export default function Hero() {
           <>
             {/* Subtle warm glow around moon on top-left */}
             <div className="absolute -top-10 -left-10 w-[500px] h-[400px] rounded-full bg-amber-100/30 blur-3xl pointer-events-none" />
-            {/* Subtle lavender glow on right behind panel */}
-            <div className="absolute top-[5%] right-0 w-[550px] h-[550px] rounded-full bg-purple-100/30 blur-3xl pointer-events-none" />
           </>
         ) : (
           <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-blue/5 blur-3xl opacity-60 mix-blend-multiply" />
@@ -127,33 +125,30 @@ export default function Hero() {
           {/* Visual/Image */}
           <div className="relative lg:h-[600px] hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/5 via-white/40 to-brand-red/5 rounded-[3rem] border border-white/80 shadow-[0_20px_40px_rgb(0,0,0,0.05)] overflow-hidden flex items-center justify-center backdrop-blur-sm">
-              {/* Halloween Spiderweb & subtle bats inside panel */}
-              <HalloweenRouteMapDecorations />
-              
-              {/* Radar Rings */}
+              {/* Radar Rings - Rotating */}
               <motion.div 
-                animate={isHalloween ? undefined : { rotate: 360 }}
+                animate={{ rotate: 360 }}
                 transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
                 className="absolute w-[800px] h-[800px] rounded-full border-[1.5px] border-dashed border-brand-blue/10 flex items-center justify-center pointer-events-none"
               />
               <motion.div 
-                animate={isHalloween ? undefined : { rotate: -360 }}
+                animate={{ rotate: -360 }}
                 transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
                 className="absolute w-[550px] h-[550px] rounded-full border-[1.5px] border-dashed border-brand-red/15 flex items-center justify-center pointer-events-none"
               />
               <motion.div 
-                animate={isHalloween ? undefined : { rotate: 360 }}
+                animate={{ rotate: 360 }}
                 transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
                 className="absolute w-[350px] h-[350px] rounded-full border-[1.5px] border-dashed border-brand-yellow/30 flex items-center justify-center pointer-events-none"
               />
 
-              {/* Connecting Lines */}
+              {/* Connecting Animated Lines */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
                 {/* Top-Right (Miami Air) to Hub */}
                 <motion.line 
                   x1="85%" y1="18%" x2="50%" y2="50%" 
                   stroke="#12435e" strokeWidth="2" strokeDasharray="6 6" 
-                  animate={isHalloween ? undefined : { strokeDashoffset: [24, 0] }}
+                  animate={{ strokeDashoffset: [24, 0] }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="opacity-40" 
                 />
@@ -161,7 +156,7 @@ export default function Hero() {
                 <motion.line 
                   x1="15%" y1="22%" x2="50%" y2="50%" 
                   stroke="#fdc151" strokeWidth="2" strokeDasharray="6 6" 
-                  animate={isHalloween ? undefined : { strokeDashoffset: [24, 0] }}
+                  animate={{ strokeDashoffset: [24, 0] }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="opacity-40" 
                 />
@@ -169,7 +164,7 @@ export default function Hero() {
                 <motion.line 
                   x1="15%" y1="78%" x2="50%" y2="50%" 
                   stroke="#fd4e64" strokeWidth="2" strokeDasharray="6 6" 
-                  animate={isHalloween ? undefined : { strokeDashoffset: [24, 0] }}
+                  animate={{ strokeDashoffset: [24, 0] }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="opacity-40" 
                 />
@@ -177,76 +172,56 @@ export default function Hero() {
                 <motion.line 
                   x1="85%" y1="82%" x2="50%" y2="50%" 
                   stroke="#12435e" strokeWidth="2" strokeDasharray="6 6" 
-                  animate={isHalloween ? undefined : { strokeDashoffset: [24, 0] }}
+                  animate={{ strokeDashoffset: [24, 0] }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="opacity-40" 
                 />
               </svg>
 
-              {/* Vehicles (Planes and Ships) - Static in Halloween mode matching reference image */}
+              {/* Vehicles (Planes and Ships) moving along routes */}
               
-              {/* Miami Air Plane */}
+              {/* Miami Air Plane (Moving ↙️) */}
               <motion.div
-                animate={isHalloween ? undefined : { top: ['18%', '50%'], left: ['85%', '50%'], opacity: [0, 1, 0, 0] }}
+                animate={{ top: ['18%', '50%'], left: ['85%', '50%'], opacity: [0, 1, 0, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                 className="absolute z-10 text-brand-blue drop-shadow-md"
-                style={{
-                  top: isHalloween ? '34%' : undefined,
-                  left: isHalloween ? '67.5%' : undefined,
-                  opacity: isHalloween ? 0.85 : undefined,
-                  transform: 'translate(-50%, -50%)',
-                }}
+                style={{ transform: 'translate(-50%, -50%)' }}
               >
                 <div className="rotate-[180deg]">
                   <Plane size={24} className="fill-current opacity-80" />
                 </div>
               </motion.div>
 
-              {/* Spain Air Plane */}
+              {/* Spain Air Plane (Moving ↘️) */}
               <motion.div
-                animate={isHalloween ? undefined : { top: ['22%', '50%'], left: ['15%', '50%'], opacity: [0, 1, 0, 0] }}
+                animate={{ top: ['22%', '50%'], left: ['15%', '50%'], opacity: [0, 1, 0, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: "linear", delay: 0.8 }}
                 className="absolute z-10 text-[#fdc151] drop-shadow-md"
-                style={{
-                  top: isHalloween ? '36.5%' : undefined,
-                  left: isHalloween ? '32.5%' : undefined,
-                  opacity: isHalloween ? 0.95 : undefined,
-                  transform: 'translate(-50%, -50%)',
-                }}
+                style={{ transform: 'translate(-50%, -50%)' }}
               >
                 <div className="rotate-[90deg]">
                   <Plane size={24} className="fill-current opacity-80" />
                 </div>
               </motion.div>
 
-              {/* China Air Plane */}
+              {/* China Air Plane (Moving ↗️) */}
               <motion.div
-                animate={isHalloween ? undefined : { top: ['78%', '50%'], left: ['15%', '50%'], opacity: [0, 1, 0, 0] }}
+                animate={{ top: ['78%', '50%'], left: ['15%', '50%'], opacity: [0, 1, 0, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 1.5 }}
                 className="absolute z-10 text-brand-red drop-shadow-md"
-                style={{
-                  top: isHalloween ? '64.5%' : undefined,
-                  left: isHalloween ? '32.5%' : undefined,
-                  opacity: isHalloween ? 0.95 : undefined,
-                  transform: 'translate(-50%, -50%)',
-                }}
+                style={{ transform: 'translate(-50%, -50%)' }}
               >
                 <div className="rotate-[0deg]">
                   <Plane size={24} className="fill-current opacity-80" />
                 </div>
               </motion.div>
 
-              {/* Miami Sea Container */}
+              {/* Miami Sea Container (Moving ↖️) */}
               <motion.div
-                animate={isHalloween ? undefined : { top: ['82%', '50%'], left: ['85%', '50%'], opacity: [0, 1, 0, 0] }}
+                animate={{ top: ['82%', '50%'], left: ['85%', '50%'], opacity: [0, 1, 0, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "linear", delay: 2.2 }}
                 className="absolute z-10 text-brand-blue drop-shadow-md"
-                style={{
-                  top: isHalloween ? '67.5%' : undefined,
-                  left: isHalloween ? '70%' : undefined,
-                  opacity: isHalloween ? 0.85 : undefined,
-                  transform: 'translate(-50%, -50%)',
-                }}
+                style={{ transform: 'translate(-50%, -50%)' }}
               >
                 <div>
                   <Container size={26} strokeWidth={2.5} className="opacity-80" />
@@ -270,13 +245,13 @@ export default function Hero() {
                 </div>
               </div>
 
-              {/* Floating Cards */}
+              {/* Floating Cards with Glows */}
               
               {/* Card: Miami Air */}
               <motion.div 
-                animate={isHalloween ? undefined : { y: [0, -10, 0], x: [0, 5, 0], rotate: [0, 1, 0] }}
+                animate={{ y: [0, -10, 0], x: [0, 5, 0], rotate: [0, 1, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                className="route-card-halloween absolute top-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
+                className="absolute top-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-brand-blue to-[#1e5c82] rounded-xl flex items-center justify-center text-brand-yellow shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>
@@ -290,9 +265,9 @@ export default function Hero() {
 
               {/* Card: Spain Air */}
               <motion.div 
-                animate={isHalloween ? undefined : { y: [0, 10, 0], x: [0, -5, 0], rotate: [0, -1, 0] }}
+                animate={{ y: [0, 10, 0], x: [0, -5, 0], rotate: [0, -1, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="route-card-halloween absolute top-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#fdc151]/10 transition-all cursor-default"
+                className="absolute top-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#fdc151]/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-[#fdc151] to-[#f4a920] rounded-xl flex items-center justify-center text-brand-blue shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/20 mix-blend-overlay"></div>
@@ -306,9 +281,9 @@ export default function Hero() {
 
               {/* Card: China Air */}
               <motion.div 
-                animate={isHalloween ? undefined : { y: [0, -8, 0], x: [0, -8, 0], rotate: [0, 2, 0] }}
+                animate={{ y: [0, -8, 0], x: [0, -8, 0], rotate: [0, 2, 0] }}
                 transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                className="route-card-halloween absolute bottom-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-red/10 transition-all cursor-default"
+                className="absolute bottom-[18%] left-[2%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-red/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-brand-red to-[#e23046] rounded-xl flex items-center justify-center text-white shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>
@@ -322,9 +297,9 @@ export default function Hero() {
 
               {/* Card: Miami Sea */}
               <motion.div 
-                animate={isHalloween ? undefined : { y: [0, 8, 0], x: [0, 8, 0], rotate: [0, -2, 0] }}
+                animate={{ y: [0, 8, 0], x: [0, 8, 0], rotate: [0, -2, 0] }}
                 transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                className="route-card-halloween absolute bottom-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
+                className="absolute bottom-[10%] right-[3%] bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-white/80 z-30 flex items-center gap-3 hover:-translate-y-2 hover:shadow-2xl hover:shadow-brand-blue/10 transition-all cursor-default"
               >
                 <div className="w-11 h-11 bg-gradient-to-br from-brand-blue to-[#1e5c82] rounded-xl flex items-center justify-center text-white shadow-inner relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/10 mix-blend-overlay"></div>
