@@ -206,8 +206,8 @@ export default function BodegaInventario() {
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Barra de herramientas */}
-        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center bg-gray-50">
-          <div className="relative w-full max-w-md">
+        <div className="p-4 border-b border-gray-100 flex flex-col xl:flex-row gap-4 justify-between items-stretch xl:items-center bg-gray-50">
+          <div className="relative w-full xl:max-w-md">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search className="text-gray-400" size={18} />
             </div>
@@ -216,22 +216,25 @@ export default function BodegaInventario() {
               placeholder="Buscar por tracking, cliente..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-sm"
+              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-sm shadow-xs"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Filter size={16} className="text-gray-400" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="hidden sm:flex items-center text-gray-400 pl-1">
+              <Filter size={16} />
+            </div>
             
             <input
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-500 font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
+              className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue shadow-xs"
+              title="Filtrar por fecha de ingreso"
             />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
+              className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue shadow-xs"
             >
               <option value="Todos">Todos los Estados</option>
               <option value="En Bodega">En Bodega</option>
@@ -241,7 +244,7 @@ export default function BodegaInventario() {
             <select
               value={filterCompany}
               onChange={(e) => setFilterCompany(e.target.value)}
-              className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue"
+              className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue shadow-xs"
             >
               <option value="Todas">Todas las Empresas</option>
               <option value="JRS CARGO">JRS CARGO</option>
@@ -250,18 +253,9 @@ export default function BodegaInventario() {
               <option value="TRINITY BOX">TRINITY BOX</option>
             </select>
 
-            <span className="px-3.5 py-2 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-xl shrink-0">
+            <span className="px-3.5 py-2 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-xl shrink-0 self-center">
               {filteredInventory.length} {filteredInventory.length === 1 ? 'Línea' : 'Líneas'}
             </span>
-
-            <button
-              onClick={() => loadInventory()}
-              disabled={isRefreshing}
-              className="p-2.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-brand-blue rounded-xl transition-all shadow-xs disabled:opacity-50 cursor-pointer"
-              title="Refrescar datos"
-            >
-              <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-brand-blue' : ''} />
-            </button>
           </div>
         </div>
 
