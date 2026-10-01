@@ -159,7 +159,7 @@ export default function PrimeBigDealPopup() {
             src="/prime-big-deal-banner.png"
             alt="Prime Big Deal Days - 6 y 7 de octubre"
             width={1024}
-            height={308}
+            height={341}
             priority
             className="w-full h-auto object-cover block"
           />
