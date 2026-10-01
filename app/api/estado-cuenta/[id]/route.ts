@@ -100,14 +100,14 @@ export async function GET(
       }
 
       return {
-        id: inv.id,
-        invoice_number: inv.invoice_number,
-        issue_date: inv.issue_date,
+        id: String(inv.id || ''),
+        invoice_number: String(inv.invoice_number || ''),
+        issue_date: String(inv.issue_date || ''),
         total: stats.total,
         paid: stats.paid,
         pending: stats.pending,
         status: stats.isAnulada ? 'Anulada' : stats.pending <= 0.01 ? 'Pagada' : stats.paid > 0 ? 'Parcial' : 'Pendiente',
-        notes: inv.notes,
+        notes: inv.notes ? String(inv.notes) : undefined,
         items
       };
     });
@@ -136,7 +136,7 @@ export async function GET(
     invoices.forEach(inv => {
       if (inv.pending > 0.01) {
         if (inv.items && inv.items.length > 0) {
-          inv.items.forEach((it, idx) => {
+          inv.items.forEach((it: Record<string, unknown>, idx: number) => {
             const trk = String(it.tracking_number || '').trim();
             if (trk) seenTracking.add(trk.toUpperCase());
             pendingPackages.push({
@@ -145,19 +145,19 @@ export async function GET(
               service_name: String(it.service_name || 'Paquete Internacional'),
               weight: it.weight ? Number(it.weight) || String(it.weight) : undefined,
               amount: Number(it.amount || 0),
-              invoice_number: inv.invoice_number,
-              invoice_id: inv.id,
+              invoice_number: String(inv.invoice_number || ''),
+              invoice_id: String(inv.id || ''),
               status: 'Listo para retiro al cancelar'
             });
           });
         } else {
           // If invoice has no line items, count invoice as 1 package
           pendingPackages.push({
-            id: inv.id,
+            id: String(inv.id || ''),
             service_name: `Paquetes de Factura #${inv.invoice_number}`,
-            amount: inv.total,
-            invoice_number: inv.invoice_number,
-            invoice_id: inv.id,
+            amount: Number(inv.total || 0),
+            invoice_number: String(inv.invoice_number || ''),
+            invoice_id: String(inv.id || ''),
             status: 'Listo para retiro al cancelar'
           });
         }
@@ -174,7 +174,7 @@ export async function GET(
         if (resInventory.ok) {
           const invData = await resInventory.json();
           if (Array.isArray(invData)) {
-            invData.forEach(item => {
+            invData.forEach((item: Record<string, unknown>) => {
               const trk = String(item.id || '').trim();
               const st = String(item.status || 'En Bodega');
               if (st !== 'Entregado' && st !== 'Eliminado') {
