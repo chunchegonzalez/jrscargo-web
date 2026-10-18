@@ -103,7 +103,8 @@ export default function FacturacionDashboard() {
 
     const pendingAutoSend = invoices.filter(inv => {
       if (inv.email_sent_at) return false;
-      if (inv.status === 'Anulada') return false;
+      if (inv.status === 'Anulada' || inv.status === 'Pagada') return false;
+      if (getInvoiceStats(inv).displayStatus === 'Pagada') return false;
       if (isPendingClientEmail(inv.clients?.email)) return false;
       if (autoSentProcessedRef.current.has(inv.id)) return false;
       const daysElapsed = getDaysSinceCreation(inv.issue_date, inv.created_at);

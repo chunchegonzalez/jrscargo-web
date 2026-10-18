@@ -186,6 +186,12 @@ export default function ActividadCorreosPage() {
         return;
       }
 
+      // Si ya está Pagada, no se envía correo automático
+      const stats = getInvoiceStats(inv);
+      if (inv.status === 'Pagada' || stats.displayStatus === 'Pagada') {
+        return;
+      }
+
       if (isPendingClientEmail(inv.clients?.email)) {
         blockedPendingEmail.push(inv);
         return;
@@ -888,6 +894,16 @@ export default function ActividadCorreosPage() {
                             </span>
                             <span className="text-[11px] text-gray-400 mt-0.5">
                               {formatEmailDate(inv.email_sent_at)}
+                            </span>
+                          </div>
+                        ) : stats.displayStatus === 'Pagada' || inv.status === 'Pagada' ? (
+                          <div className="inline-flex flex-col gap-0.5">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg w-fit">
+                              <CheckCircle2 size={13} className="text-emerald-600" />
+                              No enviar (Factura Pagada)
+                            </span>
+                            <span className="text-[11px] text-gray-400">
+                              Excluida por estar cancelada en su totalidad
                             </span>
                           </div>
                         ) : isPendingEmail ? (
