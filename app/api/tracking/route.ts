@@ -38,8 +38,14 @@ async function getWorldboxPackages(apiToken: string) {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const trackingNumber = searchParams.get('number');
+  const rawNumber = searchParams.get('number');
 
+  if (!rawNumber) {
+    return NextResponse.json({ error: 'Tracking number is required' }, { status: 400 });
+  }
+
+  // Clean invisible scanner control characters (GS1 \x1d, etc.) and whitespace
+  let trackingNumber = rawNumber.replace(/[\x00-\x1F\x7F\s]+/g, '').trim();
   if (!trackingNumber) {
     return NextResponse.json({ error: 'Tracking number is required' }, { status: 400 });
   }
@@ -52,7 +58,7 @@ export async function GET(request: Request) {
 
   try {
     // 1. Calling the tracking endpoint for timeline, weight, fotos, status
-    const [res, packagesList] = await Promise.all([
+    const [initialRes, packagesList] = await Promise.all([
       fetch(`https://worldboxcr.com/api/jrscargo/tracking/${encodeURIComponent(trackingNumber)}`, {
         method: 'GET',
         headers: { 
@@ -62,8 +68,79 @@ export async function GET(request: Request) {
       }),
       getWorldboxPackages(apiToken)
     ]);
+
+    let res = initialRes;
+
+    // Fallback 1: If barcode gun included USPS 420XXXXX ZIP routing prefix or matches a package in packagesList
+    if (!res.ok) {
+      const strippedUSPS = trackingNumber.replace(/^420\d{5}/i, '');
+      let candidateTracking = strippedUSPS !== trackingNumber && strippedUSPS.length >= 8 ? strippedUSPS : '';
+
+      if (!candidateTracking && packagesList && packagesList.length > 0) {
+        const upperInput = trackingNumber.toUpperCase();
+        const foundInList = packagesList.find(p => {
+          const t = (p.trackingNumber || '').trim().toUpperCase();
+          if (!t || t.length < 8) return false;
+          return t === upperInput || upperInput.endsWith(t) || t.endsWith(upperInput);
+        });
+        if (foundInList?.trackingNumber) {
+          candidateTracking = foundInList.trackingNumber.trim();
+        }
+      }
+
+      if (candidateTracking && candidateTracking.toUpperCase() !== trackingNumber.toUpperCase()) {
+        const retryRes = await fetch(`https://worldboxcr.com/api/jrscargo/tracking/${encodeURIComponent(candidateTracking)}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (retryRes.ok) {
+          res = retryRes;
+          trackingNumber = candidateTracking;
+        }
+      }
+    }
     
     if (!res.ok) {
+      // Fallback 2: Check if package already exists in local Supabase inventory
+      try {
+        const strippedUSPS = trackingNumber.replace(/^420\d{5}/i, '');
+        const localFallback =
+          (await getInventoryItem(trackingNumber)) ||
+          (strippedUSPS !== trackingNumber ? await getInventoryItem(strippedUSPS) : null);
+
+        if (localFallback) {
+          const resolvedCode = String(localFallback.id || trackingNumber);
+          return NextResponse.json({
+            trackingNumber: resolvedCode,
+            status: 'SUCCESS',
+            rawData: {
+              package: {
+                tracking: resolvedCode,
+                consignatario: localFallback.client || 'Desconocido',
+                company: localFallback.company || 'JRS CARGO',
+                provider: localFallback.company || 'JRS CARGO',
+                weight: String(localFallback.weight || '0').replace(/[^\d.]/g, '') || '0',
+                weightUnit: String(localFallback.weight || '').toLowerCase().includes('kg') ? 'kg' : 'lbs',
+                statusLabel: localFallback.status || 'En Bodega',
+                description: 'Paquete registrado en inventario local'
+              },
+              timeline: Array.isArray(localFallback.history)
+                ? localFallback.history.map((h: { date?: string; action?: string }) => ({
+                    date: h.date || '',
+                    status: h.action || 'En Bodega',
+                    description: h.action || ''
+                  }))
+                : []
+            }
+          });
+        }
+      } catch {
+        // Ignore local fallback error
+      }
+
       console.error('Tracking API error:', res.status, await res.text());
       return NextResponse.json({ error: 'Tracking API responded with an error' }, { status: res.status });
     }
@@ -73,7 +150,10 @@ export async function GET(request: Request) {
     // 2. Match package in Worldbox packages list to extract exact tenantName & clientCode
     if (data.package && packagesList && packagesList.length > 0) {
       const cleanSearch = trackingNumber.trim().toUpperCase();
-      const matched = packagesList.find(p => (p.trackingNumber || '').trim().toUpperCase() === cleanSearch);
+      const matched = packagesList.find(p => {
+        const pt = (p.trackingNumber || '').trim().toUpperCase();
+        return pt === cleanSearch || pt.endsWith(cleanSearch) || cleanSearch.endsWith(pt);
+      });
       
       if (matched) {
         data.package.tenantName = matched.tenantName;

@@ -205,6 +205,32 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
 
   const hasResults = filteredModules.length > 0 || filteredClients.length > 0 || filteredInvoices.length > 0 || filteredInventory.length > 0;
 
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      const cleanQ = query.replace(/[\x00-\x1F\x7F]+/g, '').trim();
+      if (!cleanQ) return;
+
+      if (filteredInventory.length > 0) {
+        const firstPkg = filteredInventory[0];
+        const trackingNum = firstPkg.id || firstPkg.tracking || firstPkg.tracking_number || cleanQ;
+        handleSelect(`/admin/tracking?number=${encodeURIComponent(trackingNum)}`);
+        return;
+      }
+      if (filteredInvoices.length > 0) {
+        handleSelect(`/admin/facturacion/${filteredInvoices[0].id}`);
+        return;
+      }
+      if (filteredClients.length > 0) {
+        handleSelect(`/admin/clientes/${filteredClients[0].id}`);
+        return;
+      }
+      // Fallback: open directly in Tracking page (great for barcode scanner gun!)
+      handleSelect(`/admin/tracking?number=${encodeURIComponent(cleanQ)}`);
+    }
+  };
+
   return (
     <div ref={wrapperRef} className="relative w-full max-w-2xl mx-auto">
       <div className="relative group">
@@ -213,6 +239,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleInputKeyDown}
           placeholder="Buscar tracking, clientes, facturas o módulos..." 
           className="w-full bg-gray-100/80 border border-transparent hover:bg-gray-50 hover:border-gray-200 focus:bg-white focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 rounded-full px-5 py-2.5 pl-11 text-sm font-medium text-gray-700 transition-all outline-none placeholder-gray-400"
         />
@@ -224,8 +251,19 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
         <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[999] max-h-[70vh] flex flex-col">
           <div className="overflow-y-auto p-2">
             {!hasResults && !isFetching && (
-              <div className="p-8 text-center text-gray-400 text-sm">
-                No se encontraron resultados para &quot;{query}&quot;
+              <div className="p-4 text-center">
+                <p className="text-gray-400 text-sm mb-3">
+                  No se encontraron resultados locales para &quot;{query}&quot;
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleSelect(`/admin/tracking?number=${encodeURIComponent(query.trim())}`)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-blue text-white text-xs font-bold hover:bg-brand-blue/90 transition-colors"
+                >
+                  <Package size={14} />
+                  <span>Buscar tracking &quot;{query.trim()}&quot; en Worldbox</span>
+                  <ArrowRight size={13} />
+                </button>
               </div>
             )}
 

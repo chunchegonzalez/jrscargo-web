@@ -27,10 +27,17 @@ export default function BodegaScanner() {
   
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-focus el input de escaneo siempre para la pistola
+  // Auto-focus el input de escaneo para la pistola solo si el usuario no está escribiendo en otro buscador/input
   useEffect(() => {
     const focusTimer = setInterval(() => {
-      if (document.activeElement !== inputRef.current && !isLoading && !packageData) {
+      const activeEl = document.activeElement;
+      const isInteractiveElement =
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        activeEl instanceof HTMLSelectElement ||
+        activeEl?.getAttribute('contenteditable') === 'true';
+
+      if (!isInteractiveElement && activeEl !== inputRef.current && !isLoading && !packageData) {
         inputRef.current?.focus();
       }
     }, 1000);
@@ -39,8 +46,10 @@ export default function BodegaScanner() {
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scannedCode.trim()) return;
+    const cleanCode = scannedCode.replace(/[\x00-\x1F\x7F]+/g, '').trim();
+    if (!cleanCode) return;
 
+    setScannedCode(cleanCode);
     setIsLoading(true);
     setPackageData(null);
     setLocalStatus(null);
@@ -48,7 +57,7 @@ export default function BodegaScanner() {
     
     try {
       // 1. Buscamos el paquete en Worldbox (API)
-      const res = await fetch(`/api/tracking?number=${encodeURIComponent(scannedCode)}`);
+      const res = await fetch(`/api/tracking?number=${encodeURIComponent(cleanCode)}`);
       
       if (!res.ok) {
         throw new Error('Paquete no encontrado en Worldbox');
@@ -58,6 +67,7 @@ export default function BodegaScanner() {
       
       if (data.status === 'SUCCESS' && data.rawData?.package) {
         const pkg = data.rawData.package;
+        const resolvedTracking = pkg.tracking || data.trackingNumber || cleanCode;
         const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
         const { company: extractedCompany, cleanClient } = extractCompanyAndClient(
           pkg.consignatario || fullConsignee,
@@ -68,6 +78,7 @@ export default function BodegaScanner() {
 
         const newPackageData = {
           ...pkg,
+          tracking: resolvedTracking,
           consignatario: cleanClient,
           provider: pkg.company || extractedCompany
         };
@@ -75,7 +86,7 @@ export default function BodegaScanner() {
         setPackageData(newPackageData);
         
         // 2. Revisamos si ya está en nuestra BD local de Supabase
-        const dbRes = await fetch(`/api/inventory/${encodeURIComponent(scannedCode)}`);
+        const dbRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`);
         if (dbRes.ok) {
           const dbData = await dbRes.json();
           if (dbData.success && dbData.data) {
