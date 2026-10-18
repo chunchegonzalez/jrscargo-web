@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
@@ -10,6 +10,7 @@ type Invoice = {
   id: string;
   invoice_number: string;
   issue_date: string;
+  created_at?: string;
   total: number | string;
   status: string;
   client_id: string;
@@ -20,6 +21,33 @@ type Invoice = {
 };
 
 type SortField = 'date' | 'number' | 'client' | 'amount' | 'status' | 'email';
+
+function isPendingClientEmail(email?: string | null): boolean {
+  if (!email) return true;
+  const clean = String(email).trim().toLowerCase();
+  if (!clean || !clean.includes('@')) return true;
+  if (
+    clean === 'pendiente@pendiente' ||
+    clean.startsWith('pendiente@') ||
+    clean.endsWith('@pendiente')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function getDaysSinceCreation(issueDateStr?: string, createdAtStr?: string): number {
+  const rawDate = (issueDateStr || createdAtStr || '').split('T')[0];
+  const parts = rawDate.split('-').map(Number);
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return 0;
+  const [y, m, d] = parts;
+  const createdUtc = Date.UTC(y, m - 1, d);
+
+  const nowCR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  const todayUtc = Date.UTC(nowCR.getFullYear(), nowCR.getMonth(), nowCR.getDate());
+
+  return Math.floor((todayUtc - createdUtc) / (1000 * 60 * 60 * 24));
+}
 
 export default function FacturacionDashboard() {
   const { showAlert } = useModal();
@@ -44,6 +72,11 @@ export default function FacturacionDashboard() {
   const [emailCc, setEmailCc] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
+  // Automatic 4-day email sending state
+  const [autoSendingIds, setAutoSendingIds] = useState<Record<string, boolean>>({});
+  const autoSentProcessedRef = useRef<Set<string>>(new Set());
+  const isRunningAutoSendRef = useRef<boolean>(false);
+
   const loadInvoices = useCallback(async () => {
     try {
       setLoading(true);
@@ -63,7 +96,73 @@ export default function FacturacionDashboard() {
     loadInvoices();
   }, [loadInvoices]);
 
+  // Automatic send for unsent invoices with >= 4 days since creation (excluding pendiente@pendiente)
+  useEffect(() => {
+    if (loading || invoices.length === 0 || isRunningAutoSendRef.current) return;
+
+    const pendingAutoSend = invoices.filter(inv => {
+      if (inv.email_sent_at) return false;
+      if (inv.status === 'Anulada') return false;
+      if (isPendingClientEmail(inv.clients?.email)) return false;
+      if (autoSentProcessedRef.current.has(inv.id)) return false;
+      const daysElapsed = getDaysSinceCreation(inv.issue_date, inv.created_at);
+      return daysElapsed >= 4;
+    });
+
+    if (pendingAutoSend.length === 0) return;
+
+    let cancelled = false;
+    isRunningAutoSendRef.current = true;
+
+    pendingAutoSend.forEach(inv => autoSentProcessedRef.current.add(inv.id));
+
+    (async () => {
+      for (const inv of pendingAutoSend) {
+        if (cancelled) break;
+        setAutoSendingIds(prev => ({ ...prev, [inv.id]: true }));
+        try {
+          const extra = parseClientAddress(inv.clients?.address);
+          const cc = inv.clients?.secondary_email || extra.secondary_email || '';
+          const res = await fetch('/api/invoices/' + inv.id + '/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subject: 'Comprobante de Compra #' + inv.invoice_number + ' - JRS CARGO',
+              message: 'Adjunto a este correo encontrarás los detalles de tu comprobante de compra reciente. Por favor, revisa la información a continuación.',
+              cc
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            const sentAt = data.email_sent_at || new Date().toISOString();
+            setInvoices(prev =>
+              prev.map(item => (item.id === inv.id ? { ...item, email_sent_at: sentAt } : item))
+            );
+          }
+        } catch (err) {
+          console.error('Error en envío automático de factura #' + inv.invoice_number, err);
+        } finally {
+          setAutoSendingIds(prev => {
+            const next = { ...prev };
+            delete next[inv.id];
+            return next;
+          });
+        }
+      }
+      isRunningAutoSendRef.current = false;
+    })();
+
+    return () => {
+      cancelled = true;
+      isRunningAutoSendRef.current = false;
+    };
+  }, [invoices, loading]);
+
   const openEmailModal = (inv: Invoice) => {
+    if (isPendingClientEmail(inv.clients?.email)) {
+      showAlert('Correo Pendiente', 'Este cliente tiene el correo "pendiente@pendiente". Por favor actualiza el correo del cliente antes de enviar el comprobante.', 'error');
+      return;
+    }
     setEmailInvoice(inv);
     const extra = parseClientAddress(inv.clients?.address);
     setEmailCc(inv.clients?.secondary_email || extra.secondary_email || '');
@@ -381,6 +480,16 @@ export default function FacturacionDashboard() {
                             Reenviar
                           </button>
                         </div>
+                      ) : autoSendingIds[inv.id] ? (
+                        <div className="flex items-center gap-1.5 text-brand-blue">
+                          <RefreshCw size={13} className="animate-spin" />
+                          <span className="text-[11px] font-bold">Enviando auto...</span>
+                        </div>
+                      ) : isPendingClientEmail(inv.clients?.email) ? (
+                        <div className="flex items-center gap-1.5 text-gray-400" title="Correo pendiente@pendiente - no se envía en automático">
+                          <Mail size={14} />
+                          <span className="text-[11px]">Correo pendiente</span>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-gray-400">
                           <Mail size={14} />
@@ -571,6 +680,19 @@ export default function FacturacionDashboard() {
                               <RefreshCw size={10} />
                               Reenviar
                             </button>
+                          </div>
+                        ) : autoSendingIds[inv.id] ? (
+                          <div className="flex flex-col items-center gap-1 text-brand-blue">
+                            <RefreshCw size={14} className="animate-spin" />
+                            <span className="text-[10px] font-bold">Enviando auto...</span>
+                          </div>
+                        ) : isPendingClientEmail(inv.clients?.email) ? (
+                          <div className="flex flex-col items-center gap-0.5 text-gray-400" title="Cliente con correo pendiente@pendiente — no se envía automáticamente">
+                            <div className="flex items-center gap-1">
+                              <Mail size={14} />
+                              <span className="text-[10px] font-medium">No enviado</span>
+                            </div>
+                            <span className="text-[10px] text-gray-400 italic">Correo pendiente</span>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1">

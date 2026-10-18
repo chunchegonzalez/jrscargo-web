@@ -93,9 +93,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const defaultClientEmail = invoice.clients?.email?.trim() || '';
     const destinationEmail = (customTo && customTo.includes('@')) ? customTo : defaultClientEmail;
+    const normalizedDest = destinationEmail.toLowerCase().trim();
 
-    if (!destinationEmail || !destinationEmail.includes('@')) {
-      return NextResponse.json({ success: false, error: 'Correo de destino no encontrado o inválido' }, { status: 400 });
+    if (
+      !normalizedDest ||
+      !normalizedDest.includes('@') ||
+      normalizedDest === 'pendiente@pendiente' ||
+      normalizedDest.startsWith('pendiente@') ||
+      normalizedDest.endsWith('@pendiente')
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'El cliente tiene correo pendiente@pendiente o inválido. No se realizó el envío.' },
+        { status: 400 }
+      );
     }
 
     const exchangeRate = invoice.exchange_rate || 530;
@@ -309,7 +319,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }]
     };
 
-    if (secondaryEmail && secondaryEmail.includes('@')) {
+    if (
+      secondaryEmail &&
+      secondaryEmail.includes('@') &&
+      secondaryEmail.toLowerCase().trim() !== 'pendiente@pendiente' &&
+      !secondaryEmail.toLowerCase().trim().startsWith('pendiente@') &&
+      !secondaryEmail.toLowerCase().trim().endsWith('@pendiente')
+    ) {
       mailOptions.cc = secondaryEmail;
     }
 
