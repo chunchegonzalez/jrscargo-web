@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, Mail } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
@@ -237,6 +237,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               }`}>
                 <Building2 size={17} className={pathname.startsWith('/admin/clientes') ? 'text-brand-yellow' : ''} />
                 Clientes
+              </Link>
+
+              <Link href="/admin/correos" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
+                pathname.startsWith('/admin/correos')
+                  ? 'bg-brand-yellow/15 text-brand-yellow font-bold shadow-[0_0_12px_-3px_rgba(245,166,35,0.3)]'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
+              }`}>
+                <Mail size={17} className={pathname.startsWith('/admin/correos') ? 'text-brand-yellow' : ''} />
+                Actividad de Correos
               </Link>
 
               <a 

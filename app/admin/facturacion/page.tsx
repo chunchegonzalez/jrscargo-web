@@ -99,6 +99,7 @@ export default function FacturacionDashboard() {
   // Automatic send for unsent invoices with >= 4 days since creation (excluding pendiente@pendiente)
   useEffect(() => {
     if (loading || invoices.length === 0 || isRunningAutoSendRef.current) return;
+    if (typeof window !== 'undefined' && localStorage.getItem('jrs_auto_email_4days_enabled') === 'false') return;
 
     const pendingAutoSend = invoices.filter(inv => {
       if (inv.email_sent_at) return false;
