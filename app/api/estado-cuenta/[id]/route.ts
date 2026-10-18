@@ -322,6 +322,16 @@ export async function GET(
     const rate = Number(exchangeRate) > 0 ? Number(exchangeRate) : 500;
     const totalBalanceCRC = Math.round(totalBalanceUSD * rate);
 
+    const creditBalanceUSD = Number(
+      paymentsRaw.reduce((sum: number, pay: Record<string, unknown>) => {
+        const amt = Number(pay.amount) || 0;
+        const invPays = Array.isArray(pay.invoice_payments) ? (pay.invoice_payments as Record<string, unknown>[]) : [];
+        const applied = invPays.reduce((s, ip) => s + (Number(ip.amount_applied) || 0), 0);
+        const rem = amt - applied;
+        return sum + (rem > 0.009 ? rem : 0);
+      }, 0).toFixed(2)
+    );
+
     return NextResponse.json({
       success: true,
       client: {
@@ -333,6 +343,7 @@ export async function GET(
       stats: {
         totalBalanceUSD: Math.round(totalBalanceUSD * 100) / 100,
         totalBalanceCRC,
+        creditBalanceUSD,
         pendingInvoicesCount: pendingCount,
         pendingPackagesCount: pendingPackages.length,
         pendingPackagesWeight: Math.round(pendingWeightTotal * 10) / 10,

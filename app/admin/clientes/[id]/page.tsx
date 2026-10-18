@@ -154,6 +154,15 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     }
   });
 
+  const saldoAFavorUSD = Number(
+    payments.reduce((sum, pay) => {
+      const amt = Number(pay.amount) || 0;
+      const applied = (pay.invoice_payments || []).reduce((s, ip) => s + (Number(ip.amount_applied) || 0), 0);
+      const rem = amt - applied;
+      return sum + (rem > 0.009 ? rem : 0);
+    }, 0).toFixed(2)
+  );
+
   return (
     <div className="w-full bg-white min-h-screen relative font-sans print:m-0 print:p-0">
       
@@ -192,15 +201,13 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
             <span>Editar Perfil</span>
           </button>
           
-          {(totalPendienteUSD > 0 || totalPendienteCRC > 0) && (
-            <Link 
-              href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
-              className="h-10 px-4 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs sm:text-sm rounded-xl hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-xs inline-flex items-center gap-2 whitespace-nowrap shrink-0"
-            >
-              <DollarSign size={16} className="text-emerald-600" />
-              <span>Recibir Pago</span>
-            </Link>
-          )}
+          <Link 
+            href={`/admin/cuentas-por-cobrar/recibir/${client.id}`}
+            className="h-10 px-4 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-xs sm:text-sm rounded-xl hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-xs inline-flex items-center gap-2 whitespace-nowrap shrink-0"
+          >
+            <DollarSign size={16} className="text-emerald-600" />
+            <span>Recibir Pago / Saldo a Favor</span>
+          </Link>
 
           <Link 
             href={`/admin/facturacion/nueva?client_id=${client.id}&client_name=${encodeURIComponent(client.name)}`}
@@ -300,6 +307,19 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
                 <span className="block text-lg font-bold text-orange-500">{formatCurrency(totalPendienteCRC, 'CRC')}</span>
               </div>
             </div>
+            {saldoAFavorUSD > 0 && (
+              <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 flex items-center justify-between print:border-none print:p-2">
+                <div>
+                  <span className="text-xs font-black text-emerald-800 uppercase tracking-wider block">Saldo a Favor Disponible</span>
+                  <Link href={`/admin/cuentas-por-cobrar/recibir/${client.id}`} className="text-[11px] font-bold text-emerald-600 hover:underline print:hidden">
+                    Aplicar o gestionar →
+                  </Link>
+                </div>
+                <div className="text-right">
+                  <span className="block text-xl font-black text-emerald-700">+{formatCurrency(saldoAFavorUSD, 'USD')}</span>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 print:border-none print:p-2">
                 <p className="text-xs font-bold text-gray-500 mb-1">Total Facturado</p>

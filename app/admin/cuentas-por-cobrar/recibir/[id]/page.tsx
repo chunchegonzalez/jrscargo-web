@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Printer, Check, Trash2 } from 'lucide-react';
+import { ArrowLeft, Printer, Check, Trash2, Wallet, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseLocalDate, getLocalTodayDate } from '@/lib/billing';
@@ -26,7 +26,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   
   // Array of { invoice_id, amount_applied, isFullyPaid }
   const [applications, setApplications] = useState<Record<string, number>>({});
+  const [creditInputStr, setCreditInputStr] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isApplyingCredit, setIsApplyingCredit] = useState(false);
 
   // Modal States
   const [alertModal, setAlertModal] = useState<{isOpen: boolean, title: string, message: string, type: 'success'|'error', onConfirm?: () => void} | null>(null);
@@ -127,13 +129,14 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     });
   };
 
-  // User types global amount at top-right
+  // User types global amount at top-right (Importe Recibido)
   const handleGlobalAmountChange = (valStr: string) => {
     setTotalPaymentAmount(valStr);
     const val = parseFloat(valStr);
     if (isNaN(val) || val <= 0) {
       setApplications({});
       setAmountToApply(0);
+      setCreditInputStr('');
       return;
     }
 
@@ -153,8 +156,10 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         remaining = 0;
       }
     }
+    const applied = Number((val - remaining).toFixed(2));
     setApplications(newApps);
-    setAmountToApply(Number((val - remaining).toFixed(2)));
+    setAmountToApply(applied);
+    setCreditInputStr(remaining > 0.009 ? remaining.toFixed(2) : '');
   };
 
   // User clicks checkbox to toggle specific invoice
@@ -166,10 +171,11 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       } else {
         next[invId] = pendingBalance;
       }
-      const newTotal = Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0);
-      const formatted = newTotal > 0 ? newTotal.toFixed(2) : '';
-      setTotalPaymentAmount(formatted);
-      setAmountToApply(Number(newTotal.toFixed(2)));
+      const newApplied = Number(Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0).toFixed(2));
+      const extraCredit = Math.max(0, parseFloat(creditInputStr) || 0);
+      const totalReceived = Number((newApplied + extraCredit).toFixed(2));
+      setTotalPaymentAmount(totalReceived > 0 ? totalReceived.toFixed(2) : '');
+      setAmountToApply(newApplied);
       return next;
     });
   };
@@ -179,40 +185,136 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     const val = parseFloat(amountStr);
     setApplications(prev => {
       const next = { ...prev };
+      let overflowCredit = 0;
       if (isNaN(val) || val <= 0) {
         delete next[invId];
+      } else if (val > max) {
+        next[invId] = max;
+        overflowCredit = Number((val - max).toFixed(2));
       } else {
-        next[invId] = Math.min(val, max);
+        next[invId] = val;
       }
-      const newTotal = Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0);
-      const formatted = newTotal > 0 ? newTotal.toFixed(2) : '';
-      setTotalPaymentAmount(formatted);
-      setAmountToApply(Number(newTotal.toFixed(2)));
+      const newApplied = Number(Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0).toFixed(2));
+      const currentCredit = overflowCredit > 0 ? overflowCredit : Math.max(0, parseFloat(creditInputStr) || 0);
+      if (overflowCredit > 0) {
+        setCreditInputStr(overflowCredit.toFixed(2));
+      }
+      const totalReceived = Number((newApplied + currentCredit).toFixed(2));
+      setTotalPaymentAmount(totalReceived > 0 ? totalReceived.toFixed(2) : '');
+      setAmountToApply(newApplied);
       return next;
     });
   };
 
+  // User edits the "Saldo a Favor a Generar" field directly
+  const handleCreditInputChange = (valStr: string) => {
+    setCreditInputStr(valStr);
+    const creditVal = Math.max(0, parseFloat(valStr) || 0);
+    const totalReceived = Number((amountToApply + creditVal).toFixed(2));
+    setTotalPaymentAmount(totalReceived > 0 ? totalReceived.toFixed(2) : '');
+  };
+
+  // Calculate existing available credit (Saldo a Favor) from previous payments
+  const availableCredit = clientPayments.reduce((sum, pay) => {
+    const totalAmt = Number(pay.amount) || 0;
+    const appliedList = Array.isArray(pay.invoice_payments) ? (pay.invoice_payments as Array<Record<string, unknown>>) : [];
+    const usedAmt = appliedList.reduce((acc, ip) => acc + (Number(ip.amount_applied) || 0), 0);
+    const rem = Number((totalAmt - usedAmt).toFixed(2));
+    return rem > 0.009 ? Number((sum + rem).toFixed(2)) : sum;
+  }, 0);
+
+  const parsedReceived = Math.max(0, parseFloat(totalPaymentAmount || '0') || 0);
+  const creditToGenerate = Math.max(0, Number((parsedReceived - amountToApply).toFixed(2)));
+
+  // Apply existing Saldo a Favor to pending invoices
+  const handleApplyExistingCredit = async () => {
+    if (availableCredit <= 0 || invoices.length === 0) return;
+
+    let remainingCredit = availableCredit;
+    const toApplyList: Array<{ invoice_id: string; amount_applied: number; isFullyPaid: boolean }> = [];
+
+    // Prioritize checked invoices first, or all pending invoices in order
+    const targetInvs = Object.keys(applications).length > 0
+      ? invoices.filter(i => applications[String(i.id)] !== undefined)
+      : invoices;
+
+    for (const inv of targetInvs) {
+      if (remainingCredit <= 0.009) break;
+      const pendingBal = Number(inv.pendingBalance) || 0;
+      if (pendingBal <= 0) continue;
+      const applyAmt = Number(Math.min(remainingCredit, pendingBal).toFixed(2));
+      if (applyAmt > 0) {
+        toApplyList.push({
+          invoice_id: String(inv.id),
+          amount_applied: applyAmt,
+          isFullyPaid: Math.abs(applyAmt - pendingBal) < 0.01
+        });
+        remainingCredit = Number((remainingCredit - applyAmt).toFixed(2));
+      }
+    }
+
+    if (toApplyList.length === 0) return;
+
+    setIsApplyingCredit(true);
+    try {
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'apply_credit',
+          client_id: clientId,
+          appliedInvoices: toApplyList
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo aplicar el saldo a favor');
+      }
+
+      const totalUsed = toApplyList.reduce((acc, item) => acc + item.amount_applied, 0);
+      setAlertModal({
+        isOpen: true,
+        title: '¡Saldo a Favor Aplicado!',
+        message: `Se aplicaron $${totalUsed.toFixed(2)} USD del saldo a favor del cliente a sus facturas pendientes.`,
+        type: 'success',
+        onConfirm: () => window.location.reload()
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al aplicar saldo a favor';
+      setAlertModal({ isOpen: true, title: 'Error', message: msg, type: 'error' });
+    } finally {
+      setIsApplyingCredit(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (amountToApply <= 0) {
-      setAlertModal({ isOpen: true, title: 'Atención', message: 'Debes aplicar un monto mayor a 0', type: 'error' });
+    const totalReceivedToSave = Number((amountToApply + creditToGenerate).toFixed(2));
+    if (totalReceivedToSave <= 0) {
+      setAlertModal({ isOpen: true, title: 'Atención', message: 'Debes ingresar un monto recibido o saldo a favor mayor a 0', type: 'error' });
       return;
     }
     
     setIsSaving(true);
     try {
-      const appliedInvoices = Object.entries(applications).map(([invoice_id, amount_applied]) => {
-        const inv = invoices.find(i => i.id === invoice_id);
-        const pendingBalance = (inv?.pendingBalance as number) || 0;
-        const isFullyPaid = Math.abs(amount_applied - pendingBalance) < 0.01;
-        return { invoice_id, amount_applied, isFullyPaid };
-      });
+      const appliedInvoices = Object.entries(applications)
+        .filter(([, amount_applied]) => Number(amount_applied) > 0)
+        .map(([invoice_id, amount_applied]) => {
+          const inv = invoices.find(i => i.id === invoice_id);
+          const pendingBalance = (inv?.pendingBalance as number) || 0;
+          const isFullyPaid = Math.abs(amount_applied - pendingBalance) < 0.01;
+          return { invoice_id, amount_applied, isFullyPaid };
+        });
+
+      const refNote = creditToGenerate > 0 && !reference.trim()
+        ? `Saldo a favor (+$${creditToGenerate.toFixed(2)})`
+        : reference;
 
       const payment = {
         client_id: clientId,
-        amount: amountToApply,
+        amount: totalReceivedToSave,
         payment_date: paymentDate,
-        payment_method: paymentMethod,
-        reference_number: reference,
+        payment_method: paymentMethod || 'SINPE',
+        reference_number: refNote,
         currency
       };
 
@@ -226,13 +328,19 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       
       if (!res.ok) throw new Error(data.error || 'Error desconocido al guardar el pago');
       
+      const successMsg = creditToGenerate > 0 && amountToApply > 0
+        ? `Se aplicaron $${amountToApply.toFixed(2)} USD a las facturas y se guardaron $${creditToGenerate.toFixed(2)} USD como saldo a favor del cliente.`
+        : creditToGenerate > 0
+        ? `Se registraron $${creditToGenerate.toFixed(2)} USD como saldo a favor para el cliente.`
+        : 'El pago ha sido registrado y aplicado a las facturas con éxito.';
+
       setAlertModal({
         isOpen: true,
-        title: '¡Pago Registrado!',
-        message: 'El pago ha sido registrado y aplicado a las facturas con éxito.',
+        title: creditToGenerate > 0 ? '¡Pago y Saldo a Favor Registrados!' : '¡Pago Registrado!',
+        message: successMsg,
         type: 'success',
         onConfirm: () => {
-          window.location.href = '/admin/cuentas-por-cobrar';
+          window.location.reload();
         }
       });
     } catch (error) {
@@ -356,13 +464,61 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               </p>
             )}
             <p className="text-xs font-bold text-gray-400">
-              Cliente Saldo (USD): <span className="text-gray-800 font-black">{formatCurrency(currentBalance, currency)}</span>
+              Cliente Saldo Pendiente: <span className="text-gray-800 font-black">{formatCurrency(currentBalance, currency)}</span>
             </p>
             <p className="text-xs font-bold text-gray-400 mt-0.5">
               Saldo en Colones: <span className="text-brand-blue font-extrabold">₡{Math.round(currentBalance * exchangeRate).toLocaleString('es-CR')} CRC</span>
             </p>
+            {availableCredit > 0 && (
+              <div className="mt-2.5 pt-2.5 border-t border-emerald-200/70 w-full flex flex-col items-end">
+                <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                  <Wallet size={13} />
+                  Saldo a Favor Disponible: +{formatCurrency(availableCredit, currency)}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 mt-0.5">
+                  ≈ ₡{Math.round(availableCredit * exchangeRate).toLocaleString('es-CR')} CRC
+                </span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Available Credit Banner */}
+        {availableCredit > 0 && (
+          <div className="mb-6 bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Wallet size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm font-black text-emerald-950 uppercase tracking-wide">
+                    Cliente con Saldo a Favor Disponible
+                  </h4>
+                  <span className="text-xs font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-full">
+                    +{formatCurrency(availableCredit, currency)} (≈ ₡{Math.round(availableCredit * exchangeRate).toLocaleString('es-CR')})
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                  {visibleInvoices.length > 0
+                    ? 'Puedes descontar este saldo a favor automáticamente en las facturas pendientes del cliente.'
+                    : 'Este monto quedará disponible para aplicarse cuando el cliente tenga nuevas facturas.'}
+                </p>
+              </div>
+            </div>
+            {visibleInvoices.length > 0 && (
+              <button
+                type="button"
+                onClick={handleApplyExistingCredit}
+                disabled={isApplyingCredit}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-sm transition-colors shrink-0 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Sparkles size={15} />
+                {isApplyingCredit ? 'Aplicando...' : 'Aplicar Saldo a Favor'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Transactions Table */}
         <div>
@@ -382,7 +538,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               </thead>
               <tbody>
                 {visibleInvoices.length === 0 ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas pendientes en {currency}.</td></tr>
+                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas pendientes en {currency}. Puedes registrar un anticipo o saldo a favor abajo.</td></tr>
                 ) : (
                   visibleInvoices.map(inv => {
                     const invId = inv.id as string;
@@ -442,14 +598,60 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             </table>
           </div>
           
-          <div className="mt-4 flex flex-col items-end">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">
-              Monto a Aplicar: <span className="text-xl font-black text-green-600 ml-2">{formatCurrency(amountToApply, currency)}</span>
-            </p>
-            <p className="text-xs font-bold text-gray-500 mt-1">
-              Total en Colones: <span className="text-base font-black text-brand-blue ml-1">₡{Math.round(amountToApply * exchangeRate).toLocaleString('es-CR')} CRC</span>
-              <span className="text-[10px] text-gray-400 font-medium ml-1.5">(T.C. ₡{exchangeRate})</span>
-            </p>
+          {/* Saldo a Favor / Overpayment Box & Totals */}
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            <div className="md:col-span-7 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 print:hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <label className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet size={14} className="text-emerald-600" />
+                    Generar Saldo a Favor (Pago de más / Anticipo)
+                  </label>
+                  <p className="text-xs text-emerald-700/90 mt-1 leading-relaxed">
+                    Si el cliente pagó de más, ingresa el total recibido arriba o escribe aquí el monto excedente en USD para guardarlo como saldo a favor.
+                  </p>
+                </div>
+                <div className="shrink-0 flex flex-col items-end">
+                  <div className="inline-flex items-center gap-1.5 bg-white border-2 border-emerald-300 focus-within:border-emerald-600 px-3 py-2 rounded-xl shadow-sm">
+                    <span className="text-sm font-black text-emerald-700">+$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      value={creditInputStr !== '' ? creditInputStr : (creditToGenerate > 0 ? creditToGenerate.toFixed(2) : '')}
+                      onChange={e => handleCreditInputChange(e.target.value)}
+                      className="w-28 text-right font-black text-base text-emerald-900 focus:outline-none bg-transparent"
+                    />
+                  </div>
+                  {creditToGenerate > 0 && (
+                    <span className="text-[11px] font-bold text-emerald-700 mt-1">
+                      ≈ +₡{Math.round(creditToGenerate * exchangeRate).toLocaleString('es-CR')} CRC
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="md:col-span-5 flex flex-col items-end justify-end space-y-1.5 pt-1">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                Monto a Aplicar a Facturas: <span className="text-base font-black text-gray-800 ml-2">{formatCurrency(amountToApply, currency)}</span>
+              </p>
+              {creditToGenerate > 0 && (
+                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  Saldo a Favor a Generar: <span className="text-base font-black text-emerald-700 ml-1.5">+{formatCurrency(creditToGenerate, currency)}</span>
+                </p>
+              )}
+              <div className="pt-1.5 border-t border-gray-200 w-full flex flex-col items-end">
+                <p className="text-sm font-bold text-gray-600 uppercase tracking-wider">
+                  Total Pago Recibido: <span className="text-xl font-black text-green-600 ml-2">{formatCurrency(Number((amountToApply + creditToGenerate).toFixed(2)), currency)}</span>
+                </p>
+                <p className="text-xs font-bold text-gray-500 mt-1">
+                  Total en Colones: <span className="text-base font-black text-brand-blue ml-1">₡{Math.round((amountToApply + creditToGenerate) * exchangeRate).toLocaleString('es-CR')} CRC</span>
+                  <span className="text-[10px] text-gray-400 font-medium ml-1.5">(T.C. ₡{exchangeRate})</span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -464,7 +666,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Método</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Referencia</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Facturas Aplicadas</th>
+                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Facturas Aplicadas / Saldo</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto</th>
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center print:hidden">Acción</th>
                 </tr>
@@ -473,30 +675,46 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 {clientPayments.length === 0 ? (
                   <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay pagos registrados.</td></tr>
                 ) : (
-                  clientPayments.map((pay: Record<string, unknown>) => (
-                    <tr key={pay.id as string} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
-                      <td className="p-4 text-sm text-gray-800 font-medium">{pay.payment_date as string}</td>
-                      <td className="p-4 text-sm text-gray-600">{(pay.payment_method as string) || '-'}</td>
-                      <td className="p-4 text-sm text-gray-600">{(pay.reference_number as string) || '-'}</td>
-                      <td className="p-4 text-sm text-gray-500">
-                        {Array.isArray(pay.invoice_payments) && pay.invoice_payments.map((ip: Record<string, unknown>) => (
-                          <div key={ip.invoice_id as string}>
-                            #{(ip.invoices as Record<string, unknown>)?.invoice_number as string} <span className="text-xs">(${Number(ip.amount_applied).toFixed(2)})</span>
-                          </div>
-                        ))}
-                      </td>
-                      <td className="p-4 text-sm font-bold text-green-700 text-right">+{formatCurrency(Number(pay.amount), (pay.currency as string) || 'USD')}</td>
-                      <td className="p-4 text-center print:hidden">
-                        <button 
-                          onClick={() => handleDeletePayment(pay.id as string)}
-                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" 
-                          title="Anular Pago"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  clientPayments.map((pay: Record<string, unknown>) => {
+                    const payAmt = Number(pay.amount) || 0;
+                    const invPayments = Array.isArray(pay.invoice_payments) ? (pay.invoice_payments as Record<string, unknown>[]) : [];
+                    const appliedSum = invPayments.reduce((acc, ip) => acc + (Number(ip.amount_applied) || 0), 0);
+                    const unappliedCredit = Math.max(0, Number((payAmt - appliedSum).toFixed(2)));
+
+                    return (
+                      <tr key={pay.id as string} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
+                        <td className="p-4 text-sm text-gray-800 font-medium">{pay.payment_date as string}</td>
+                        <td className="p-4 text-sm text-gray-600">{(pay.payment_method as string) || '-'}</td>
+                        <td className="p-4 text-sm text-gray-600">{(pay.reference_number as string) || '-'}</td>
+                        <td className="p-4 text-sm text-gray-500 space-y-1">
+                          {invPayments.map((ip: Record<string, unknown>) => (
+                            <div key={`${ip.invoice_id as string}-${ip.amount_applied as number}`}>
+                              #{(ip.invoices as Record<string, unknown>)?.invoice_number as string} <span className="text-xs">(${Number(ip.amount_applied).toFixed(2)})</span>
+                            </div>
+                          ))}
+                          {unappliedCredit > 0.009 && (
+                            <div className="inline-flex items-center gap-1 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                              <Wallet size={11} />
+                              Saldo a favor disp.: +${unappliedCredit.toFixed(2)}
+                            </div>
+                          )}
+                          {invPayments.length === 0 && unappliedCredit <= 0.009 && (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm font-bold text-green-700 text-right">+{formatCurrency(payAmt, (pay.currency as string) || 'USD')}</td>
+                        <td className="p-4 text-center print:hidden">
+                          <button 
+                            onClick={() => handleDeletePayment(pay.id as string)}
+                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" 
+                            title="Anular Pago"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -515,10 +733,16 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         </button>
         <button 
           onClick={handleSave} 
-          disabled={isSaving || amountToApply <= 0}
+          disabled={isSaving || (amountToApply + creditToGenerate) <= 0}
           className="px-8 py-2.5 bg-[#0A2636] text-white rounded-xl font-bold hover:bg-[#0A2636]/90 transition-colors shadow-lg shadow-[#0A2636]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          {isSaving ? 'Guardando...' : 'Guardar Pago'}
+          {isSaving
+            ? 'Guardando...'
+            : creditToGenerate > 0 && amountToApply > 0
+              ? `Guardar Pago y Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+              : creditToGenerate > 0
+                ? `Registrar Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+                : 'Guardar Pago'}
         </button>
       </div>
       

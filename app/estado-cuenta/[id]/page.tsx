@@ -128,6 +128,7 @@ interface StatementData {
   stats: {
     totalBalanceUSD: number;
     totalBalanceCRC: number;
+    creditBalanceUSD?: number;
     pendingInvoicesCount: number;
     pendingPackagesCount: number;
     pendingPackagesWeight: number;
@@ -649,6 +650,33 @@ export default function PublicEstadoCuentaPage() {
             </div>
 
           </div>
+
+          {/* Saldo a Favor Banner */}
+          {(stats.creditBalanceUSD || 0) > 0.01 && (
+            <div className="mt-4 p-4 sm:p-5 bg-emerald-50/90 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <span className="text-xs font-black text-emerald-950 uppercase tracking-wider block">
+                    Saldo a Favor Disponible en tu Cuenta
+                  </span>
+                  <span className="text-xs text-emerald-800 font-medium">
+                    Este saldo a favor se aplicará a tus próximos paquetes o comprobantes.
+                  </span>
+                </div>
+              </div>
+              <div className="text-left sm:text-right shrink-0">
+                <span className="text-xl sm:text-2xl font-black text-emerald-700 block">
+                  +${Number(stats.creditBalanceUSD).toFixed(2)} USD
+                </span>
+                <span className="text-xs font-bold text-emerald-600">
+                  ≈ ₡{Math.round(Number(stats.creditBalanceUSD) * (stats.exchangeRate || 500)).toLocaleString('es-CR')} CRC
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Payment Instructions Box: Multiple Payment Options */}
           {stats.totalBalanceUSD > 0.01 && (
