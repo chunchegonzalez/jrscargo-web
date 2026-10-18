@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Printer, Check, Trash2, Wallet, Sparkles } from 'lucide-react';
+import { ArrowLeft, Printer, Check, Trash2, Wallet, Sparkles, Plus, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseLocalDate, getLocalTodayDate } from '@/lib/billing';
@@ -27,6 +27,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   // Array of { invoice_id, amount_applied, isFullyPaid }
   const [applications, setApplications] = useState<Record<string, number>>({});
   const [creditInputStr, setCreditInputStr] = useState<string>('');
+  const [showCreditBox, setShowCreditBox] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isApplyingCredit, setIsApplyingCredit] = useState(false);
 
@@ -600,37 +601,62 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           
           {/* Saldo a Favor / Overpayment Box & Totals */}
           <div className="mt-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            <div className="md:col-span-7 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 print:hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <label className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Wallet size={14} className="text-emerald-600" />
-                    Generar Saldo a Favor (Pago de más / Anticipo)
-                  </label>
-                  <p className="text-xs text-emerald-700/90 mt-1 leading-relaxed">
-                    Si el cliente pagó de más, ingresa el total recibido arriba o escribe aquí el monto excedente en USD para guardarlo como saldo a favor.
-                  </p>
-                </div>
-                <div className="shrink-0 flex flex-col items-end">
-                  <div className="inline-flex items-center gap-1.5 bg-white border-2 border-emerald-300 focus-within:border-emerald-600 px-3 py-2 rounded-xl shadow-sm">
-                    <span className="text-sm font-black text-emerald-700">+$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={creditInputStr !== '' ? creditInputStr : (creditToGenerate > 0 ? creditToGenerate.toFixed(2) : '')}
-                      onChange={e => handleCreditInputChange(e.target.value)}
-                      className="w-28 text-right font-black text-base text-emerald-900 focus:outline-none bg-transparent"
-                    />
+            <div className="md:col-span-7 print:hidden">
+              {!showCreditBox && creditToGenerate <= 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCreditBox(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 text-xs font-bold transition-all shadow-2xs"
+                >
+                  <Plus size={15} className="text-emerald-600 stroke-[2.5]" />
+                  <Wallet size={14} className="text-emerald-600" />
+                  <span>Generar Saldo a Favor (Pago de más / Anticipo)</span>
+                </button>
+              ) : (
+                <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCreditInputChange('');
+                      setShowCreditBox(false);
+                    }}
+                    title="Ocultar saldo a favor"
+                    className="absolute top-3 right-3 p-1 rounded-lg text-emerald-700/60 hover:text-emerald-900 hover:bg-emerald-100/70 transition-colors"
+                  >
+                    <X size={15} />
+                  </button>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-5">
+                    <div>
+                      <label className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Wallet size={14} className="text-emerald-600" />
+                        Generar Saldo a Favor (Pago de más / Anticipo)
+                      </label>
+                      <p className="text-xs text-emerald-700/90 mt-1 leading-relaxed">
+                        Si el cliente pagó de más, ingresa el total recibido arriba o escribe aquí el monto excedente en USD para guardarlo como saldo a favor.
+                      </p>
+                    </div>
+                    <div className="shrink-0 flex flex-col items-end">
+                      <div className="inline-flex items-center gap-1.5 bg-white border-2 border-emerald-300 focus-within:border-emerald-600 px-3 py-2 rounded-xl shadow-sm">
+                        <span className="text-sm font-black text-emerald-700">+$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={creditInputStr !== '' ? creditInputStr : (creditToGenerate > 0 ? creditToGenerate.toFixed(2) : '')}
+                          onChange={e => handleCreditInputChange(e.target.value)}
+                          className="w-28 text-right font-black text-base text-emerald-900 focus:outline-none bg-transparent"
+                        />
+                      </div>
+                      {creditToGenerate > 0 && (
+                        <span className="text-[11px] font-bold text-emerald-700 mt-1">
+                          ≈ +₡{Math.round(creditToGenerate * exchangeRate).toLocaleString('es-CR')} CRC
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {creditToGenerate > 0 && (
-                    <span className="text-[11px] font-bold text-emerald-700 mt-1">
-                      ≈ +₡{Math.round(creditToGenerate * exchangeRate).toLocaleString('es-CR')} CRC
-                    </span>
-                  )}
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="md:col-span-5 flex flex-col items-end justify-end space-y-1.5 pt-1">
