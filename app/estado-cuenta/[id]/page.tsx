@@ -7,7 +7,8 @@ import {
   DollarSign, CheckCircle2, Clock, FileText, Printer, 
   Copy, Check, ShieldCheck, AlertCircle, 
   ChevronDown, ChevronUp, Phone, Mail, Package, MessageCircle,
-  HelpCircle, Building2, X, Send, Smartphone, Banknote, Calendar
+  HelpCircle, Building2, X, Send, Smartphone, Banknote, Calendar,
+  Filter, Search, ArrowLeft
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
 
@@ -146,7 +147,9 @@ export default function PublicEstadoCuentaPage() {
   const [data, setData] = useState<StatementData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pendientes' | 'paquetes' | 'todas' | 'pagos'>('pendientes');
+  const [activeTab, setActiveTab] = useState<'pendientes' | 'pagadas' | 'todas' | 'pagos' | 'paquetes'>('pendientes');
+  const [historyMonthFilter, setHistoryMonthFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedSinpe, setCopiedSinpe] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [expandedInvoices, setExpandedInvoices] = useState<Record<string, boolean>>({});
@@ -334,7 +337,49 @@ export default function PublicEstadoCuentaPage() {
   }
 
   const { client, stats, invoices, payments } = data;
-  const pendingInvoices = invoices.filter(inv => inv.pending > 0.01);
+  const pendingInvoices = invoices.filter(inv => inv.pending > 0.01 && inv.status !== 'Anulada');
+  const paidInvoices = invoices.filter(inv => inv.pending <= 0.01 && inv.status !== 'Anulada');
+
+  const displayedInvoices = (
+    activeTab === 'pendientes'
+      ? pendingInvoices
+      : activeTab === 'pagadas'
+      ? paidInvoices
+      : invoices
+  ).filter((inv) => {
+    if (activeTab !== 'pendientes' && historyMonthFilter !== 'all') {
+      if (getMonthKey(inv.issue_date) !== historyMonthFilter) return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const matchNumber = String(inv.invoice_number || '').toLowerCase().includes(q);
+      const matchNotes = String(inv.notes || '').toLowerCase().includes(q);
+      const matchItems = (inv.items || []).some(
+        (it) =>
+          String(it.tracking_number || '').toLowerCase().includes(q) ||
+          String(it.service_name || '').toLowerCase().includes(q)
+      );
+      if (!matchNumber && !matchNotes && !matchItems) return false;
+    }
+    return true;
+  });
+
+  const displayedPayments = payments.filter((p) => {
+    if (historyMonthFilter !== 'all') {
+      if (getMonthKey(p.payment_date) !== historyMonthFilter) return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const matchRef = String(p.reference_number || '').toLowerCase().includes(q);
+      const matchMethod = String(p.payment_method || '').toLowerCase().includes(q);
+      const matchInv = (p.invoice_payments || []).some((ip) =>
+        String(ip.invoices?.invoice_number || '').toLowerCase().includes(q)
+      );
+      if (!matchRef && !matchMethod && !matchInv) return false;
+    }
+    return true;
+  });
+
   const whatsappPaymentMsg = `Hola JRS Cargo, adjunto comprobante de pago para la cuenta de *${client.name}* (Saldo pendiente: $${stats.totalBalanceUSD.toFixed(2)} USD / ₡${stats.totalBalanceCRC.toLocaleString('es-CR')}).`;
 
   return (
@@ -535,8 +580,11 @@ export default function PublicEstadoCuentaPage() {
 
                 {stats.pendingPackagesCount > 0 ? (
                   <button
-                    onClick={() => setActiveTab('paquetes')}
-                    className="text-xs font-black text-brand-blue hover:text-[#0c2f42] inline-flex items-center gap-1 py-1 px-2.5 rounded-lg hover:bg-blue-50 transition-colors"
+                    onClick={() => {
+                      setActiveTab('paquetes');
+                      document.getElementById('seccion-comprobantes')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="text-xs font-black text-brand-blue hover:text-[#0c2f42] inline-flex items-center gap-1 py-1 px-2.5 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer"
                   >
                     <span>Ver detalle</span> &rarr;
                   </button>
@@ -740,147 +788,349 @@ export default function PublicEstadoCuentaPage() {
         </div>
 
         {/* Invoices and Payments Section */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm print:border-none print:shadow-none print:p-0">
+        <div id="seccion-comprobantes" className="bg-white rounded-3xl p-5 sm:p-8 border border-slate-200/80 shadow-xs print:border-none print:shadow-none print:p-0">
           
-          {/* Tabs (Hidden in print) */}
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-4 mb-6 overflow-x-auto print:hidden">
-            <button
-              onClick={() => setActiveTab('pendientes')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+          {/* Top Header & Filter Controls (Hidden in print) */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-100 print:hidden">
+            {/* Section Title & Badge */}
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border shadow-2xs ${
                 activeTab === 'pendientes'
-                  ? 'bg-brand-blue text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
-              }`}
-            >
-              <Clock size={16} />
-              <span>Comprobantes Pendientes ({pendingInvoices.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('paquetes')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
-                activeTab === 'paquetes'
-                  ? 'bg-brand-blue text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
-              }`}
-            >
-              <Package size={16} />
-              <span>Paquetes por Retirar ({stats.pendingPackagesCount})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('todas')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
-                activeTab === 'todas'
-                  ? 'bg-brand-blue text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
-              }`}
-            >
-              <FileText size={16} />
-              <span>Todos los Comprobantes ({invoices.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('pagos')}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
-                activeTab === 'pagos'
-                  ? 'bg-brand-blue text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
-              }`}
-            >
-              <CheckCircle2 size={16} />
-              <span>Historial de Pagos ({payments.length})</span>
-            </button>
+                  ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                  : activeTab === 'pagadas' || activeTab === 'pagos'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                  : 'bg-blue-50 text-brand-blue border-blue-200/80'
+              }`}>
+                {activeTab === 'pendientes' ? (
+                  <Clock size={21} />
+                ) : activeTab === 'paquetes' ? (
+                  <Package size={21} />
+                ) : activeTab === 'pagos' || activeTab === 'pagadas' ? (
+                  <CheckCircle2 size={21} />
+                ) : (
+                  <FileText size={21} />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                    {activeTab === 'pendientes'
+                      ? 'Comprobantes Pendientes de Pago'
+                      : activeTab === 'pagadas'
+                      ? 'Historial de Comprobantes Pagados'
+                      : activeTab === 'todas'
+                      ? 'Historial Completo de Comprobantes'
+                      : activeTab === 'pagos'
+                      ? 'Historial de Pagos y Abonos'
+                      : 'Paquetes por Retirar en Bodega'}
+                  </h2>
+                  {activeTab === 'pendientes' && (
+                    <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                      pendingInvoices.length > 0
+                        ? 'bg-amber-100/90 text-amber-900 border-amber-300/80'
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    }`}>
+                      {pendingInvoices.length} {pendingInvoices.length === 1 ? 'pendiente' : 'pendientes'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {activeTab === 'pendientes'
+                    ? 'Mostrando únicamente tus comprobantes con saldo pendiente por cancelar.'
+                    : activeTab === 'pagadas'
+                    ? 'Consulta tus comprobantes que ya fueron cancelados.'
+                    : activeTab === 'todas'
+                    ? 'Listado histórico de todos los comprobantes emitidos en tu cuenta.'
+                    : activeTab === 'pagos'
+                    ? 'Registro de transferencias, SINPE Móvil y abonos aplicados.'
+                    : 'Detalle de paquetes disponibles en bodega o asociados a tus comprobantes.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Dropdown & Quick Toggle */}
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              {activeTab !== 'pendientes' ? (
+                <button
+                  onClick={() => {
+                    setActiveTab('pendientes');
+                    setSearchQuery('');
+                    setHistoryMonthFilter('all');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100/80 text-amber-900 border border-amber-200/90 transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={14} />
+                  <span>Pendientes ({pendingInvoices.length})</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setActiveTab(paidInvoices.length > 0 ? 'pagadas' : 'todas')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/90 transition-all cursor-pointer"
+                >
+                  <FileText size={14} className="text-brand-blue" />
+                  <span>Ver Historial ({invoices.length})</span>
+                </button>
+              )}
+
+              {/* Selector de Vista / Filtro */}
+              <div className="relative flex-1 sm:flex-initial min-w-[225px]">
+                <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-blue pointer-events-none" />
+                <select
+                  value={activeTab}
+                  onChange={(e) => {
+                    setActiveTab(e.target.value as 'pendientes' | 'pagadas' | 'todas' | 'pagos' | 'paquetes');
+                    setSearchQuery('');
+                  }}
+                  aria-label="Filtrar vista de comprobantes e historial"
+                  className="w-full pl-8 pr-8 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl text-xs font-bold text-slate-800 shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue appearance-none transition-all"
+                >
+                  <option value="pendientes">Vista: Solo Pendientes de Pago ({pendingInvoices.length})</option>
+                  <option value="pagadas">Historial: Comprobantes Pagados ({paidInvoices.length})</option>
+                  <option value="todas">Historial: Todos los Comprobantes ({invoices.length})</option>
+                  <option value="pagos">Historial: Pagos y Abonos ({payments.length})</option>
+                  <option value="paquetes">Bodega: Paquetes por Retirar ({stats.pendingPackagesCount})</option>
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
           </div>
 
-          {/* ================= PENDIENTES O TODAS ================= */}
-          {(activeTab === 'pendientes' || activeTab === 'todas') && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-gray-800">
-                  {activeTab === 'pendientes' ? 'Comprobantes Pendientes de Pago' : 'Historial Completo de Comprobantes'}
-                </h2>
-                <span className="text-xs text-gray-400">
-                  Total mostrados: {activeTab === 'pendientes' ? pendingInvoices.length : invoices.length}
-                </span>
+          {/* Secondary Filter Bar for History Mode (or when searching) */}
+          {activeTab !== 'pendientes' && activeTab !== 'paquetes' && (
+            <div className="bg-slate-50/90 border border-slate-200/70 rounded-2xl p-3 sm:p-3.5 mb-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 print:hidden">
+              {/* Sub-filter pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                <button
+                  onClick={() => setActiveTab('pagadas')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    activeTab === 'pagadas'
+                      ? 'bg-brand-blue text-white shadow-2xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                  }`}
+                >
+                  Pagados ({paidInvoices.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('todas')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    activeTab === 'todas'
+                      ? 'bg-brand-blue text-white shadow-2xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                  }`}
+                >
+                  Todos ({invoices.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('pagos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    activeTab === 'pagos'
+                      ? 'bg-brand-blue text-white shadow-2xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
+                  }`}
+                >
+                  Abonos Recibidos ({payments.length})
+                </button>
               </div>
 
-              {(activeTab === 'pendientes' ? pendingInvoices : invoices).length === 0 ? (
-                <div className="p-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <CheckCircle2 size={40} className="text-green-500 mx-auto mb-2" />
-                  <p className="font-bold text-gray-700">No hay comprobantes en esta sección</p>
-                  <p className="text-xs text-gray-400 mt-1">Tu cuenta se encuentra al día.</p>
+              {/* Search & Month filter */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                {/* Search Input */}
+                <div className="relative flex-1 sm:w-56">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={activeTab === 'pagos' ? 'Buscar referencia o método...' : 'Buscar # comprobante o guía...'}
+                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200/90 rounded-xl text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      title="Limpiar búsqueda"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Month Selector */}
+                <div className="relative shrink-0">
+                  <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <select
+                    value={historyMonthFilter}
+                    onChange={(e) => setHistoryMonthFilter(e.target.value)}
+                    aria-label="Filtrar historial por mes"
+                    className="w-full sm:w-auto pl-7 pr-7 py-1.5 bg-white border border-slate-200/90 rounded-xl text-xs font-bold text-slate-700 cursor-pointer focus:outline-none focus:border-brand-blue appearance-none"
+                  >
+                    <option value="all">Todos los meses</option>
+                    {availableMonths.map((m) => (
+                      <option key={m} value={m}>
+                        {formatMonthName(m)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= COMPROBANTES (PENDIENTES / PAGADAS / TODAS) ================= */}
+          {(activeTab === 'pendientes' || activeTab === 'pagadas' || activeTab === 'todas') && (
+            <div>
+              {displayedInvoices.length === 0 ? (
+                <div className="p-10 sm:p-12 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100/80 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle2 size={26} />
+                  </div>
+                  <p className="font-black text-slate-800 text-base">
+                    {activeTab === 'pendientes'
+                      ? '¡No tienes comprobantes pendientes de pago!'
+                      : 'No se encontraron comprobantes con este filtro'}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    {activeTab === 'pendientes'
+                      ? 'Tu cuenta se encuentra completamente al día. Puedes consultar tus comprobantes anteriores usando el filtro de historial.'
+                      : 'Intenta cambiar el mes seleccionado o limpiar el texto de búsqueda.'}
+                  </p>
+                  {activeTab === 'pendientes' && invoices.length > 0 && (
+                    <button
+                      onClick={() => setActiveTab('todas')}
+                      className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-brand-blue border border-slate-200 shadow-2xs transition-all cursor-pointer"
+                    >
+                      <FileText size={14} />
+                      <span>Ver historial de comprobantes ({invoices.length})</span>
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {(activeTab === 'pendientes' ? pendingInvoices : invoices).map((inv) => {
+                <div className="space-y-3.5">
+                  {displayedInvoices.map((inv) => {
                     const isExpanded = !!expandedInvoices[inv.id];
                     const hasItems = inv.items && inv.items.length > 0;
+                    const isPending = inv.pending > 0.01 && inv.status !== 'Anulada';
+                    const pendingCRC = Math.round(inv.pending * stats.exchangeRate);
 
                     return (
                       <div
                         key={inv.id}
-                        className={`rounded-2xl border transition-all ${
-                          inv.pending > 0.01 
-                            ? 'bg-white border-amber-200/80 shadow-sm' 
-                            : 'bg-slate-50/60 border-gray-100 text-gray-600'
+                        className={`rounded-2xl border transition-all overflow-hidden ${
+                          isPending
+                            ? 'bg-white border-slate-200/90 border-l-4 border-l-amber-500 shadow-xs hover:shadow-md'
+                            : 'bg-slate-50/50 border-slate-200/70 border-l-4 border-l-emerald-500 text-slate-600'
                         }`}
                       >
-                        <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                              inv.pending > 0.01 
-                                ? 'bg-amber-100 text-amber-800' 
-                                : 'bg-green-100 text-green-700'
+                        <div className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          {/* Left Info Block */}
+                          <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 border ${
+                              isPending
+                                ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
                             }`}>
                               <FileText size={20} />
                             </div>
-                            <div>
+
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-black text-gray-900 text-base">
+                                <h3 className="font-black text-slate-900 text-base sm:text-lg tracking-tight">
                                   Comprobante #{inv.invoice_number}
                                 </h3>
-                                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 border ${
                                   inv.status === 'Pagada'
-                                    ? 'bg-green-100 text-green-700'
+                                    ? 'bg-emerald-100/80 text-emerald-800 border-emerald-200'
                                     : inv.status === 'Parcial'
-                                    ? 'bg-blue-100 text-blue-700'
+                                    ? 'bg-blue-100 text-blue-800 border-blue-200'
                                     : inv.status === 'Anulada'
-                                    ? 'bg-gray-100 text-gray-400 line-through'
-                                    : 'bg-amber-100 text-amber-800'
+                                    ? 'bg-slate-100 text-slate-400 border-slate-200 line-through'
+                                    : 'bg-amber-100 text-amber-900 border-amber-300/80'
                                 }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    inv.status === 'Pagada'
+                                      ? 'bg-emerald-600'
+                                      : inv.status === 'Parcial'
+                                      ? 'bg-blue-600'
+                                      : 'bg-amber-600'
+                                  }`} />
                                   {inv.status}
                                 </span>
-                              </div>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                Emisión: <span className="font-semibold text-gray-600">{formatDisplayDate(inv.issue_date)}</span>
-                                {inv.due_date && (
-                                  <> • Vence: <span className="font-semibold text-gray-600">{formatDisplayDate(inv.due_date)}</span></>
+
+                                {hasItems && (
+                                  <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70 inline-flex items-center gap-1">
+                                    <Package size={12} className="text-brand-blue" />
+                                    {inv.items.length} {inv.items.length === 1 ? 'paquete' : 'paquetes'}
+                                  </span>
                                 )}
-                              </p>
+                              </div>
+
+                              <div className="flex items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1 flex-wrap">
+                                <span>
+                                  Emisión: <strong className="font-bold text-slate-700">{formatDisplayDate(inv.issue_date)}</strong>
+                                </span>
+                                {inv.due_date && (
+                                  <span>
+                                    • Vence: <strong className="font-bold text-slate-700">{formatDisplayDate(inv.due_date)}</strong>
+                                  </span>
+                                )}
+                                {inv.paid > 0 && isPending && (
+                                  <span className="text-emerald-700 font-bold">
+                                    • Total: ${inv.total.toFixed(2)} (Abonado: ${inv.paid.toFixed(2)})
+                                  </span>
+                                )}
+                              </div>
+
                               {inv.notes && (
-                                <p className="text-xs text-gray-500 italic mt-1 bg-gray-50 px-2 py-1 rounded inline-block">
+                                <p className="text-[11px] text-slate-500 italic mt-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-0.5 rounded-lg inline-block">
                                   {inv.notes}
                                 </p>
                               )}
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 flex-wrap">
-                            <div className="text-left md:text-right">
-                              <p className="text-[11px] text-gray-400 font-bold uppercase">Saldo a Pagar</p>
-                              <p className="text-lg font-black text-brand-blue">
-                                ${inv.pending.toFixed(2)} <span className="text-xs font-normal text-gray-400">USD</span>
+                          {/* Right Balance & Actions Block */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between lg:justify-end gap-3 sm:gap-5 pt-3.5 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                            <div className="text-left sm:text-right">
+                              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
+                                {isPending ? 'Saldo a Pagar' : 'Total Comprobante'}
                               </p>
-                              {inv.paid > 0 && (
-                                <p className="text-[11px] text-green-600 font-semibold">
-                                  Abonado: ${inv.paid.toFixed(2)}
+                              <div className="flex items-baseline sm:justify-end gap-1.5">
+                                <span className={`text-xl sm:text-2xl font-black tracking-tight ${
+                                  isPending ? 'text-brand-blue' : 'text-slate-700'
+                                }`}>
+                                  ${(isPending ? inv.pending : inv.total).toFixed(2)}
+                                </span>
+                                <span className="text-xs font-bold text-slate-400">USD</span>
+                              </div>
+                              {isPending && (
+                                <p className="text-[11px] font-bold text-amber-700">
+                                  ≈ ₡{pendingCRC.toLocaleString('es-CR')} CRC
                                 </p>
                               )}
                             </div>
 
-                            {/* Actions: Reenviar Comprobante, PDF y Expandir */}
-                            <div className="flex items-center gap-2 print:hidden">
+                            {/* Actions: Ver Paquetes, Reenviar Comprobante, PDF */}
+                            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap print:hidden">
+                              {hasItems && (
+                                <button
+                                  onClick={() => toggleInvoiceExpand(inv.id)}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                    isExpanded
+                                      ? 'bg-slate-800 text-white border-slate-800'
+                                      : 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 border-slate-200'
+                                  }`}
+                                  title="Ver desglose de paquetes incluidos"
+                                >
+                                  <Package size={14} className="shrink-0" />
+                                  <span>{isExpanded ? 'Ocultar' : 'Paquetes'}</span>
+                                  {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => handleOpenSendModal(inv)}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white border border-blue-200/90 transition-all shadow-2xs hover:shadow active:scale-95"
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-blue-50/90 text-brand-blue hover:bg-brand-blue hover:text-white border border-blue-200/90 transition-all shadow-2xs active:scale-95 cursor-pointer"
                                 title="Reenviar comprobante por correo electrónico"
                               >
                                 <Mail size={14} className="shrink-0" />
@@ -892,82 +1142,72 @@ export default function PublicEstadoCuentaPage() {
                                 href={`/api/invoices/${inv.id}/pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-all"
+                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-200/90 shadow-2xs transition-all"
                                 title="Descargar comprobante oficial en PDF"
                               >
-                                <FileText size={14} className="shrink-0" />
-                                <span className="hidden sm:inline">PDF</span>
+                                <FileText size={14} className="shrink-0 text-brand-blue" />
+                                <span>PDF</span>
                               </a>
-
-                              {hasItems && (
-                                <button
-                                  onClick={() => toggleInvoiceExpand(inv.id)}
-                                  className="p-2 text-gray-400 hover:text-brand-blue hover:bg-gray-100 rounded-xl transition-colors"
-                                  title="Ver detalles de paquetes"
-                                >
-                                  {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                </button>
-                              )}
                             </div>
                           </div>
                         </div>
 
                         {/* Invoice Items details (Expandable) */}
                         {hasItems && (isExpanded || typeof window === 'undefined') && (
-                          <div className="bg-slate-50/80 p-3 sm:p-4 border-t border-gray-100 rounded-b-2xl">
-                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <div className="bg-slate-50/90 p-3.5 sm:p-5 border-t border-slate-200/70">
+                            <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                               <Package size={14} className="text-brand-blue" />
-                              Paquetes y servicios incluidos:
+                              Desglose de paquetes y servicios en este comprobante:
                             </p>
 
                             {/* Mobile Items List */}
-                            <div className="sm:hidden divide-y divide-gray-100 space-y-2">
+                            <div className="sm:hidden divide-y divide-slate-200/60 space-y-2">
                               {inv.items.map((it, idx) => (
                                 <div key={idx} className="pt-2 first:pt-0 flex items-start justify-between gap-2 text-xs">
                                   <div className="min-w-0 flex-1">
-                                    <p className="font-semibold text-gray-800 truncate">{it.service_name}</p>
+                                    <p className="font-bold text-slate-800 truncate">{it.service_name}</p>
                                     {it.tracking_number ? (
-                                      <span className="text-[11px] font-mono text-slate-800 font-bold block mt-0.5 select-all truncate">
+                                      <span className="text-[11px] font-mono text-brand-blue font-bold block mt-0.5 select-all truncate">
                                         {it.tracking_number}
                                       </span>
                                     ) : (
-                                      <span className="text-[11px] text-gray-400">Sin guía</span>
+                                      <span className="text-[11px] text-slate-400">Sin guía</span>
                                     )}
                                     {it.weight && (
-                                      <span className="text-[11px] text-gray-500 font-medium">
+                                      <span className="text-[11px] text-slate-500 font-medium">
                                         ({formatWeightWithUnit(it.weight, it.service_name)})
                                       </span>
                                     )}
                                   </div>
                                   <div className="text-right shrink-0">
-                                    <span className="font-black text-gray-900">${Number(it.amount || 0).toFixed(2)}</span>
+                                    <span className="font-black text-slate-900">${Number(it.amount || 0).toFixed(2)}</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
 
                             {/* Desktop Items Table */}
-                            <div className="hidden sm:block overflow-x-auto">
+                            <div className="hidden sm:block overflow-x-auto bg-white rounded-xl border border-slate-200/80 p-3">
                               <table className="w-full text-xs">
                                 <thead>
-                                  <tr className="text-gray-400 border-b border-gray-200/60 text-left">
-                                    <th className="py-1.5 font-bold">Servicio</th>
-                                    <th className="py-1.5 font-bold">Tracking / Guía</th>
-                                    <th className="py-1.5 font-bold text-right">Peso / Medida</th>
-                                    <th className="py-1.5 font-bold text-right">Monto</th>
+                                  <tr className="text-slate-400 border-b border-slate-100 text-left uppercase text-[10px] tracking-wider">
+                                    <th className="pb-2 font-extrabold">Servicio</th>
+                                    <th className="pb-2 font-extrabold">Tracking / Guía</th>
+                                    <th className="pb-2 font-extrabold text-right">Peso / Medida</th>
+                                    <th className="pb-2 font-extrabold text-right">Monto</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-slate-100">
                                   {inv.items.map((it, idx) => (
-                                    <tr key={idx} className="text-gray-700">
-                                      <td className="py-1.5 font-medium">{it.service_name}</td>
-                                      <td className="py-1.5 font-mono text-slate-800 font-bold select-all">
+                                    <tr key={idx} className="text-slate-700">
+                                      <td className="py-2 font-semibold">{it.service_name}</td>
+                                      <td className="py-2 font-mono text-brand-blue font-bold select-all">
                                         {it.tracking_number || '—'}
                                       </td>
-                                      <td className="py-1.5 text-right font-medium">
+                                      <td className="py-2 text-right font-medium text-slate-600">
                                         {it.weight ? formatWeightWithUnit(it.weight, it.service_name) : '—'}
                                       </td>
-                                      <td className="py-1.5 text-right font-black">${Number(it.amount || 0).toFixed(2)}</td>
+                                      <td className="py-2 text-right font-black text-slate-900">${Number(it.amount || 0).toFixed(2)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -980,39 +1220,32 @@ export default function PublicEstadoCuentaPage() {
                   })}
                 </div>
               )}
+
+              {/* Subtle Footer Link to view history when on Pending view */}
+              {activeTab === 'pendientes' && paidInvoices.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 print:hidden">
+                  <span>
+                    Tienes <strong className="text-slate-700">{paidInvoices.length}</strong> {paidInvoices.length === 1 ? 'comprobante pagado anteriormente' : 'comprobantes pagados en tu historial'}.
+                  </span>
+                  <button
+                    onClick={() => setActiveTab('pagadas')}
+                    className="font-bold text-brand-blue hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Consultar comprobantes pagados</span> &rarr;
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* ================= PAQUETES POR RETIRAR ================= */}
           {activeTab === 'paquetes' && (
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-100">
-                <div>
-                  <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                    <Package size={18} className="text-brand-blue" />
-                    Paquetes Pendientes de Retiro y Entrega
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Detalle de los paquetes que se encuentran en bodega o asociados a tus comprobantes pendientes.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-3 py-1 bg-blue-50 text-brand-blue rounded-full border border-blue-200/80">
-                    {stats.pendingPackagesCount} {stats.pendingPackagesCount === 1 ? 'paquete' : 'paquetes'}
-                  </span>
-                  {stats.pendingPackagesWeight > 0 && (
-                    <span className="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                      {stats.pendingPackagesWeight} lbs
-                    </span>
-                  )}
-                </div>
-              </div>
-
               {(!data.pendingPackages || data.pendingPackages.length === 0) ? (
-                <div className="p-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <CheckCircle2 size={40} className="text-green-500 mx-auto mb-2" />
-                  <p className="font-bold text-gray-700">No tienes paquetes pendientes por retirar</p>
-                  <p className="text-xs text-gray-400 mt-1">Todos tus paquetes han sido retirados o entregados satisfactoriamente.</p>
+                <div className="p-12 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">
+                  <CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700">No tienes paquetes pendientes por retirar</p>
+                  <p className="text-xs text-slate-400 mt-1">Todos tus paquetes han sido retirados o entregados satisfactoriamente.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1074,22 +1307,17 @@ export default function PublicEstadoCuentaPage() {
           {/* ================= PAGOS ================= */}
           {activeTab === 'pagos' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-gray-800">Historial de Pagos y Abonos Registrados</h2>
-                <span className="text-xs text-gray-400">Total recibidos: {payments.length}</span>
-              </div>
-
-              {payments.length === 0 ? (
-                <div className="p-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                  <HelpCircle size={40} className="text-gray-400 mx-auto mb-2" />
-                  <p className="font-bold text-gray-700">Aún no hay pagos registrados</p>
-                  <p className="text-xs text-gray-400 mt-1">Tus abonos y transferencias se reflejarán aquí una vez verificados.</p>
+              {displayedPayments.length === 0 ? (
+                <div className="p-12 text-center bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">
+                  <HelpCircle size={40} className="text-slate-400 mx-auto mb-2" />
+                  <p className="font-bold text-slate-700">No se encontraron pagos registrados</p>
+                  <p className="text-xs text-slate-400 mt-1">Tus abonos y transferencias se reflejarán aquí una vez verificados.</p>
                 </div>
               ) : (
                 <>
                   {/* Vista móvil de pagos */}
                   <div className="sm:hidden divide-y divide-gray-100">
-                    {payments.map(p => (
+                    {displayedPayments.map(p => (
                       <div key={p.id} className="py-3 flex items-start justify-between gap-3 text-xs">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1112,7 +1340,7 @@ export default function PublicEstadoCuentaPage() {
                           )}
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="font-black text-green-600 text-sm">
+                          <span className="font-black text-emerald-600 text-sm">
                             +${Number(p.amount || 0).toFixed(2)}
                           </span>
                           <span className="block text-[10px] text-gray-400">USD</span>
@@ -1125,7 +1353,7 @@ export default function PublicEstadoCuentaPage() {
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left text-xs">
                       <thead>
-                        <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                        <tr className="bg-slate-50 text-slate-500 uppercase tracking-wider border-b border-slate-100">
                           <th className="p-3 font-bold">Fecha</th>
                           <th className="p-3 font-bold">Método</th>
                           <th className="p-3 font-bold">Referencia</th>
@@ -1133,33 +1361,33 @@ export default function PublicEstadoCuentaPage() {
                           <th className="p-3 font-bold text-right">Monto</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {payments.map(p => (
-                          <tr key={p.id} className="hover:bg-gray-50/50">
-                            <td className="p-3 font-semibold text-gray-700">{formatDisplayDate(p.payment_date)}</td>
+                      <tbody className="divide-y divide-slate-100">
+                        {displayedPayments.map(p => (
+                          <tr key={p.id} className="hover:bg-slate-50/50">
+                            <td className="p-3 font-semibold text-slate-700">{formatDisplayDate(p.payment_date)}</td>
                             <td className="p-3">
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold rounded-md">
+                              <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-bold rounded-md">
                                 {p.payment_method || '—'}
                               </span>
                             </td>
-                            <td className="p-3 font-mono text-gray-600">
+                            <td className="p-3 font-mono text-slate-600">
                               {p.reference_number || '—'}
                             </td>
-                            <td className="p-3 text-gray-700">
+                            <td className="p-3 text-slate-700">
                               {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 ? (
                                 p.invoice_payments.map((ip) => (
                                   <div key={ip.invoice_id} className="font-semibold text-brand-blue">
                                     #{ip.invoices?.invoice_number || 'Comprobante'}{' '}
-                                    <span className="text-[11px] font-normal text-gray-400">
+                                    <span className="text-[11px] font-normal text-slate-400">
                                       (${Number(ip.amount_applied).toFixed(2)})
                                     </span>
                                   </div>
                                 ))
                               ) : (
-                                <span className="text-gray-400">—</span>
+                                <span className="text-slate-400">—</span>
                               )}
                             </td>
-                            <td className="p-3 text-right font-black text-green-600 text-sm">
+                            <td className="p-3 text-right font-black text-emerald-600 text-sm">
                               +${Number(p.amount || 0).toFixed(2)} USD
                             </td>
                           </tr>
