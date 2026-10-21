@@ -7,7 +7,67 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
 import { HalloweenHeroBackground } from '@/components/ui/HalloweenHeroDecorations';
-import { HalloweenMiniPumpkin, HalloweenWitchHat } from '@/components/ui/HalloweenIcons';
+import {
+  HalloweenMiniPumpkin,
+  HalloweenWitchHat,
+  HalloweenAnimatedSkull,
+  HalloweenSkeletonHand,
+  HalloweenDancingSkeleton,
+  HalloweenFloatingBone,
+} from '@/components/ui/HalloweenIcons';
+
+function SpookyAnimatedWords({
+  text,
+  baseDelay = 0,
+  isGradient = false,
+}: {
+  text: string;
+  baseDelay?: number;
+  isGradient?: boolean;
+}) {
+  const words = text.split(' ');
+  let charIndex = 0;
+
+  return (
+    <span className="inline">
+      {words.map((word, wIdx) => (
+        <span key={wIdx} className="inline-block whitespace-nowrap mr-[0.26em] last:mr-0">
+          {Array.from(word).map((ch, cIdx) => {
+            const idx = charIndex++;
+            return (
+              <motion.span
+                key={cIdx}
+                animate={{
+                  y: [0, -4, 1, -2, 0],
+                  rotate: [0, -1.8, 1.8, -0.8, 0],
+                }}
+                transition={{
+                  duration: 3.2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: baseDelay + idx * 0.09,
+                }}
+                whileHover={{
+                  y: -10,
+                  scale: 1.16,
+                  rotate: idx % 2 === 0 ? -8 : 8,
+                  transition: { duration: 0.18 },
+                }}
+                className={`inline-block cursor-default ${
+                  isGradient
+                    ? 'text-transparent bg-clip-text bg-gradient-to-b from-[#FF5500] via-[#E11D48] to-[#7E22CE] drop-shadow-[0_4px_12px_rgba(249,115,22,0.32)]'
+                    : 'text-brand-blue drop-shadow-[0_3px_0_rgba(147,51,234,0.14)]'
+                }`}
+              >
+                {ch}
+              </motion.span>
+            );
+          })}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export default function Hero() {
   const { t } = useLanguage();
@@ -51,20 +111,95 @@ export default function Hero() {
               </motion.div>
             )}
 
-            <h1 className="text-[2.5rem] sm:text-5xl lg:text-[4.5rem] font-black text-brand-blue leading-[1.1] mb-6 text-balance tracking-tight">
-              {t.hero.titleLine1} <br className="hidden lg:block"/>
-              <span
-                className={
-                  isHalloween
-                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#FF5500] via-brand-red to-[#9333EA] drop-shadow-[0_2px_12px_rgba(249,115,22,0.2)]'
-                    : 'text-brand-red'
-                }
-              >
-                {t.hero.titleHighlight}
-              </span>{' '}
-              <br className="hidden lg:block"/>
-              {t.hero.titleLine2}
-            </h1>
+            {isHalloween ? (
+              <div className="relative mb-7 pt-3">
+                {/* 1. Crawling Skeleton Hand gripping top of "Tus compras" */}
+                <motion.div
+                  animate={{
+                    x: [0, 14, -6, 0],
+                    y: [0, 4, -2, 0],
+                    rotate: [-8, 6, -4, -8],
+                  }}
+                  transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute -top-6 left-[34%] sm:left-[40%] z-20 pointer-events-none"
+                >
+                  <HalloweenSkeletonHand size={50} />
+                </motion.div>
+
+                {/* 2. Floating Bone spinning near top-right of headline */}
+                <motion.div
+                  animate={{
+                    y: [0, -8, 0],
+                    rotate: [15, -20, 15],
+                  }}
+                  transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
+                  className="hidden sm:block absolute top-1 -right-2 lg:right-4 z-20 pointer-events-none"
+                >
+                  <HalloweenFloatingBone size={32} />
+                </motion.div>
+
+                {/* 3. Chattering Animated Skull perched on "más cerca de" */}
+                <motion.div
+                  animate={{
+                    y: [0, -7, 0],
+                    rotate: [-12, 10, -12],
+                    scale: [1, 1.08, 1],
+                  }}
+                  transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute top-[46%] -left-4 sm:-left-7 z-20 pointer-events-none"
+                >
+                  <HalloweenAnimatedSkull size={42} />
+                </motion.div>
+
+                {/* 4. Full Articulated Dancing Skeleton swinging next to "Costa Rica." */}
+                <motion.div
+                  animate={{
+                    y: [0, -10, 0],
+                    rotate: [-8, 10, -8],
+                  }}
+                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute -bottom-3 right-2 sm:right-10 lg:right-14 z-20 pointer-events-none"
+                >
+                  <HalloweenDancingSkeleton size={58} />
+                </motion.div>
+
+                <h1 className="text-[2.5rem] sm:text-5xl lg:text-[4.5rem] font-black leading-[1.12] tracking-tight relative z-10 select-none">
+                  <SpookyAnimatedWords text={t.hero.titleLine1} baseDelay={0} />
+                  <br className="hidden lg:block" />{' '}
+                  <span className="relative inline-block">
+                    <SpookyAnimatedWords text={t.hero.titleHighlight} baseDelay={0.6} isGradient />
+                    {/* Animated Spooky Melting Drips under "más cerca de" */}
+                    <svg
+                      viewBox="0 0 320 22"
+                      fill="none"
+                      className="w-full h-3.5 sm:h-4 -mt-1.5 pointer-events-none opacity-85"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d="M4 0 H316 C310 4, 304 16, 300 16 C296 16, 292 3, 280 3 C265 3, 262 19, 257 19 C252 19, 249 3, 230 3 C212 3, 208 13, 204 13 C200 13, 196 3, 175 3 C158 3, 154 21, 149 21 C144 21, 140 3, 118 3 C102 3, 98 15, 93 15 C88 15, 84 3, 62 3 C45 3, 41 18, 36 18 C31 18, 27 3, 12 3 Z"
+                        fill="url(#spookyDripGrad)"
+                      />
+                      <defs>
+                        <linearGradient id="spookyDripGrad" x1="0" y1="0" x2="320" y2="0" gradientUnits="userSpaceOnUse">
+                          <stop offset="0%" stopColor="#FF5500" />
+                          <stop offset="50%" stopColor="#E11D48" />
+                          <stop offset="100%" stopColor="#7E22CE" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </span>{' '}
+                  <br className="hidden lg:block" />
+                  <SpookyAnimatedWords text={t.hero.titleLine2} baseDelay={1.2} />
+                </h1>
+              </div>
+            ) : (
+              <h1 className="text-[2.5rem] sm:text-5xl lg:text-[4.5rem] font-black text-brand-blue leading-[1.1] mb-6 text-balance tracking-tight">
+                {t.hero.titleLine1} <br className="hidden lg:block"/>
+                <span className="text-brand-red">{t.hero.titleHighlight}</span>{' '}
+                <br className="hidden lg:block"/>
+                {t.hero.titleLine2}
+              </h1>
+            )}
             
             <div className="flex items-center gap-2 mb-6">
               <motion.div 

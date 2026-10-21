@@ -325,3 +325,302 @@ export function HalloweenWitchHat({
     />
   );
 }
+
+/**
+ * Animated Chattering Skull with glowing fiery eyes and moving jaw
+ */
+export function HalloweenAnimatedSkull({
+  size = 44,
+  className = '',
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`drop-shadow-[0_6px_14px_rgba(249,115,22,0.45)] ${className}`}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="skullBoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="65%" stopColor="#F1F5F9" />
+          <stop offset="100%" stopColor="#CBD5E1" />
+        </linearGradient>
+        <radialGradient id="skullEyeGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="55%" stopColor="#F97316" />
+          <stop offset="100%" stopColor="#DC2626" />
+        </radialGradient>
+      </defs>
+
+      {/* Lower Jaw (Animated chattering up and down via CSS/SVG) */}
+      <g className="origin-center animate-[bounce_1.2s_infinite]">
+        <rect
+          x="21"
+          y="42"
+          width="22"
+          height="13"
+          rx="4"
+          fill="url(#skullBoneGrad)"
+          stroke="#1E293B"
+          strokeWidth="2.2"
+        />
+        {/* Lower teeth */}
+        <line x1="26" y1="42" x2="26" y2="48" stroke="#1E293B" strokeWidth="2" />
+        <line x1="32" y1="42" x2="32" y2="48" stroke="#1E293B" strokeWidth="2" />
+        <line x1="38" y1="42" x2="38" y2="48" stroke="#1E293B" strokeWidth="2" />
+      </g>
+
+      {/* Upper Cranium */}
+      <path
+        d="M12 28 C12 13 21 6 32 6 C43 6 52 13 52 28 C52 34 49 38 45 40 L45 45 C45 47 43 48 41 48 L23 48 C21 48 19 47 19 45 L19 40 C15 38 12 34 12 28 Z"
+        fill="url(#skullBoneGrad)"
+        stroke="#1E293B"
+        strokeWidth="2.4"
+      />
+
+      {/* Cranium crack detail */}
+      <path
+        d="M22 9 L25 14 L22 17"
+        stroke="#475569"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Eye Sockets */}
+      <circle cx="24" cy="27" r="6.2" fill="#0F172A" />
+      <circle cx="40" cy="27" r="6.2" fill="#0F172A" />
+
+      {/* Glowing Fiery Pupils */}
+      <circle cx="24" cy="27" r="3.2" fill="url(#skullEyeGlow)" className="animate-pulse" />
+      <circle cx="40" cy="27" r="3.2" fill="url(#skullEyeGlow)" className="animate-pulse" />
+
+      {/* Nasal Cavity */}
+      <polygon points="32,32 29,38 35,38" fill="#0F172A" />
+
+      {/* Upper Teeth */}
+      <line x1="25" y1="42" x2="25" y2="48" stroke="#1E293B" strokeWidth="2" />
+      <line x1="30" y1="42" x2="30" y2="48" stroke="#1E293B" strokeWidth="2" />
+      <line x1="34" y1="42" x2="34" y2="48" stroke="#1E293B" strokeWidth="2" />
+      <line x1="39" y1="42" x2="39" y2="48" stroke="#1E293B" strokeWidth="2" />
+    </svg>
+  );
+}
+
+/**
+ * Bony Skeleton Hand gripping/crawling over letters
+ */
+export function HalloweenSkeletonHand({
+  size = 52,
+  className = '',
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`drop-shadow-[0_4px_8px_rgba(15,23,42,0.28)] ${className}`}
+      aria-hidden="true"
+    >
+      {/* Wrist & Carpal Bones */}
+      <rect x="24" y="8" width="6" height="14" rx="3" fill="#F8FAFC" stroke="#1E293B" strokeWidth="2" />
+      <rect x="33" y="8" width="6" height="14" rx="3" fill="#F8FAFC" stroke="#1E293B" strokeWidth="2" />
+      <ellipse cx="32" cy="25" rx="12" ry="6" fill="#F1F5F9" stroke="#1E293B" strokeWidth="2" />
+
+      {/* 4 Gripping Bony Fingers + Thumb */}
+      {/* Thumb (Left) */}
+      <path
+        d="M20 25 C14 27 11 32 13 38"
+        stroke="#1E293B"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M20 25 C14 27 11 32 13 38"
+        stroke="#F8FAFC"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+
+      {/* Finger 1 */}
+      <rect x="20" y="30" width="4.5" height="12" rx="2.2" fill="#F8FAFC" stroke="#1E293B" strokeWidth="1.8" />
+      <rect x="20.5" y="43" width="4" height="9" rx="2" fill="#E2E8F0" stroke="#1E293B" strokeWidth="1.8" />
+
+      {/* Finger 2 (Longest) */}
+      <rect x="27.5" y="31" width="4.5" height="14" rx="2.2" fill="#F8FAFC" stroke="#1E293B" strokeWidth="1.8" />
+      <rect x="28" y="46" width="4" height="10" rx="2" fill="#E2E8F0" stroke="#1E293B" strokeWidth="1.8" />
+
+      {/* Finger 3 */}
+      <rect x="35" y="30" width="4.5" height="13" rx="2.2" fill="#F8FAFC" stroke="#1E293B" strokeWidth="1.8" />
+      <rect x="35.5" y="44" width="4" height="9" rx="2" fill="#E2E8F0" stroke="#1E293B" strokeWidth="1.8" />
+
+      {/* Finger 4 (Pinky) */}
+      <rect x="42" y="28" width="4" height="10" rx="2" fill="#F8FAFC" stroke="#1E293B" strokeWidth="1.8" />
+      <rect x="42.5" y="39" width="3.5" height="8" rx="1.7" fill="#E2E8F0" stroke="#1E293B" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+/**
+ * Full Articulated Dancing Skeleton for Headline
+ */
+export function HalloweenDancingSkeleton({
+  size = 68,
+  className = '',
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size * 1.25}
+      viewBox="0 0 80 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`drop-shadow-[0_8px_16px_rgba(15,23,42,0.25)] ${className}`}
+      aria-hidden="true"
+    >
+      {/* Head / Skull */}
+      <g>
+        <circle cx="40" cy="20" r="13" fill="#F8FAFC" stroke="#1E293B" strokeWidth="2.2" />
+        <rect x="33" y="28" width="14" height="8" rx="3" fill="#F8FAFC" stroke="#1E293B" strokeWidth="2" />
+        {/* Glowing Eyes */}
+        <circle cx="35.5" cy="19" r="3.2" fill="#0F172A" />
+        <circle cx="44.5" cy="19" r="3.2" fill="#0F172A" />
+        <circle cx="35.5" cy="19" r="1.6" fill="#F97316" />
+        <circle cx="44.5" cy="19" r="1.6" fill="#F97316" />
+        {/* Nose & Teeth */}
+        <polygon points="40,22 38.5,25.5 41.5,25.5" fill="#0F172A" />
+        <line x1="36" y1="31" x2="44" y2="31" stroke="#1E293B" strokeWidth="1.8" />
+        <line x1="38" y1="29" x2="38" y2="34" stroke="#1E293B" strokeWidth="1.5" />
+        <line x1="42" y1="29" x2="42" y2="34" stroke="#1E293B" strokeWidth="1.5" />
+      </g>
+
+      {/* Spine & Ribcage */}
+      <line x1="40" y1="36" x2="40" y2="66" stroke="#1E293B" strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="40" y1="36" x2="40" y2="66" stroke="#F8FAFC" strokeWidth="1.8" strokeLinecap="round" />
+
+      {/* Ribs */}
+      <path d="M28 42 Q40 46 52 42" stroke="#1E293B" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M28 42 Q40 46 52 42" stroke="#F8FAFC" strokeWidth="2.2" strokeLinecap="round" />
+
+      <path d="M30 49 Q40 53 50 49" stroke="#1E293B" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M30 49 Q40 53 50 49" stroke="#F8FAFC" strokeWidth="2.2" strokeLinecap="round" />
+
+      <path d="M32 56 Q40 59 48 56" stroke="#1E293B" strokeWidth="4" strokeLinecap="round" />
+      <path d="M32 56 Q40 59 48 56" stroke="#F8FAFC" strokeWidth="2" strokeLinecap="round" />
+
+      {/* Waving Left Arm (raised up!) */}
+      <path
+        d="M28 42 L15 32 L10 18"
+        stroke="#1E293B"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M28 42 L15 32 L10 18"
+        stroke="#F8FAFC"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="10" cy="17" r="3" fill="#F8FAFC" stroke="#1E293B" strokeWidth="1.8" />
+
+      {/* Waving Right Arm */}
+      <path
+        d="M52 42 L65 34 L70 22"
+        stroke="#1E293B"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M52 42 L65 34 L70 22"
+        stroke="#F8FAFC"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="70" cy="21" r="3" fill="#F8FAFC" stroke="#1E293B" strokeWidth="1.8" />
+
+      {/* Pelvis */}
+      <ellipse cx="40" cy="67" rx="9" ry="4.5" fill="#F8FAFC" stroke="#1E293B" strokeWidth="2" />
+
+      {/* Dancing Legs */}
+      <path
+        d="M34 70 L26 82 L30 94"
+        stroke="#1E293B"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M34 70 L26 82 L30 94"
+        stroke="#F8FAFC"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M46 70 L54 82 L50 94"
+        stroke="#1E293B"
+        strokeWidth="4.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M46 70 L54 82 L50 94"
+        stroke="#F8FAFC"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Floating Crossed Bones Accent
+ */
+export function HalloweenFloatingBone({
+  size = 28,
+  className = '',
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size * 0.55}
+      viewBox="0 0 44 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`drop-shadow-sm ${className}`}
+      aria-hidden="true"
+    >
+      <path
+        d="M8 7 C5 4, 1 6, 3 10 C4 11.5, 4 12.5, 3 14 C1 18, 5 20, 8 17 L36 17 C39 20, 43 18, 41 14 C40 12.5, 40 11.5, 41 10 C43 6, 39 4, 36 7 Z"
+        fill="#F8FAFC"
+        stroke="#1E293B"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
