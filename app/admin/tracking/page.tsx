@@ -68,14 +68,16 @@ function formatDate(ds: string | null | undefined): string {
 function getStatusStyle(status: string): { bg: string; text: string; border: string } {
   const s = status.toLowerCase();
   if (s.includes('entregado') || s.includes('delivered')) return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' };
-  if (s.includes('tránsito') || s.includes('transit') || s.includes('camino')) return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' };
+  if (s.includes('por entregar')) return { bg: 'bg-sky-50', text: 'text-brand-blue', border: 'border-sky-200' };
+  if (s.includes('tránsito') || s.includes('transit') || s.includes('camino') || s.includes('aduana')) return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' };
   if (s.includes('bodega') || s.includes('warehouse') || s.includes('miami') || s.includes('mia')) return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
   return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
 }
 
 function getTimelineIcon(status?: string) {
   const s = (status || '').toLowerCase();
-  if (s.includes('entregado') || s.includes('delivered')) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+  if (s.includes('entregado') && !s.includes('por entregar')) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+  if (s.includes('por entregar')) return <MapPin className="w-4 h-4 text-brand-blue" />;
   if (s.includes('transit') || s.includes('camino') || s.includes('tránsito')) return <Truck className="w-4 h-4 text-orange-500" />;
   if (s.includes('bodega') || s.includes('warehouse') || s.includes('recib')) return <MapPin className="w-4 h-4 text-blue-500" />;
   return <Package className="w-4 h-4 text-gray-400" />;
@@ -125,6 +127,8 @@ export default function TrackingPage() {
       const localData = localResult.status === 'fulfilled' ? localResult.value : null;
       if (localData?.success && localData.data) {
         setLocalItem(localData.data);
+      } else if (trackingData?.localItem) {
+        setLocalItem(trackingData.localItem);
       }
 
       // Process invoice lookup result
@@ -390,7 +394,7 @@ export default function TrackingPage() {
                     )}
                   </div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
-                    Estado: <span className="font-semibold text-gray-700">{localItem.status}</span>
+                    Estado: <span className="font-semibold text-gray-700">{(localItem.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'Por Entregar (En Bodega CR)'}</span>
                     {matchedInvoice ? ` • Factura: #${matchedInvoice.invoice_number}` : ''}
                     {localItem.client_name ? ` • Cliente: ${localItem.client_name}` : ''}
                     {` • Recibido: ${formatDate(localItem.received_date || localItem.created_at)}`}
@@ -428,7 +432,9 @@ export default function TrackingPage() {
                     </div>
                     <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
                       <p className="font-bold text-gray-800 text-sm">{event.status}</p>
-                      {event.description && <p className="text-gray-500 text-xs mt-1">{event.description}</p>}
+                      {event.description && event.description.trim().toLowerCase() !== event.status.trim().toLowerCase() && (
+                        <p className="text-gray-500 text-xs mt-1">{event.description}</p>
+                      )}
                       <p className="text-gray-400 text-[11px] mt-2 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatDate(event.date)}

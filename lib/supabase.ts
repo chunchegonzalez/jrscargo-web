@@ -22,13 +22,35 @@ export async function getInventory() {
 
 export async function getInventoryItem(id: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const res = await fetch(`${url}/rest/v1/local_inventory?id=eq.${encodeURIComponent(id)}`, {
+  const cleanId = id.trim();
+  if (!cleanId) return null;
+
+  const res = await fetch(`${url}/rest/v1/local_inventory?id=eq.${encodeURIComponent(cleanId)}&status=neq.Eliminado`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
   if (!res.ok) throw new Error('Error fetching item');
   const data = await res.json();
-  return data.length > 0 ? data[0] : null;
+  if (data.length > 0) return data[0];
+
+  // Fallback for USPS 420XXXXX / 420XXXXXXXXX routing prefixes
+  const stripped = cleanId.replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+  const candidate = stripped !== cleanId && stripped.length >= 8 ? stripped : cleanId;
+  if (candidate.length >= 8) {
+    const fallbackRes = await fetch(
+      `${url}/rest/v1/local_inventory?or=(id.eq.${encodeURIComponent(candidate)},id.ilike.*${encodeURIComponent(candidate)})&status=neq.Eliminado&limit=1`,
+      {
+        headers: getHeaders(),
+        cache: 'no-store'
+      }
+    );
+    if (fallbackRes.ok) {
+      const fallbackData = await fallbackRes.json();
+      if (fallbackData.length > 0) return fallbackData[0];
+    }
+  }
+
+  return null;
 }
 
 export async function insertInventoryItem(item: Record<string, unknown>) {

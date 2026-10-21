@@ -25,11 +25,22 @@ async function fetchTrackingData(trackingNumber: string) {
     
     try {
       const localItem = await getInventoryItem(trackingNumber);
-      if (localItem && localItem.status) {
+      if (localItem && localItem.status && localItem.status !== 'Eliminado') {
         if (!data.package) data.package = { tracking: trackingNumber };
         const isDelivered = localItem.status.toLowerCase().includes('entregad');
-        (data.package as Record<string, unknown>).statusLabel = isDelivered ? 'Entregado' : 'En Bodega Costa Rica';
+        (data.package as Record<string, unknown>).statusLabel = isDelivered ? 'Entregado' : 'Por Entregar';
         (data.package as Record<string, unknown>).weight = localItem.weight || (data.package as Record<string, unknown>).weight;
+      } else if (data.package) {
+        const rawLabel = String((data.package as Record<string, unknown>).statusLabel || '').toLowerCase();
+        if (
+          rawLabel.includes('por entregar') ||
+          rawLabel.includes('entregado') ||
+          rawLabel.includes('sede central') ||
+          rawLabel.includes('oficina central') ||
+          rawLabel.includes('aduana')
+        ) {
+          (data.package as Record<string, unknown>).statusLabel = 'En Tránsito a Bodega CR';
+        }
       }
     } catch {
       // Ignore local error

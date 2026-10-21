@@ -36,6 +36,166 @@ async function getWorldboxPackages(apiToken: string) {
   return cachedPackages || [];
 }
 
+interface RawTimelineEvent {
+  date?: string;
+  status?: string;
+  description?: string;
+  icon?: string;
+}
+
+interface NormalizedTimelineEvent {
+  date: string;
+  status: string;
+  description: string;
+  icon: string;
+  stageKey: string;
+}
+
+function normalizeAndDeduplicateTimeline(
+  rawTimeline: RawTimelineEvent[],
+  isRegisteredInCR: boolean,
+  isDeliveredInCR: boolean,
+  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null
+): { timeline: Array<{ date: string; status: string; description: string; icon: string }>; stageKeys: Set<string> } {
+  const normalizedList: NormalizedTimelineEvent[] = [];
+
+  for (const evt of rawTimeline) {
+    const rawStatus = (evt.status || evt.description || '').trim();
+    const rawDesc = (evt.description || '').trim();
+    if (!rawStatus) continue;
+
+    const combined = `${rawStatus} ${rawDesc}`.toLowerCase();
+    const date = evt.date || '';
+
+    // 1. Worldbox central office / nationalized / premature delivery statuses
+    if (
+      combined.includes('oficina central') ||
+      combined.includes('sede central') ||
+      combined.includes('nacionalizado') ||
+      combined.includes('por entregar') ||
+      combined.includes('cambio de estatus') ||
+      combined.includes('entregado')
+    ) {
+      if (isRegisteredInCR) {
+        normalizedList.push({
+          date,
+          status: 'Paquete nacionalizado en Costa Rica',
+          description: 'Liberación aduanal completada y trasladado a bodega central.',
+          icon: 'warehouse',
+          stageKey: 'STAGE_CR_NATIONALIZED'
+        });
+      } else {
+        normalizedList.push({
+          date,
+          status: 'Paquete nacionalizado — En tránsito a Bodega JRS',
+          description: 'Proceso aduanal completado. En traslado hacia el inventario de Costa Rica.',
+          icon: 'truck',
+          stageKey: 'STAGE_CR_NATIONALIZED'
+        });
+      }
+      continue;
+    }
+
+    // 2. Customs in Costa Rica
+    if (combined.includes('aduana')) {
+      normalizedList.push({
+        date,
+        status: 'Paquete en aduanas de Costa Rica',
+        description: 'En proceso de revisión y desalmacenaje aduanal en Costa Rica.',
+        icon: 'package',
+        stageKey: 'STAGE_CR_CUSTOMS'
+      });
+      continue;
+    }
+
+    // 3. In transit / flight / manifest to Costa Rica
+    if (
+      combined.includes('tránsito') ||
+      combined.includes('transito') ||
+      combined.includes('manifiesto') ||
+      combined.includes('vuelo') ||
+      combined.includes('despachado') ||
+      combined.includes('en camino') ||
+      combined.includes('embarcado')
+    ) {
+      normalizedList.push({
+        date,
+        status: 'En tránsito hacia Costa Rica',
+        description: 'El paquete salió de la bodega de origen y viaja hacia Costa Rica.',
+        icon: 'plane',
+        stageKey: 'STAGE_IN_TRANSIT'
+      });
+      continue;
+    }
+
+    // 4. Received at origin warehouse (Miami / Spain / China)
+    if (
+      combined.includes('miami') ||
+      combined.includes('bodega origen') ||
+      combined.includes('recibido en bodega') ||
+      combined.includes('warehouse')
+    ) {
+      normalizedList.push({
+        date,
+        status: 'Paquete recibido en Bodega Miami',
+        description: 'Recibido, pesado y registrado en nuestro centro de distribución en Miami.',
+        icon: 'warehouse',
+        stageKey: 'STAGE_ORIGIN_MIA'
+      });
+      continue;
+    }
+
+    // 5. Fallback for any other custom event: clean duplicate description
+    const cleanStatusKey = rawStatus.toLowerCase().replace(/[.\s]+$/g, '');
+    const cleanDescKey = rawDesc.toLowerCase().replace(/[.\s]+$/g, '');
+    normalizedList.push({
+      date,
+      status: rawStatus.replace(/\.$/, ''),
+      description: cleanDescKey && cleanDescKey !== cleanStatusKey ? rawDesc : '',
+      icon: evt.icon || 'package',
+      stageKey: `CUSTOM_${cleanStatusKey}`
+    });
+  }
+
+  // Deduplicate by stageKey while preserving newest-first order
+  const seenStages = new Set<string>();
+  const deduped: Array<{ date: string; status: string; description: string; icon: string }> = [];
+
+  // Prepend official Costa Rica local inventory milestones if registered in CR
+  if (isRegisteredInCR && localItem) {
+    if (isDeliveredInCR) {
+      seenStages.add('STAGE_JRS_DELIVERED');
+      deduped.push({
+        date: localItem.updated_at || localItem.created_at || new Date().toISOString(),
+        status: 'Paquete Entregado',
+        description: 'El paquete ha sido entregado exitosamente al cliente.',
+        icon: 'circle'
+      });
+    }
+
+    seenStages.add('STAGE_JRS_POR_ENTREGAR');
+    deduped.push({
+      date: localItem.received_date || localItem.created_at || new Date().toISOString(),
+      status: 'Por Entregar — En Bodega Costa Rica',
+      description: 'Registrado en el inventario de Costa Rica y disponible para entrega al cliente.',
+      icon: 'warehouse'
+    });
+  }
+
+  for (const item of normalizedList) {
+    if (seenStages.has(item.stageKey)) continue;
+    seenStages.add(item.stageKey);
+    deduped.push({
+      date: item.date,
+      status: item.status,
+      description: item.description,
+      icon: item.icon
+    });
+  }
+
+  return { timeline: deduped, stageKeys: seenStages };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawNumber = searchParams.get('number');
@@ -71,9 +231,11 @@ export async function GET(request: Request) {
 
     let res = initialRes;
 
-    // Fallback 1: If barcode gun included USPS 420XXXXX ZIP routing prefix or matches a package in packagesList
+    // Fallback 1: If barcode gun included USPS 420XXXXX / 420XXXXXXXXX ZIP routing prefix or matches a package in packagesList
     if (!res.ok) {
-      const strippedUSPS = trackingNumber.replace(/^420\d{5}/i, '');
+      const strippedUSPS = trackingNumber
+        .replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '')
+        .replace(/^420\d{5}/i, '');
       let candidateTracking = strippedUSPS !== trackingNumber && strippedUSPS.length >= 8 ? strippedUSPS : '';
 
       if (!candidateTracking && packagesList && packagesList.length > 0) {
@@ -106,16 +268,28 @@ export async function GET(request: Request) {
     if (!res.ok) {
       // Fallback 2: Check if package already exists in local Supabase inventory
       try {
-        const strippedUSPS = trackingNumber.replace(/^420\d{5}/i, '');
-        const localFallback =
-          (await getInventoryItem(trackingNumber)) ||
-          (strippedUSPS !== trackingNumber ? await getInventoryItem(strippedUSPS) : null);
+        const localFallback = await getInventoryItem(trackingNumber);
 
         if (localFallback) {
           const resolvedCode = String(localFallback.id || trackingNumber);
+          const isDelivered = String(localFallback.status || '').toLowerCase().includes('entregad');
+          const { timeline } = normalizeAndDeduplicateTimeline(
+            Array.isArray(localFallback.history)
+              ? localFallback.history.map((h: { date?: string; action?: string }) => ({
+                  date: h.date || '',
+                  status: h.action || 'En Bodega',
+                  description: ''
+                }))
+              : [],
+            true,
+            isDelivered,
+            localFallback
+          );
+
           return NextResponse.json({
             trackingNumber: resolvedCode,
             status: 'SUCCESS',
+            localItem: localFallback,
             rawData: {
               package: {
                 tracking: resolvedCode,
@@ -124,16 +298,10 @@ export async function GET(request: Request) {
                 provider: localFallback.company || 'JRS CARGO',
                 weight: String(localFallback.weight || '0').replace(/[^\d.]/g, '') || '0',
                 weightUnit: String(localFallback.weight || '').toLowerCase().includes('kg') ? 'kg' : 'lbs',
-                statusLabel: localFallback.status || 'En Bodega',
-                description: 'Paquete registrado en inventario local'
+                statusLabel: isDelivered ? 'Entregado' : 'Por Entregar',
+                description: 'Paquete registrado en inventario de Costa Rica'
               },
-              timeline: Array.isArray(localFallback.history)
-                ? localFallback.history.map((h: { date?: string; action?: string }) => ({
-                    date: h.date || '',
-                    status: h.action || 'En Bodega',
-                    description: h.action || ''
-                  }))
-                : []
+              timeline
             }
           });
         }
@@ -181,7 +349,6 @@ export async function GET(request: Request) {
         const isGenericClientName = genericCompanies.includes((matched.clientName || '').trim().toUpperCase());
         
         if (matched.clientName && (!data.package.consignatario || !isGenericClientName)) {
-          // If we had no consignatario or matched clientName is a real person name, use it
           if (!data.package.consignatario) {
             data.package.consignatario = matched.clientName;
           }
@@ -189,33 +356,64 @@ export async function GET(request: Request) {
       }
     }
 
-    // 3. Local inventory status check
+    // 3. Local Costa Rica inventory status check & timeline deduplication
+    let localItem = null;
     try {
-      const localItem = await getInventoryItem(trackingNumber);
-      if (localItem && localItem.status && localItem.status.includes('Entregado')) {
-        if (!data.package) data.package = { tracking: trackingNumber };
-        if (!data.timeline) data.timeline = [];
-        
-        data.package.statusLabel = 'Entregado';
-        
-        // Remove the existing 'Entregado' event if it already exists to avoid duplicates
-        data.timeline = data.timeline.filter((e: { status: string }) => e.status !== 'Paquete Entregado');
-
-        data.timeline.unshift({
-          date: localItem.updated_at || localItem.created_at || new Date().toISOString(),
-          status: 'Paquete Entregado',
-          description: 'El paquete ha sido entregado exitosamente al cliente.',
-          icon: 'circle'
-        });
-      }
+      localItem = await getInventoryItem(trackingNumber);
     } catch (e) {
       console.error('Error fetching local inventory for tracking:', e);
     }
 
-    // We pass the raw data to the frontend so it can be mapped.
+    const isRegisteredInCR = Boolean(localItem && localItem.status && localItem.status !== 'Eliminado');
+    const isDeliveredInCR = Boolean(
+      isRegisteredInCR && String(localItem.status).toLowerCase().includes('entregad')
+    );
+
+    if (!data.package) {
+      data.package = { tracking: trackingNumber };
+    }
+
+    const rawTimeline: RawTimelineEvent[] = Array.isArray(data.timeline) ? data.timeline : [];
+    const { timeline: cleanTimeline, stageKeys } = normalizeAndDeduplicateTimeline(
+      rawTimeline,
+      isRegisteredInCR,
+      isDeliveredInCR,
+      localItem
+    );
+
+    data.timeline = cleanTimeline;
+
+    // Only show "Por Entregar" (or "Entregado") once registered in the Costa Rica inventory
+    if (isDeliveredInCR) {
+      data.package.statusLabel = 'Entregado';
+    } else if (isRegisteredInCR) {
+      data.package.statusLabel = 'Por Entregar';
+    } else {
+      // Not yet registered in Costa Rica inventory -> never show "Por Entregar" or "Entregado"
+      if (stageKeys.has('STAGE_CR_NATIONALIZED') || stageKeys.has('STAGE_CR_CUSTOMS')) {
+        data.package.statusLabel = 'En Tránsito a Bodega CR';
+      } else if (stageKeys.has('STAGE_IN_TRANSIT')) {
+        data.package.statusLabel = 'En Tránsito a Costa Rica';
+      } else {
+        const rawStatusLabel = String(data.package.statusLabel || '').toLowerCase();
+        if (
+          rawStatusLabel.includes('por entregar') ||
+          rawStatusLabel.includes('entregado') ||
+          rawStatusLabel.includes('sede central') ||
+          rawStatusLabel.includes('oficina central') ||
+          rawStatusLabel.includes('aduana')
+        ) {
+          data.package.statusLabel = 'En Tránsito a Bodega CR';
+        } else if (!data.package.statusLabel) {
+          data.package.statusLabel = 'En Bodega Miami';
+        }
+      }
+    }
+
     return NextResponse.json({
       trackingNumber,
       status: 'SUCCESS',
+      localItem: localItem || null,
       rawData: data
     });
 
