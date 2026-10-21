@@ -294,10 +294,38 @@ export async function POST(request: Request) {
       const cleanPhone = String(phone || '').trim();
       const newSessionId = sessionId || `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-      const initialMessages: BotChatMessage[] = Array.isArray(messages) ? messages : [];
+      const initialMessages: BotChatMessage[] = Array.isArray(messages) ? [...messages] : [];
+      const isRequestingAgent = action === 'request_agent';
+      if (isRequestingAgent) {
+        initialMessages.push(
+          {
+            id: `usr-${Date.now()}`,
+            role: 'user',
+            senderName: cleanName,
+            content: '👨‍💻 Solicito hablar con un asesor en línea',
+            createdAt: nowIso,
+          },
+          {
+            id: `sys-${Date.now() + 1}`,
+            role: 'system',
+            content: '🔔 Solicitud enviada: Nuestros asesores han sido notificados en el panel de gestión.',
+            createdAt: nowIso,
+          },
+          {
+            id: `agt-${Date.now() + 2}`,
+            role: 'agent',
+            senderName: 'Asesor JRS Cargo',
+            content:
+              '¡Hola! 👋 Hemos recibido tu solicitud para hablar con un asesor en línea. Escribe tu consulta o número de guía aquí abajo y un agente te responderá en vivo por este chat.\n\n💬 Si deseas atención directa por WhatsApp, también puedes tocar aquí:\nhttps://wa.me/50672601238',
+            createdAt: nowIso,
+          }
+        );
+      }
+
       const payload: BotSessionPayload = {
         sessionId: newSessionId,
-        mode: 'bot',
+        mode: isRequestingAgent ? 'agent' : 'bot',
+        takenBy: isRequestingAgent ? 'Asesor en Línea' : undefined,
         unreadForAdmin: 1,
         trackings: extractTrackingsFromMessages(initialMessages),
         notes: notes || '',
@@ -391,6 +419,34 @@ export async function POST(request: Request) {
       if (updatedMode !== 'agent') {
         updatedStatus = 'nuevo';
       }
+    } else if (action === 'request_agent') {
+      updatedMode = 'agent';
+      if (!updatedTakenBy) updatedTakenBy = 'Asesor en Línea';
+      updatedUnread = existingRecord.unreadForAdmin + 1;
+      updatedStatus = 'nuevo';
+      updatedMessages.push(
+        {
+          id: `usr-${Date.now()}`,
+          role: 'user',
+          senderName: existingRecord.name,
+          content: '👨‍💻 Solicito hablar con un asesor en línea',
+          createdAt: nowIso,
+        },
+        {
+          id: `sys-${Date.now() + 1}`,
+          role: 'system',
+          content: '🔔 Solicitud enviada: Nuestros asesores han sido notificados en el panel de gestión.',
+          createdAt: nowIso,
+        },
+        {
+          id: `agt-${Date.now() + 2}`,
+          role: 'agent',
+          senderName: updatedTakenBy || 'Asesor JRS Cargo',
+          content:
+            '¡Hola! 👋 Hemos recibido tu solicitud para hablar con un asesor en línea. Escribe tu consulta o número de guía aquí abajo y un agente te responderá en vivo por este chat.\n\n💬 Si deseas atención directa por WhatsApp, también puedes tocar aquí:\nhttps://wa.me/50672601238',
+          createdAt: nowIso,
+        }
+      );
     } else if (action === 'takeover') {
       const advisor = String(agentName || 'Asesor JRS').trim();
       updatedMode = 'agent';

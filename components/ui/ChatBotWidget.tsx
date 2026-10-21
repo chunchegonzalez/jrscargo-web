@@ -456,6 +456,79 @@ export default function ChatBotWidget() {
     }, 50);
   };
 
+  // Request live human agent in the web chat (alerts /admin/chat-bot and Gestión immediately)
+  const handleRequestLiveAgent = async () => {
+    const nowIso = new Date().toISOString();
+    setChatMode('agent');
+    if (!takenByAgent) setTakenByAgent('Asesor en Línea');
+    setIsSendingToAgent(true);
+
+    const existingMsgs: SyncedChatMessage[] =
+      agentMessages.length > 0
+        ? agentMessages
+        : messages.map((m, idx) => ({
+            id: m.id || `m-${idx}`,
+            role: m.role === 'user' ? 'user' : 'assistant',
+            senderName: m.role === 'user' ? userName : 'Clari AI',
+            content: m.content,
+            createdAt: nowIso,
+          }));
+
+    const optimistic: SyncedChatMessage[] = [
+      ...existingMsgs,
+      {
+        id: `usr-${Date.now()}`,
+        role: 'user',
+        senderName: userName,
+        content: isEn ? '👨‍💻 I want to talk with an online advisor' : '👨‍💻 Solicito hablar con un asesor en línea',
+        createdAt: nowIso,
+      },
+      {
+        id: `sys-${Date.now() + 1}`,
+        role: 'system',
+        content: isEn
+          ? '🔔 Request sent: Our advisors have been notified.'
+          : '🔔 Solicitud enviada: Nuestros asesores han sido notificados en el panel de gestión.',
+        createdAt: nowIso,
+      },
+      {
+        id: `agt-${Date.now() + 2}`,
+        role: 'agent',
+        senderName: 'Asesor JRS Cargo',
+        content: isEn
+          ? 'Hello! 👋 We have notified our online advisors. Write your question or tracking number below and an agent will reply live right here.\n\n💬 If you prefer direct WhatsApp attention, tap here:\nhttps://wa.me/50672601238'
+          : '¡Hola! 👋 Hemos recibido tu solicitud para hablar con un asesor en línea. Escribe tu consulta o número de guía aquí abajo y un agente te responderá en vivo por este chat.\n\n💬 Si deseas atención directa por WhatsApp, también puedes tocar aquí:\nhttps://wa.me/50672601238',
+        createdAt: nowIso,
+      },
+    ];
+    setAgentMessages(optimistic);
+
+    try {
+      const res = await fetch('/api/bot-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request_agent',
+          sessionId,
+          name: userName,
+          email: userEmail,
+          phone: userPhone,
+          messages: existingMsgs,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.session?.messages) {
+          setAgentMessages(data.session.messages);
+        }
+      }
+    } catch (err) {
+      console.error('Error requesting live agent:', err);
+    } finally {
+      setIsSendingToAgent(false);
+    }
+  };
+
   const handleReset = () => {
     setMessages([]);
     setAgentMessages([]);
@@ -759,6 +832,29 @@ export default function ChatBotWidget() {
                           </button>
                         );
                       })}
+
+                      {/* Prominent "Hablar con un Asesor en Línea" Button */}
+                      <button
+                        type="button"
+                        onClick={handleRequestLiveAgent}
+                        className="w-full text-left p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/90 flex items-center justify-between transition-all group shadow-sm hover:shadow cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-2xs relative">
+                            <Headset size={14} />
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
+                          </div>
+                          <div>
+                            <span className="block text-xs font-black text-emerald-900">
+                              {isEn ? 'Talk to an Online Advisor' : 'Hablar con un Asesor en Línea'}
+                            </span>
+                            <span className="block text-[10px] font-semibold text-emerald-700/80">
+                              {isEn ? 'Live attention right here in this chat' : 'Atención en vivo por un agente en este chat'}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight size={14} className="text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -842,6 +938,16 @@ export default function ChatBotWidget() {
             {/* Quick Pills Bar when conversation is active */}
             {displayedMessages.length > 0 && (
               <div className="px-3 py-1.5 bg-white border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
+                {chatMode !== 'agent' && (
+                  <button
+                    type="button"
+                    onClick={handleRequestLiveAgent}
+                    className="px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold whitespace-nowrap transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                  >
+                    <Headset size={12} />
+                    <span>{isEn ? 'Online Advisor' : 'Asesor en Línea'}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => handleQuickAction(t.chat.faqRatesQuery)}
                   className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-brand-blue/10 text-gray-700 hover:text-brand-blue text-[11px] font-semibold whitespace-nowrap transition-colors"
