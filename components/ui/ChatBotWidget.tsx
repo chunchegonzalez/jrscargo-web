@@ -13,17 +13,43 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
 import { HalloweenWitchHat } from '@/components/ui/HalloweenIcons';
 
-const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHovered?: boolean; isPatriotic?: boolean }) => {
+const AnimatedRobotFace = ({
+  isHovered = false,
+  isPatriotic = false,
+  isHalloween = false,
+}: {
+  isHovered?: boolean;
+  isPatriotic?: boolean;
+  isHalloween?: boolean;
+}) => {
   const faceRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  
-  const springConfig = { damping: 20, stiffness: 300, mass: 0.4 };
+
+  const springConfig = { damping: 18, stiffness: 320, mass: 0.38 };
   const smoothX = useSpring(mouseX, springConfig);
   const smoothY = useSpring(mouseY, springConfig);
-  
-  const eyeX = useTransform(smoothX, [-1, 1], [-7, 7]);
-  const eyeY = useTransform(smoothY, [-1, 1], [-5, 5]);
+
+  // Expressive multi-layer parallax mouse tracking
+  const headX = useTransform(smoothX, [-1, 1], [-4.5, 4.5]);
+  const headY = useTransform(smoothY, [-1, 1], [-3.5, 3.5]);
+  const headRotate = useTransform(smoothX, [-1, 1], [-7, 7]);
+
+  const visorX = useTransform(smoothX, [-1, 1], [-3, 3]);
+  const visorY = useTransform(smoothY, [-1, 1], [-2.5, 2.5]);
+
+  const eyeX = useTransform(smoothX, [-1, 1], [-8.5, 8.5]);
+  const eyeY = useTransform(smoothY, [-1, 1], [-5.5, 5.5]);
+  const pupilX = useTransform(smoothX, [-1, 1], [-3, 3]);
+  const pupilY = useTransform(smoothY, [-1, 1], [-2, 2]);
+
+  // Witch hat & skeleton details react to mouse position
+  const hatX = useTransform(smoothX, [-1, 1], [-6, 6]);
+  const hatY = useTransform(smoothY, [-1, 1], [-3, 2]);
+  const hatRotate = useTransform(smoothX, [-1, 1], [2, 18]);
+  const jawY = useTransform(smoothY, [-1, 1], [0, 3.5]);
+  const leftHandY = useTransform(smoothY, [-1, 1], [-3, 3]);
+  const rightHandY = useTransform(smoothY, [-1, 1], [3, -3]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -31,19 +57,19 @@ const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHover
       const rect = faceRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-      
+
       const deltaX = e.clientX - centerX;
       const deltaY = e.clientY - centerY;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      const maxDistance = 400;
+      const maxDistance = 750;
       const normalizedDist = Math.min(distance / maxDistance, 1);
-      
+
       const angle = Math.atan2(deltaY, deltaX);
       mouseX.set(Math.cos(angle) * normalizedDist);
       mouseY.set(Math.sin(angle) * normalizedDist);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [mouseX, mouseY]);
 
@@ -84,93 +110,269 @@ const AnimatedRobotFace = ({ isHovered = false, isPatriotic = false }: { isHover
     );
   }
 
-  // Versión estándar normal
+  // Versión Estándar + Edición Especial Skeleton-Bot de Halloween 🎃💀
   return (
-    <motion.div 
-      animate={isHovered ? { 
-        y: [0, -8, -3, -6, -4],
-        rotate: [0, -6, 6, -3, 3, 0],
-        scale: [1, 1.12, 1.08]
-      } : { 
-        y: 0, 
-        rotate: 0,
-        scale: 1 
+    <motion.div
+      ref={faceRef}
+      style={{ x: headX, y: headY, rotate: headRotate }}
+      animate={isHovered ? {
+        y: [0, -8, -3, -6, 0],
+        scale: [1, 1.13, 1.08, 1.12, 1],
+      } : {
+        y: [0, -2.5, 0],
+        scale: 1,
       }}
       transition={isHovered ? {
-        duration: 1.2,
+        duration: 1.1,
         repeat: Infinity,
-        repeatType: "reverse",
-        ease: "easeInOut"
+        ease: "easeInOut",
       } : {
-        duration: 0.25,
-        ease: "easeOut"
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut",
       }}
-      ref={faceRef} 
-      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_10px_35px_rgba(0,0,0,0.3)] flex items-center justify-center relative overflow-hidden border-2 border-white"
+      className="relative flex items-center justify-center select-none"
     >
-      {/* Outer Multi-color Halo Ring - Accelerates on Hover */}
-      <motion.div 
-        animate={{ rotate: 360, scale: isHovered ? 1.3 : 1.05 }}
-        transition={{ 
-          rotate: { duration: isHovered ? 1.8 : 6, repeat: Infinity, ease: "linear" },
-          scale: { duration: 0.3 }
-        }}
-        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
-      />
-      
-      <div className="absolute inset-1 rounded-full bg-white z-0"></div>
-      
-      {/* Inner Visor */}
-      <div className="absolute w-[78%] h-[62%] bg-gradient-to-b from-gray-900 to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-gray-700/40 z-10">
-        <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px]"></div>
-        
-        {/* Animated Eyes */}
-        <motion.div style={{ x: eyeX, y: eyeY }} className="flex gap-2 relative z-10">
-          {/* Left Eye */}
-          <motion.div 
-            animate={isHovered ? {
-              scaleY: [1, 0.15, 1.2, 0.9, 1.1],
-              scaleX: [1, 1.1, 0.9, 1.1, 1],
-            } : {
-              scaleY: [1, 0.1, 1, 1, 1],
-              scaleX: 1
-            }}
-            transition={isHovered ? {
-              duration: 1.2,
-              repeat: Infinity,
-              times: [0, 0.1, 0.3, 0.6, 1]
-            } : {
-              duration: 3.5,
-              repeat: Infinity,
-              times: [0, 0.05, 0.1, 0.5, 1]
-            }}
-            className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
-              isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
-            }`}
-          />
-          {/* Right Eye */}
-          <motion.div 
-            animate={isHovered ? {
-              scaleY: [1, 0.15, 1.2, 0.9, 1.1],
-              scaleX: [1, 1.1, 0.9, 1.1, 1],
-            } : {
-              scaleY: [1, 0.1, 1, 1, 1],
-              scaleX: 1
-            }}
-            transition={isHovered ? {
-              duration: 1.2,
-              repeat: Infinity,
-              times: [0, 0.1, 0.3, 0.6, 1]
-            } : {
-              duration: 3.5,
-              repeat: Infinity,
-              times: [0, 0.05, 0.1, 0.5, 1]
-            }}
-            className={`w-2.5 h-3.5 bg-brand-yellow rounded-full transition-all duration-300 ${
-              isHovered ? 'shadow-[0_0_14px_rgba(249,178,51,1)] bg-amber-300' : 'shadow-[0_0_8px_rgba(249,178,51,0.9)]'
-            }`}
-          />
+      {/* 1. Interactive Witch Hat perched seamlessly on the head (moves with mouse & hover) */}
+      {isHalloween && (
+        <motion.div
+          style={{ x: hatX, y: hatY, rotate: hatRotate }}
+          animate={isHovered ? {
+            y: [-2, -9, -3, -7, -2],
+            scale: [1, 1.08, 1],
+          } : {
+            y: [0, -2, 0],
+            scale: 1,
+          }}
+          transition={{
+            duration: isHovered ? 0.9 : 2.6,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -top-8 sm:-top-9 left-1/2 -translate-x-[44%] z-30 pointer-events-none"
+        >
+          <HalloweenWitchHat size={58} />
         </motion.div>
+      )}
+
+      {/* 2. Left & Right Articulated Bony Skeleton Hands gripping the bot sides */}
+      {isHalloween && (
+        <>
+          {/* Left Skeleton Hand */}
+          <motion.div
+            style={{ y: leftHandY }}
+            animate={isHovered ? {
+              x: [-2, -6, -1, -5, -2],
+              rotate: [-12, -28, -5, -22, -12],
+            } : {
+              x: [0, -1.5, 0],
+              rotate: [-6, -12, -6],
+            }}
+            transition={{ duration: isHovered ? 0.7 : 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -left-3.5 sm:-left-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.45)]"
+          >
+            <svg width="20" height="24" viewBox="0 0 20 24" fill="none" aria-hidden="true">
+              <rect x="2" y="6" width="6" height="12" rx="3" fill="#F8FAFC" stroke="#475569" strokeWidth="1.2" />
+              <rect x="6" y="4" width="11" height="4" rx="2" fill="#FFFFFF" stroke="#475569" strokeWidth="1.1" />
+              <rect x="7" y="10" width="11" height="4" rx="2" fill="#FFFFFF" stroke="#475569" strokeWidth="1.1" />
+              <rect x="6" y="16" width="10" height="4" rx="2" fill="#FFFFFF" stroke="#475569" strokeWidth="1.1" />
+            </svg>
+          </motion.div>
+
+          {/* Right Skeleton Hand */}
+          <motion.div
+            style={{ y: rightHandY }}
+            animate={isHovered ? {
+              x: [2, 6, 1, 5, 2],
+              rotate: [12, 28, 5, 22, 12],
+            } : {
+              x: [0, 1.5, 0],
+              rotate: [6, 12, 6],
+            }}
+            transition={{ duration: isHovered ? 0.7 : 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -right-3.5 sm:-right-4 top-1/2 -translate-y-1/2 z-20 pointer-events-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.45)]"
+          >
+            <svg width="20" height="24" viewBox="0 0 20 24" fill="none" aria-hidden="true">
+              <rect x="12" y="6" width="6" height="12" rx="3" fill="#F8FAFC" stroke="#475569" strokeWidth="1.2" />
+              <rect x="3" y="4" width="11" height="4" rx="2" fill="#FFFFFF" stroke="#475569" strokeWidth="1.1" />
+              <rect x="2" y="10" width="11" height="4" rx="2" fill="#FFFFFF" stroke="#475569" strokeWidth="1.1" />
+              <rect x="4" y="16" width="10" height="4" rx="2" fill="#FFFFFF" stroke="#475569" strokeWidth="1.1" />
+            </svg>
+          </motion.div>
+        </>
+      )}
+
+      {/* 3. Main Circular Robot / Skeleton Cranium Shell */}
+      <div
+        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center relative overflow-hidden border-2 ${
+          isHalloween
+            ? 'bg-gradient-to-b from-white via-slate-50 to-slate-200 border-orange-300/90 shadow-[0_10px_35px_rgba(249,115,22,0.45)]'
+            : 'bg-gradient-to-b from-gray-50 to-gray-200 border-white shadow-[0_10px_35px_rgba(0,0,0,0.3)]'
+        }`}
+      >
+        {/* Outer Multi-color Halo Ring - Accelerates on Hover */}
+        <motion.div
+          animate={{ rotate: 360, scale: isHovered ? 1.3 : 1.05 }}
+          transition={{
+            rotate: { duration: isHovered ? 1.6 : 5.5, repeat: Infinity, ease: "linear" },
+            scale: { duration: 0.3 },
+          }}
+          className={`absolute w-[150%] h-[150%] opacity-95 ${
+            isHalloween
+              ? 'bg-[conic-gradient(from_0deg,transparent,#F97316,#A855F7,#FBBF24,#EF4444,transparent)]'
+              : 'bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)]'
+          }`}
+        />
+
+        {/* Bone-white / Pearl Inner Skull Face */}
+        <div
+          className={`absolute inset-1 rounded-full z-0 ${
+            isHalloween
+              ? 'bg-gradient-to-b from-[#FFFFFF] via-[#F8FAFC] to-[#E2E8F0]'
+              : 'bg-white'
+          }`}
+        >
+          {/* Subtle stitched skull-suture detail on forehead when Halloween is active */}
+          {isHalloween && (
+            <svg
+              viewBox="0 0 60 20"
+              className="w-full h-4 opacity-45 pointer-events-none"
+              fill="none"
+            >
+              <path
+                d="M18 6 Q30 11 42 6"
+                stroke="#64748B"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <line x1="24" y1="5" x2="23" y2="9" stroke="#64748B" strokeWidth="1.1" strokeLinecap="round" />
+              <line x1="30" y1="6" x2="30" y2="10.5" stroke="#64748B" strokeWidth="1.1" strokeLinecap="round" />
+              <line x1="36" y1="5" x2="37" y2="9" stroke="#64748B" strokeWidth="1.1" strokeLinecap="round" />
+            </svg>
+          )}
+        </div>
+
+        {/* Inner Visor (shifts subtly with mouse) */}
+        <motion.div
+          style={{ x: visorX, y: visorY }}
+          className={`absolute w-[80%] h-[60%] rounded-[2rem] flex items-center justify-center gap-2.5 shadow-inner overflow-hidden z-10 ${
+            isHalloween
+              ? 'bg-gradient-to-b from-[#130722] via-[#090414] to-black border border-purple-500/40 -mt-1'
+              : 'bg-gradient-to-b from-gray-900 to-black border border-gray-700/40'
+          }`}
+        >
+          <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px]" />
+
+          {/* Animated Mouse-Tracking Eyes */}
+          <motion.div style={{ x: eyeX, y: eyeY }} className="flex items-center gap-2.5 relative z-10">
+            {/* Left Eye */}
+            <motion.div
+              animate={isHovered ? {
+                scaleY: [1, 0.15, 1.22, 0.92, 1.1],
+                scaleX: [1, 1.12, 0.92, 1.1, 1],
+              } : {
+                scaleY: [1, 0.1, 1, 1, 1],
+                scaleX: 1,
+              }}
+              transition={isHovered ? {
+                duration: 1.1,
+                repeat: Infinity,
+                times: [0, 0.1, 0.3, 0.6, 1],
+              } : {
+                duration: 3.5,
+                repeat: Infinity,
+                times: [0, 0.05, 0.1, 0.5, 1],
+              }}
+              className={`w-3 h-3.5 rounded-full flex items-center justify-center transition-colors duration-300 ${
+                isHalloween
+                  ? isHovered
+                    ? 'bg-gradient-to-t from-orange-600 via-amber-400 to-yellow-200 shadow-[0_0_16px_rgba(249,115,22,1)]'
+                    : 'bg-gradient-to-t from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_10px_rgba(249,115,22,0.95)]'
+                  : isHovered
+                    ? 'bg-amber-300 shadow-[0_0_14px_rgba(249,178,51,1)]'
+                    : 'bg-brand-yellow shadow-[0_0_8px_rgba(249,178,51,0.9)]'
+              }`}
+            >
+              {/* Inner cursor-tracking pupil */}
+              <motion.div
+                style={{ x: pupilX, y: pupilY }}
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isHalloween ? 'bg-white shadow-[0_0_4px_#FFF]' : 'bg-white/90'
+                }`}
+              />
+            </motion.div>
+
+            {/* Tiny glowing skull nasal cavity triangle in Halloween mode */}
+            {isHalloween && (
+              <div
+                className="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] border-b-purple-400/80 mt-2 opacity-90"
+                aria-hidden="true"
+              />
+            )}
+
+            {/* Right Eye */}
+            <motion.div
+              animate={isHovered ? {
+                scaleY: [1, 0.15, 1.22, 0.92, 1.1],
+                scaleX: [1, 1.12, 0.92, 1.1, 1],
+              } : {
+                scaleY: [1, 0.1, 1, 1, 1],
+                scaleX: 1,
+              }}
+              transition={isHovered ? {
+                duration: 1.1,
+                repeat: Infinity,
+                times: [0, 0.1, 0.3, 0.6, 1],
+              } : {
+                duration: 3.5,
+                repeat: Infinity,
+                times: [0, 0.05, 0.1, 0.5, 1],
+              }}
+              className={`w-3 h-3.5 rounded-full flex items-center justify-center transition-colors duration-300 ${
+                isHalloween
+                  ? isHovered
+                    ? 'bg-gradient-to-t from-orange-600 via-amber-400 to-yellow-200 shadow-[0_0_16px_rgba(249,115,22,1)]'
+                    : 'bg-gradient-to-t from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_10px_rgba(249,115,22,0.95)]'
+                  : isHovered
+                    ? 'bg-amber-300 shadow-[0_0_14px_rgba(249,178,51,1)]'
+                    : 'bg-brand-yellow shadow-[0_0_8px_rgba(249,178,51,0.9)]'
+              }`}
+            >
+              {/* Inner cursor-tracking pupil */}
+              <motion.div
+                style={{ x: pupilX, y: pupilY }}
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isHalloween ? 'bg-white shadow-[0_0_4px_#FFF]' : 'bg-white/90'
+                }`}
+              />
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+        {/* 4. Articulated Chattering Skeleton Jaw & Teeth at the bottom of the head */}
+        {isHalloween && (
+          <motion.div
+            style={{ y: jawY }}
+            animate={isHovered ? {
+              y: [0, 2.5, 0, 2, 0],
+            } : {
+              y: [0, 1, 0],
+            }}
+            transition={{
+              duration: isHovered ? 0.45 : 2.2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute bottom-1 z-20 flex items-center justify-center pointer-events-none"
+          >
+            <div className="flex items-center gap-[1.5px] bg-slate-900/90 px-1.5 py-[1.5px] rounded-full border border-slate-400/60 shadow-xs">
+              <span className="w-1 h-1.5 bg-white rounded-[1px]" />
+              <span className="w-1 h-2 bg-white rounded-[1px]" />
+              <span className="w-1 h-2 bg-white rounded-[1px]" />
+              <span className="w-1 h-1.5 bg-white rounded-[1px]" />
+            </div>
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );
@@ -659,22 +861,30 @@ export default function ChatBotWidget() {
           <motion.div
             animate={isTriggerHovered ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 8, scale: 0.92 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="bg-[#0B1D2B] text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-white/10 text-xs font-bold whitespace-nowrap hidden sm:flex items-center gap-2 pointer-events-none"
+            className={`text-white px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-bold whitespace-nowrap hidden sm:flex items-center gap-2 pointer-events-none border ${
+              isHalloween
+                ? 'bg-gradient-to-r from-[#1A0B2E] via-[#2A0F45] to-[#1A0B2E] border-orange-400/40 shadow-[0_10px_28px_rgba(249,115,22,0.35)]'
+                : 'bg-[#0B1D2B] border-white/10'
+            }`}
           >
-            <Sparkles size={14} className="text-brand-yellow animate-spin" />
-            <span>👋 {isEn ? 'Hi! Talk with' : '¡Hola! Habla con'} <strong className="text-brand-yellow font-black">Clari</strong></span>
+            <Sparkles size={14} className={isHalloween ? 'text-orange-400 animate-spin' : 'text-brand-yellow animate-spin'} />
+            <span>
+              {isHalloween ? '🎃' : '👋'} {isEn ? 'Hi! Talk with' : '¡Hola! Habla con'}{' '}
+              <strong className={isHalloween ? 'text-orange-300 font-black' : 'text-brand-yellow font-black'}>
+                Clari
+              </strong>
+            </span>
           </motion.div>
 
           <motion.div
             whileTap={{ scale: 0.92 }}
             className="relative cursor-pointer"
           >
-            {isHalloween && (
-              <div className="absolute -top-7 sm:-top-8 -right-1 sm:-right-2 z-20 pointer-events-none drop-shadow-md select-none">
-                <HalloweenWitchHat size={48} />
-              </div>
-            )}
-            <AnimatedRobotFace isHovered={isTriggerHovered} isPatriotic={isPatriotic} />
+            <AnimatedRobotFace
+              isHovered={isTriggerHovered}
+              isPatriotic={isPatriotic}
+              isHalloween={isHalloween}
+            />
           </motion.div>
         </button>
       )}

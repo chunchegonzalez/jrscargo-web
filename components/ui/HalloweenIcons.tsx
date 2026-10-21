@@ -302,10 +302,11 @@ export function HalloweenFloatingGhost({
 }
 
 /**
- * Witch hat rendered from the user reference screenshot
+ * High-craft Vector SVG Witch Hat with curved brim (hugs circular heads seamlessly),
+ * glowing orange ribbon, golden skull/buckle, and animated magical sparks
  */
 export function HalloweenWitchHat({
-  size = 46,
+  size = 52,
   className = '',
   style = {},
 }: {
@@ -314,15 +315,133 @@ export function HalloweenWitchHat({
   style?: React.CSSProperties;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/halloween-witch-hat.png"
-      alt="Halloween Witch Hat"
+    <svg
       width={size}
-      height={Math.round((size * 90) / 110)}
-      className={`object-contain pointer-events-none select-none ${className}`}
+      height={Math.round((size * 76) / 90)}
+      viewBox="0 0 90 76"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`pointer-events-none select-none overflow-visible drop-shadow-[0_6px_14px_rgba(88,28,135,0.45)] ${className}`}
       style={style}
-    />
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="witchHatCone" x1="20%" y1="0%" x2="85%" y2="100%">
+          <stop offset="0%" stopColor="#4C1D95" />
+          <stop offset="48%" stopColor="#2E1065" />
+          <stop offset="100%" stopColor="#0F0728" />
+        </linearGradient>
+        <linearGradient id="witchHatBrim" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3B0764" />
+          <stop offset="50%" stopColor="#1E1B4B" />
+          <stop offset="100%" stopColor="#0F0728" />
+        </linearGradient>
+        <linearGradient id="witchHatRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#EA580C" />
+          <stop offset="50%" stopColor="#F97316" />
+          <stop offset="100%" stopColor="#D97706" />
+        </linearGradient>
+        <linearGradient id="witchHatBuckle" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="55%" stopColor="#F59E0B" />
+          <stop offset="100%" stopColor="#B45309" />
+        </linearGradient>
+      </defs>
+
+      {/* Back shadow under brim */}
+      <ellipse cx="45" cy="57" rx="37" ry="10" fill="#090418" fillOpacity="0.65" />
+
+      {/* Curved Witch Hat Cone with expressive bent tip */}
+      <path
+        d="M22 52 C24 35, 31 16, 48 6 C57 1, 69 2, 75 9 C70 9, 63 11, 58 17 C54 22, 58 36, 67 52 Z"
+        fill="url(#witchHatCone)"
+        stroke="#6D28D9"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+
+      {/* Subtle fabric fold creases on cone */}
+      <path
+        d="M32 36 Q45 39 56 33"
+        stroke="#7C3AED"
+        strokeWidth="1.1"
+        strokeOpacity="0.45"
+        strokeLinecap="round"
+      />
+      <path
+        d="M38 23 Q47 26 54 21"
+        stroke="#A78BFA"
+        strokeWidth="1"
+        strokeOpacity="0.35"
+        strokeLinecap="round"
+      />
+
+      {/* Glowing Orange Ribbon Band */}
+      <path
+        d="M21.5 47.5 C34 53, 56 53, 67.5 47.5 L69.5 53.5 C56 59.5, 33 59.5, 19.5 53.5 Z"
+        fill="url(#witchHatRibbon)"
+        stroke="#FDBA74"
+        strokeWidth="0.8"
+      />
+
+      {/* Curved Ergonomic Brim that hugs round avatars */}
+      <path
+        d="M4 54 C14 45, 76 45, 86 54 C89 57, 83 65, 70 63 C54 60, 36 60, 20 63 C7 65, 1 57, 4 54 Z"
+        fill="url(#witchHatBrim)"
+        stroke="#7C3AED"
+        strokeWidth="1.3"
+      />
+
+      {/* Rim highlight */}
+      <path
+        d="M9 54.5 C26 48.5, 64 48.5, 81 54.5"
+        stroke="#C4B5FD"
+        strokeWidth="1"
+        strokeOpacity="0.45"
+        strokeLinecap="round"
+      />
+
+      {/* Golden Buckle in center of ribbon */}
+      <g transform="translate(38.5, 45.5)">
+        <rect
+          x="0"
+          y="0"
+          width="13"
+          height="11"
+          rx="2.5"
+          fill="url(#witchHatBuckle)"
+          stroke="#78350F"
+          strokeWidth="0.9"
+        />
+        <rect x="3" y="2.5" width="7" height="6" rx="1" fill="#1E1B4B" />
+        <line x1="6.5" y1="2.5" x2="6.5" y2="8.5" stroke="#FDE047" strokeWidth="1.3" />
+      </g>
+
+      {/* Magical glowing stars around the hat tip */}
+      <g>
+        <circle cx="77" cy="12" r="2" fill="#FDE047">
+          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" repeatCount="indefinite" />
+          <animate attributeName="r" values="1.4;2.5;1.4" dur="1.6s" repeatCount="indefinite" />
+        </circle>
+        <circle cx="16" cy="28" r="1.6" fill="#FB923C">
+          <animate attributeName="opacity" values="1;0.25;1" dur="2.1s" repeatCount="indefinite" />
+        </circle>
+        <path
+          d="M66 2 L67.2 5.2 L70.5 6.4 L67.2 7.6 L66 10.8 L64.8 7.6 L61.5 6.4 L64.8 5.2 Z"
+          fill="#FDE047"
+        >
+          <animateTransform
+            attributeName="transform"
+            type="scale"
+            values="0.85;1.15;0.85"
+             additive="sum"
+            dur="2s"
+            repeatCount="indefinite"
+          />
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
+        </path>
+      </g>
+    </svg>
   );
 }
 
