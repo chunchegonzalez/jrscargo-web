@@ -3,6 +3,7 @@
 
 const AUTH_COOKIE_NAME = 'jrs_admin_auth';
 const COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours in seconds
+const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
 function getSecret(): string {
   return process.env.AUTH_SECRET || 'jrs-cargo-auth-secure-hmac-key-2026-production';
@@ -55,12 +56,13 @@ export interface AuthUser {
 }
 
 // Create a cryptographically signed cookie value with expiration
-export async function createSignedCookie(user: AuthUser): Promise<{ name: string; value: string; options: Record<string, unknown> }> {
+export async function createSignedCookie(user: AuthUser, remember = true): Promise<{ name: string; value: string; options: Record<string, unknown> }> {
   const now = Math.floor(Date.now() / 1000);
+  const maxAge = remember ? REMEMBER_MAX_AGE : COOKIE_MAX_AGE;
   const payloadData: AuthUser = {
     username: user.username,
     role: user.role,
-    exp: now + COOKIE_MAX_AGE,
+    exp: now + maxAge,
   };
 
   const payload = base64UrlEncode(JSON.stringify(payloadData));
@@ -74,7 +76,7 @@ export async function createSignedCookie(user: AuthUser): Promise<{ name: string
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
-      maxAge: COOKIE_MAX_AGE,
+      maxAge,
       sameSite: 'lax' as const,
     }
   };

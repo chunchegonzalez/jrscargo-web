@@ -6,7 +6,7 @@ import { isRateLimited, recordFailedAttempt, resetAttempts } from '@/lib/rate-li
 
 export async function POST(request: Request) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, remember } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Usuario y contraseña requeridos' }, { status: 400 });
@@ -75,8 +75,8 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({ success: true, user: validUser }, { status: 200 });
       
-      // Create signed cookie
-      const cookie = await createSignedCookie(validUser);
+      // Create signed cookie (30 days if remember is enabled, 8h otherwise)
+      const cookie = await createSignedCookie(validUser, remember !== false);
       response.cookies.set({
         name: cookie.name,
         value: cookie.value,
