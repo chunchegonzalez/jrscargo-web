@@ -11,10 +11,8 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  CheckCircle2,
   Clock,
   AlertCircle,
-  Smartphone,
   RefreshCw,
   ArrowUpRight,
   Sparkles
@@ -29,7 +27,126 @@ const STATUS_TICKER = [
 interface SavedDeviceProfile {
   username: string;
   token: string;
+  credentialId?: string;
   savedAt: number;
+}
+
+function bufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToBuffer(base64url: string): ArrayBuffer {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padLen = (4 - (base64.length % 4)) % 4;
+  const padded = base64 + '='.repeat(padLen);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+async function isPlatformBiometricAvailable(): Promise<boolean> {
+  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+    return false;
+  }
+  try {
+    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function createBiometricCredential(username: string): Promise<string | null> {
+  const challenge = new Uint8Array(32);
+  window.crypto.getRandomValues(challenge);
+
+  const userId = new Uint8Array(16);
+  window.crypto.getRandomValues(userId);
+
+  const credential = (await navigator.credentials.create({
+    publicKey: {
+      challenge,
+      rp: {
+        name: 'Panel de JRS Cargo',
+        id: window.location.hostname
+      },
+      user: {
+        id: userId,
+        name: username,
+        displayName: username
+      },
+      pubKeyCredParams: [
+        { alg: -7, type: 'public-key' },
+        { alg: -257, type: 'public-key' }
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        residentKey: 'preferred'
+      },
+      timeout: 60000
+    }
+  })) as PublicKeyCredential | null;
+
+  if (!credential || !credential.rawId) return null;
+  return bufferToBase64Url(credential.rawId);
+}
+
+async function verifyBiometricCredential(credentialId: string): Promise<boolean> {
+  const challenge = new Uint8Array(32);
+  window.crypto.getRandomValues(challenge);
+
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      rpId: window.location.hostname,
+      allowCredentials: [
+        {
+          id: base64UrlToBuffer(credentialId),
+          type: 'public-key',
+          transports: ['internal']
+        }
+      ],
+      userVerification: 'required',
+      timeout: 60000
+    }
+  });
+
+  return Boolean(assertion);
+}
+
+function FingerprintIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+      <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+      <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+      <path d="M2 12a10 10 0 0 1 18-6" />
+      <path d="M2 16h.01" />
+      <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+      <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+      <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+      <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+    </svg>
+  );
 }
 
 export default function AdminLogin() {
@@ -40,7 +157,7 @@ export default function AdminLogin() {
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
+  const [biometricScanning, setBiometricScanning] = useState(false);
   const [savedProfile, setSavedProfile] = useState<SavedDeviceProfile | null>(null);
   const [useQuickAccess, setUseQuickAccess] = useState(false);
   const [tickerIndex, setTickerIndex] = useState(0);
@@ -50,31 +167,10 @@ export default function AdminLogin() {
 
   const router = useRouter();
 
-  // 1. Auto-check active session + load saved mobile/device profile + live CR clock
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.title = 'Panel de JRS';
     }
-
-    // Check if user already has a valid session cookie -> auto-redirect to panel
-    const verifyExistingSession = async () => {
-      try {
-        const res = await fetch('/api/auth/me', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated) {
-            router.replace('/admin/bodega');
-            return;
-          }
-        }
-      } catch {
-        // Ignore network errors and show login form
-      } finally {
-        setCheckingSession(false);
-      }
-    };
-
-    verifyExistingSession();
 
     // Load saved quick-access profile or saved username
     try {
@@ -127,7 +223,7 @@ export default function AdminLogin() {
       clearInterval(clockTimer);
       clearInterval(tickerTimer);
     };
-  }, [router]);
+  }, []);
 
   const checkCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.getModifierState) {
@@ -135,7 +231,12 @@ export default function AdminLogin() {
     }
   };
 
-  const performLogin = async (loginUser: string, loginPass: string) => {
+  const performLogin = async (
+    loginUser: string,
+    loginPass: string,
+    existingCredId?: string,
+    enrollBiometricIfNeeded = false
+  ) => {
     setIsLoading(true);
     setError('');
 
@@ -153,10 +254,27 @@ export default function AdminLogin() {
       if (res.ok) {
         try {
           if (rememberDevice && loginUser.trim()) {
+            let credentialId = existingCredId || savedProfile?.credentialId;
+
+            if (enrollBiometricIfNeeded && !credentialId) {
+              const supported = await isPlatformBiometricAvailable();
+              if (supported) {
+                try {
+                  const newCredId = await createBiometricCredential(loginUser.trim());
+                  if (newCredId) {
+                    credentialId = newCredId;
+                  }
+                } catch {
+                  // If user skipped biometric creation during password login, we'll ask on quick login
+                }
+              }
+            }
+
             localStorage.setItem('jrs_saved_username', loginUser.trim());
             const profile: SavedDeviceProfile = {
               username: loginUser.trim(),
               token: btoa(unescape(encodeURIComponent(loginPass))),
+              credentialId,
               savedAt: Date.now()
             };
             localStorage.setItem('jrs_device_quick_access', JSON.stringify(profile));
@@ -184,16 +302,59 @@ export default function AdminLogin() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await performLogin(username, password);
+    await performLogin(username, password, undefined, true);
   };
 
-  const handleQuickLogin = async () => {
+  // Biometric (Huella / Touch ID / Face ID) verification required before Quick Access login
+  const handleBiometricQuickLogin = async () => {
     if (!savedProfile) return;
-    try {
-      const decodedPass = decodeURIComponent(escape(atob(savedProfile.token)));
-      await performLogin(savedProfile.username, decodedPass);
-    } catch {
+    setError('');
+
+    const supported = await isPlatformBiometricAvailable();
+    if (!supported) {
+      setError('Este navegador o equipo no tiene lector de huella / Face ID activo. Ingresa tu contraseña.');
       setUseQuickAccess(false);
+      return;
+    }
+
+    setBiometricScanning(true);
+    try {
+      let activeCredentialId = savedProfile.credentialId;
+
+      if (activeCredentialId) {
+        const verified = await verifyBiometricCredential(activeCredentialId);
+        if (!verified) {
+          setError('No se pudo verificar tu huella. Intenta nuevamente.');
+          setBiometricScanning(false);
+          return;
+        }
+      } else {
+        // First time using biometric on this saved profile -> enroll & verify platform fingerprint/FaceID now
+        const createdId = await createBiometricCredential(savedProfile.username);
+        if (!createdId) {
+          setError('Verificación de huella cancelada.');
+          setBiometricScanning(false);
+          return;
+        }
+        activeCredentialId = createdId;
+        const updatedProfile: SavedDeviceProfile = {
+          ...savedProfile,
+          credentialId: createdId
+        };
+        setSavedProfile(updatedProfile);
+        try {
+          localStorage.setItem('jrs_device_quick_access', JSON.stringify(updatedProfile));
+        } catch {
+          // ignore
+        }
+      }
+
+      setBiometricScanning(false);
+      const decodedPass = decodeURIComponent(escape(atob(savedProfile.token)));
+      await performLogin(savedProfile.username, decodedPass, activeCredentialId, false);
+    } catch {
+      setBiometricScanning(false);
+      setError('Se requiere confirmar tu huella o Face ID para ingresar.');
     }
   };
 
@@ -315,25 +476,23 @@ export default function AdminLogin() {
             </Link>
           </div>
 
-          {checkingSession ? (
-            <div className="py-10 flex flex-col items-center justify-center gap-3 text-slate-500">
-              <div className="w-7 h-7 border-2 border-brand-blue/20 border-t-brand-blue rounded-full animate-spin" />
-              <p className="text-xs font-bold">Verificando sesión activa...</p>
-            </div>
-          ) : useQuickAccess && savedProfile ? (
-            /* ==================== 1-TAP MOBILE QUICK ACCESS MODE ==================== */
+          {useQuickAccess && savedProfile ? (
+            /* ==================== BIOMETRIC (HUELLA / FACE ID) QUICK ACCESS MODE ==================== */
             <div className="space-y-4">
               <div>
                 <h2 className="text-xl font-black text-[#0B2535] tracking-tight">
                   Acceso Rápido
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tu cuenta está vinculada en este dispositivo.
+                  Confirma tu huella o Face ID para ingresar al panel.
                 </p>
               </div>
 
-              {/* Saved User Card */}
-              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200/80 flex items-center justify-between gap-3">
+              {/* Saved User Card with Fingerprint Indicator */}
+              <div
+                onClick={!isLoading && !biometricScanning ? handleBiometricQuickLogin : undefined}
+                className="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200/80 hover:border-brand-blue/40 transition-all flex items-center justify-between gap-3 cursor-pointer group"
+              >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#0B2535] to-[#12435E] text-brand-yellow font-black text-sm flex items-center justify-center shadow-sm shrink-0">
                     {getInitials(savedProfile.username)}
@@ -343,11 +502,20 @@ export default function AdminLogin() {
                       {savedProfile.username}
                     </p>
                     <p className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
-                      <Smartphone size={11} /> Acceso automático listo
+                      <FingerprintIcon className="w-3.5 h-3.5" />
+                      <span>Protegido con Huella / Face ID</span>
                     </p>
                   </div>
                 </div>
-                <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                    biometricScanning
+                      ? 'bg-brand-yellow/20 text-brand-blue animate-pulse ring-4 ring-brand-yellow/20'
+                      : 'bg-emerald-50 text-emerald-600 group-hover:bg-brand-blue group-hover:text-white'
+                  }`}
+                >
+                  <FingerprintIcon className="w-5 h-5" />
+                </div>
               </div>
 
               {error && (
@@ -357,21 +525,27 @@ export default function AdminLogin() {
                 </div>
               )}
 
-              {/* 1-Tap Login Button */}
+              {/* Biometric Login Button */}
               <button
                 type="button"
-                onClick={handleQuickLogin}
-                disabled={isLoading}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#0B2535] via-[#12435E] to-[#0B2535] text-white font-black text-base shadow-[0_10px_25px_-5px_rgba(18,67,94,0.45)] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                onClick={handleBiometricQuickLogin}
+                disabled={isLoading || biometricScanning}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#0B2535] via-[#12435E] to-[#0B2535] text-white font-black text-base shadow-[0_10px_25px_-5px_rgba(18,67,94,0.45)] active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-75"
               >
-                {isLoading ? (
+                {biometricScanning ? (
+                  <div className="flex items-center gap-2.5">
+                    <FingerprintIcon className="w-5 h-5 text-brand-yellow animate-pulse" />
+                    <span>Coloca tu huella para entrar...</span>
+                  </div>
+                ) : isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-brand-yellow rounded-full animate-spin" />
                     <span>Ingresando...</span>
                   </div>
                 ) : (
                   <>
-                    <span>Continuar como {savedProfile.username.split(' ')[0]}</span>
+                    <FingerprintIcon className="w-5 h-5 text-brand-yellow" />
+                    <span>Ingresar con Huella ({savedProfile.username.split(' ')[0]})</span>
                     <ArrowRight size={18} className="text-brand-yellow" />
                   </>
                 )}
@@ -494,7 +668,7 @@ export default function AdminLogin() {
                   </div>
                 </div>
 
-                {/* Automatic Mobile Access / Remember Toggle */}
+                {/* Biometric Quick Access Toggle */}
                 <div className="pt-0.5">
                   <label className="inline-flex items-center gap-2.5 cursor-pointer select-none group">
                     <input
@@ -516,8 +690,9 @@ export default function AdminLogin() {
                         </svg>
                       )}
                     </div>
-                    <span className="text-xs font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">
-                      Recordar acceso rápido en este celular / equipo
+                    <span className="text-xs font-semibold text-slate-600 group-hover:text-slate-900 transition-colors flex items-center gap-1">
+                      <FingerprintIcon className="w-3.5 h-3.5 text-brand-blue" />
+                      Activar ingreso con Huella / Face ID en este equipo
                     </span>
                   </label>
                 </div>
