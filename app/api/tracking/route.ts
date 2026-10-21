@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getInventoryItem } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // Cache for Worldbox packages list (60 seconds TTL)
 let cachedPackages: Array<{
   trackingNumber?: string;
@@ -133,14 +135,27 @@ function normalizeAndDeduplicateTimeline(
       combined.includes('miami') ||
       combined.includes('bodega origen') ||
       combined.includes('recibido en bodega') ||
+      combined.includes('recibido y procesado') ||
       combined.includes('warehouse')
     ) {
       normalizedList.push({
         date,
-        status: 'Paquete recibido en Bodega Miami',
-        description: 'Recibido, pesado y registrado en nuestro centro de distribución en Miami.',
+        status: 'Paquete recibido y procesado en Bodega Miami',
+        description: 'Recibido, pesado y procesado en nuestro centro de distribución en Miami.',
         icon: 'warehouse',
         stageKey: 'STAGE_ORIGIN_MIA'
+      });
+      continue;
+    }
+
+    // 5. Created / Registered in system
+    if (combined.includes('creado') || combined.includes('registrado en el sistema')) {
+      normalizedList.push({
+        date,
+        status: 'Paquete registrado en el sistema',
+        description: 'Guía registrada inicialmente en plataforma.',
+        icon: 'package',
+        stageKey: 'STAGE_CREATED'
       });
       continue;
     }

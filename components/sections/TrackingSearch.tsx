@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Search, Calendar, AlertCircle, MessageCircle, Package, Plane, CheckCircle2, Warehouse, Image as ImageIcon, ChevronRight } from 'lucide-react';
+import { Search, Calendar, AlertCircle, MessageCircle, Package, Plane, CheckCircle2, Warehouse, Truck, MapPin, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -53,7 +53,9 @@ export default function TrackingSearch() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber)}`);
+      const response = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber.trim())}`, {
+        cache: 'no-store'
+      });
       const data = await response.json();
       
       if (!response.ok || data.error) {
@@ -84,21 +86,30 @@ export default function TrackingSearch() {
     }
   };
 
-  const renderIcon = (iconName: string) => {
+  const renderIcon = (iconName: string, statusText?: string) => {
+    const s = (statusText || '').toLowerCase();
+    if (s.includes('entregado') && !s.includes('por entregar')) return <CheckCircle2 size={20} />;
+    if (s.includes('por entregar')) return <MapPin size={20} />;
+    if (s.includes('tránsito') || s.includes('transito') || s.includes('camino')) return <Truck size={20} />;
+    if (s.includes('bodega') || s.includes('warehouse') || s.includes('recibido')) return <Warehouse size={20} />;
+
     switch (iconName) {
       case 'plane': return <Plane size={20} />;
+      case 'truck': return <Truck size={20} />;
       case 'warehouse': return <Warehouse size={20} />;
       case 'package': return <Package size={20} />;
       case 'circle': return <CheckCircle2 size={20} />;
-      default: return <CheckCircle2 size={20} />;
+      default: return <Package size={20} />;
     }
   };
 
-  // Format date helper
+  // Format date helper (Costa Rica timezone)
   const formatDate = (isoString: string) => {
     try {
       const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
       return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'es-CR', {
+        timeZone: 'America/Costa_Rica',
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', hour12: true
       }).format(d);
@@ -259,7 +270,7 @@ export default function TrackingSearch() {
                                 ? 'bg-brand-blue text-white' 
                                 : 'bg-gray-100 text-gray-400'
                             }`}>
-                              {renderIcon(event.icon)}
+                              {renderIcon(event.icon, displayStatus)}
                             </div>
                             
                             <div className={`${isLatest ? 'text-brand-blue' : 'text-brand-text-light'} bg-gray-50/50 p-4 rounded-2xl border border-gray-50`}>

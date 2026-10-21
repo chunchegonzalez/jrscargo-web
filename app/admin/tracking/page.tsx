@@ -109,9 +109,9 @@ export default function TrackingPage() {
     try {
       // Fetch ALL 3 sources in PARALLEL instead of sequential waterfall
       const [trackingResult, localResult, invoiceResult] = await Promise.allSettled([
-        fetch(`/api/tracking?number=${encodeURIComponent(num)}`).then(r => r.ok ? r.json() : null),
-        fetch(`/api/inventory/${encodeURIComponent(num)}`).then(r => r.ok ? r.json() : null),
-        fetch(`/api/invoices/by-tracking?tracking=${encodeURIComponent(num)}`).then(r => r.ok ? r.json() : null)
+        fetch(`/api/tracking?number=${encodeURIComponent(num)}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+        fetch(`/api/inventory/${encodeURIComponent(num)}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+        fetch(`/api/invoices/by-tracking?tracking=${encodeURIComponent(num)}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
       ]);
 
       // Process tracking API result

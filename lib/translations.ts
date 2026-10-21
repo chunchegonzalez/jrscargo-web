@@ -51,7 +51,7 @@ export const translations = {
     tracking: {
       title: 'Rastrea tus paquetes en tiempo real',
       subtitle: 'Ingresa tu número de rastreo (guía o tracking internacional) para conocer el estado exacto de tu envío.',
-      inputPlaceholder: 'Ej: 1Z9999999999999999',
+      inputPlaceholder: 'Ingresa tu número de tracking (Ej: TBA315891485)',
       searchBtn: 'Buscar paquete',
       searching: 'Buscando...',
       packageFound: 'Paquete encontrado',
@@ -301,7 +301,7 @@ export const translations = {
     tracking: {
       title: 'Track your packages in real time',
       subtitle: 'Enter your tracking number (courier or international tracking) to see the exact status of your shipment.',
-      inputPlaceholder: 'E.g.: 1Z9999999999999999',
+      inputPlaceholder: 'Enter your tracking number (e.g. TBA315891485)',
       searchBtn: 'Track Package',
       searching: 'Searching...',
       packageFound: 'Package found',
