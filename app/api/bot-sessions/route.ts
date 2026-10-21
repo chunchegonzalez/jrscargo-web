@@ -329,7 +329,6 @@ export async function POST(request: Request) {
         success: true,
         session: createdRow || {
           dbId: 0,
-          sessionId: newSessionId,
           name: cleanName,
           email: cleanEmail,
           phone: cleanPhone,
