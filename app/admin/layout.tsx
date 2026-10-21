@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, Mail } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, Mail, Bot, Bell } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
@@ -19,6 +19,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Live Bot Consultation Alerts across Admin Panel
+  const [botUnreadCount, setBotUnreadCount] = useState(0);
+  const [latestBotAlert, setLatestBotAlert] = useState<{
+    dbId: number;
+    name: string;
+    email: string;
+    preview: string;
+  } | null>(null);
+  const prevBotUnreadRef = useRef<number>(0);
 
   useEffect(() => {
     setMounted(true);
@@ -84,6 +94,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         .catch(console.error);
     }
   }, [isLoginPage]);
+
+  // Poll /api/bot-sessions for live alerts in Gestión
+  useEffect(() => {
+    if (isLoginPage) return;
+
+    const checkBotAlerts = async () => {
+      try {
+        const res = await fetch('/api/bot-sessions', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const unread = Number(data.unreadCount || 0);
+        setBotUnreadCount(unread);
+
+        if (unread > prevBotUnreadRef.current && Array.isArray(data.sessions)) {
+          const newestUnread = data.sessions.find((s: { unreadForAdmin?: number }) => (s.unreadForAdmin || 0) > 0);
+          if (newestUnread && !pathname.startsWith('/admin/chat-bot')) {
+            const msgs = Array.isArray(newestUnread.messages) ? newestUnread.messages : [];
+            const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1].content : 'Inició una consulta en el bot';
+            setLatestBotAlert({
+              dbId: newestUnread.dbId,
+              name: newestUnread.name || 'Visitante Web',
+              email: newestUnread.email || '',
+              preview: String(lastMsg).replace(/\*/g, '').slice(0, 90),
+            });
+          }
+        }
+        prevBotUnreadRef.current = unread;
+      } catch {
+        // Ignore polling error
+      }
+    };
+
+    checkBotAlerts();
+    const interval = setInterval(checkBotAlerts, 6000);
+    return () => clearInterval(interval);
+  }, [isLoginPage, pathname]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -229,8 +275,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
 
               {/* CLIENTES & WHATSAPP - visible to all */}
-              <div className="pt-4 pb-1 px-3">
+              <div className="pt-4 pb-1 px-3 flex items-center justify-between">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em]">Gestión</p>
+                {botUnreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-black animate-pulse">
+                    {botUnreadCount} nueva{botUnreadCount > 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
 
               <Link href="/admin/clientes" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
@@ -240,6 +291,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               }`}>
                 <Building2 size={17} className={pathname.startsWith('/admin/clientes') ? 'text-brand-yellow' : ''} />
                 Clientes
+              </Link>
+
+              <Link href="/admin/chat-bot" className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
+                pathname.startsWith('/admin/chat-bot')
+                  ? 'bg-brand-yellow/15 text-brand-yellow font-bold shadow-[0_0_12px_-3px_rgba(245,166,35,0.3)]'
+                  : botUnreadCount > 0
+                    ? 'bg-red-500/15 text-white border border-red-500/30 font-bold'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
+              }`}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <Bot size={17} className={pathname.startsWith('/admin/chat-bot') ? 'text-brand-yellow' : botUnreadCount > 0 ? 'text-red-400 animate-bounce' : ''} />
+                  <span className="truncate">Chat Bot (Clari)</span>
+                </div>
+                {botUnreadCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black animate-pulse shrink-0">
+                    🔔 {botUnreadCount}
+                  </span>
+                )}
               </Link>
 
               <Link href="/admin/correos" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all ${
@@ -340,9 +409,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1 max-w-2xl px-2 sm:px-4">
             <GlobalSearch role={currentUser?.role} />
           </div>
-          
-          {/* User Profile Capsule with Interactive Dropdown */}
-          <div ref={profileDropdownRef} className="relative shrink-0">
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Live Bot Alert Pill in Top Header */}
+            <Link
+              href="/admin/chat-bot"
+              className={`relative p-2.5 rounded-2xl border transition-all flex items-center gap-2 ${
+                botUnreadCount > 0
+                  ? 'bg-red-50 border-red-200 text-red-600 shadow-sm animate-pulse'
+                  : 'bg-gray-50 border-gray-200/80 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/5'
+              }`}
+              title="Consultas en vivo del Bot Clari"
+            >
+              <Bell size={18} />
+              {botUnreadCount > 0 && (
+                <span className="text-xs font-black">
+                  {botUnreadCount} {botUnreadCount === 1 ? 'Consulta' : 'Consultas'}
+                </span>
+              )}
+            </Link>
+
+            {/* User Profile Capsule with Interactive Dropdown */}
+            <div ref={profileDropdownRef} className="relative shrink-0">
             <button
               onClick={() => setIsProfileDropdownOpen(prev => !prev)}
               className={`group flex items-center gap-3 p-1.5 sm:pl-3.5 sm:pr-2 sm:py-1.5 rounded-2xl transition-all duration-200 border cursor-pointer select-none ${
@@ -440,7 +528,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             )}
           </div>
+          </div>
         </header>
+
+        {/* Live Floating Toast Alert when a new Bot Consultation arrives */}
+        {latestBotAlert && !pathname.startsWith('/admin/chat-bot') && (
+          <div className="fixed bottom-5 right-5 z-50 max-w-sm bg-[#0B1D2B] text-white p-4 rounded-2xl shadow-2xl border border-brand-yellow/40 animate-slide-up print:hidden">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 animate-bounce">
+                  <Bell size={16} />
+                </span>
+                <div>
+                  <p className="text-xs font-black text-brand-yellow uppercase tracking-wider">
+                    🔔 Nueva Consulta en Clari Bot
+                  </p>
+                  <p className="text-xs font-bold text-white truncate">
+                    {latestBotAlert.name} ({latestBotAlert.email})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setLatestBotAlert(null)}
+                className="text-gray-400 hover:text-white p-1"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-300 bg-white/5 p-2.5 rounded-xl mb-3 line-clamp-2">
+              &quot;{latestBotAlert.preview}&quot;
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setLatestBotAlert(null)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/10"
+              >
+                Cerrar
+              </button>
+              <Link
+                href="/admin/chat-bot"
+                onClick={() => setLatestBotAlert(null)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-md"
+              >
+                Ir y Tomar el Mando →
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="p-4 md:p-8 min-w-0 print:p-0 print:overflow-visible">
           {children}

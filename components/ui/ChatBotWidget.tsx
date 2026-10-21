@@ -5,7 +5,7 @@ import { useChat } from 'ai/react';
 import { 
   X, Send, Bot, Sparkles, 
   Package, DollarSign, MapPin, Clock, MessageCircle, 
-  ChevronRight, ExternalLink, RotateCcw, User, Mail, ArrowRight
+  ChevronRight, ExternalLink, RotateCcw, User, Mail, Phone, Headset, ArrowRight
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
@@ -378,6 +378,14 @@ const AnimatedRobotFace = ({
   );
 };
 
+interface SyncedChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'agent' | 'system';
+  senderName?: string;
+  content: string;
+  createdAt: string;
+}
+
 export default function ChatBotWidget() {
   const { t, language } = useLanguage();
   const isEn = language === 'en';
@@ -387,12 +395,20 @@ export default function ChatBotWidget() {
   const [isTriggerHovered, setIsTriggerHovered] = useState(false);
   const [isPatriotic, setIsPatriotic] = useState(false);
 
-  // User details for Bot Leads in Admin Panel
+  // User details for Bot Leads & Live Chat in Admin Panel
+  const [sessionId, setSessionId] = useState('');
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userPhone, setUserPhone] = useState('');
   const [isRegistered, setIsRegistered] = useState(false);
   const [registerError, setRegisterError] = useState('');
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
+
+  // Live Agent Takeover State
+  const [chatMode, setChatMode] = useState<'bot' | 'agent' | 'closed'>('bot');
+  const [takenByAgent, setTakenByAgent] = useState<string>('');
+  const [agentMessages, setAgentMessages] = useState<SyncedChatMessage[]>([]);
+  const [isSendingToAgent, setIsSendingToAgent] = useState(false);
 
   const quickActions = [
     { id: 'tarifas', label: t.chat.faqRates, icon: DollarSign, query: t.chat.faqRatesQuery },
@@ -407,36 +423,114 @@ export default function ChatBotWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastSyncedCountRef = useRef<number>(0);
 
   useEffect(() => {
-    // Mes patrio activo hasta el 20 de septiembre inclusive (mes 8 = Septiembre)
     const now = new Date();
     if (now.getMonth() === 8 && now.getDate() <= 20) {
       setIsPatriotic(true);
     }
 
     if (typeof window !== 'undefined') {
+      let savedSessionId = localStorage.getItem('clari_session_id') || '';
+      if (!savedSessionId) {
+        savedSessionId = `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        localStorage.setItem('clari_session_id', savedSessionId);
+      }
+      setSessionId(savedSessionId);
+
       const savedName = localStorage.getItem('clari_lead_name');
       const savedEmail = localStorage.getItem('clari_lead_email');
+      const savedPhone = localStorage.getItem('clari_lead_phone');
       if (savedName && savedEmail) {
         setUserName(savedName);
         setUserEmail(savedEmail);
+        if (savedPhone) setUserPhone(savedPhone);
         setIsRegistered(true);
       }
     }
   }, []);
 
+  // Sync AI conversation messages to /api/bot-sessions whenever AI finishes streaming or user sends a message
+  useEffect(() => {
+    if (!isRegistered || !sessionId || isLoading) return;
+    if (chatMode === 'agent') return;
+    if (messages.length === 0 || messages.length === lastSyncedCountRef.current) return;
+
+    lastSyncedCountRef.current = messages.length;
+    const formatted: SyncedChatMessage[] = messages.map((m, idx) => ({
+      id: m.id || `msg-${idx}`,
+      role: m.role === 'user' ? 'user' : 'assistant',
+      senderName: m.role === 'user' ? userName : 'Clari AI',
+      content: m.content,
+      createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+    }));
+
+    fetch('/api/bot-sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'sync_messages',
+        sessionId,
+        name: userName,
+        email: userEmail,
+        phone: userPhone,
+        messages: formatted,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.session) {
+          if (data.session.mode) setChatMode(data.session.mode);
+          if (data.session.takenBy) setTakenByAgent(data.session.takenBy);
+          if (Array.isArray(data.session.messages)) {
+            setAgentMessages(data.session.messages);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [messages, isLoading, isRegistered, sessionId, userName, userEmail, userPhone, chatMode]);
+
+  // Poll /api/bot-sessions while chat is open to detect live agent takeover & receive agent messages
+  useEffect(() => {
+    if (!isOpen || !isRegistered || !sessionId) return;
+
+    const checkSession = async () => {
+      try {
+        const res = await fetch(`/api/bot-sessions?sessionId=${encodeURIComponent(sessionId)}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.session) {
+          setChatMode(data.session.mode || 'bot');
+          setTakenByAgent(data.session.takenBy || '');
+          if (Array.isArray(data.session.messages)) {
+            setAgentMessages(data.session.messages);
+          }
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    };
+
+    checkSession();
+    const interval = setInterval(checkSession, 3000);
+    return () => clearInterval(interval);
+  }, [isOpen, isRegistered, sessionId]);
+
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isLoading, isOpen]);
+  }, [messages, agentMessages, isLoading, isOpen]);
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegisterError('');
     const trimmedName = userName.trim();
     const trimmedEmail = userEmail.trim().toLowerCase();
+    const trimmedPhone = userPhone.trim();
 
     if (!trimmedName) {
       setRegisterError(isEn ? 'Please enter your name' : 'Por favor ingresa tu nombre');
@@ -449,21 +543,32 @@ export default function ChatBotWidget() {
 
     try {
       setIsSubmittingLead(true);
+      let activeSessionId = sessionId;
+      if (!activeSessionId && typeof window !== 'undefined') {
+        activeSessionId = `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        localStorage.setItem('clari_session_id', activeSessionId);
+        setSessionId(activeSessionId);
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('clari_lead_name', trimmedName);
         localStorage.setItem('clari_lead_email', trimmedEmail);
+        localStorage.setItem('clari_lead_phone', trimmedPhone);
       }
       setIsRegistered(true);
 
-      // Send to Admin Panel (bot-leads)
-      await fetch('/api/bot-leads', {
+      // Register in live bot-sessions & clients table
+      await fetch('/api/bot-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'init',
+          sessionId: activeSessionId,
           name: trimmedName,
           email: trimmedEmail,
-          message: 'Inicio de chat en sitio web'
-        })
+          phone: trimmedPhone,
+          messages: [],
+        }),
       });
     } catch (err) {
       console.error('Error saving lead:', err);
@@ -473,7 +578,59 @@ export default function ChatBotWidget() {
     }
   };
 
+  // Unified submit handler: routes to human agent if mode === 'agent', or to Clari AI if mode === 'bot'
+  const handleUnifiedSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = input.trim();
+    if (!trimmed) return;
+
+    if (chatMode === 'agent') {
+      setInput('');
+      setIsSendingToAgent(true);
+      const optimisticMsg: SyncedChatMessage = {
+        id: `usr-${Date.now()}`,
+        role: 'user',
+        senderName: userName,
+        content: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+      setAgentMessages((prev) => [...prev, optimisticMsg]);
+
+      try {
+        const res = await fetch('/api/bot-sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'customer_message',
+            sessionId,
+            name: userName,
+            email: userEmail,
+            phone: userPhone,
+            content: trimmed,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.session?.messages) {
+            setAgentMessages(data.session.messages);
+          }
+        }
+      } catch (err) {
+        console.error('Error sending message to agent:', err);
+      } finally {
+        setIsSendingToAgent(false);
+      }
+      return;
+    }
+
+    handleSubmit(e);
+  };
+
   const handleQuickAction = (queryText: string) => {
+    if (chatMode === 'agent') {
+      setInput(queryText);
+      return;
+    }
     setInput(queryText);
     setTimeout(() => {
       const fakeEvent = new Event('submit', { cancelable: true }) as unknown as React.FormEvent<HTMLFormElement>;
@@ -483,10 +640,19 @@ export default function ChatBotWidget() {
 
   const handleReset = () => {
     setMessages([]);
+    setAgentMessages([]);
+    setChatMode('bot');
+    setTakenByAgent('');
     setInput('');
+    lastSyncedCountRef.current = 0;
+    if (typeof window !== 'undefined') {
+      const newSid = `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      localStorage.setItem('clari_session_id', newSid);
+      setSessionId(newSid);
+    }
   };
 
-  // Formatter for rich text rendering
+  // Formatter for rich text rendering (No "Ver en Vivo", prominent WhatsApp Advisor button)
   const renderMessageContent = (content: string) => {
     const lines = content.split('\n');
     return (
@@ -494,28 +660,12 @@ export default function ChatBotWidget() {
         {lines.map((line, idx) => {
           if (!line.trim()) return <div key={idx} className="h-1" />;
 
-          // Render Tracking CTA Button
-          const trackingLinkMatch = line.match(/(?:https?:\/\/)?(?:www\.)?jrscargocr\.com\/tracking\?number=([A-Za-z0-9_-]+)/i) ||
-                                    line.match(/\/tracking\?number=([A-Za-z0-9_-]+)/i);
-          if (trackingLinkMatch) {
-            const trkNumber = trackingLinkMatch[1];
-            return (
-              <div key={idx} className="my-2.5">
-                <a
-                  href={`/tracking?number=${encodeURIComponent(trkNumber)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-blue text-white font-bold rounded-xl text-xs hover:bg-brand-blue/90 hover:shadow-md transition-all active:scale-95"
-                >
-                  <Package size={15} className="text-brand-yellow" />
-                  <span>{isEn ? `View Live Tracking (${trkNumber})` : `Ver Seguimiento en Vivo (${trkNumber})`}</span>
-                  <ExternalLink size={13} className="opacity-80" />
-                </a>
-              </div>
-            );
+          // Skip any legacy /tracking?number= links
+          if (/jrscargocr\.com\/tracking\?number=/i.test(line) || /\/tracking\?number=/i.test(line)) {
+            return null;
           }
 
-          // Highlight specific CTA links
+          // Highlight locker creation link
           if (line.includes('worldboxcr.com/jrscargo/register')) {
             return (
               <div key={idx} className="my-2">
@@ -531,16 +681,21 @@ export default function ChatBotWidget() {
             );
           }
 
+          // Render Prominent WhatsApp Advisor Button
           if (line.includes('wa.me/50672601238') || line.includes('+506 7260 1238')) {
+            const urlMatch = line.match(/https?:\/\/wa\.me\/50672601238[^\s)"]*/i);
+            const whatsappHref = urlMatch ? urlMatch[0] : 'https://wa.me/50672601238';
             return (
-              <div key={idx} className="my-2">
+              <div key={idx} className="my-2.5">
                 <a
-                  href="https://wa.me/50672601238"
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#25D366] text-white font-bold rounded-xl text-xs hover:bg-[#20b858] transition-transform active:scale-95 shadow-sm"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#25D366] hover:bg-[#1fb855] text-white font-bold rounded-xl text-xs transition-all active:scale-95 shadow-md hover:shadow-lg"
                 >
-                  <MessageCircle size={14} /> {isEn ? 'Contact on WhatsApp' : 'Contactar por WhatsApp'}
+                  <MessageCircle size={16} />
+                  <span>{isEn ? 'Talk to an Advisor on WhatsApp' : 'Hablar con un Asesor en WhatsApp'}</span>
+                  <ExternalLink size={13} className="opacity-85" />
                 </a>
               </div>
             );
@@ -561,6 +716,18 @@ export default function ChatBotWidget() {
       </div>
     );
   };
+
+  // Decide which message list to render: when agent messages exist or chatMode === 'agent', merge/display the synced list
+  const hasAgentActivity = chatMode === 'agent' || agentMessages.some((m) => m.role === 'agent' || m.role === 'system');
+  const displayedMessages: SyncedChatMessage[] = hasAgentActivity
+    ? agentMessages
+    : messages.map((m, idx) => ({
+        id: m.id || `m-${idx}`,
+        role: m.role === 'user' ? 'user' : 'assistant',
+        senderName: m.role === 'user' ? userName : 'Clari AI',
+        content: m.content,
+        createdAt: new Date().toISOString(),
+      }));
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
@@ -593,12 +760,21 @@ export default function ChatBotWidget() {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="font-black text-sm tracking-tight text-white flex items-center gap-1">
-                      {t.chat.title} {isPatriotic && '🇨🇷'}
+                      {chatMode === 'agent' ? (takenByAgent || 'Asesor JRS') : t.chat.title} {isPatriotic && '🇨🇷'}
                     </h3>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-brand-yellow/20 text-brand-yellow rounded font-bold uppercase tracking-wider">AI</span>
+                    {chatMode === 'agent' ? (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/25 text-emerald-300 border border-emerald-400/30 rounded font-bold uppercase tracking-wider flex items-center gap-1">
+                        <Headset size={10} /> En Vivo
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.2 bg-brand-yellow/20 text-brand-yellow rounded font-bold uppercase tracking-wider">AI</span>
+                    )}
                   </div>
                   <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> {t.chat.subtitle} {isPatriotic && '• ¡Mes Patrio!'}
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>{' '}
+                    {chatMode === 'agent'
+                      ? (isEn ? 'JRS Cargo Human Advisor' : 'Agente Oficial JRS Cargo en línea')
+                      : `${t.chat.subtitle}${isPatriotic ? ' • ¡Mes Patrio!' : ''}`}
                   </p>
                 </div>
               </div>
@@ -613,7 +789,7 @@ export default function ChatBotWidget() {
                 >
                   <MessageCircle size={18} />
                 </a>
-                {messages.length > 0 && (
+                {displayedMessages.length > 0 && (
                   <button
                     onClick={handleReset}
                     className="p-2 text-gray-400 hover:text-brand-yellow hover:bg-white/10 rounded-xl transition-colors"
@@ -632,11 +808,24 @@ export default function ChatBotWidget() {
               </div>
             </div>
 
+            {/* Live Agent Banner when taken over from /admin */}
+            {chatMode === 'agent' && (
+              <div className="bg-emerald-600 text-white px-4 py-2 text-[11px] font-bold flex items-center justify-between shrink-0 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                  <span>
+                    👨‍💻 {isEn ? `Attended live by ${takenByAgent || 'JRS Advisor'}` : `Atendido en vivo por ${takenByAgent || 'Agesor JRS'}`}
+                  </span>
+                </div>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Tiempo real</span>
+              </div>
+            )}
+
             {/* Chat Conversation Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
               
               {/* Lead Registration Form Gate if not registered */}
-              {!isRegistered && messages.length === 0 && (
+              {!isRegistered && displayedMessages.length === 0 && (
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-left animate-fade-in space-y-3">
                   <div className="flex items-center gap-2 text-brand-blue font-black text-sm">
                     <Sparkles size={16} className="text-brand-yellow" />
@@ -679,6 +868,22 @@ export default function ChatBotWidget() {
                       </div>
                     </div>
 
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                        {isEn ? 'Phone / WhatsApp (Optional)' : 'Teléfono / WhatsApp (Opcional)'}
+                      </label>
+                      <div className="relative">
+                        <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="tel"
+                          placeholder={isEn ? "E.g. +506 8888-8888" : "Ej. 8888-8888"}
+                          value={userPhone}
+                          onChange={(e) => setUserPhone(e.target.value)}
+                          className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+                        />
+                      </div>
+                    </div>
+
                     {registerError && (
                       <p className="text-[11px] text-red-600 font-semibold">{registerError}</p>
                     )}
@@ -696,7 +901,7 @@ export default function ChatBotWidget() {
               )}
 
               {/* Welcome Presentation Card (When Registered) */}
-              {isRegistered && messages.length === 0 && (
+              {isRegistered && displayedMessages.length === 0 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left">
                     <div className="flex items-center gap-2 text-brand-blue font-bold text-xs mb-1">
@@ -742,13 +947,29 @@ export default function ChatBotWidget() {
               )}
 
               {/* Message List */}
-              {messages.map((m) => {
+              {displayedMessages.map((m) => {
+                if (m.role === 'system') {
+                  return (
+                    <div key={m.id} className="flex justify-center my-2 animate-fade-in">
+                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-full text-[11px] font-bold text-center shadow-2xs">
+                        {m.content.replace(/\*/g, '')}
+                      </div>
+                    </div>
+                  );
+                }
+
                 const isUser = m.role === 'user';
+                const isAgent = m.role === 'agent';
+
                 return (
                   <div key={m.id} className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                     {!isUser && (
-                      <div className="w-7 h-7 rounded-xl bg-[#0B1D2B] text-brand-yellow flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                        <Bot size={14} />
+                      <div
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-sm mt-0.5 ${
+                          isAgent ? 'bg-emerald-600 text-white' : 'bg-[#0B1D2B] text-brand-yellow'
+                        }`}
+                      >
+                        {isAgent ? <Headset size={14} /> : <Bot size={14} />}
                       </div>
                     )}
 
@@ -756,9 +977,16 @@ export default function ChatBotWidget() {
                       className={`max-w-[85%] p-3.5 rounded-2xl shadow-sm text-left ${
                         isUser
                           ? 'bg-brand-blue text-white rounded-tr-sm font-medium text-xs'
-                          : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                          : isAgent
+                            ? 'bg-emerald-50/80 border border-emerald-200 text-gray-800 rounded-tl-sm'
+                            : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
                       }`}
                     >
+                      {isAgent && (
+                        <div className="flex items-center gap-1.5 mb-1 text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider">
+                          <span>👨‍💻 {m.senderName || takenByAgent || 'Asesor JRS Cargo'}</span>
+                        </div>
+                      )}
                       {isUser ? (
                         <p className="whitespace-pre-wrap">{m.content}</p>
                       ) : (
@@ -770,7 +998,7 @@ export default function ChatBotWidget() {
               })}
 
               {/* Typing Loader */}
-              {isLoading && (
+              {(isLoading || isSendingToAgent) && (
                 <div className="flex gap-2.5 justify-start animate-fade-in">
                   <div className="w-7 h-7 rounded-xl bg-[#0B1D2B] text-brand-yellow flex items-center justify-center shrink-0">
                     <Bot size={14} />
@@ -783,7 +1011,7 @@ export default function ChatBotWidget() {
                 </div>
               )}
 
-              {error && (
+              {error && chatMode !== 'agent' && (
                 <div className="p-3 bg-red-50 text-red-700 rounded-2xl text-xs text-center border border-red-100">
                   <p className="font-bold mb-1">{isEn ? 'We are experiencing high demand.' : 'Estamos experimentando una alta demanda.'}</p>
                   <p>{isEn ? 'Please contact us directly on our ' : 'Por favor contáctanos directamente a nuestro '}<a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="font-bold underline text-green-700">{isEn ? 'Official WhatsApp (+506 7260 1238)' : 'WhatsApp Oficial (+506 7260 1238)'}</a>.</p>
@@ -794,7 +1022,7 @@ export default function ChatBotWidget() {
             </div>
 
             {/* Quick Pills Bar when conversation is active */}
-            {messages.length > 0 && (
+            {displayedMessages.length > 0 && (
               <div className="px-3 py-1.5 bg-white border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
                 <button
                   onClick={() => handleQuickAction(t.chat.faqRatesQuery)}
@@ -827,19 +1055,25 @@ export default function ChatBotWidget() {
 
             {/* Input Bar */}
             <div className="p-3.5 bg-white border-t border-gray-100 shrink-0">
-              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+              <form onSubmit={handleUnifiedSubmit} className="flex items-center gap-2">
                 <input
                   ref={inputRef}
                   value={input}
                   onChange={handleInputChange}
-                  placeholder={t.chat.inputPlaceholder}
+                  placeholder={
+                    chatMode === 'agent'
+                      ? (isEn ? `Write a message to ${takenByAgent || 'advisor'}...` : `Escribe tu mensaje a ${takenByAgent || 'nuestro asesor'}...`)
+                      : t.chat.inputPlaceholder
+                  }
                   className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-                  disabled={isLoading}
+                  disabled={isLoading || isSendingToAgent}
                 />
                 <button
                   type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="w-10 h-10 rounded-2xl bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-40 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0"
+                  disabled={isLoading || isSendingToAgent || !input.trim()}
+                  className={`w-10 h-10 rounded-2xl disabled:opacity-40 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0 ${
+                    chatMode === 'agent' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-blue hover:bg-brand-blue/90'
+                  }`}
                 >
                   <Send size={16} />
                 </button>

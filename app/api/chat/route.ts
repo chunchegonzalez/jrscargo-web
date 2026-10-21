@@ -8,42 +8,265 @@ export const maxDuration = 30;
 
 const TRACKING_API_TOKEN = process.env.TRACKING_API_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyNiwiZW1haWwiOiJqb3NlZ29uMjAwMEBob3RtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsInJvbGVJZCI6MTIsInRlbmFudElkIjoiOWRjZGFlZGItZmZlMS00M2Y3LWI1ZTgtMDMzOGVjYjk4NmQwIiwiY2xpZW50SWQiOjYwODMsImNsaWVudENvZGUiOiJKUlMtMTAwMSIsImlzVG9wTWFzdGVyIjpmYWxzZSwiaXNNYXlvcmlzdGEiOnRydWUsImlhdCI6MTc4NjIzNzE1Mn0.ZLEBwa8iR_wLw59Akpl-PpR_Mwq3h3IBO6XKVi2PZpQ";
 
+interface RawTimelineEvent {
+  date?: string;
+  status?: string;
+  description?: string;
+  icon?: string;
+}
+
+interface NormalizedTimelineEvent {
+  date: string;
+  status: string;
+  description: string;
+  icon: string;
+  stageKey: string;
+}
+
+/**
+ * Exact same timeline normalization & deduplication used in /api/tracking ("¿Dónde está mi paquete?")
+ */
+function normalizeAndDeduplicateTimeline(
+  rawTimeline: RawTimelineEvent[],
+  isRegisteredInCR: boolean,
+  isDeliveredInCR: boolean,
+  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null
+): { timeline: Array<{ date: string; status: string; description: string; icon: string }>; stageKeys: Set<string> } {
+  const normalizedList: NormalizedTimelineEvent[] = [];
+
+  for (const evt of rawTimeline) {
+    const rawStatus = (evt.status || evt.description || '').trim();
+    const rawDesc = (evt.description || '').trim();
+    if (!rawStatus) continue;
+
+    const combined = `${rawStatus} ${rawDesc}`.toLowerCase();
+    const date = evt.date || '';
+
+    // 1. Worldbox central office / nationalized / premature delivery statuses
+    if (
+      combined.includes('oficina central') ||
+      combined.includes('sede central') ||
+      combined.includes('nacionalizado') ||
+      combined.includes('por entregar') ||
+      combined.includes('cambio de estatus') ||
+      combined.includes('entregado')
+    ) {
+      if (isRegisteredInCR) {
+        normalizedList.push({
+          date,
+          status: 'Paquete nacionalizado en Costa Rica',
+          description: 'Liberación aduanal completada y trasladado a bodega central.',
+          icon: 'warehouse',
+          stageKey: 'STAGE_CR_NATIONALIZED'
+        });
+      } else {
+        normalizedList.push({
+          date,
+          status: 'Paquete nacionalizado — En tránsito a Bodega JRS',
+          description: 'Proceso aduanal completado. En traslado hacia el inventario de Costa Rica.',
+          icon: 'truck',
+          stageKey: 'STAGE_CR_NATIONALIZED'
+        });
+      }
+      continue;
+    }
+
+    // 2. Customs in Costa Rica
+    if (combined.includes('aduana')) {
+      normalizedList.push({
+        date,
+        status: 'Paquete en aduanas de Costa Rica',
+        description: 'En proceso de revisión y desalmacenaje aduanal en Costa Rica.',
+        icon: 'package',
+        stageKey: 'STAGE_CR_CUSTOMS'
+      });
+      continue;
+    }
+
+    // 3. In transit / flight / manifest to Costa Rica
+    if (
+      combined.includes('tránsito') ||
+      combined.includes('transito') ||
+      combined.includes('manifiesto') ||
+      combined.includes('vuelo') ||
+      combined.includes('despachado') ||
+      combined.includes('en camino') ||
+      combined.includes('embarcado')
+    ) {
+      normalizedList.push({
+        date,
+        status: 'En tránsito hacia Costa Rica',
+        description: 'El paquete salió de la bodega de origen y viaja hacia Costa Rica.',
+        icon: 'plane',
+        stageKey: 'STAGE_IN_TRANSIT'
+      });
+      continue;
+    }
+
+    // 4. Received at origin warehouse (Miami / Spain / China)
+    if (
+      combined.includes('miami') ||
+      combined.includes('bodega origen') ||
+      combined.includes('recibido en bodega') ||
+      combined.includes('recibido y procesado') ||
+      combined.includes('warehouse')
+    ) {
+      normalizedList.push({
+        date,
+        status: 'Paquete recibido y procesado en Bodega Miami',
+        description: 'Recibido, pesado y procesado en nuestro centro de distribución en Miami.',
+        icon: 'warehouse',
+        stageKey: 'STAGE_ORIGIN_MIA'
+      });
+      continue;
+    }
+
+    // 5. Created / Registered in system
+    if (combined.includes('creado') || combined.includes('registrado en el sistema')) {
+      normalizedList.push({
+        date,
+        status: 'Paquete registrado en el sistema',
+        description: 'Guía registrada inicialmente en plataforma.',
+        icon: 'package',
+        stageKey: 'STAGE_CREATED'
+      });
+      continue;
+    }
+
+    // Fallback for any other custom event
+    const cleanStatusKey = rawStatus.toLowerCase().replace(/[.\s]+$/g, '');
+    const cleanDescKey = rawDesc.toLowerCase().replace(/[.\s]+$/g, '');
+    normalizedList.push({
+      date,
+      status: rawStatus.replace(/\.$/, ''),
+      description: cleanDescKey && cleanDescKey !== cleanStatusKey ? rawDesc : '',
+      icon: evt.icon || 'package',
+      stageKey: `CUSTOM_${cleanStatusKey}`
+    });
+  }
+
+  const seenStages = new Set<string>();
+  const deduped: Array<{ date: string; status: string; description: string; icon: string }> = [];
+
+  if (isRegisteredInCR && localItem) {
+    if (isDeliveredInCR) {
+      seenStages.add('STAGE_JRS_DELIVERED');
+      deduped.push({
+        date: localItem.updated_at || localItem.created_at || new Date().toISOString(),
+        status: 'Paquete Entregado',
+        description: 'El paquete ha sido entregado exitosamente al cliente.',
+        icon: 'circle'
+      });
+    }
+
+    seenStages.add('STAGE_JRS_POR_ENTREGAR');
+    deduped.push({
+      date: localItem.received_date || localItem.created_at || new Date().toISOString(),
+      status: 'Por Entregar — En Bodega Costa Rica',
+      description: 'Registrado en el inventario de Costa Rica y disponible para entrega al cliente.',
+      icon: 'warehouse'
+    });
+  }
+
+  for (const item of normalizedList) {
+    if (seenStages.has(item.stageKey)) continue;
+    seenStages.add(item.stageKey);
+    deduped.push({
+      date: item.date,
+      status: item.status,
+      description: item.description,
+      icon: item.icon
+    });
+  }
+
+  return { timeline: deduped, stageKeys: seenStages };
+}
+
 async function fetchTrackingData(trackingNumber: string) {
   try {
-    const res = await fetch(`https://worldboxcr.com/api/jrscargo/tracking/${encodeURIComponent(trackingNumber)}`, {
+    const cleanTracking = trackingNumber.replace(/[\x00-\x1F\x7F\s]+/g, '').trim();
+    const res = await fetch(`https://worldboxcr.com/api/jrscargo/tracking/${encodeURIComponent(cleanTracking)}`, {
       method: 'GET',
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${TRACKING_API_TOKEN}`,
         'Content-Type': 'application/json'
-      }
+      },
+      cache: 'no-store'
     });
-    
+
     let data: Record<string, unknown> = {};
     if (res.ok) {
       data = await res.json();
     }
-    
+
+    let localItem = null;
     try {
-      const localItem = await getInventoryItem(trackingNumber);
-      if (localItem && localItem.status && localItem.status !== 'Eliminado') {
-        if (!data.package) data.package = { tracking: trackingNumber };
-        const isDelivered = localItem.status.toLowerCase().includes('entregad');
-        (data.package as Record<string, unknown>).statusLabel = isDelivered ? 'Entregado' : 'Por Entregar';
-        (data.package as Record<string, unknown>).weight = localItem.weight || (data.package as Record<string, unknown>).weight;
-      } else if (data.package) {
-        const rawLabel = String((data.package as Record<string, unknown>).statusLabel || '').toLowerCase();
-        if (
-          rawLabel.includes('por entregar') ||
-          rawLabel.includes('entregado') ||
-          rawLabel.includes('sede central') ||
-          rawLabel.includes('oficina central') ||
-          rawLabel.includes('aduana')
-        ) {
-          (data.package as Record<string, unknown>).statusLabel = 'En Tránsito a Bodega CR';
+      localItem = await getInventoryItem(cleanTracking);
+    } catch {
+      // Ignore local lookup error
+    }
+
+    const isRegisteredInCR = Boolean(localItem && localItem.status && localItem.status !== 'Eliminado');
+    const isDeliveredInCR = Boolean(
+      isRegisteredInCR && String(localItem.status).toLowerCase().includes('entregad')
+    );
+
+    if (!data.package && isRegisteredInCR && localItem) {
+      const cleanNumericWeight = String(localItem.weight || '0').replace(/[^\d.]/g, '') || '0';
+      data.package = {
+        tracking: String(localItem.id || cleanTracking),
+        consignatario: localItem.client || 'Cliente JRS',
+        provider: localItem.company || 'JRS CARGO',
+        weight: cleanNumericWeight,
+        weightUnit: String(localItem.weight || '').toLowerCase().includes('kg') ? 'kg' : 'lbs',
+        statusLabel: isDeliveredInCR ? 'Entregado' : 'Por Entregar',
+        description: 'Paquete registrado en inventario de Costa Rica'
+      };
+    }
+
+    if (data.package) {
+      const pkg = data.package as Record<string, unknown>;
+      const rawTimeline: RawTimelineEvent[] = Array.isArray(data.timeline)
+        ? (data.timeline as RawTimelineEvent[])
+        : [];
+
+      const { timeline: cleanTimeline, stageKeys } = normalizeAndDeduplicateTimeline(
+        rawTimeline,
+        isRegisteredInCR,
+        isDeliveredInCR,
+        localItem
+      );
+
+      data.timeline = cleanTimeline;
+
+      if (localItem && localItem.weight && !pkg.weight) {
+        pkg.weight = String(localItem.weight).replace(/[^\d.]/g, '') || localItem.weight;
+      }
+
+      if (isDeliveredInCR) {
+        pkg.statusLabel = 'Entregado';
+      } else if (isRegisteredInCR) {
+        pkg.statusLabel = 'Por Entregar';
+      } else {
+        if (stageKeys.has('STAGE_CR_NATIONALIZED') || stageKeys.has('STAGE_CR_CUSTOMS')) {
+          pkg.statusLabel = 'En Tránsito a Bodega CR';
+        } else if (stageKeys.has('STAGE_IN_TRANSIT')) {
+          pkg.statusLabel = 'En Tránsito a Costa Rica';
+        } else {
+          const rawLabel = String(pkg.statusLabel || '').toLowerCase();
+          if (
+            rawLabel.includes('por entregar') ||
+            rawLabel.includes('entregado') ||
+            rawLabel.includes('sede central') ||
+            rawLabel.includes('oficina central') ||
+            rawLabel.includes('aduana')
+          ) {
+            pkg.statusLabel = 'En Tránsito a Bodega CR';
+          } else if (!pkg.statusLabel) {
+            pkg.statusLabel = 'En Bodega Miami';
+          }
         }
       }
-    } catch {
-      // Ignore local error
     }
 
     return data;
@@ -80,43 +303,83 @@ function extractTrackingNumber(text: string): string | null {
   return null;
 }
 
+function formatCostaRicaDate(isoString?: string): string {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return new Intl.DateTimeFormat('es-CR', {
+      timeZone: 'America/Costa_Rica',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(d);
+  } catch {
+    return isoString;
+  }
+}
+
 async function getTrackingMessage(trackingNumber: string): Promise<string> {
   const data = await fetchTrackingData(trackingNumber);
-  
+
   if (data && data.package && (data.package as Record<string, unknown>).tracking) {
     const pkg = data.package as Record<string, unknown>;
-    const status = String(pkg.statusLabel || pkg.status || 'En Tránsito hacia Costa Rica');
-    const weight = pkg.weight ? `${pkg.weight} lbs` : 'Por registrar';
+    const status = String(pkg.statusLabel || pkg.status || 'En Tránsito a Costa Rica');
+
+    // Clean weight so it never repeats "lbs lbs"
+    const rawWeight = String(pkg.weight || '').trim();
+    const numericWeight = parseFloat(rawWeight.replace(/[^\d.]/g, ''));
+    const unit = String(pkg.weightUnit || (rawWeight.toLowerCase().includes('kg') ? 'kg' : 'lbs'));
+    let weightDisplay = 'Por registrar';
+    if (!isNaN(numericWeight) && numericWeight > 0) {
+      if (unit === 'lbs') {
+        weightDisplay = `${numericWeight} lbs (${(numericWeight * 0.453592).toFixed(2)} kg)`;
+      } else {
+        weightDisplay = `${numericWeight} ${unit}`;
+      }
+    } else if (rawWeight) {
+      weightDisplay = rawWeight;
+    }
+
     const consignee = String(pkg.consignatario || pkg.consignee || pkg.client || 'Cliente JRS');
-    const provider = String(pkg.provider || 'JRS CARGO');
+    const description = String(pkg.description || '').trim();
     const timeline = (data.timeline as Array<{ date?: string; status?: string; description?: string }>) || [];
 
-    let msg = `📦 *INFORMACIÓN DE RASTREO EN TIEMPO REAL*\n\n` +
+    let msg =
+      `📦 *INFORMACIÓN DE RASTREO EN TIEMPO REAL*\n\n` +
       `🏷️ *Número de Guía:* *${trackingNumber}*\n` +
       `📍 *Estado Actual:* *${status}*\n` +
       `👤 *Consignatario:* ${consignee}\n` +
-      `⚖️ *Peso:* ${weight}\n` +
-      `🏢 *Empresa:* ${provider}\n\n`;
+      `⚖️ *Peso:* ${weightDisplay}\n` +
+      (description ? `📝 *Descripción:* ${description}\n` : '') +
+      `\n`;
 
     if (timeline.length > 0) {
-      msg += `📜 *Últimos Movimientos:*\n`;
-      timeline.slice(0, 3).forEach(evt => {
-        const dateStr = evt.date ? new Date(evt.date).toLocaleDateString('es-CR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-        msg += `• ${evt.status || evt.description} ${dateStr ? `(${dateStr})` : ''}\n`;
+      msg += `📜 *Historial de Eventos:*\n`;
+      timeline.forEach((evt) => {
+        const dateStr = formatCostaRicaDate(evt.date);
+        const title = evt.status || 'Actualización';
+        const desc = evt.description ? ` — ${evt.description}` : '';
+        msg += `• *${title}*${desc}${dateStr ? ` (${dateStr})` : ''}\n`;
       });
       msg += `\n`;
     }
 
-    msg += `👉 Ver detalles completos en: https://www.jrscargocr.com/tracking?number=${encodeURIComponent(trackingNumber)}`;
+    msg +=
+      `💬 *¿Tienes alguna consulta sobre tu paquete?* Puedes hablar directamente con un asesor en WhatsApp:\n` +
+      `https://wa.me/50672601238?text=${encodeURIComponent(`Hola JRS Cargo, tengo una consulta sobre mi paquete con guía ${trackingNumber}`)}`;
     return msg;
   }
 
-  return `🔍 *Consulta de Guía:* *${trackingNumber}*\n\n` +
-    `No encontramos este número de tracking registrado en nuestro sistema en este momento.\n\n` +
-    `💡 *Posibles motivos:*\n` +
-    `• El paquete aún viene en camino hacia nuestra bodega en Miami y no ha sido recibido físicamente.\n` +
-    `• El número de tracking tiene algún dígito o letra faltante.\n\n` +
-    `📲 Si necesitas ayuda para rastrearlo manualmente, escríbenos a nuestro WhatsApp oficial: *+506 7260 1238* (wa.me/50672601238).`;
+  return (
+    `🔍 *Consulta de Guía:* *${trackingNumber}*\n\n` +
+    `El paquete *${trackingNumber}* aún no ha llegado a nuestras bodegas en Miami o se encuentra en proceso de registro.\n\n` +
+    `💬 *¿Tienes alguna consulta?* Puedes hablar directamente con un asesor en WhatsApp:\n` +
+    `https://wa.me/50672601238?text=${encodeURIComponent(`Hola JRS Cargo, necesito ayuda para rastrear mi paquete ${trackingNumber}`)}`
+  );
 }
 
 // Smart Local Knowledge Engine for instant answers without API failure
@@ -131,7 +394,7 @@ async function getSmartLocalResponse(lastMessage: string): Promise<string> {
 
   if (msg.includes('rastrear') || msg.includes('tracking') || msg.includes('paquete') || msg.includes('donde esta') || msg.includes('dónde está') || msg.includes('guia') || msg.includes('guía') || msg.includes('seguimiento')) {
     return `📦 *Rastreo de Paquetes en JRS CARGO*\n\n` +
-      `Por favor escribe tu número de tracking o guía (ejemplo: *TBA315891485906*, *1Z999999999*, *JRS-1054*) y con gusto te mostraré su ubicación y estado actual en tiempo real.`;
+      `Por favor escribe tu número de tracking o guía (ejemplo: *TBA315891485*, *1Z999999999*, *JRS-1054*) y con gusto te mostraré el historial de eventos y estado actual en tiempo real.`;
   }
 
   // 2. Casillero / Registro / Dirección (Priorizado para evitar confusión)
@@ -184,7 +447,7 @@ async function getSmartLocalResponse(lastMessage: string): Promise<string> {
     `• ✈️ *Tarifas y cotizaciones* (Aéreo $7/lb, Marítimo $30/ft³)\n` +
     `• 🏢 *Información de casillero gratuito* en Miami, España y China\n` +
     `• ⏱️ *Tiempos de tránsito y entregas*\n\n` +
-    `¿En qué te puedo asesorar hoy? También puedes escribirnos directamente a nuestro WhatsApp oficial: +506 7260 1238.`;
+    `¿En qué te puedo asesorar hoy? Si tienes alguna consulta adicional, puedes hablar con un asesor en WhatsApp: https://wa.me/50672601238`;
 }
 
 // Helper to stream text in AI SDK standard protocol format (0:"chunk"\n)
@@ -197,7 +460,7 @@ function createStreamResponse(fullText: string) {
       for (let i = 0; i < words.length; i++) {
         const chunk = (i === 0 ? '' : ' ') + words[i];
         controller.enqueue(encoder.encode(`0:${JSON.stringify(chunk)}\n`));
-        await new Promise(r => setTimeout(r, 18));
+        await new Promise(r => setTimeout(r, 14));
       }
       controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));
       controller.close();
@@ -217,6 +480,13 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastUserMessage = [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.content || '';
 
+    // Always use the unified tracking formatter when a tracking number is detected so movements match "¿Dónde está mi paquete?"
+    const detectedTracking = extractTrackingNumber(lastUserMessage);
+    if (detectedTracking) {
+      const trackingReply = await getTrackingMessage(detectedTracking);
+      return createStreamResponse(trackingReply);
+    }
+
     // If Google API Key is configured, attempt full AI agent with tools
     if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       try {
@@ -231,12 +501,11 @@ INFORMACIÓN OFICIAL JRS CARGO:
 - Tarifa Aérea España: $15 por libra (lb).
 - Tarifa Aérea China: $17 por libra (lb).
 - Tarifa Marítima Miami: $30 por pie cúbico (ft³). Entrega en 2 a 3 semanas.
-- WhatsApp de atención: +506 7260 1238 (wa.me/50672601238)
+- WhatsApp de atención: +506 7260 1238 (https://wa.me/50672601238)
 - Dirección Miami: 8280 NW 64th St, Miami, FL 33166.
 - Entregas en todo Costa Rica (GAM a domicilio por un costo adicional y envíos por Correos de CR o encomienda).
 
-Si el usuario ingresa un número de rastreo o tracking, ejecuta de inmediato la herramienta 'trackPackage'.
-Si no tienes el dato exacto de una cotización especial (mercancía peligrosa, aduanas especiales), deriva con calidez a WhatsApp.
+NUNCA incluyas enlaces de "Ver Seguimiento en Vivo" ni "/tracking?number=". Siempre indica que si tiene alguna consulta puede hablar con un asesor en WhatsApp incluyendo https://wa.me/50672601238.
 Mantén respuestas limpias, sin exceso de texto.`,
           messages,
           maxSteps: 4,
@@ -247,11 +516,8 @@ Mantén respuestas limpias, sin exceso de texto.`,
                 trackingNumber: z.string().describe('Número de guía o rastreo.'),
               }),
               execute: async ({ trackingNumber }) => {
-                const data = await fetchTrackingData(trackingNumber);
-                if (!data || !data.package) {
-                  return { error: `No se encontró información para la guía ${trackingNumber}. Verifica que esté bien escrita.` };
-                }
-                return { success: true, trackingInfo: data };
+                const formatted = await getTrackingMessage(trackingNumber);
+                return { formattedMessage: formatted };
               },
             }),
           },
@@ -270,7 +536,7 @@ Mantén respuestas limpias, sin exceso de texto.`,
     return createStreamResponse(localResponse);
   } catch (error) {
     console.error("Chat API error:", error);
-    const fallbackText = "¡Hola! Con gusto te atendemos. Para cualquier consulta sobre tus paquetes o tarifas, escríbenos a nuestro WhatsApp oficial: +506 7260 1238.";
+    const fallbackText = "¡Hola! Con gusto te atendemos. Si tienes alguna consulta puedes hablar con un asesor en nuestro WhatsApp oficial:\nhttps://wa.me/50672601238";
     return createStreamResponse(fallbackText);
   }
 }
