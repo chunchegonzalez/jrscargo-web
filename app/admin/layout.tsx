@@ -46,10 +46,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Close mobile menu on route change
+  // Close mobile menu on route change and set tab title to Panel de JRS
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsProfileDropdownOpen(false);
+    if (typeof document !== 'undefined') {
+      document.title = 'Panel de JRS';
+    }
   }, [pathname]);
 
   useEffect(() => {
