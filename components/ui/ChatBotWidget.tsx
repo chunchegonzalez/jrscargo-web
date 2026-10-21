@@ -26,20 +26,13 @@ const AnimatedRobotFace = ({
   const smoothX = useSpring(mouseX, springConfig);
   const smoothY = useSpring(mouseY, springConfig);
 
-  // Multi-layer 3D parallax mouse tracking (kept safely inside visor bounds so eyes never clip)
-  const headX = useTransform(smoothX, [-1, 1], [-3.5, 3.5]);
-  const headY = useTransform(smoothY, [-1, 1], [-2.8, 2.8]);
-  const headRotate = useTransform(smoothX, [-1, 1], [-5.5, 5.5]);
-
+  // Smooth 3D parallax mouse tracking for visor and LED capsule eyes
+  const headX = useTransform(smoothX, [-1, 1], [-3, 3]);
+  const headY = useTransform(smoothY, [-1, 1], [-2.5, 2.5]);
   const visorX = useTransform(smoothX, [-1, 1], [-2.5, 2.5]);
   const visorY = useTransform(smoothY, [-1, 1], [-2, 2]);
-
-  const eyeX = useTransform(smoothX, [-1, 1], [-5.2, 5.2]);
-  const eyeY = useTransform(smoothY, [-1, 1], [-3.5, 3.5]);
-  const glintX = useTransform(smoothX, [-1, 1], [-1.2, 1.2]);
-  const glintY = useTransform(smoothY, [-1, 1], [-1, 1]);
-
-  const antennaRotate = useTransform(smoothX, [-1, 1], [-12, 12]);
+  const eyeX = useTransform(smoothX, [-1, 1], [-6.5, 6.5]);
+  const eyeY = useTransform(smoothY, [-1, 1], [-4.5, 4.5]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -51,7 +44,7 @@ const AnimatedRobotFace = ({
       const deltaX = e.clientX - centerX;
       const deltaY = e.clientY - centerY;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      const maxDistance = 700;
+      const maxDistance = 650;
       const normalizedDist = Math.min(distance / maxDistance, 1);
 
       const angle = Math.atan2(deltaY, deltaX);
@@ -100,161 +93,106 @@ const AnimatedRobotFace = ({
     );
   }
 
-  // Versión Robot Clari Mejorada (Sin efectos de Halloween, 100% corporativa y dinámica)
+  // Versión Ejecutiva Minimalista Mejorada (Orb 3D limpio con seguimiento fluido del mouse)
   return (
     <motion.div
       ref={faceRef}
-      style={{ x: headX, y: headY, rotate: headRotate }}
+      style={{ x: headX, y: headY }}
       animate={isHovered ? {
         y: [0, -7, -2, -5, 0],
-        scale: [1, 1.1, 1.06, 1.1, 1],
+        rotate: [0, -4, 4, -2, 0],
+        scale: [1, 1.1, 1.07],
       } : {
         y: [0, -2.5, 0],
+        rotate: 0,
         scale: 1,
       }}
       transition={isHovered ? {
         duration: 1.15,
         repeat: Infinity,
+        repeatType: "reverse",
         ease: "easeInOut",
       } : {
         duration: 3,
         repeat: Infinity,
         ease: "easeInOut",
       }}
-      className="relative flex items-center justify-center select-none pt-2 pb-1"
+      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_12px_35px_rgba(18,67,94,0.35)] flex items-center justify-center relative overflow-hidden border-2 border-white select-none"
     >
-      {/* Top AI Signal Antenna */}
+      {/* Outer Multi-color JRS Halo Ring - Accelerates on Hover */}
       <motion.div
-        style={{ rotate: antennaRotate }}
-        animate={isHovered ? { y: [0, -2, 0] } : {}}
-        transition={{ duration: 0.6, repeat: Infinity }}
-        className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none"
+        animate={{ rotate: 360, scale: isHovered ? 1.32 : 1.06 }}
+        transition={{
+          rotate: { duration: isHovered ? 1.6 : 5.5, repeat: Infinity, ease: "linear" },
+          scale: { duration: 0.3 },
+        }}
+        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
+      />
+
+      {/* Clean 3D White Inner Sphere */}
+      <div className="absolute inset-1 rounded-full bg-gradient-to-b from-white via-white to-slate-100 z-0" />
+
+      {/* Sleek Glass Visor with 3D Parallax */}
+      <motion.div
+        style={{ x: visorX, y: visorY }}
+        className="absolute w-[78%] h-[62%] bg-gradient-to-b from-[#102030] via-[#09121B] to-black rounded-[2rem] flex items-center justify-center gap-2 shadow-inner overflow-hidden border border-slate-700/50 z-10"
       >
-        <div
-          className={`w-2.5 h-2.5 rounded-full border border-white transition-all duration-300 ${
-            isHovered
-              ? 'bg-brand-yellow shadow-[0_0_12px_rgba(249,178,51,1)] scale-115'
-              : 'bg-brand-yellow shadow-[0_0_6px_rgba(249,178,51,0.85)]'
-          }`}
-        />
-        <div className="w-[2.5px] h-2 bg-gradient-to-b from-slate-300 to-brand-blue rounded-full -mt-0.5" />
-      </motion.div>
+        {/* Top Specular Glass Reflection */}
+        <div className="absolute top-0 left-1/4 right-1/4 h-1/2 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[1px] pointer-events-none" />
 
-      {/* Sleek Robot Side Ear-Pods */}
-      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-5 rounded-l-full bg-gradient-to-b from-[#12435E] to-[#0B1D2B] border border-white/80 shadow-xs z-0" />
-      <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-5 rounded-r-full bg-gradient-to-b from-[#12435E] to-[#0B1D2B] border border-white/80 shadow-xs z-0" />
+        {/* Clean Glowing Capsule LED Eyes that Track the Mouse */}
+        <motion.div style={{ x: eyeX, y: eyeY }} className="flex items-center gap-2.5 relative z-10">
+          {/* Left Eye */}
+          <motion.div
+            animate={isHovered ? {
+              scaleY: [1, 0.15, 1.22, 0.92, 1.12],
+              scaleX: [1, 1.12, 0.92, 1.1, 1],
+            } : {
+              scaleY: [1, 0.1, 1, 1, 1],
+              scaleX: 1,
+            }}
+            transition={isHovered ? {
+              duration: 1.15,
+              repeat: Infinity,
+              times: [0, 0.1, 0.3, 0.6, 1],
+            } : {
+              duration: 3.5,
+              repeat: Infinity,
+              times: [0, 0.05, 0.1, 0.5, 1],
+            }}
+            className={`w-2.5 h-3.5 rounded-full transition-all duration-300 ${
+              isHovered
+                ? 'bg-amber-300 shadow-[0_0_15px_rgba(249,178,51,1)]'
+                : 'bg-brand-yellow shadow-[0_0_9px_rgba(249,178,51,0.95)]'
+            }`}
+          />
 
-      {/* Main Circular Robot Head */}
-      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-white via-gray-50 to-gray-200 shadow-[0_12px_32px_rgba(18,67,94,0.32)] flex items-center justify-center relative overflow-hidden border-2 border-white z-10">
-        {/* Outer Multi-color JRS Halo Ring - Accelerates on Hover */}
-        <motion.div
-          animate={{ rotate: 360, scale: isHovered ? 1.3 : 1.05 }}
-          transition={{
-            rotate: { duration: isHovered ? 1.8 : 6, repeat: Infinity, ease: "linear" },
-            scale: { duration: 0.3 },
-          }}
-          className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
-        />
-
-        {/* Glossy 3D White Inner Sphere */}
-        <div className="absolute inset-1 rounded-full bg-gradient-to-b from-white via-slate-50 to-slate-100 shadow-inner z-0" />
-
-        {/* Inner Visor with Parallax */}
-        <motion.div
-          style={{ x: visorX, y: visorY }}
-          className="absolute w-[80%] h-[62%] bg-gradient-to-b from-[#0E1E2E] via-[#09131D] to-black rounded-[2rem] flex flex-col items-center justify-center shadow-inner overflow-hidden border border-slate-700/50 z-10"
-        >
-          {/* Curved glass reflection */}
-          <div className="absolute top-0.5 left-1/5 right-1/5 h-1/3 bg-gradient-to-b from-white/25 to-transparent rounded-full blur-[0.5px] pointer-events-none" />
-
-          {/* Animated Mouse-Tracking Eyes + Digital Smile */}
-          <motion.div style={{ x: eyeX, y: eyeY }} className="flex flex-col items-center justify-center relative z-10">
-            <div className="flex items-center gap-2.5">
-              {/* Left Eye */}
-              <motion.div
-                animate={isHovered ? {
-                  scaleY: [1, 0.15, 1.18, 0.92, 1.08],
-                  scaleX: [1, 1.12, 0.94, 1.08, 1],
-                } : {
-                  scaleY: [1, 0.1, 1, 1, 1],
-                  scaleX: 1,
-                }}
-                transition={isHovered ? {
-                  duration: 1.2,
-                  repeat: Infinity,
-                  times: [0, 0.1, 0.3, 0.6, 1],
-                } : {
-                  duration: 3.5,
-                  repeat: Infinity,
-                  times: [0, 0.05, 0.1, 0.5, 1],
-                }}
-                className={`w-2.5 h-3.5 sm:w-3 sm:h-4 rounded-full relative flex items-start justify-end p-0.5 transition-all duration-300 ${
-                  isHovered
-                    ? 'bg-amber-300 shadow-[0_0_14px_rgba(249,178,51,1)]'
-                    : 'bg-brand-yellow shadow-[0_0_9px_rgba(249,178,51,0.9)]'
-                }`}
-              >
-                <motion.span
-                  style={{ x: glintX, y: glintY }}
-                  className="w-1 h-1 rounded-full bg-white/95"
-                />
-              </motion.div>
-
-              {/* Right Eye */}
-              <motion.div
-                animate={isHovered ? {
-                  scaleY: [1, 0.15, 1.18, 0.92, 1.08],
-                  scaleX: [1, 1.12, 0.94, 1.08, 1],
-                } : {
-                  scaleY: [1, 0.1, 1, 1, 1],
-                  scaleX: 1,
-                }}
-                transition={isHovered ? {
-                  duration: 1.2,
-                  repeat: Infinity,
-                  times: [0, 0.1, 0.3, 0.6, 1],
-                } : {
-                  duration: 3.5,
-                  repeat: Infinity,
-                  times: [0, 0.05, 0.1, 0.5, 1],
-                }}
-                className={`w-2.5 h-3.5 sm:w-3 sm:h-4 rounded-full relative flex items-start justify-end p-0.5 transition-all duration-300 ${
-                  isHovered
-                    ? 'bg-amber-300 shadow-[0_0_14px_rgba(249,178,51,1)]'
-                    : 'bg-brand-yellow shadow-[0_0_9px_rgba(249,178,51,0.9)]'
-                }`}
-              >
-                <motion.span
-                  style={{ x: glintX, y: glintY }}
-                  className="w-1 h-1 rounded-full bg-white/95"
-                />
-              </motion.div>
-            </div>
-
-            {/* Expressive Digital Smile Arc */}
-            <svg
-              width="14"
-              height="5"
-              viewBox="0 0 14 5"
-              fill="none"
-              className={`mt-1 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-70'}`}
-            >
-              <path
-                d="M2 1.5 Q7 4.5 12 1.5"
-                stroke="#F9B233"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </motion.div>
+          {/* Right Eye */}
+          <motion.div
+            animate={isHovered ? {
+              scaleY: [1, 0.15, 1.22, 0.92, 1.12],
+              scaleX: [1, 1.12, 0.92, 1.1, 1],
+            } : {
+              scaleY: [1, 0.1, 1, 1, 1],
+              scaleX: 1,
+            }}
+            transition={isHovered ? {
+              duration: 1.15,
+              repeat: Infinity,
+              times: [0, 0.1, 0.3, 0.6, 1],
+            } : {
+              duration: 3.5,
+              repeat: Infinity,
+              times: [0, 0.05, 0.1, 0.5, 1],
+            }}
+            className={`w-2.5 h-3.5 rounded-full transition-all duration-300 ${
+              isHovered
+                ? 'bg-amber-300 shadow-[0_0_15px_rgba(249,178,51,1)]'
+                : 'bg-brand-yellow shadow-[0_0_9px_rgba(249,178,51,0.95)]'
+            }`}
+          />
         </motion.div>
-      </div>
-
-      {/* Sleek "CLARI" Name Badge at bottom */}
-      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 z-20 bg-[#0B1D2B] text-white text-[9px] font-black tracking-wider px-2 py-0.5 rounded-full border border-white/25 shadow-md flex items-center gap-1 pointer-events-none">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span>CLARI</span>
-      </div>
+      </motion.div>
     </motion.div>
   );
 };
