@@ -323,19 +323,29 @@ export async function POST(request: Request) {
       });
 
       const inserted = insertRes.ok ? await insertRes.json() : [];
-      const createdRow = Array.isArray(inserted) && inserted.length > 0 ? parseRowToSession(inserted[0]) : null;
+      const fallbackCreated: BotSessionRecord = {
+        dbId: 0,
+        sessionId: payload.sessionId,
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        status: 'nuevo',
+        mode: payload.mode,
+        unreadForAdmin: payload.unreadForAdmin,
+        trackings: payload.trackings,
+        notes: payload.notes,
+        createdAt: nowIso,
+        updatedAt: payload.updatedAt,
+        messages: payload.messages,
+      };
+      const createdRow =
+        Array.isArray(inserted) && inserted.length > 0
+          ? parseRowToSession(inserted[0]) || fallbackCreated
+          : fallbackCreated;
 
       return NextResponse.json({
         success: true,
-        session: createdRow || {
-          dbId: 0,
-          name: cleanName,
-          email: cleanEmail,
-          phone: cleanPhone,
-          status: 'nuevo',
-          ...payload,
-          createdAt: nowIso,
-        },
+        session: createdRow,
       });
     }
 
@@ -346,10 +356,10 @@ export async function POST(request: Request) {
     let updatedTakenAt = existingRecord.takenAt;
     let updatedUnread = existingRecord.unreadForAdmin;
     let updatedStatus = existingRecord.status;
-    let updatedName = name ? String(name).trim() : existingRecord.name;
-    let updatedEmail = email ? String(email).trim().toLowerCase() : existingRecord.email;
-    let updatedPhone = phone !== undefined ? String(phone).trim() : existingRecord.phone;
-    let updatedNotes = notes !== undefined ? String(notes) : (existingRecord.notes || '');
+    const updatedName = name ? String(name).trim() : existingRecord.name;
+    const updatedEmail = email ? String(email).trim().toLowerCase() : existingRecord.email;
+    const updatedPhone = phone !== undefined ? String(phone).trim() : existingRecord.phone;
+    const updatedNotes = notes !== undefined ? String(notes) : (existingRecord.notes || '');
 
     if (action === 'sync_messages' && Array.isArray(messages)) {
       // Preserve any agent/system messages that exist in DB while syncing user/assistant messages from widget
@@ -460,17 +470,28 @@ export async function POST(request: Request) {
     );
 
     const patchedRows = patchRes.ok ? await patchRes.json() : [];
+    const fallbackUpdatedSession: BotSessionRecord = {
+      dbId: existingRecord.dbId,
+      sessionId: updatedPayload.sessionId,
+      name: updatedName,
+      email: updatedEmail,
+      phone: updatedPhone,
+      status: updatedStatus,
+      mode: updatedPayload.mode,
+      takenBy: updatedPayload.takenBy,
+      takenAt: updatedPayload.takenAt,
+      unreadForAdmin: updatedPayload.unreadForAdmin,
+      trackings: updatedPayload.trackings,
+      notes: updatedPayload.notes,
+      createdAt: existingRecord.createdAt,
+      updatedAt: updatedPayload.updatedAt,
+      messages: updatedPayload.messages,
+    };
+
     const updatedSession =
       Array.isArray(patchedRows) && patchedRows.length > 0
-        ? parseRowToSession(patchedRows[0])
-        : {
-            ...existingRecord,
-            name: updatedName,
-            email: updatedEmail,
-            phone: updatedPhone,
-            status: updatedStatus,
-            ...updatedPayload,
-          };
+        ? parseRowToSession(patchedRows[0]) || fallbackUpdatedSession
+        : fallbackUpdatedSession;
 
     return NextResponse.json({
       success: true,
