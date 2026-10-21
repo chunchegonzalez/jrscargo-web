@@ -208,8 +208,8 @@ export default function Header() {
               className="relative group inline-flex items-center gap-2 bg-brand-blue hover:bg-[#0c2f42] text-white font-bold text-[14px] px-5 py-2.5 rounded-full shadow-sm hover:shadow transition-all"
             >
               {isHalloween && (
-                <span className="absolute -top-2 -right-1.5 pointer-events-none transform rotate-12 drop-shadow-xs">
-                  <HalloweenMiniPumpkin size={15} />
+                <span className="absolute -top-2.5 -right-2 pointer-events-none transform rotate-12 animate-bounce">
+                  <HalloweenMiniPumpkin size={20} />
                 </span>
               )}
               <PackageOpen size={18} className="text-brand-yellow" />

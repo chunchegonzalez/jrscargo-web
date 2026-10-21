@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
 import { HalloweenHeroBackground } from '@/components/ui/HalloweenHeroDecorations';
+import { HalloweenMiniPumpkin, HalloweenWitchHat } from '@/components/ui/HalloweenIcons';
 
 export default function Hero() {
   const { t } = useLanguage();
@@ -14,17 +15,17 @@ export default function Hero() {
 
   return (
     <section className={`relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden ${
-      isHalloween ? 'bg-[#fbfbfe]' : 'bg-brand-bg-section'
+      isHalloween ? 'bg-gradient-to-b from-[#FAF7FF] via-[#FFF9F5] to-[#F8F5FF]' : 'bg-brand-bg-section'
     }`}>
-      {/* Halloween Subtle Background Layer */}
+      {/* Halloween Dynamic Background Layer */}
       <HalloweenHeroBackground />
 
       {/* Abstract Background Elements */}
       <div className="absolute inset-0 pointer-events-none">
         {isHalloween ? (
           <>
-            {/* Subtle warm glow around moon on top-left */}
-            <div className="absolute -top-10 -left-10 w-[500px] h-[400px] rounded-full bg-amber-100/30 blur-3xl pointer-events-none" />
+            {/* Warm golden-orange & purple ambient glow */}
+            <div className="absolute -top-10 -left-10 w-[520px] h-[420px] rounded-full bg-orange-200/35 blur-3xl pointer-events-none" />
           </>
         ) : (
           <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-blue/5 blur-3xl opacity-60 mix-blend-multiply" />
@@ -36,9 +37,32 @@ export default function Hero() {
           
           {/* Content */}
           <div className="max-w-2xl animate-slide-up">
+            {isHalloween && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#1E1B4B] via-[#311042] to-[#1E1B4B] text-white text-xs sm:text-sm font-extrabold mb-5 shadow-[0_8px_25px_-4px_rgba(249,115,22,0.4)] border border-orange-400/40"
+              >
+                <HalloweenMiniPumpkin size={18} className="animate-bounce" />
+                <span className="bg-gradient-to-r from-amber-200 via-orange-300 to-amber-200 bg-clip-text text-transparent">
+                  Halloween Edition • Tus envíos llegan volando sin sustos
+                </span>
+              </motion.div>
+            )}
+
             <h1 className="text-[2.5rem] sm:text-5xl lg:text-[4.5rem] font-black text-brand-blue leading-[1.1] mb-6 text-balance tracking-tight">
               {t.hero.titleLine1} <br className="hidden lg:block"/>
-              <span className="text-brand-red">{t.hero.titleHighlight}</span> <br className="hidden lg:block"/>
+              <span
+                className={
+                  isHalloween
+                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#FF5500] via-brand-red to-[#9333EA] drop-shadow-[0_2px_12px_rgba(249,115,22,0.2)]'
+                    : 'text-brand-red'
+                }
+              >
+                {t.hero.titleHighlight}
+              </span>{' '}
+              <br className="hidden lg:block"/>
               {t.hero.titleLine2}
             </h1>
             
@@ -230,11 +254,39 @@ export default function Hero() {
 
               {/* Center Premium Hub */}
               <div className="relative z-20 flex items-center justify-center">
+                {isHalloween && (
+                  <div className="absolute w-56 h-56 rounded-full bg-gradient-to-tr from-orange-400/25 via-purple-500/20 to-amber-300/25 blur-2xl animate-pulse pointer-events-none" />
+                )}
+
                 {/* Glassmorphic Base */}
-                <div className="absolute w-48 h-48 bg-white/40 backdrop-blur-xl rounded-full border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.1)]"></div>
+                <div
+                  className={`absolute w-48 h-48 backdrop-blur-xl rounded-full border shadow-[0_8px_32px_rgba(0,0,0,0.1)] ${
+                    isHalloween
+                      ? 'bg-gradient-to-tr from-orange-50/60 via-white/50 to-purple-50/60 border-orange-300/60'
+                      : 'bg-white/40 border-white/60'
+                  }`}
+                />
                 
                 {/* Solid Core */}
                 <div className="relative w-36 h-36 bg-white rounded-full shadow-[0_0_20px_rgba(0,0,0,0.05)] border-4 border-white flex items-center justify-center">
+                  {isHalloween && (
+                    <>
+                      <motion.div
+                        animate={{ rotate: [10, 16, 10], y: [0, -4, 0] }}
+                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute -top-8 -right-4 z-30 pointer-events-none drop-shadow-[0_6px_12px_rgba(88,28,135,0.35)]"
+                      >
+                        <HalloweenWitchHat size={52} />
+                      </motion.div>
+                      <motion.div
+                        animate={{ y: [0, -5, 0], rotate: [-8, 8, -8] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute -bottom-3 -left-3 z-30 pointer-events-none"
+                      >
+                        <HalloweenMiniPumpkin size={28} />
+                      </motion.div>
+                    </>
+                  )}
                   <Image 
                     src="/logo.png" 
                     alt="JRS CARGO" 
