@@ -5,7 +5,7 @@ import { useChat } from 'ai/react';
 import { 
   X, Send, Bot, Sparkles, 
   Package, DollarSign, MapPin, Clock, MessageCircle, 
-  ChevronRight, ExternalLink, RotateCcw, User, Mail, Phone, Headset, ArrowRight
+  ChevronRight, ExternalLink, RotateCcw, User, Mail, Phone, Headset, ArrowRight, Lock
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
@@ -205,6 +205,16 @@ interface SyncedChatMessage {
   createdAt: string;
 }
 
+function hasCompleteLeadData(name: string, email: string, phone: string): boolean {
+  const n = (name || '').trim();
+  const e = (email || '').trim().toLowerCase();
+  const p = (phone || '').replace(/\D/g, '');
+  if (!n || n.length < 2 || n.toLowerCase() === 'visitante web') return false;
+  if (!e || e === 'sin-correo@jrscargocr.com' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return false;
+  if (p.length < 7) return false;
+  return true;
+}
+
 export default function ChatBotWidget() {
   const { t, language } = useLanguage();
   const isEn = language === 'en';
@@ -213,7 +223,7 @@ export default function ChatBotWidget() {
   const [isTriggerHovered, setIsTriggerHovered] = useState(false);
   const [isPatriotic, setIsPatriotic] = useState(false);
 
-  // User details for Bot Leads & Live Chat in Admin Panel
+  // User details for Bot Leads & Live Chat in Admin Panel (all 3 required)
   const [sessionId, setSessionId] = useState('');
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -235,13 +245,23 @@ export default function ChatBotWidget() {
     { id: 'tiempos', label: t.chat.faqTimes, icon: Clock, query: t.chat.faqTimesQuery },
   ];
 
-  const { messages, input, handleInputChange, handleSubmit, setInput, isLoading, error, setMessages } = useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    setInput,
+    isLoading,
+    error,
+    setMessages,
+    append,
+  } = useChat({
     maxSteps: 4,
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const lastSyncedCountRef = useRef<number>(0);
+  const lastSyncedSignatureRef = useRef<string>('');
 
   useEffect(() => {
     const now = new Date();
@@ -257,25 +277,35 @@ export default function ChatBotWidget() {
       }
       setSessionId(savedSessionId);
 
-      const savedName = localStorage.getItem('clari_lead_name');
-      const savedEmail = localStorage.getItem('clari_lead_email');
-      const savedPhone = localStorage.getItem('clari_lead_phone');
-      if (savedName && savedEmail) {
-        setUserName(savedName);
-        setUserEmail(savedEmail);
-        if (savedPhone) setUserPhone(savedPhone);
+      const savedName = localStorage.getItem('clari_lead_name') || '';
+      const savedEmail = localStorage.getItem('clari_lead_email') || '';
+      const savedPhone = localStorage.getItem('clari_lead_phone') || '';
+
+      if (savedName && savedName.toLowerCase() !== 'visitante web') setUserName(savedName);
+      if (savedEmail && savedEmail.toLowerCase() !== 'sin-correo@jrscargocr.com') setUserEmail(savedEmail);
+      if (savedPhone) setUserPhone(savedPhone);
+
+      // Only mark as registered if ALL 3 fields (name, email, phone) are complete and valid
+      if (hasCompleteLeadData(savedName, savedEmail, savedPhone)) {
         setIsRegistered(true);
+      } else {
+        setIsRegistered(false);
       }
     }
   }, []);
 
-  // Sync AI conversation messages to /api/bot-sessions whenever AI finishes streaming or user sends a message
+  // Sync AI conversation messages to /api/bot-sessions ONLY after user is registered AND has sent messages
   useEffect(() => {
     if (!isRegistered || !sessionId || isLoading) return;
+    if (!hasCompleteLeadData(userName, userEmail, userPhone)) return;
     if (chatMode === 'agent') return;
-    if (messages.length === 0 || messages.length === lastSyncedCountRef.current) return;
+    if (messages.length === 0) return;
 
-    lastSyncedCountRef.current = messages.length;
+    const lastMsg = messages[messages.length - 1];
+    const signature = `${messages.length}:${lastMsg?.id || ''}:${(lastMsg?.content || '').length}`;
+    if (signature === lastSyncedSignatureRef.current) return;
+
+    lastSyncedSignatureRef.current = signature;
     const formatted: SyncedChatMessage[] = messages.map((m, idx) => ({
       id: m.id || `msg-${idx}`,
       role: m.role === 'user' ? 'user' : 'assistant',
@@ -290,9 +320,9 @@ export default function ChatBotWidget() {
       body: JSON.stringify({
         action: 'sync_messages',
         sessionId,
-        name: userName,
-        email: userEmail,
-        phone: userPhone,
+        name: userName.trim(),
+        email: userEmail.trim().toLowerCase(),
+        phone: userPhone.trim(),
         messages: formatted,
       }),
     })
@@ -312,6 +342,7 @@ export default function ChatBotWidget() {
   // Poll /api/bot-sessions while chat is open to detect live agent takeover & receive agent messages
   useEffect(() => {
     if (!isOpen || !isRegistered || !sessionId) return;
+    if (messages.length === 0 && agentMessages.length === 0 && chatMode === 'bot') return;
 
     const checkSession = async () => {
       try {
@@ -335,7 +366,7 @@ export default function ChatBotWidget() {
     checkSession();
     const interval = setInterval(checkSession, 3000);
     return () => clearInterval(interval);
-  }, [isOpen, isRegistered, sessionId]);
+  }, [isOpen, isRegistered, sessionId, messages.length, agentMessages.length, chatMode]);
 
   useEffect(() => {
     if (isOpen) {
@@ -350,12 +381,28 @@ export default function ChatBotWidget() {
     const trimmedEmail = userEmail.trim().toLowerCase();
     const trimmedPhone = userPhone.trim();
 
-    if (!trimmedName) {
-      setRegisterError(isEn ? 'Please enter your name' : 'Por favor ingresa tu nombre');
+    if (!trimmedName || trimmedName.length < 2 || trimmedName.toLowerCase() === 'visitante web') {
+      setRegisterError(
+        isEn ? 'Please enter your full name' : 'Por favor ingresa tu nombre completo'
+      );
       return;
     }
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setRegisterError(isEn ? 'Please enter a valid email' : 'Por favor ingresa un correo válido');
+    if (
+      !trimmedEmail ||
+      trimmedEmail === 'sin-correo@jrscargocr.com' ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)
+    ) {
+      setRegisterError(
+        isEn ? 'Please enter a valid email address' : 'Por favor ingresa un correo electrónico válido'
+      );
+      return;
+    }
+    if (trimmedPhone.replace(/\D/g, '').length < 7) {
+      setRegisterError(
+        isEn
+          ? 'Please enter your phone or WhatsApp number'
+          : 'Por favor ingresa tu número de teléfono / WhatsApp (mínimo 8 dígitos)'
+      );
       return;
     }
 
@@ -373,19 +420,22 @@ export default function ChatBotWidget() {
         localStorage.setItem('clari_lead_email', trimmedEmail);
         localStorage.setItem('clari_lead_phone', trimmedPhone);
       }
+
+      setUserName(trimmedName);
+      setUserEmail(trimmedEmail);
+      setUserPhone(trimmedPhone);
       setIsRegistered(true);
 
-      // Register in live bot-sessions & clients table
+      // Save customer lead in `clients` table (session in /admin/chat-bot is created once they send a message)
       await fetch('/api/bot-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'init',
+          action: 'register_lead',
           sessionId: activeSessionId,
           name: trimmedName,
           email: trimmedEmail,
           phone: trimmedPhone,
-          messages: [],
         }),
       });
     } catch (err) {
@@ -396,68 +446,81 @@ export default function ChatBotWidget() {
     }
   };
 
-  // Unified submit handler: routes to human agent if mode === 'agent', or to Clari AI if mode === 'bot'
+  const sendMessageToAgent = async (textContent: string) => {
+    const trimmed = textContent.trim();
+    if (!trimmed || !isRegistered || !hasCompleteLeadData(userName, userEmail, userPhone)) return;
+
+    setIsSendingToAgent(true);
+    const optimisticMsg: SyncedChatMessage = {
+      id: `usr-${Date.now()}`,
+      role: 'user',
+      senderName: userName.trim(),
+      content: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    setAgentMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      const res = await fetch('/api/bot-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'customer_message',
+          sessionId,
+          name: userName.trim(),
+          email: userEmail.trim().toLowerCase(),
+          phone: userPhone.trim(),
+          content: trimmed,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.session?.messages) {
+          setAgentMessages(data.session.messages);
+        }
+      }
+    } catch (err) {
+      console.error('Error sending message to agent:', err);
+    } finally {
+      setIsSendingToAgent(false);
+    }
+  };
+
+  // Unified submit handler: strictly blocked unless registered with all 3 fields
   const handleUnifiedSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!isRegistered || !hasCompleteLeadData(userName, userEmail, userPhone)) return;
+
     const trimmed = input.trim();
     if (!trimmed) return;
 
     if (chatMode === 'agent') {
       setInput('');
-      setIsSendingToAgent(true);
-      const optimisticMsg: SyncedChatMessage = {
-        id: `usr-${Date.now()}`,
-        role: 'user',
-        senderName: userName,
-        content: trimmed,
-        createdAt: new Date().toISOString(),
-      };
-      setAgentMessages((prev) => [...prev, optimisticMsg]);
-
-      try {
-        const res = await fetch('/api/bot-sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'customer_message',
-            sessionId,
-            name: userName,
-            email: userEmail,
-            phone: userPhone,
-            content: trimmed,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.session?.messages) {
-            setAgentMessages(data.session.messages);
-          }
-        }
-      } catch (err) {
-        console.error('Error sending message to agent:', err);
-      } finally {
-        setIsSendingToAgent(false);
-      }
+      await sendMessageToAgent(trimmed);
       return;
     }
 
     handleSubmit(e);
   };
 
-  const handleQuickAction = (queryText: string) => {
+  const handleQuickAction = async (queryText: string) => {
+    if (!isRegistered || !hasCompleteLeadData(userName, userEmail, userPhone)) return;
+
     if (chatMode === 'agent') {
-      setInput(queryText);
+      await sendMessageToAgent(queryText);
       return;
     }
-    setInput(queryText);
-    setTimeout(() => {
-      const fakeEvent = new Event('submit', { cancelable: true }) as unknown as React.FormEvent<HTMLFormElement>;
-      handleSubmit(fakeEvent);
-    }, 50);
+
+    await append({
+      role: 'user',
+      content: queryText,
+    });
   };
 
   // Request live human agent in the web chat (alerts /admin/chat-bot and Gestión immediately)
   const handleRequestLiveAgent = async () => {
+    if (!isRegistered || !hasCompleteLeadData(userName, userEmail, userPhone)) return;
+
     const nowIso = new Date().toISOString();
     setChatMode('agent');
     if (!takenByAgent) setTakenByAgent('Asesor en Línea');
@@ -469,7 +532,7 @@ export default function ChatBotWidget() {
         : messages.map((m, idx) => ({
             id: m.id || `m-${idx}`,
             role: m.role === 'user' ? 'user' : 'assistant',
-            senderName: m.role === 'user' ? userName : 'Clari AI',
+            senderName: m.role === 'user' ? userName.trim() : 'Clari AI',
             content: m.content,
             createdAt: nowIso,
           }));
@@ -479,7 +542,7 @@ export default function ChatBotWidget() {
       {
         id: `usr-${Date.now()}`,
         role: 'user',
-        senderName: userName,
+        senderName: userName.trim(),
         content: isEn ? '👨‍💻 I want to talk with an online advisor' : '👨‍💻 Solicito hablar con un asesor en línea',
         createdAt: nowIso,
       },
@@ -510,9 +573,9 @@ export default function ChatBotWidget() {
         body: JSON.stringify({
           action: 'request_agent',
           sessionId,
-          name: userName,
-          email: userEmail,
-          phone: userPhone,
+          name: userName.trim(),
+          email: userEmail.trim().toLowerCase(),
+          phone: userPhone.trim(),
           messages: existingMsgs,
         }),
       });
@@ -535,12 +598,17 @@ export default function ChatBotWidget() {
     setChatMode('bot');
     setTakenByAgent('');
     setInput('');
-    lastSyncedCountRef.current = 0;
+    lastSyncedSignatureRef.current = '';
     if (typeof window !== 'undefined') {
       const newSid = `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       localStorage.setItem('clari_session_id', newSid);
       setSessionId(newSid);
     }
+  };
+
+  const handleEditUserData = () => {
+    setIsRegistered(false);
+    setRegisterError('');
   };
 
   // Formatter for rich text rendering (No "Ver en Vivo", prominent WhatsApp Advisor button)
@@ -608,17 +676,23 @@ export default function ChatBotWidget() {
     );
   };
 
-  // Decide which message list to render: when agent messages exist or chatMode === 'agent', merge/display the synced list
-  const hasAgentActivity = chatMode === 'agent' || agentMessages.some((m) => m.role === 'agent' || m.role === 'system');
-  const displayedMessages: SyncedChatMessage[] = hasAgentActivity
-    ? agentMessages
-    : messages.map((m, idx) => ({
-        id: m.id || `m-${idx}`,
-        role: m.role === 'user' ? 'user' : 'assistant',
-        senderName: m.role === 'user' ? userName : 'Clari AI',
-        content: m.content,
-        createdAt: new Date().toISOString(),
-      }));
+  // Build displayedMessages: in 'agent' mode use agentMessages; in 'bot' mode use live AI messages merged with any agent/system messages
+  const displayedMessages: SyncedChatMessage[] = (() => {
+    if (chatMode === 'agent') {
+      return agentMessages;
+    }
+    const aiMsgs: SyncedChatMessage[] = messages.map((m, idx) => ({
+      id: m.id || `m-${idx}`,
+      role: m.role === 'user' ? 'user' : 'assistant',
+      senderName: m.role === 'user' ? userName : 'Clari AI',
+      content: m.content,
+      createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+    }));
+    const extraAgentMsgs = agentMessages.filter(
+      (am) => (am.role === 'agent' || am.role === 'system') && !aiMsgs.some((m) => m.id === am.id)
+    );
+    return [...aiMsgs, ...extraAgentMsgs];
+  })();
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
@@ -680,7 +754,7 @@ export default function ChatBotWidget() {
                 >
                   <MessageCircle size={18} />
                 </a>
-                {displayedMessages.length > 0 && (
+                {isRegistered && displayedMessages.length > 0 && (
                   <button
                     onClick={handleReset}
                     className="p-2 text-gray-400 hover:text-brand-yellow hover:bg-white/10 rounded-xl transition-colors"
@@ -700,12 +774,12 @@ export default function ChatBotWidget() {
             </div>
 
             {/* Live Agent Banner when taken over from /admin */}
-            {chatMode === 'agent' && (
+            {isRegistered && chatMode === 'agent' && (
               <div className="bg-emerald-600 text-white px-4 py-2 text-[11px] font-bold flex items-center justify-between shrink-0 shadow-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                   <span>
-                    👨‍💻 {isEn ? `Attended live by ${takenByAgent || 'JRS Advisor'}` : `Atendido en vivo por ${takenByAgent || 'Agesor JRS'}`}
+                    👨‍💻 {isEn ? `Attended live by ${takenByAgent || 'JRS Advisor'}` : `Atendido en vivo por ${takenByAgent || 'Asesor JRS'}`}
                   </span>
                 </div>
                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Tiempo real</span>
@@ -715,8 +789,8 @@ export default function ChatBotWidget() {
             {/* Chat Conversation Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
               
-              {/* Lead Registration Form Gate if not registered */}
-              {!isRegistered && displayedMessages.length === 0 && (
+              {/* Strict Lead Registration Gate: User MUST fill out Name, Email, and Phone before chatting */}
+              {!isRegistered ? (
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-left animate-fade-in space-y-3">
                   <div className="flex items-center gap-2 text-brand-blue font-black text-sm">
                     <Sparkles size={16} className="text-brand-yellow" />
@@ -724,13 +798,15 @@ export default function ChatBotWidget() {
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
                     {isEn 
-                      ? "I'm Clari. To provide you with fast guidance and register your inquiry, please provide your details:" 
-                      : "Soy Clari. Para brindarte una atención rápida y registrar tu consulta en el sistema, por favor indícanos tus datos:"}
+                      ? "I'm Clari. To start your chat and provide personalized attention, please complete all your contact details:" 
+                      : "Soy Clari. Para habilitar el chat y brindarte atención personalizada, por favor completa toda tu información de contacto:"}
                   </p>
 
-                  <form onSubmit={handleRegisterSubmit} className="space-y-2.5 pt-1">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-3 pt-1">
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1">{isEn ? 'Full Name' : 'Nombre Completo'}</label>
+                      <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                        {isEn ? 'Full Name *' : 'Nombre Completo *'}
+                      </label>
                       <div className="relative">
                         <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
@@ -739,13 +815,15 @@ export default function ChatBotWidget() {
                           placeholder={isEn ? "E.g. John Doe" : "Ej. Carlos Mora"}
                           value={userName}
                           onChange={(e) => setUserName(e.target.value)}
-                          className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+                          className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1">{isEn ? 'Email Address' : 'Correo Electrónico'}</label>
+                      <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                        {isEn ? 'Email Address *' : 'Correo Electrónico *'}
+                      </label>
                       <div className="relative">
                         <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
@@ -754,189 +832,203 @@ export default function ChatBotWidget() {
                           placeholder={isEn ? "E.g. john@gmail.com" : "Ej. carlos@gmail.com"}
                           value={userEmail}
                           onChange={(e) => setUserEmail(e.target.value)}
-                          className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+                          className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                        {isEn ? 'Phone / WhatsApp (Optional)' : 'Teléfono / WhatsApp (Opcional)'}
+                      <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                        {isEn ? 'Phone / WhatsApp *' : 'Teléfono / WhatsApp *'}
                       </label>
                       <div className="relative">
                         <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                           type="tel"
+                          required
                           placeholder={isEn ? "E.g. +506 8888-8888" : "Ej. 8888-8888"}
                           value={userPhone}
                           onChange={(e) => setUserPhone(e.target.value)}
-                          className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
+                          className="w-full pl-8 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white transition-all"
                         />
                       </div>
                     </div>
 
                     {registerError && (
-                      <p className="text-[11px] text-red-600 font-semibold">{registerError}</p>
+                      <p className="text-[11px] text-red-600 font-semibold bg-red-50 px-3 py-2 rounded-xl border border-red-100">
+                        {registerError}
+                      </p>
                     )}
 
                     <button
                       type="submit"
                       disabled={isSubmittingLead}
-                      className="w-full mt-1 py-2.5 bg-brand-blue hover:bg-brand-blue/95 active:scale-[0.98] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
+                      className="w-full mt-1 py-2.5 bg-brand-blue hover:bg-brand-blue/95 active:scale-[0.98] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50 cursor-pointer"
                     >
-                      <span>{isSubmittingLead ? (isEn ? 'Connecting...' : 'Conectando...') : (isEn ? 'Start Chat' : 'Iniciar Atención')}</span>
+                      <span>{isSubmittingLead ? (isEn ? 'Validating...' : 'Validando datos...') : (isEn ? 'Start Chat' : 'Iniciar Atención')}</span>
                       <ArrowRight size={14} />
                     </button>
                   </form>
                 </div>
-              )}
-
-              {/* Welcome Presentation Card (When Registered) */}
-              {isRegistered && displayedMessages.length === 0 && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left">
-                    <div className="flex items-center gap-2 text-brand-blue font-bold text-xs mb-1">
-                      <Sparkles size={14} className="text-brand-yellow" />
-                      {isEn ? `Hello, ${userName.split(' ')[0]}!` : `¡Hola, ${userName.split(' ')[0]}!`}
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                      {t.chat.greetingDesc}
-                    </p>
-                    <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400">
-                      <span>{isEn ? '⚡ Instant response' : '⚡ Respuesta inmediata'}</span>
-                      <span className="font-bold text-brand-blue">Miami • España • China</span>
-                    </div>
-                  </div>
-
-                  {/* Quick Action Buttons */}
-                  <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">{t.chat.faqTitle}</p>
-                    <div className="grid grid-cols-1 gap-2">
-                      {quickActions.map(action => {
-                        const Icon = action.icon;
-                        return (
+              ) : (
+                <>
+                  {/* Welcome Presentation Card (When Registered & 0 messages) */}
+                  {displayedMessages.length === 0 && (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm text-left">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 text-brand-blue font-bold text-xs">
+                            <Sparkles size={14} className="text-brand-yellow" />
+                            {isEn ? `Hello, ${userName.split(' ')[0]}!` : `¡Hola, ${userName.split(' ')[0]}!`}
+                          </div>
                           <button
-                            key={action.id}
-                            onClick={() => handleQuickAction(action.query)}
-                            className="w-full text-left p-3 rounded-2xl bg-white hover:bg-brand-blue/5 border border-gray-100 hover:border-brand-blue/20 flex items-center justify-between transition-all group shadow-sm hover:shadow"
+                            type="button"
+                            onClick={handleEditUserData}
+                            className="text-[10px] font-semibold text-gray-400 hover:text-brand-blue underline"
+                          >
+                            {isEn ? 'Edit info' : 'Editar mis datos'}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-600 leading-relaxed mb-3">
+                          {t.chat.greetingDesc}
+                        </p>
+                        <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[11px] text-gray-400">
+                          <span>{isEn ? '⚡ Instant response' : '⚡ Respuesta inmediata'}</span>
+                          <span className="font-bold text-brand-blue">Miami • España • China</span>
+                        </div>
+                      </div>
+
+                      {/* Quick Action Buttons */}
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-2">{t.chat.faqTitle}</p>
+                        <div className="grid grid-cols-1 gap-2">
+                          {quickActions.map(action => {
+                            const Icon = action.icon;
+                            return (
+                              <button
+                                key={action.id}
+                                onClick={() => handleQuickAction(action.query)}
+                                className="w-full text-left p-3 rounded-2xl bg-white hover:bg-brand-blue/5 border border-gray-100 hover:border-brand-blue/20 flex items-center justify-between transition-all group shadow-sm hover:shadow cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-xl bg-brand-blue/5 text-brand-blue group-hover:bg-brand-blue group-hover:text-white flex items-center justify-center transition-colors">
+                                    <Icon size={14} />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-700 group-hover:text-brand-blue transition-colors">
+                                    {action.label}
+                                  </span>
+                                </div>
+                                <ChevronRight size={14} className="text-gray-400 group-hover:text-brand-blue group-hover:translate-x-0.5 transition-all" />
+                              </button>
+                            );
+                          })}
+
+                          {/* Prominent "Hablar con un Asesor en Línea" Button */}
+                          <button
+                            type="button"
+                            onClick={handleRequestLiveAgent}
+                            className="w-full text-left p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/90 flex items-center justify-between transition-all group shadow-sm hover:shadow cursor-pointer"
                           >
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-xl bg-brand-blue/5 text-brand-blue group-hover:bg-brand-blue group-hover:text-white flex items-center justify-center transition-colors">
-                                <Icon size={14} />
+                              <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-2xs relative">
+                                <Headset size={14} />
+                                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
                               </div>
-                              <span className="text-xs font-bold text-gray-700 group-hover:text-brand-blue transition-colors">
-                                {action.label}
-                              </span>
+                              <div>
+                                <span className="block text-xs font-black text-emerald-900">
+                                  {isEn ? 'Talk to an Online Advisor' : 'Hablar con un Asesor en Línea'}
+                                </span>
+                                <span className="block text-[10px] font-semibold text-emerald-700/80">
+                                  {isEn ? 'Live attention right here in this chat' : 'Atención en vivo por un agente en este chat'}
+                                </span>
+                              </div>
                             </div>
-                            <ChevronRight size={14} className="text-gray-400 group-hover:text-brand-blue group-hover:translate-x-0.5 transition-all" />
+                            <ChevronRight size={14} className="text-emerald-600 group-hover:translate-x-0.5 transition-all" />
                           </button>
-                        );
-                      })}
-
-                      {/* Prominent "Hablar con un Asesor en Línea" Button */}
-                      <button
-                        type="button"
-                        onClick={handleRequestLiveAgent}
-                        className="w-full text-left p-3 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 border border-emerald-200/90 flex items-center justify-between transition-all group shadow-sm hover:shadow cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-2xs relative">
-                            <Headset size={14} />
-                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
-                          </div>
-                          <div>
-                            <span className="block text-xs font-black text-emerald-900">
-                              {isEn ? 'Talk to an Online Advisor' : 'Hablar con un Asesor en Línea'}
-                            </span>
-                            <span className="block text-[10px] font-semibold text-emerald-700/80">
-                              {isEn ? 'Live attention right here in this chat' : 'Atención en vivo por un agente en este chat'}
-                            </span>
-                          </div>
                         </div>
-                        <ChevronRight size={14} className="text-emerald-600 group-hover:translate-x-0.5 transition-all" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Message List */}
-              {displayedMessages.map((m) => {
-                if (m.role === 'system') {
-                  return (
-                    <div key={m.id} className="flex justify-center my-2 animate-fade-in">
-                      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-full text-[11px] font-bold text-center shadow-2xs">
-                        {m.content.replace(/\*/g, '')}
                       </div>
                     </div>
-                  );
-                }
+                  )}
 
-                const isUser = m.role === 'user';
-                const isAgent = m.role === 'agent';
-
-                return (
-                  <div key={m.id} className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                    {!isUser && (
-                      <div
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-sm mt-0.5 ${
-                          isAgent ? 'bg-emerald-600 text-white' : 'bg-[#0B1D2B] text-brand-yellow'
-                        }`}
-                      >
-                        {isAgent ? <Headset size={14} /> : <Bot size={14} />}
-                      </div>
-                    )}
-
-                    <div
-                      className={`max-w-[85%] p-3.5 rounded-2xl shadow-sm text-left ${
-                        isUser
-                          ? 'bg-brand-blue text-white rounded-tr-sm font-medium text-xs'
-                          : isAgent
-                            ? 'bg-emerald-50/80 border border-emerald-200 text-gray-800 rounded-tl-sm'
-                            : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
-                      }`}
-                    >
-                      {isAgent && (
-                        <div className="flex items-center gap-1.5 mb-1 text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider">
-                          <span>👨‍💻 {m.senderName || takenByAgent || 'Asesor JRS Cargo'}</span>
+                  {/* Message List */}
+                  {displayedMessages.map((m) => {
+                    if (m.role === 'system') {
+                      return (
+                        <div key={m.id} className="flex justify-center my-2 animate-fade-in">
+                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-full text-[11px] font-bold text-center shadow-2xs">
+                            {m.content.replace(/\*/g, '')}
+                          </div>
                         </div>
-                      )}
-                      {isUser ? (
-                        <p className="whitespace-pre-wrap">{m.content}</p>
-                      ) : (
-                        renderMessageContent(m.content)
-                      )}
+                      );
+                    }
+
+                    const isUser = m.role === 'user';
+                    const isAgent = m.role === 'agent';
+
+                    return (
+                      <div key={m.id} className={`flex gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                        {!isUser && (
+                          <div
+                            className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-sm mt-0.5 ${
+                              isAgent ? 'bg-emerald-600 text-white' : 'bg-[#0B1D2B] text-brand-yellow'
+                            }`}
+                          >
+                            {isAgent ? <Headset size={14} /> : <Bot size={14} />}
+                          </div>
+                        )}
+
+                        <div
+                          className={`max-w-[85%] p-3.5 rounded-2xl shadow-sm text-left ${
+                            isUser
+                              ? 'bg-brand-blue text-white rounded-tr-sm font-medium text-xs'
+                              : isAgent
+                                ? 'bg-emerald-50/80 border border-emerald-200 text-gray-800 rounded-tl-sm'
+                                : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                          }`}
+                        >
+                          {isAgent && (
+                            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider">
+                              <span>👨‍💻 {m.senderName || takenByAgent || 'Asesor JRS Cargo'}</span>
+                            </div>
+                          )}
+                          {isUser ? (
+                            <p className="whitespace-pre-wrap">{m.content}</p>
+                          ) : (
+                            renderMessageContent(m.content)
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Typing Loader */}
+                  {(isLoading || isSendingToAgent) && (
+                    <div className="flex gap-2.5 justify-start animate-fade-in">
+                      <div className="w-7 h-7 rounded-xl bg-[#0B1D2B] text-brand-yellow flex items-center justify-center shrink-0">
+                        <Bot size={14} />
+                      </div>
+                      <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm p-3.5 shadow-sm flex items-center gap-1.5">
+                        <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce" />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
 
-              {/* Typing Loader */}
-              {(isLoading || isSendingToAgent) && (
-                <div className="flex gap-2.5 justify-start animate-fade-in">
-                  <div className="w-7 h-7 rounded-xl bg-[#0B1D2B] text-brand-yellow flex items-center justify-center shrink-0">
-                    <Bot size={14} />
-                  </div>
-                  <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm p-3.5 shadow-sm flex items-center gap-1.5">
-                    <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-2 h-2 bg-brand-blue rounded-full animate-bounce" />
-                  </div>
-                </div>
-              )}
-
-              {error && chatMode !== 'agent' && (
-                <div className="p-3 bg-red-50 text-red-700 rounded-2xl text-xs text-center border border-red-100">
-                  <p className="font-bold mb-1">{isEn ? 'We are experiencing high demand.' : 'Estamos experimentando una alta demanda.'}</p>
-                  <p>{isEn ? 'Please contact us directly on our ' : 'Por favor contáctanos directamente a nuestro '}<a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="font-bold underline text-green-700">{isEn ? 'Official WhatsApp (+506 7260 1238)' : 'WhatsApp Oficial (+506 7260 1238)'}</a>.</p>
-                </div>
+                  {error && chatMode !== 'agent' && (
+                    <div className="p-3 bg-red-50 text-red-700 rounded-2xl text-xs text-center border border-red-100">
+                      <p className="font-bold mb-1">{isEn ? 'We are experiencing high demand.' : 'Estamos experimentando una alta demanda.'}</p>
+                      <p>{isEn ? 'Please contact us directly on our ' : 'Por favor contáctanos directamente a nuestro '}<a href="https://wa.me/50672601238" target="_blank" rel="noopener noreferrer" className="font-bold underline text-green-700">{isEn ? 'Official WhatsApp (+506 7260 1238)' : 'WhatsApp Oficial (+506 7260 1238)'}</a>.</p>
+                    </div>
+                  )}
+                </>
               )}
 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Pills Bar when conversation is active */}
-            {displayedMessages.length > 0 && (
+            {/* Quick Pills Bar (Only when Registered and conversation is active) */}
+            {isRegistered && displayedMessages.length > 0 && (
               <div className="px-3 py-1.5 bg-white border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0">
                 {chatMode !== 'agent' && (
                   <button
@@ -977,32 +1069,43 @@ export default function ChatBotWidget() {
               </div>
             )}
 
-            {/* Input Bar */}
-            <div className="p-3.5 bg-white border-t border-gray-100 shrink-0">
-              <form onSubmit={handleUnifiedSubmit} className="flex items-center gap-2">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder={
-                    chatMode === 'agent'
-                      ? (isEn ? `Write a message to ${takenByAgent || 'advisor'}...` : `Escribe tu mensaje a ${takenByAgent || 'nuestro asesor'}...`)
-                      : t.chat.inputPlaceholder
-                  }
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-                  disabled={isLoading || isSendingToAgent}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || isSendingToAgent || !input.trim()}
-                  className={`w-10 h-10 rounded-2xl disabled:opacity-40 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0 ${
-                    chatMode === 'agent' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-blue hover:bg-brand-blue/90'
-                  }`}
-                >
-                  <Send size={16} />
-                </button>
-              </form>
-            </div>
+            {/* Input Bar: Strictly locked until customer registers all 3 fields */}
+            {isRegistered ? (
+              <div className="p-3.5 bg-white border-t border-gray-100 shrink-0">
+                <form onSubmit={handleUnifiedSubmit} className="flex items-center gap-2">
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    placeholder={
+                      chatMode === 'agent'
+                        ? (isEn ? `Write a message to ${takenByAgent || 'advisor'}...` : `Escribe tu mensaje a ${takenByAgent || 'nuestro asesor'}...`)
+                        : t.chat.inputPlaceholder
+                    }
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                    disabled={isLoading || isSendingToAgent}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || isSendingToAgent || !input.trim()}
+                    className={`w-10 h-10 rounded-2xl disabled:opacity-40 text-white flex items-center justify-center shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0 ${
+                      chatMode === 'agent' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-blue hover:bg-brand-blue/90'
+                    }`}
+                  >
+                    <Send size={16} />
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-[11px] font-semibold text-gray-500 flex items-center justify-center gap-1.5 shrink-0">
+                <Lock size={13} className="text-brand-blue shrink-0" />
+                <span>
+                  {isEn
+                    ? 'Complete your name, email, and phone above to start chatting'
+                    : 'Completa tu nombre, correo y teléfono arriba para escribir'}
+                </span>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -38,7 +38,14 @@ export async function GET() {
     if (Array.isArray(subsRes)) {
       for (const item of subsRes) {
         const itemEmail = (item.email || '').trim().toLowerCase();
-        const leadName = item.contact_name || item.company_name || 'Contacto Web';
+        const leadName = (item.contact_name || item.company_name || '').trim();
+        if (
+          !itemEmail ||
+          itemEmail === 'sin-correo@jrscargocr.com' ||
+          leadName.toLowerCase() === 'visitante web'
+        ) {
+          continue;
+        }
         const isBot = (item.company_name || '').toLowerCase().includes('bot') || 
                       (item.company_name || '').toLowerCase().includes('clari') ||
                       (item.message || '').toLowerCase().includes('bot') ||

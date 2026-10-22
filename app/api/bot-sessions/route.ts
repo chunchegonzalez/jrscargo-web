@@ -13,6 +13,9 @@ export interface BotChatMessage {
 
 export interface BotSessionPayload {
   sessionId: string;
+  name?: string;
+  email?: string;
+  phone?: string;
   mode: 'bot' | 'agent' | 'closed';
   takenBy?: string;
   takenAt?: string;
@@ -24,7 +27,7 @@ export interface BotSessionPayload {
 }
 
 export interface BotSessionRecord {
-  dbId: number;
+  dbId: string;
   sessionId: string;
   name: string;
   email: string;
@@ -39,6 +42,18 @@ export interface BotSessionRecord {
   createdAt: string;
   updatedAt: string;
   messages: BotChatMessage[];
+}
+
+function isInvalidCustomerIdentity(name: string, email: string): boolean {
+  const cleanName = (name || '').trim().toLowerCase();
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanName || cleanName === 'visitante web' || cleanName === 'cliente bot clari') {
+    return true;
+  }
+  if (!cleanEmail || cleanEmail === 'sin-correo@jrscargocr.com' || !cleanEmail.includes('@')) {
+    return true;
+  }
+  return false;
 }
 
 function extractTrackingsFromMessages(messages: BotChatMessage[]): string[] {
@@ -64,16 +79,23 @@ function extractTrackingsFromMessages(messages: BotChatMessage[]): string[] {
   return Array.from(found);
 }
 
-function parseRowToSession(row: Record<string, unknown>): BotSessionRecord | null {
+function parseRowToSession(row: Record<string, unknown>): {
+  session: BotSessionRecord | null;
+  shouldPurge: boolean;
+} {
   const company = String(row.company_name || '');
   if (!company.toLowerCase().includes('clari') && !company.toLowerCase().includes('bot')) {
-    return null;
+    return { session: null, shouldPurge: false };
   }
 
-  const dbId = Number(row.id);
-  const name = String(row.contact_name || 'Visitante Web');
-  const email = String(row.email || '');
-  const phone = String(row.phone || '');
+  const dbId = String(row.id || '');
+  if (!dbId) {
+    return { session: null, shouldPurge: false };
+  }
+
+  const rowName = String(row.contact_name || '').trim();
+  const rowEmail = String(row.email || '').trim();
+  const rowPhone = String(row.phone || '').trim();
   const status = String(row.status || 'nuevo');
   const createdAt = String(row.created_at || new Date().toISOString());
   const rawMessage = String(row.message || '');
@@ -81,64 +103,96 @@ function parseRowToSession(row: Record<string, unknown>): BotSessionRecord | nul
   try {
     if (rawMessage.trim().startsWith('{')) {
       const parsed = JSON.parse(rawMessage) as Partial<BotSessionPayload>;
+      const name = String(parsed.name || rowName || '').trim();
+      const email = String(parsed.email || rowEmail || '').trim();
+      const phone = String(parsed.phone || rowPhone || '').trim();
       const messages = Array.isArray(parsed.messages) ? parsed.messages : [];
+
+      // Purge any legacy/corrupted rows with Visitante Web, sin-correo, or 0 messages
+      if (isInvalidCustomerIdentity(name, email) || messages.length === 0) {
+        return { session: null, shouldPurge: true };
+      }
+
       const trackings = Array.isArray(parsed.trackings) && parsed.trackings.length > 0
         ? parsed.trackings
         : extractTrackingsFromMessages(messages);
 
       return {
-        dbId,
-        sessionId: parsed.sessionId || `session-${dbId}`,
-        name,
-        email,
-        phone,
-        status,
-        mode: parsed.mode || 'bot',
-        takenBy: parsed.takenBy,
-        takenAt: parsed.takenAt,
-        unreadForAdmin: typeof parsed.unreadForAdmin === 'number' ? parsed.unreadForAdmin : (status === 'nuevo' ? 1 : 0),
-        trackings,
-        notes: parsed.notes || '',
-        createdAt,
-        updatedAt: parsed.updatedAt || createdAt,
-        messages,
+        shouldPurge: false,
+        session: {
+          dbId,
+          sessionId: parsed.sessionId || `session-${dbId}`,
+          name,
+          email,
+          phone,
+          status,
+          mode: parsed.mode || 'bot',
+          takenBy: parsed.takenBy,
+          takenAt: parsed.takenAt,
+          unreadForAdmin:
+            typeof parsed.unreadForAdmin === 'number'
+              ? parsed.unreadForAdmin
+              : status === 'nuevo'
+                ? 1
+                : 0,
+          trackings,
+          notes: parsed.notes || '',
+          createdAt,
+          updatedAt: parsed.updatedAt || createdAt,
+          messages,
+        },
       };
     }
   } catch {
     // Fallback for plain text legacy message
   }
 
-  const fallbackMessages: BotChatMessage[] = rawMessage
-    ? [
-        {
-          id: `legacy-${dbId}`,
-          role: 'user',
-          content: rawMessage,
-          createdAt,
-        },
-      ]
-    : [];
+  // Legacy non-JSON row check
+  if (
+    isInvalidCustomerIdentity(rowName, rowEmail) ||
+    !rawMessage.trim() ||
+    rawMessage.trim() === 'Inicio de chat en sitio web' ||
+    rawMessage.trim() === 'Inicio de chat con Clari'
+  ) {
+    return {
+      session: null,
+      shouldPurge: isInvalidCustomerIdentity(rowName, rowEmail),
+    };
+  }
+
+  const fallbackMessages: BotChatMessage[] = [
+    {
+      id: `legacy-${dbId}`,
+      role: 'user',
+      senderName: rowName,
+      content: rawMessage,
+      createdAt,
+    },
+  ];
 
   return {
-    dbId,
-    sessionId: `legacy-${dbId}`,
-    name,
-    email,
-    phone,
-    status,
-    mode: 'bot',
-    unreadForAdmin: status === 'nuevo' ? 1 : 0,
-    trackings: extractTrackingsFromMessages(fallbackMessages),
-    notes: '',
-    createdAt,
-    updatedAt: createdAt,
-    messages: fallbackMessages,
+    shouldPurge: false,
+    session: {
+      dbId,
+      sessionId: `legacy-${dbId}`,
+      name: rowName,
+      email: rowEmail,
+      phone: rowPhone,
+      status,
+      mode: 'bot',
+      unreadForAdmin: status === 'nuevo' ? 1 : 0,
+      trackings: extractTrackingsFromMessages(fallbackMessages),
+      notes: '',
+      createdAt,
+      updatedAt: createdAt,
+      messages: fallbackMessages,
+    },
   };
 }
 
 async function upsertLeadInClients(name: string, email: string, phone: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  if (!url || !email) return;
+  if (!url || !email || isInvalidCustomerIdentity(name, email)) return;
 
   try {
     const cleanEmail = email.trim().toLowerCase();
@@ -149,7 +203,7 @@ async function upsertLeadInClients(name: string, email: string, phone: string) {
     const existing = checkRes.ok ? await checkRes.json() : [];
 
     if (Array.isArray(existing) && existing.length > 0) {
-      await fetch(`${url}/rest/v1/clients?id=eq.${existing[0].id}`, {
+      await fetch(`${url}/rest/v1/clients?id=eq.${encodeURIComponent(String(existing[0].id))}`, {
         method: 'PATCH',
         headers: getHeaders(),
         body: JSON.stringify({
@@ -163,9 +217,9 @@ async function upsertLeadInClients(name: string, email: string, phone: string) {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
-          name: name || 'Cliente Bot Clari',
+          name,
           email: cleanEmail,
-          phone: phone || '',
+          phone,
           address: 'Registro Bot Clari',
           created_at: new Date().toISOString(),
         }),
@@ -201,12 +255,29 @@ export async function GET(request: Request) {
 
     const rows = (await res.json()) as Record<string, unknown>[];
     const allSessions: BotSessionRecord[] = [];
+    const idsToPurge: string[] = [];
 
     for (const row of rows) {
-      const parsed = parseRowToSession(row);
-      if (parsed) {
-        allSessions.push(parsed);
+      const { session, shouldPurge } = parseRowToSession(row);
+      if (shouldPurge && row.id) {
+        idsToPurge.push(String(row.id));
+        continue;
       }
+      if (session) {
+        allSessions.push(session);
+      }
+    }
+
+    // Automatically clean up any invalid "Visitante Web" / "sin-correo" / empty rows in background
+    if (idsToPurge.length > 0) {
+      Promise.allSettled(
+        idsToPurge.map((badId) =>
+          fetch(`${url}/rest/v1/contact_submissions?id=eq.${encodeURIComponent(badId)}`, {
+            method: 'DELETE',
+            headers: getHeaders(),
+          })
+        )
+      ).catch(() => {});
     }
 
     // Sort by updatedAt descending so active conversations jump to top
@@ -249,7 +320,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      action = 'sync',
+      action = 'sync_messages',
       sessionId,
       dbId,
       name,
@@ -260,6 +331,25 @@ export async function POST(request: Request) {
       content,
       notes,
     } = body;
+
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanPhone = String(phone || '').trim();
+
+    // Action: register_lead only saves the lead in `clients` without creating an empty chat session
+    if (action === 'register_lead' || action === 'init') {
+      if (isInvalidCustomerIdentity(cleanName, cleanEmail) || cleanPhone.replace(/\D/g, '').length < 7) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Debes completar tu nombre completo, correo electrónico y teléfono para continuar.',
+          },
+          { status: 400 }
+        );
+      }
+      await upsertLeadInClients(cleanName, cleanEmail, cleanPhone);
+      return NextResponse.json({ success: true });
+    }
 
     // Fetch existing rows to locate session
     const res = await fetch(
@@ -273,7 +363,7 @@ export async function POST(request: Request) {
 
     let existingRecord: BotSessionRecord | null = null;
     for (const row of rows) {
-      const parsed = parseRowToSession(row);
+      const { session: parsed } = parseRowToSession(row);
       if (!parsed) continue;
       if (dbId && String(parsed.dbId) === String(dbId)) {
         existingRecord = parsed;
@@ -287,15 +377,48 @@ export async function POST(request: Request) {
 
     const nowIso = new Date().toISOString();
 
-    // 1. Create a brand new session if none found
-    if (!existingRecord) {
-      const cleanName = String(name || 'Visitante Web').trim();
-      const cleanEmail = String(email || '').trim().toLowerCase();
-      const cleanPhone = String(phone || '').trim();
-      const newSessionId = sessionId || `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    // Admin-only actions must never create a new session if existingRecord is not found
+    const adminOnlyActions = new Set([
+      'mark_read',
+      'takeover',
+      'release_to_bot',
+      'agent_message',
+      'close',
+      'update_lead_info',
+    ]);
+    if (!existingRecord && adminOnlyActions.has(action)) {
+      return NextResponse.json(
+        { success: false, error: 'Sesión no encontrada' },
+        { status: 404 }
+      );
+    }
 
+    // 1. Create a brand new session ONLY when the customer has valid full data AND sends a message
+    if (!existingRecord) {
+      if (isInvalidCustomerIdentity(cleanName, cleanEmail) || cleanPhone.replace(/\D/g, '').length < 7) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Nombre, correo y teléfono son obligatorios antes de enviar mensajes.',
+          },
+          { status: 400 }
+        );
+      }
+
+      const newSessionId = sessionId || `clari-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const initialMessages: BotChatMessage[] = Array.isArray(messages) ? [...messages] : [];
       const isRequestingAgent = action === 'request_agent';
+
+      if (action === 'customer_message' && content) {
+        initialMessages.push({
+          id: `usr-${Date.now()}`,
+          role: 'user',
+          senderName: cleanName,
+          content: String(content).trim(),
+          createdAt: nowIso,
+        });
+      }
+
       if (isRequestingAgent) {
         initialMessages.push(
           {
@@ -322,8 +445,16 @@ export async function POST(request: Request) {
         );
       }
 
+      // Never create a session if there are still 0 messages
+      if (initialMessages.length === 0) {
+        return NextResponse.json({ success: true, session: null });
+      }
+
       const payload: BotSessionPayload = {
         sessionId: newSessionId,
+        name: cleanName,
+        email: cleanEmail,
+        phone: cleanPhone,
         mode: isRequestingAgent ? 'agent' : 'bot',
         takenBy: isRequestingAgent ? 'Asesor en Línea' : undefined,
         unreadForAdmin: 1,
@@ -333,9 +464,7 @@ export async function POST(request: Request) {
         messages: initialMessages,
       };
 
-      if (cleanEmail) {
-        await upsertLeadInClients(cleanName, cleanEmail, cleanPhone);
-      }
+      await upsertLeadInClients(cleanName, cleanEmail, cleanPhone);
 
       const insertRes = await fetch(`${url}/rest/v1/contact_submissions`, {
         method: 'POST',
@@ -343,7 +472,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           company_name: 'Chat Clari',
           contact_name: cleanName,
-          email: cleanEmail || 'sin-correo@jrscargocr.com',
+          email: cleanEmail,
           phone: cleanPhone,
           message: JSON.stringify(payload),
           status: 'nuevo',
@@ -351,14 +480,18 @@ export async function POST(request: Request) {
       });
 
       const inserted = insertRes.ok ? await insertRes.json() : [];
+      const insertedRow = Array.isArray(inserted) && inserted.length > 0 ? inserted[0] : null;
+      const insertedId = insertedRow && insertedRow.id ? String(insertedRow.id) : `temp-${Date.now()}`;
+
       const fallbackCreated: BotSessionRecord = {
-        dbId: 0,
+        dbId: insertedId,
         sessionId: payload.sessionId,
         name: cleanName,
         email: cleanEmail,
         phone: cleanPhone,
         status: 'nuevo',
         mode: payload.mode,
+        takenBy: payload.takenBy,
         unreadForAdmin: payload.unreadForAdmin,
         trackings: payload.trackings,
         notes: payload.notes,
@@ -366,14 +499,12 @@ export async function POST(request: Request) {
         updatedAt: payload.updatedAt,
         messages: payload.messages,
       };
-      const createdRow =
-        Array.isArray(inserted) && inserted.length > 0
-          ? parseRowToSession(inserted[0]) || fallbackCreated
-          : fallbackCreated;
+
+      const parsedCreated = insertedRow ? parseRowToSession(insertedRow).session : null;
 
       return NextResponse.json({
         success: true,
-        session: createdRow,
+        session: parsedCreated || fallbackCreated,
       });
     }
 
@@ -384,9 +515,15 @@ export async function POST(request: Request) {
     let updatedTakenAt = existingRecord.takenAt;
     let updatedUnread = existingRecord.unreadForAdmin;
     let updatedStatus = existingRecord.status;
-    const updatedName = name ? String(name).trim() : existingRecord.name;
-    const updatedEmail = email ? String(email).trim().toLowerCase() : existingRecord.email;
-    const updatedPhone = phone !== undefined ? String(phone).trim() : existingRecord.phone;
+    const updatedName =
+      cleanName && !isInvalidCustomerIdentity(cleanName, existingRecord.email)
+        ? cleanName
+        : existingRecord.name;
+    const updatedEmail =
+      cleanEmail && !isInvalidCustomerIdentity(existingRecord.name, cleanEmail)
+        ? cleanEmail
+        : existingRecord.email;
+    const updatedPhone = cleanPhone || existingRecord.phone;
     const updatedNotes = notes !== undefined ? String(notes) : (existingRecord.notes || '');
 
     if (action === 'sync_messages' && Array.isArray(messages)) {
@@ -411,7 +548,7 @@ export async function POST(request: Request) {
       updatedMessages.push({
         id: `usr-${Date.now()}`,
         role: 'user',
-        senderName: existingRecord.name,
+        senderName: updatedName,
         content: String(content).trim(),
         createdAt: nowIso,
       });
@@ -428,7 +565,7 @@ export async function POST(request: Request) {
         {
           id: `usr-${Date.now()}`,
           role: 'user',
-          senderName: existingRecord.name,
+          senderName: updatedName,
           content: '👨‍💻 Solicito hablar con un asesor en línea',
           createdAt: nowIso,
         },
@@ -499,6 +636,9 @@ export async function POST(request: Request) {
 
     const updatedPayload: BotSessionPayload = {
       sessionId: existingRecord.sessionId,
+      name: updatedName,
+      email: updatedEmail,
+      phone: updatedPhone,
       mode: updatedMode,
       takenBy: updatedTakenBy,
       takenAt: updatedTakenAt,
@@ -510,7 +650,7 @@ export async function POST(request: Request) {
     };
 
     const patchRes = await fetch(
-      `${url}/rest/v1/contact_submissions?id=eq.${existingRecord.dbId}`,
+      `${url}/rest/v1/contact_submissions?id=eq.${encodeURIComponent(existingRecord.dbId)}`,
       {
         method: 'PATCH',
         headers: getHeaders(),
@@ -544,14 +684,14 @@ export async function POST(request: Request) {
       messages: updatedPayload.messages,
     };
 
-    const updatedSession =
+    const parsedUpdated =
       Array.isArray(patchedRows) && patchedRows.length > 0
-        ? parseRowToSession(patchedRows[0]) || fallbackUpdatedSession
-        : fallbackUpdatedSession;
+        ? parseRowToSession(patchedRows[0]).session
+        : null;
 
     return NextResponse.json({
       success: true,
-      session: updatedSession,
+      session: parsedUpdated || fallbackUpdatedSession,
     });
   } catch (error) {
     console.error('Error in POST /api/bot-sessions:', error);

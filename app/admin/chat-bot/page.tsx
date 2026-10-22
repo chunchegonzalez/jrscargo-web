@@ -34,7 +34,7 @@ interface BotChatMessage {
 }
 
 interface BotSessionRecord {
-  dbId: number;
+  dbId: string;
   sessionId: string;
   name: string;
   email: string;
@@ -53,7 +53,7 @@ interface BotSessionRecord {
 
 export default function AdminChatBotPage() {
   const [sessions, setSessions] = useState<BotSessionRecord[]>([]);
-  const [selectedDbId, setSelectedDbId] = useState<number | null>(null);
+  const [selectedDbId, setSelectedDbId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unread' | 'agent' | 'bot' | 'closed'>('all');
@@ -135,29 +135,30 @@ export default function AdminChatBotPage() {
     return () => clearInterval(interval);
   }, [fetchSessions]);
 
-  const selectedSession = sessions.find((s) => s.dbId === selectedDbId) || null;
+  const selectedSession = selectedDbId
+    ? sessions.find((s) => String(s.dbId) === String(selectedDbId)) || null
+    : null;
 
-  // Populate lead editor when switching sessions
-  useEffect(() => {
-    if (!selectedSession) return;
-    setEditName(selectedSession.name || '');
-    setEditEmail(selectedSession.email || '');
-    setEditPhone(selectedSession.phone || '');
-    setEditNotes(selectedSession.notes || '');
+  const handleSelectSession = (session: BotSessionRecord) => {
+    setSelectedDbId(String(session.dbId));
+    setEditName(session.name || '');
+    setEditEmail(session.email || '');
+    setEditPhone(session.phone || '');
+    setEditNotes(session.notes || '');
     setSaveSuccess(false);
 
-    // Automatically mark as read if it had unread alerts
-    if (selectedSession.unreadForAdmin > 0) {
+    if (session.unreadForAdmin > 0) {
       fetch('/api/bot-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'mark_read',
-          dbId: selectedSession.dbId,
+          dbId: session.dbId,
+          sessionId: session.sessionId,
         }),
       }).then(() => fetchSessions(true));
     }
-  }, [selectedSession?.dbId]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -174,6 +175,7 @@ export default function AdminChatBotPage() {
         body: JSON.stringify({
           action: 'takeover',
           dbId: selectedSession.dbId,
+          sessionId: selectedSession.sessionId,
           agentName,
         }),
       });
@@ -195,6 +197,7 @@ export default function AdminChatBotPage() {
         body: JSON.stringify({
           action: 'release_to_bot',
           dbId: selectedSession.dbId,
+          sessionId: selectedSession.sessionId,
         }),
       });
       if (res.ok) {
@@ -213,6 +216,7 @@ export default function AdminChatBotPage() {
       body: JSON.stringify({
         action: 'close',
         dbId: selectedSession.dbId,
+        sessionId: selectedSession.sessionId,
       }),
     });
     await fetchSessions(true);
@@ -234,6 +238,7 @@ export default function AdminChatBotPage() {
         body: JSON.stringify({
           action: 'agent_message',
           dbId: selectedSession.dbId,
+          sessionId: selectedSession.sessionId,
           agentName,
           content: text,
         }),
@@ -258,6 +263,7 @@ export default function AdminChatBotPage() {
         body: JSON.stringify({
           action: 'update_lead_info',
           dbId: selectedSession.dbId,
+          sessionId: selectedSession.sessionId,
           name: editName,
           email: editEmail,
           phone: editPhone,
@@ -274,9 +280,9 @@ export default function AdminChatBotPage() {
     }
   };
 
-  const handleDeleteSession = async (dbId: number) => {
+  const handleDeleteSession = async (dbId: string) => {
     if (!confirm('¿Eliminar esta conversación del historial?')) return;
-    await fetch(`/api/bot-sessions?dbId=${dbId}`, { method: 'DELETE' });
+    await fetch(`/api/bot-sessions?dbId=${encodeURIComponent(dbId)}`, { method: 'DELETE' });
     if (selectedDbId === dbId) setSelectedDbId(null);
     await fetchSessions(true);
   };
@@ -335,7 +341,7 @@ export default function AdminChatBotPage() {
                 )}
               </h1>
               <p className="text-xs text-gray-500">
-                Monitorea en vivo las consultas del bot, toma el mando como agente y guarda los datos de cada cliente.
+                Monitorea en vivo las consultas reales de clientes registrados, toma el mando como agente y gestiona sus datos.
               </p>
             </div>
           </div>
@@ -417,7 +423,7 @@ export default function AdminChatBotPage() {
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, correo, guía..."
+                placeholder="Buscar por nombre, correo, teléfono, guía..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-brand-blue"
@@ -450,18 +456,18 @@ export default function AdminChatBotPage() {
           <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
             {filteredSessions.length === 0 ? (
               <div className="p-8 text-center text-gray-400 text-xs">
-                No hay conversaciones en esta vista.
+                No hay conversaciones activas en esta vista.
               </div>
             ) : (
               filteredSessions.map((session) => {
-                const isSelected = session.dbId === selectedDbId;
+                const isSelected = selectedDbId !== null && String(session.dbId) === String(selectedDbId);
                 const lastMsg = session.messages[session.messages.length - 1];
                 const hasAlert = session.unreadForAdmin > 0 || session.status === 'nuevo';
 
                 return (
                   <button
                     key={session.dbId}
-                    onClick={() => setSelectedDbId(session.dbId)}
+                    onClick={() => handleSelectSession(session)}
                     className={`w-full text-left p-3.5 transition-all hover:bg-slate-50 flex flex-col gap-1.5 relative ${
                       isSelected ? 'bg-brand-blue/5 border-l-4 border-l-brand-blue' : ''
                     }`}
@@ -475,6 +481,11 @@ export default function AdminChatBotPage() {
                           )}
                         </p>
                         <p className="text-[11px] text-gray-500 truncate">{session.email}</p>
+                        {session.phone && (
+                          <p className="text-[10px] text-brand-blue font-semibold truncate">
+                            📱 {session.phone}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-end shrink-0 gap-1">
@@ -512,7 +523,7 @@ export default function AdminChatBotPage() {
 
                     <div className="flex items-center justify-between gap-2 mt-0.5">
                       <p className="text-[11px] text-gray-600 truncate">
-                        {lastMsg ? lastMsg.content.replace(/\*/g, '') : 'Inició conversación en el sitio web'}
+                        {lastMsg ? lastMsg.content.replace(/\*/g, '') : 'Consulta activa'}
                       </p>
                       {session.unreadForAdmin > 0 && (
                         <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black shrink-0">
@@ -556,7 +567,10 @@ export default function AdminChatBotPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-300 truncate">{selectedSession.email}</p>
+                  <p className="text-[11px] text-gray-300 truncate">
+                    {selectedSession.email}
+                    {selectedSession.phone ? ` • 📱 ${selectedSession.phone}` : ''}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -613,56 +627,50 @@ export default function AdminChatBotPage() {
 
               {/* Messages History */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/70">
-                {selectedSession.messages.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-gray-400">
-                    El cliente registró sus datos en el bot pero aún no ha enviado preguntas. Puedes escribirle primero tomando el mando.
-                  </div>
-                ) : (
-                  selectedSession.messages.map((m) => {
-                    if (m.role === 'system') {
-                      return (
-                        <div key={m.id} className="flex justify-center my-2">
-                          <span className="px-3 py-1 rounded-full bg-gray-200/80 text-gray-700 text-[11px] font-bold">
-                            {m.content.replace(/\*/g, '')}
-                          </span>
-                        </div>
-                      );
-                    }
-
-                    const isCustomer = m.role === 'user';
-                    const isAgent = m.role === 'agent';
-
+                {selectedSession.messages.map((m) => {
+                  if (m.role === 'system') {
                     return (
-                      <div
-                        key={m.id}
-                        className={`flex flex-col ${isCustomer ? 'items-start' : 'items-end'}`}
-                      >
-                        <div className="flex items-center gap-1.5 mb-1 px-1">
-                          <span className="text-[10px] font-extrabold text-gray-500">
-                            {isCustomer
-                              ? `👤 ${selectedSession.name}`
-                              : isAgent
-                                ? `👨‍💻 ${m.senderName || 'Agente JRS'}`
-                                : '🤖 Clari AI'}
-                          </span>
-                          <span className="text-[10px] text-gray-400">{formatTime(m.createdAt)}</span>
-                        </div>
-
-                        <div
-                          className={`max-w-[85%] p-3 rounded-2xl text-xs whitespace-pre-wrap leading-relaxed shadow-2xs ${
-                            isCustomer
-                              ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-xs'
-                              : isAgent
-                                ? 'bg-emerald-600 text-white rounded-tr-xs font-medium'
-                                : 'bg-[#0B1D2B] text-white rounded-tr-xs'
-                          }`}
-                        >
-                          {m.content}
-                        </div>
+                      <div key={m.id} className="flex justify-center my-2">
+                        <span className="px-3 py-1 rounded-full bg-gray-200/80 text-gray-700 text-[11px] font-bold">
+                          {m.content.replace(/\*/g, '')}
+                        </span>
                       </div>
                     );
-                  })
-                )}
+                  }
+
+                  const isCustomer = m.role === 'user';
+                  const isAgent = m.role === 'agent';
+
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex flex-col ${isCustomer ? 'items-start' : 'items-end'}`}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1 px-1">
+                        <span className="text-[10px] font-extrabold text-gray-500">
+                          {isCustomer
+                            ? `👤 ${selectedSession.name}`
+                            : isAgent
+                              ? `👨‍💻 ${m.senderName || 'Agente JRS'}`
+                              : '🤖 Clari AI'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">{formatTime(m.createdAt)}</span>
+                      </div>
+
+                      <div
+                        className={`max-w-[85%] p-3 rounded-2xl text-xs whitespace-pre-wrap leading-relaxed shadow-2xs ${
+                          isCustomer
+                            ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-xs'
+                            : isAgent
+                              ? 'bg-emerald-600 text-white rounded-tr-xs font-medium'
+                              : 'bg-[#0B1D2B] text-white rounded-tr-xs'
+                        }`}
+                      >
+                        {m.content}
+                      </div>
+                    </div>
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -671,7 +679,7 @@ export default function AdminChatBotPage() {
                 {[
                   '¡Hola! Te atiende un asesor de JRS Cargo en vivo, ¿en qué te puedo ayudar?',
                   'Con gusto estamos verificando tu número de guía en nuestra bodega.',
-                  '¿Me podrías confirmar tu número de WhatsApp para coordinar la entrega?',
+                  '¿Me podrías confirmar tu dirección para coordinar la entrega?',
                 ].map((quick, idx) => (
                   <button
                     key={idx}
@@ -745,6 +753,7 @@ export default function AdminChatBotPage() {
                     <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
+                      required
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-brand-blue"
@@ -760,6 +769,7 @@ export default function AdminChatBotPage() {
                     <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="email"
+                      required
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
                       className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-brand-blue"
@@ -775,6 +785,7 @@ export default function AdminChatBotPage() {
                     <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
+                      required
                       placeholder="Ej. 8888-8888"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}

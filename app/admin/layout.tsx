@@ -23,7 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Live Bot Consultation Alerts across Admin Panel
   const [botUnreadCount, setBotUnreadCount] = useState(0);
   const [latestBotAlert, setLatestBotAlert] = useState<{
-    dbId: number;
+    dbId: string;
     name: string;
     email: string;
     preview: string;
@@ -113,8 +113,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const msgs = Array.isArray(newestUnread.messages) ? newestUnread.messages : [];
             const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1].content : 'Inició una consulta en el bot';
             setLatestBotAlert({
-              dbId: newestUnread.dbId,
-              name: newestUnread.name || 'Visitante Web',
+              dbId: String(newestUnread.dbId),
+              name: newestUnread.name,
               email: newestUnread.email || '',
               preview: String(lastMsg).replace(/\*/g, '').slice(0, 90),
             });
