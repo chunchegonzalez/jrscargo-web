@@ -9,11 +9,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Tarifas Aéreas y Marítimas | JRS CARGO Costa Rica',
     description: 'Envíos aéreos desde $7/lb y marítimos desde $30/ft³. Cotiza tus paquetes online con JRS CARGO.',
-    url: 'https://jrscargocr.com/tarifas',
+    url: 'https://www.jrscargocr.com/tarifas',
     type: 'website',
   },
   alternates: {
-    canonical: 'https://jrscargocr.com/tarifas',
+    canonical: 'https://www.jrscargocr.com/tarifas',
   }
 };
 

@@ -7,10 +7,19 @@ import { Analytics } from "@vercel/analytics/react"
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'JRS CARGO Costa Rica | Casillero y Envíos Internacionales',
+  metadataBase: new URL('https://www.jrscargocr.com'),
+  title: 'Casillero en Miami Gratis | JRS CARGO Costa Rica',
   description:
-    'Trae tus compras desde Estados Unidos, España y China a Costa Rica con JRS CARGO. Envíos aéreos y marítimos, casillero internacional, tracking y cotizador online.',
+    'Abrí tu casillero en Miami gratis y comprá en Amazon, SHEIN, eBay y más. Recibí en Costa Rica desde $7/lb aéreo, con tracking en vivo. También casillero en España y China.',
   keywords: [
+    'casillero en Miami',
+    'casillero Miami Costa Rica',
+    'casillero gratis Costa Rica',
+    'casillero virtual Costa Rica',
+    'casillero internacional',
+    'casillero Amazon Costa Rica',
+    'casillero España Costa Rica',
+    'casillero China Costa Rica',
     'casillero Costa Rica',
     'envíos internacionales Costa Rica',
     'compras en USA Costa Rica',
@@ -23,25 +32,17 @@ export const metadata: Metadata = {
     'envío marítimo Costa Rica',
   ],
   openGraph: {
-    title: 'JRS CARGO Costa Rica | Casillero y Envíos Internacionales',
+    title: 'Casillero en Miami Gratis | JRS CARGO Costa Rica',
     description:
-      'Trae tus compras desde Estados Unidos, España y China a Costa Rica con JRS CARGO. Envíos aéreos y marítimos, casillero internacional, tracking y cotizador online.',
-    url: 'https://jrscargocr.com',
+      'Abrí tu casillero en Miami gratis y recibí tus compras de USA, España y China en Costa Rica con tracking en vivo.',
+    url: 'https://www.jrscargocr.com',
     siteName: 'JRS CARGO CR',
     locale: 'es_CR',
     type: 'website',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'JRS CARGO CR — Casillero y Envíos Internacionales',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'JRS CARGO Costa Rica | Casillero y Envíos Internacionales',
+    title: 'Casillero en Miami Gratis | JRS CARGO Costa Rica',
     description:
       'Trae tus compras desde Estados Unidos, España y China a Costa Rica con JRS CARGO.',
   },
@@ -63,7 +64,7 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   alternates: {
-    canonical: 'https://jrscargocr.com',
+    canonical: 'https://www.jrscargocr.com',
   },
 }
 
@@ -72,10 +73,10 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://jrscargocr.com/#organization',
+      '@id': 'https://www.jrscargocr.com/#organization',
       'name': 'JRS CARGO Costa Rica',
-      'url': 'https://jrscargocr.com',
-      'logo': 'https://jrscargocr.com/logo.png',
+      'url': 'https://www.jrscargocr.com',
+      'logo': 'https://www.jrscargocr.com/logo.png',
       'contactPoint': {
         '@type': 'ContactPoint',
         'telephone': '+506-7260-1238',
@@ -85,16 +86,45 @@ const jsonLd = {
       }
     },
     {
+      '@type': 'LocalBusiness',
+      '@id': 'https://www.jrscargocr.com/#localbusiness',
+      'name': 'JRS CARGO Costa Rica — Casillero en Miami',
+      'description': 'Casillero en Miami, España y China para comprar en línea y recibir en Costa Rica. Envíos aéreos y marítimos.',
+      'url': 'https://www.jrscargocr.com',
+      'image': 'https://www.jrscargocr.com/logo.png',
+      'logo': 'https://www.jrscargocr.com/logo.png',
+      'telephone': '+506-7260-1238',
+      'email': 'info@jrscargocr.com',
+      'priceRange': '$$',
+      'address': {
+        '@type': 'PostalAddress',
+        'streetAddress': '2W23+2P4, San Pablo',
+        'addressLocality': 'Heredia',
+        'addressRegion': 'Heredia',
+        'addressCountry': 'CR'
+      },
+      'areaServed': { '@type': 'Country', 'name': 'Costa Rica' },
+      'openingHoursSpecification': [
+        {
+          '@type': 'OpeningHoursSpecification',
+          'dayOfWeek': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          'opens': '08:00',
+          'closes': '17:30'
+        }
+      ],
+      'parentOrganization': { '@id': 'https://www.jrscargocr.com/#organization' }
+    },
+    {
       '@type': 'WebSite',
-      '@id': 'https://jrscargocr.com/#website',
-      'url': 'https://jrscargocr.com',
+      '@id': 'https://www.jrscargocr.com/#website',
+      'url': 'https://www.jrscargocr.com',
       'name': 'JRS CARGO Costa Rica',
-      'publisher': { '@id': 'https://jrscargocr.com/#organization' },
+      'publisher': { '@id': 'https://www.jrscargocr.com/#organization' },
       'potentialAction': {
         '@type': 'SearchAction',
         'target': {
           '@type': 'EntryPoint',
-          'urlTemplate': 'https://jrscargocr.com/tracking?number={search_term_string}'
+          'urlTemplate': 'https://www.jrscargocr.com/tracking?number={search_term_string}'
         },
         'query-input': 'required name=search_term_string'
       }
@@ -108,28 +138,28 @@ const jsonLd = {
           'position': 1,
           'name': 'Rastrear Mi Paquete (Tracking)',
           'description': 'Consulta en tiempo real la ubicación y estado de tus paquetes desde Miami a Costa Rica.',
-          'url': 'https://jrscargocr.com/tracking'
+          'url': 'https://www.jrscargocr.com/tracking'
         },
         {
           '@type': 'SiteNavigationElement',
           'position': 2,
           'name': 'Abrir Casillero en Miami',
           'description': 'Regístrate 100% gratis y obtén tu casillero en Miami para comprar en USA y el mundo.',
-          'url': 'https://jrscargocr.com/casillero'
+          'url': 'https://www.jrscargocr.com/casillero'
         },
         {
           '@type': 'SiteNavigationElement',
           'position': 3,
           'name': 'Tarifas Aéreas y Marítimas',
           'description': 'Conoce nuestras tarifas: Aéreo Miami $7/lb y Marítimo $30/ft³ hacia Costa Rica.',
-          'url': 'https://jrscargocr.com/tarifas'
+          'url': 'https://www.jrscargocr.com/tarifas'
         },
         {
           '@type': 'SiteNavigationElement',
           'position': 4,
           'name': '¿Cómo Funciona el Casillero?',
           'description': 'Guía paso a paso para comprar por internet y recibir tus paquetes en Costa Rica.',
-          'url': 'https://jrscargocr.com/como-funciona'
+          'url': 'https://www.jrscargocr.com/como-funciona'
         }
       ]
     }

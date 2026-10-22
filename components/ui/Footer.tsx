@@ -61,6 +61,11 @@ export default function Footer() {
             <h3 className="text-white font-semibold text-lg mb-6">{t.footer.clients}</h3>
             <ul className="space-y-4">
               <li>
+                <Link href="/casillero" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
+                  Casillero en Miami
+                </Link>
+              </li>
+              <li>
                 <a href="https://worldboxcr.com/jrscargo/register" target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-brand-yellow transition-colors text-sm">
                   {t.footer.createLocker}
                 </a>

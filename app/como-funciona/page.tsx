@@ -9,11 +9,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: '¿Cómo Funciona el Casillero Internacional? | JRS CARGO',
     description: 'Guía paso a paso para comprar en USA, España y China y recibir tus paquetes en Costa Rica.',
-    url: 'https://jrscargocr.com/como-funciona',
+    url: 'https://www.jrscargocr.com/como-funciona',
     type: 'website',
   },
   alternates: {
-    canonical: 'https://jrscargocr.com/como-funciona',
+    canonical: 'https://www.jrscargocr.com/como-funciona',
   }
 };
 

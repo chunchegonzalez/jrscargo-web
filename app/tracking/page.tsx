@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Rastrear Mi Paquete | JRS CARGO Costa Rica',
     description: 'Consulta en tiempo real la ubicación y estado de tus paquetes desde Miami a Costa Rica.',
-    url: 'https://jrscargocr.com/tracking',
+    url: 'https://www.jrscargocr.com/tracking',
     type: 'website',
   },
   alternates: {
-    canonical: 'https://jrscargocr.com/tracking',
+    canonical: 'https://www.jrscargocr.com/tracking',
   }
 };
 
