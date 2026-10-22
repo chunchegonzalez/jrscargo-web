@@ -74,13 +74,12 @@ export default function HowItWorks() {
           {/* Animated Connecting Line (Desktop) */}
           <div className="hidden lg:block absolute top-12 left-24 right-24 h-1 z-0">
             <svg width="100%" height="100%" className="text-gray-300">
-              <motion.line 
+              <line 
                 x1="0" y1="50%" x2="100%" y2="50%" 
                 stroke="currentColor" 
                 strokeWidth="3" 
                 strokeDasharray="10 10" 
-                animate={{ strokeDashoffset: [0, -20] }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                style={{ animation: 'gpu-dash-flow 1.2s linear infinite' }}
               />
             </svg>
           </div>
@@ -102,16 +101,17 @@ export default function HowItWorks() {
                     {idx + 1}
                   </div>
 
-                  {/* Icon Circle with continuous floating animation */}
-                  <motion.div 
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: idx * 0.2 }}
-                    className={`w-24 h-24 rounded-3xl ${step.color} text-white flex items-center justify-center mb-6 shadow-lg shadow-${step.color}/30 transform transition-transform duration-300 relative`}
+                  {/* Icon Circle with GPU continuous floating animation */}
+                  <div 
+                    style={{
+                      willChange: 'transform',
+                      animation: `gpu-float-slow 3s ease-in-out ${idx * 0.2}s infinite`,
+                    }}
+                    className={`w-24 h-24 rounded-3xl ${step.color} text-white flex items-center justify-center mb-6 shadow-lg shadow-${step.color}/30 transform hover:scale-110 hover:rotate-3 transition-transform duration-300 relative`}
                   >
                     <Icon size={40} className="relative z-10" />
                     <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 rounded-3xl transition-opacity" />
-                  </motion.div>
+                  </div>
 
                   {/* Content */}
                   <h3 className={`text-xl font-bold mb-4 ${step.textColor}`}>
@@ -145,27 +145,27 @@ export default function HowItWorks() {
           className="mt-20 pt-12 border-t border-gray-200"
         >
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 font-bold text-brand-text-gray">
-            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
+            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:scale-105 hover:shadow-md transition-all">
               <ShoppingBag size={18} className="text-brand-red" /> {language === 'en' ? 'Shop' : 'Compra'}
-            </motion.span>
-            <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            </span>
+            <div>
               <ArrowRight className="text-brand-blue/50" />
-            </motion.div>
-            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
+            </div>
+            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:scale-105 hover:shadow-md transition-all">
               <UserPlus size={18} className="text-brand-blue" /> {language === 'en' ? 'Warehouse' : 'Casillero'}
-            </motion.span>
-            <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            </span>
+            <div>
               <ArrowRight className="text-brand-blue/50" />
-            </motion.div>
-            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
+            </div>
+            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:scale-105 hover:shadow-md transition-all">
               <PlaneTakeoff size={18} className="text-brand-yellow" /> {language === 'en' ? 'Shipping' : 'Transporte'}
-            </motion.span>
-            <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+            </span>
+            <div>
               <ArrowRight className="text-brand-blue/50" />
-            </motion.div>
-            <motion.span whileHover={{ scale: 1.05 }} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:shadow-md transition-shadow">
+            </div>
+            <span className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm cursor-default hover:scale-105 hover:shadow-md transition-all">
               <MapPin size={18} className="text-brand-blue" /> Costa Rica
-            </motion.span>
+            </span>
           </div>
         </motion.div>
       </div>

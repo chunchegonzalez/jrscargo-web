@@ -63,22 +63,28 @@ export default function AmazonDeals() {
 
   return (
     <section className="py-20 bg-[#0B1D2B] relative overflow-hidden">
-      {/* Ambient background glows */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[350px] bg-brand-yellow/10 blur-[130px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-brand-red/10 blur-[120px] rounded-full pointer-events-none" />
+      {/* Ambient background glows (GPU-friendly radial gradients) */}
+      <div
+        className="absolute top-0 left-1/4 w-[650px] h-[400px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%)',
+        }}
+      />
+      <div
+        className="absolute bottom-0 right-1/4 w-[550px] h-[350px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(239, 68, 68, 0.12) 0%, transparent 70%)',
+        }}
+      />
 
       {/* Ultra-Pro Premium Partner Ticker Banner */}
-      <div className="relative w-full border-y border-white/10 bg-[#07131D]/80 backdrop-blur-md shadow-2xl py-3.5 mb-14 overflow-hidden z-20">
+      <div className="relative w-full border-y border-white/10 bg-[#07131D]/90 shadow-2xl py-3.5 mb-14 overflow-hidden z-20">
         {/* Left & Right Smooth Edge Masks */}
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-r from-[#07131D] to-transparent z-10" />
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-l from-[#07131D] to-transparent z-10" />
 
         <div className="flex select-none">
-          <motion.div 
-            animate={{ x: ['0%', '-50%'] }}
-            transition={{ repeat: Infinity, duration: 25, ease: 'linear' }}
-            className="flex items-center whitespace-nowrap shrink-0"
-          >
+          <div className="flex items-center whitespace-nowrap shrink-0 animate-gpu-ticker">
             {[...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems].map((item, idx) => {
               const Icon = item.icon;
               return (
@@ -101,7 +107,7 @@ export default function AmazonDeals() {
                 </div>
               );
             })}
-          </motion.div>
+          </div>
         </div>
       </div>
 

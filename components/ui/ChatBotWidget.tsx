@@ -35,14 +35,17 @@ const AnimatedRobotFace = ({
   const eyeY = useTransform(smoothY, [-1, 1], [-4.5, 4.5]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!faceRef.current) return;
-      const rect = faceRef.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
+    let rafId: number | null = null;
+    let lastClientX = 0;
+    let lastClientY = 0;
 
-      const deltaX = e.clientX - centerX;
-      const deltaY = e.clientY - centerY;
+    const updateMousePosition = () => {
+      rafId = null;
+      const centerX = window.innerWidth - 52;
+      const centerY = window.innerHeight - 52;
+
+      const deltaX = lastClientX - centerX;
+      const deltaY = lastClientY - centerY;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       const maxDistance = 650;
       const normalizedDist = Math.min(distance / maxDistance, 1);
@@ -52,8 +55,19 @@ const AnimatedRobotFace = ({
       mouseY.set(Math.sin(angle) * normalizedDist);
     };
 
+    const handleMouseMove = (e: MouseEvent) => {
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(updateMousePosition);
+      }
+    };
+
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+    };
   }, [mouseX, mouseY]);
 
   // Edición 3D Mes Patrio (Costa Rica 🇨🇷) hasta el 20 de Septiembre
@@ -119,14 +133,15 @@ const AnimatedRobotFace = ({
       }}
       className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-b from-gray-50 to-gray-200 shadow-[0_12px_35px_rgba(18,67,94,0.35)] flex items-center justify-center relative overflow-hidden border-2 border-white select-none"
     >
-      {/* Outer Multi-color JRS Halo Ring - Accelerates on Hover */}
-      <motion.div
-        animate={{ rotate: 360, scale: isHovered ? 1.32 : 1.06 }}
-        transition={{
-          rotate: { duration: isHovered ? 1.6 : 5.5, repeat: Infinity, ease: "linear" },
-          scale: { duration: 0.3 },
+      {/* Outer Multi-color JRS Halo Ring - GPU CSS Spin */}
+      <div
+        style={{
+          willChange: 'transform',
+          animation: `gpu-spin-cw ${isHovered ? '1.6s' : '5.5s'} linear infinite`,
         }}
-        className="absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95"
+        className={`absolute w-[150%] h-[150%] bg-[conic-gradient(from_0deg,transparent,#12435E,#F9B233,#ED3B4A,transparent)] opacity-95 transition-transform duration-300 ${
+          isHovered ? 'scale-125' : 'scale-105'
+        }`}
       />
 
       {/* Clean 3D White Inner Sphere */}

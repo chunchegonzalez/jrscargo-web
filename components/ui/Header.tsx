@@ -37,7 +37,9 @@ export default function Header() {
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
-    const handleScroll = () => {
+    let ticking = false;
+
+    const updateScrollState = () => {
       const scrollY = window.scrollY;
       setIsScrolled(scrollY > 20);
 
@@ -60,10 +62,18 @@ export default function Header() {
       if (found) {
         setActiveSection(found);
       }
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(updateScrollState);
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    updateScrollState();
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);

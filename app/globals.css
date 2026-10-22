@@ -244,3 +244,313 @@
   pointer-events: none !important;
   user-select: none !important;
 }
+
+/* ==========================================================================
+   GPU-ACCELERATED COMPOSITOR ANIMATIONS (Zero Main-Thread JS Overhead)
+   ========================================================================== */
+
+@keyframes spooky-letter-wave {
+  0%, 100% {
+    transform: translate3d(0, 0px, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(0, -4px, 0) rotate(-1.8deg);
+  }
+  50% {
+    transform: translate3d(0, 1px, 0) rotate(1.8deg);
+  }
+  75% {
+    transform: translate3d(0, -2px, 0) rotate(-0.8deg);
+  }
+}
+
+.spooky-letter {
+  display: inline-block;
+  will-change: transform;
+  animation: spooky-letter-wave 3.2s ease-in-out infinite;
+  transition: transform 0.18s ease-out;
+}
+
+.spooky-letter-even:hover {
+  transform: translate3d(0, -10px, 0) scale(1.16) rotate(-8deg) !important;
+}
+
+.spooky-letter-odd:hover {
+  transform: translate3d(0, -10px, 0) scale(1.16) rotate(8deg) !important;
+}
+
+@keyframes gpu-float-slow {
+  0%, 100% {
+    transform: translate3d(0, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0) rotate(1.5deg);
+  }
+}
+
+@keyframes gpu-float-web {
+  0%, 100% {
+    transform: translate3d(0, 0px, 0);
+  }
+  50% {
+    transform: translate3d(0, 6px, 0);
+  }
+}
+
+@keyframes gpu-bat-1 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-6deg) scale(1);
+  }
+  50% {
+    transform: translate3d(26px, -12px, 0) rotate(8deg) scale(1.08);
+  }
+}
+
+@keyframes gpu-bat-2 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(8deg) scale(0.95);
+  }
+  50% {
+    transform: translate3d(-18px, 10px, 0) rotate(-8deg) scale(1.06);
+  }
+}
+
+@keyframes gpu-bat-3 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-10deg);
+  }
+  50% {
+    transform: translate3d(35px, -14px, 0) rotate(5deg);
+  }
+}
+
+@keyframes gpu-bat-4 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(6deg);
+  }
+  50% {
+    transform: translate3d(-24px, -10px, 0) rotate(-6deg);
+  }
+}
+
+@keyframes gpu-ghost-float {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-3deg);
+  }
+  50% {
+    transform: translate3d(6px, -14px, 0) rotate(3deg);
+  }
+}
+
+@keyframes gpu-pumpkin-bob {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-5deg);
+  }
+  50% {
+    transform: translate3d(0px, -6px, 0) rotate(5deg);
+  }
+}
+
+@keyframes gpu-firefly {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) scale(0.85);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate3d(0px, -28px, 0) scale(1.25);
+    opacity: 0.9;
+  }
+}
+
+@keyframes gpu-hand-crawl {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-8deg);
+  }
+  33% {
+    transform: translate3d(14px, 4px, 0) rotate(6deg);
+  }
+  66% {
+    transform: translate3d(-6px, -2px, 0) rotate(-4deg);
+  }
+}
+
+@keyframes gpu-bone-spin {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(15deg);
+  }
+  50% {
+    transform: translate3d(0px, -8px, 0) rotate(-20deg);
+  }
+}
+
+@keyframes gpu-skull-bob {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-12deg) scale(1);
+  }
+  50% {
+    transform: translate3d(0px, -7px, 0) rotate(10deg) scale(1.08);
+  }
+}
+
+@keyframes gpu-skeleton-dance {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(-8deg);
+  }
+  50% {
+    transform: translate3d(0px, -10px, 0) rotate(10deg);
+  }
+}
+
+@keyframes gpu-witch-hat {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(10deg);
+  }
+  50% {
+    transform: translate3d(0px, -4px, 0) rotate(16deg);
+  }
+}
+
+@keyframes gpu-spin-cw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gpu-spin-ccw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes gpu-dash-flow {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes gpu-plane-miami {
+  0% {
+    transform: translate3d(0px, 0px, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(-190px, 190px, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes gpu-plane-spain {
+  0% {
+    transform: translate3d(0px, 0px, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(190px, 168px, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes gpu-plane-china {
+  0% {
+    transform: translate3d(0px, 0px, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(190px, -168px, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes gpu-ship-miami {
+  0% {
+    transform: translate3d(0px, 0px, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(-190px, -190px, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes gpu-card-1 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(5px, -10px, 0) rotate(1deg);
+  }
+}
+
+@keyframes gpu-card-2 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-5px, 10px, 0) rotate(-1deg);
+  }
+}
+
+@keyframes gpu-card-3 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-8px, -8px, 0) rotate(2deg);
+  }
+}
+
+@keyframes gpu-card-4 {
+  0%, 100% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(8px, 8px, 0) rotate(-2deg);
+  }
+}
+
+@keyframes gpu-ticker {
+  0% {
+    transform: translate3d(0%, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-gpu-ticker {
+  will-change: transform;
+  animation: gpu-ticker 25s linear infinite;
+}

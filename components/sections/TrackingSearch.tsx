@@ -120,11 +120,29 @@ export default function TrackingSearch() {
 
   return (
     <section id="tracking" className="section-padding bg-gray-50 relative overflow-hidden">
-      {/* Dynamic Background Elements */}
+      {/* Dynamic Background Elements (GPU-friendly radial gradients) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full pointer-events-none">
-        <div className="absolute top-20 left-0 w-72 h-72 bg-brand-blue/5 rounded-full blur-3xl mix-blend-multiply animate-blob"></div>
-        <div className="absolute top-20 right-0 w-72 h-72 bg-brand-red/5 rounded-full blur-3xl mix-blend-multiply animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-brand-yellow/10 rounded-full blur-3xl mix-blend-multiply animate-blob animation-delay-4000"></div>
+        <div
+          className="absolute top-20 left-0 w-72 h-72 rounded-full animate-blob"
+          style={{
+            background: 'radial-gradient(circle, rgba(18, 67, 94, 0.06) 0%, transparent 70%)',
+            willChange: 'transform',
+          }}
+        />
+        <div
+          className="absolute top-20 right-0 w-72 h-72 rounded-full animate-blob animation-delay-2000"
+          style={{
+            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.06) 0%, transparent 70%)',
+            willChange: 'transform',
+          }}
+        />
+        <div
+          className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full animate-blob animation-delay-4000"
+          style={{
+            background: 'radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 70%)',
+            willChange: 'transform',
+          }}
+        />
       </div>
 
       <div className="container-max max-w-5xl mx-auto relative z-10">

@@ -123,9 +123,9 @@ export function HalloweenSoftFullMoon({
       style={{ width: size, height: size, ...style }}
       aria-hidden="true"
     >
-      {/* Outer pulsing golden-orange glow */}
+      {/* Outer golden-orange glow */}
       <div
-        className="absolute inset-0 rounded-full pointer-events-none blur-2xl animate-pulse"
+        className="absolute inset-0 rounded-full pointer-events-none"
         style={{
           background:
             'radial-gradient(circle, rgba(251, 146, 60, 0.45) 0%, rgba(245, 158, 11, 0.22) 48%, rgba(147, 51, 234, 0.08) 72%, transparent 85%)',
@@ -139,7 +139,7 @@ export function HalloweenSoftFullMoon({
         viewBox="0 0 160 160"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="relative z-10 drop-shadow-[0_0_25px_rgba(251,146,60,0.45)]"
+        className="relative z-10"
       >
         <defs>
           <radialGradient id="harvestMoonGrad" cx="40%" cy="35%" r="58%">
@@ -209,7 +209,7 @@ export function HalloweenMiniPumpkin({
       viewBox="0 0 36 36"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`drop-shadow-[0_4px_10px_rgba(249,115,22,0.55)] ${className}`}
+      className={className}
       aria-hidden="true"
     >
       <defs>
@@ -264,7 +264,7 @@ export function HalloweenFloatingGhost({
       viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`drop-shadow-[0_10px_20px_rgba(139,92,246,0.28)] ${className}`}
+      className={className}
       aria-hidden="true"
     >
       <defs>
@@ -321,7 +321,7 @@ export function HalloweenWitchHat({
       viewBox="0 0 90 76"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`pointer-events-none select-none overflow-visible drop-shadow-[0_6px_14px_rgba(88,28,135,0.45)] ${className}`}
+      className={`pointer-events-none select-none overflow-visible ${className}`}
       style={style}
       aria-hidden="true"
     >
@@ -419,27 +419,12 @@ export function HalloweenWitchHat({
 
       {/* Magical glowing stars around the hat tip */}
       <g>
-        <circle cx="77" cy="12" r="2" fill="#FDE047">
-          <animate attributeName="opacity" values="0.3;1;0.3" dur="1.6s" repeatCount="indefinite" />
-          <animate attributeName="r" values="1.4;2.5;1.4" dur="1.6s" repeatCount="indefinite" />
-        </circle>
-        <circle cx="16" cy="28" r="1.6" fill="#FB923C">
-          <animate attributeName="opacity" values="1;0.25;1" dur="2.1s" repeatCount="indefinite" />
-        </circle>
+        <circle cx="77" cy="12" r="2" fill="#FDE047" />
+        <circle cx="16" cy="28" r="1.6" fill="#FB923C" />
         <path
           d="M66 2 L67.2 5.2 L70.5 6.4 L67.2 7.6 L66 10.8 L64.8 7.6 L61.5 6.4 L64.8 5.2 Z"
           fill="#FDE047"
-        >
-          <animateTransform
-            attributeName="transform"
-            type="scale"
-            values="0.85;1.15;0.85"
-             additive="sum"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-          <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
-        </path>
+        />
       </g>
     </svg>
   );
@@ -462,7 +447,7 @@ export function HalloweenAnimatedSkull({
       viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`drop-shadow-[0_6px_14px_rgba(249,115,22,0.45)] ${className}`}
+      className={className}
       aria-hidden="true"
     >
       <defs>
@@ -550,7 +535,7 @@ export function HalloweenSkeletonHand({
       viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`drop-shadow-[0_4px_8px_rgba(15,23,42,0.28)] ${className}`}
+      className={className}
       aria-hidden="true"
     >
       {/* Wrist & Carpal Bones */}
@@ -609,7 +594,7 @@ export function HalloweenDancingSkeleton({
       viewBox="0 0 80 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={`drop-shadow-[0_8px_16px_rgba(15,23,42,0.25)] ${className}`}
+      className={className}
       aria-hidden="true"
     >
       {/* Head / Skull */}
