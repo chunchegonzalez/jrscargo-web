@@ -214,6 +214,18 @@ function normalizeAndDeduplicateTimeline(
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawNumber = searchParams.get('number');
+  const isListReq = searchParams.get('list') === 'true' || searchParams.get('all') === 'true';
+
+  const apiToken = process.env.TRACKING_API_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyNiwiZW1haWwiOiJqb3NlZ29uMjAwMEBob3RtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsInJvbGVJZCI6MTIsInRlbmFudElkIjoiOWRjZGFlZGItZmZlMS00M2Y3LWI1ZTgtMDMzOGVjYjk4NmQwIiwiY2xpZW50SWQiOjYwODMsImNsaWVudENvZGUiOiJKUlMtMTAwMSIsImlzVG9wTWFzdGVyIjpmYWxzZSwiaXNNYXlvcmlzdGEiOnRydWUsImlhdCI6MTc4NjIzNzE1Mn0.ZLEBwa8iR_wLw59Akpl-PpR_Mwq3h3IBO6XKVi2PZpQ";
+
+  if (!apiToken) {
+    return NextResponse.json({ error: 'System configuration error' }, { status: 500 });
+  }
+
+  if (isListReq) {
+    const list = await getWorldboxPackages(apiToken);
+    return NextResponse.json({ success: true, count: list.length, data: list });
+  }
 
   if (!rawNumber) {
     return NextResponse.json({ error: 'Tracking number is required' }, { status: 400 });
@@ -223,12 +235,6 @@ export async function GET(request: Request) {
   let trackingNumber = rawNumber.replace(/[\x00-\x1F\x7F\s]+/g, '').trim();
   if (!trackingNumber) {
     return NextResponse.json({ error: 'Tracking number is required' }, { status: 400 });
-  }
-
-  const apiToken = process.env.TRACKING_API_TOKEN || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTgyNiwiZW1haWwiOiJqb3NlZ29uMjAwMEBob3RtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsInJvbGVJZCI6MTIsInRlbmFudElkIjoiOWRjZGFlZGItZmZlMS00M2Y3LWI1ZTgtMDMzOGVjYjk4NmQwIiwiY2xpZW50SWQiOjYwODMsImNsaWVudENvZGUiOiJKUlMtMTAwMSIsImlzVG9wTWFzdGVyIjpmYWxzZSwiaXNNYXlvcmlzdGEiOnRydWUsImlhdCI6MTc4NjIzNzE1Mn0.ZLEBwa8iR_wLw59Akpl-PpR_Mwq3h3IBO6XKVi2PZpQ";
-
-  if (!apiToken) {
-    return NextResponse.json({ error: 'System configuration error' }, { status: 500 });
   }
 
   try {
