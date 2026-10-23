@@ -4,18 +4,20 @@ import { getInventoryItem } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 // Cache for Worldbox packages list (60 seconds TTL)
-let cachedPackages: Array<{
+type WorldboxPackageListItem = {
   trackingNumber?: string;
   tenantName?: string;
   clientName?: string;
   clientCode?: string;
   consignatario?: string;
-}> | null = null;
+};
+
+let cachedPackages: WorldboxPackageListItem[] = [];
 let lastCacheTime = 0;
 
-async function getWorldboxPackages(apiToken: string) {
+async function getWorldboxPackages(apiToken: string): Promise<WorldboxPackageListItem[]> {
   const now = Date.now();
-  if (cachedPackages && (now - lastCacheTime < 60000)) {
+  if (cachedPackages.length > 0 && (now - lastCacheTime < 60000)) {
     return cachedPackages;
   }
   try {
@@ -28,14 +30,17 @@ async function getWorldboxPackages(apiToken: string) {
       next: { revalidate: 60 }
     });
     if (res.ok) {
-      cachedPackages = await res.json();
-      lastCacheTime = Date.now();
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        cachedPackages = data;
+        lastCacheTime = Date.now();
+      }
       return cachedPackages;
     }
   } catch (e) {
     console.error('Error fetching Worldbox packages list:', e);
   }
-  return cachedPackages || [];
+  return cachedPackages;
 }
 
 interface RawTimelineEvent {
@@ -223,7 +228,7 @@ export async function GET(request: Request) {
   }
 
   if (isListReq) {
-    const list = await getWorldboxPackages(apiToken);
+    const list = (await getWorldboxPackages(apiToken)) || [];
     return NextResponse.json({ success: true, count: list.length, data: list });
   }
 
