@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Search, Package, MapPin, Truck, CheckCircle2, Clock, Loader2, AlertTriangle, FileText, ExternalLink, Plus } from 'lucide-react';
+import { formatPackageWeightAndRate } from '@/lib/billing';
 
 interface TrackingEvent {
   date: string;
@@ -173,6 +174,14 @@ export default function TrackingPage() {
   const statusLabel = pkg?.statusLabel || localItem?.status || '';
   const statusStyle = statusLabel ? getStatusStyle(statusLabel) : null;
 
+  const invWeightInfo = matchedInvoice ? formatPackageWeightAndRate({
+    weight: matchedInvoice.package_weight,
+    serviceName: matchedInvoice.package_service,
+    rate: matchedInvoice.package_rate,
+    pkgWeight: pkg?.weight,
+    pkgUnit: pkg?.weightUnit
+  }) : null;
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -279,14 +288,14 @@ export default function TrackingPage() {
                   <p className="text-sm font-bold text-gray-800">{consignatario}</p>
                 </div>
               )}
-              {(pkg.weight || matchedInvoice?.package_weight || localItem?.weight) && (
+              {(pkg?.weight || localItem?.weight || matchedInvoice?.package_weight) && (
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Peso</p>
                   <p className="text-sm font-bold text-gray-800">
                     {(() => {
-                      const effWeight = pkg.weight || matchedInvoice?.package_weight || localItem?.weight;
+                      const effWeight = pkg?.weight || localItem?.weight || (invWeightInfo?.unit === 'Kg' && invWeightInfo.cleanNum ? (Number(invWeightInfo.cleanNum) * 2.20462).toFixed(2) : invWeightInfo?.cleanNum);
                       const num = parseFloat(String(effWeight));
-                      const unit = (pkg.weightUnit || (typeof matchedInvoice?.package_service === 'string' && matchedInvoice.package_service.toLowerCase().includes('kg') ? 'kg' : 'lbs')).toLowerCase();
+                      const unit = (pkg?.weightUnit || 'lbs').toLowerCase();
                       if (isNaN(num)) return `${effWeight} ${unit}`;
                       if (unit.includes('kg')) {
                         const lbs = (num * 2.20462).toFixed(2);
@@ -297,9 +306,9 @@ export default function TrackingPage() {
                       }
                     })()}
                   </p>
-                  {matchedInvoice?.package_weight && (
+                  {invWeightInfo && invWeightInfo.weightFormatted && (
                     <p className="text-[10px] text-brand-blue font-semibold mt-1">
-                      Facturado: {matchedInvoice.package_weight} {String(matchedInvoice.package_weight).toLowerCase().includes('lb') || String(matchedInvoice.package_weight).toLowerCase().includes('kg') ? '' : 'lbs'}
+                      Facturado: {invWeightInfo.weightFull}
                     </p>
                   )}
                 </div>
@@ -356,19 +365,27 @@ export default function TrackingPage() {
                             : `$${matchedInvoice.total.toFixed(2)} ${matchedInvoice.currency || 'USD'}`}
                         </span>
                       </div>
-                      {matchedInvoice.package_weight && (
+                      {invWeightInfo && invWeightInfo.weightFormatted && (
                         <div className="flex items-center justify-between text-[11px] text-gray-500">
                           <span>Peso paquete:</span>
                           <span className="font-bold text-gray-800 font-mono">
-                            {matchedInvoice.package_weight} {String(matchedInvoice.package_weight).toLowerCase().includes('lb') || String(matchedInvoice.package_weight).toLowerCase().includes('kg') ? '' : 'lbs'}
+                            {invWeightInfo.weightFull}
                           </span>
                         </div>
                       )}
-                      {matchedInvoice.package_rate && Number(matchedInvoice.package_rate) > 0 && (
+                      {invWeightInfo && invWeightInfo.rateFormatted && (
                         <div className="flex items-center justify-between text-[10px] text-gray-400">
                           <span>Tarifa:</span>
                           <span className="font-medium text-gray-600 font-mono">
-                            ${matchedInvoice.package_rate} / {matchedInvoice.package_service?.toLowerCase().includes('kg') ? 'kg' : 'lb'}
+                            {invWeightInfo.rateFormatted}
+                          </span>
+                        </div>
+                      )}
+                      {matchedInvoice.package_service && (
+                        <div className="flex items-center justify-between text-[10px] text-gray-400">
+                          <span>Servicio:</span>
+                          <span className="font-medium text-gray-600 truncate max-w-[150px]" title={matchedInvoice.package_service}>
+                            {matchedInvoice.package_service}
                           </span>
                         </div>
                       )}
@@ -456,7 +473,7 @@ export default function TrackingPage() {
                     Estado: <span className="font-semibold text-gray-700">{(localItem.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'Por Entregar (En Bodega CR)'}</span>
                     {matchedInvoice ? ` • Factura: #${matchedInvoice.invoice_number}` : ''}
                     {matchedInvoice?.package_amount !== undefined && matchedInvoice?.package_amount !== null ? ` • Costo paquete: $${matchedInvoice.package_amount.toFixed(2)}` : ''}
-                    {matchedInvoice?.package_weight || localItem.weight ? ` • Peso: ${matchedInvoice?.package_weight || localItem.weight} lbs` : ''}
+                    {invWeightInfo?.weightFormatted ? ` • Peso: ${invWeightInfo.weightFull}` : (localItem.weight ? ` • Peso: ${localItem.weight} lbs` : '')}
                     {localItem.client_name ? ` • Cliente: ${localItem.client_name}` : ''}
                     {` • Recibido: ${formatDate(localItem.received_date || localItem.created_at)}`}
                   </p>

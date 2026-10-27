@@ -82,6 +82,140 @@ export function formatWeight(weight: number, unit: string = 'lbs'): string {
   return `${weight.toFixed(1)} ${unit}`;
 }
 
+export type WeightUnitType = 'Lb' | 'Kg' | 'ft³';
+
+export function detectServiceUnit(name?: string | null): WeightUnitType {
+  if (!name) return 'Lb';
+  const norm = name
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Marítimo -> Pies Cúbicos (ft³)
+  if (norm.includes('MARITIMO') || norm.includes('PIE CUBICO') || norm.includes('FT3') || norm.includes('FT³')) {
+    return 'ft³';
+  }
+
+  // 2. Mayorista Aéreo / Madrid / Kilos -> Kilos (Kg)
+  if (
+    norm.includes('MAYORISTA AEREO') ||
+    norm.includes('AEREO MADRID') ||
+    (norm.includes('MAYORISTA') && norm.includes('AEREO')) ||
+    (norm.includes('MAYORISTA') && norm.includes('MADRID')) ||
+    norm.includes('(KG)') ||
+    norm.includes('POR KILO') ||
+    norm.includes('KILO') ||
+    norm.includes('KG')
+  ) {
+    return 'Kg';
+  }
+
+  // 3. Estándar Aéreo -> Libras (Lb)
+  return 'Lb';
+}
+
+export function formatPackageWeightAndRate({
+  weight,
+  serviceName,
+  rate,
+  pkgWeight,
+  pkgUnit = 'lbs'
+}: {
+  weight?: number | string | null;
+  serviceName?: string | null;
+  rate?: number | string | null;
+  pkgWeight?: number | string | null;
+  pkgUnit?: string | null;
+}) {
+  if (weight === undefined || weight === null || weight === '') {
+    return {
+      unit: 'Lb' as WeightUnitType,
+      unitLabel: 'lb',
+      unitPlural: 'lbs',
+      weightFormatted: '',
+      weightFull: '',
+      equivalentStr: '',
+      rateFormatted: rate ? `$${rate}` : '',
+    };
+  }
+
+  const numWeight = parseFloat(String(weight));
+  const rawStr = String(weight).trim();
+
+  // If already contains unit text (e.g. "2.5 lbs" or "1.13 kg")
+  let unit: WeightUnitType = 'Lb';
+  const rawLower = rawStr.toLowerCase();
+  if (rawLower.includes('kg') || rawLower.includes('kilo')) {
+    unit = 'Kg';
+  } else if (rawLower.includes('ft3') || rawLower.includes('ft³') || rawLower.includes('pie')) {
+    unit = 'ft³';
+  } else if (rawLower.includes('lb')) {
+    unit = 'Lb';
+  } else {
+    // 1. Detect from service name
+    unit = detectServiceUnit(serviceName);
+
+    // 2. Cross-check with reference package weight if available
+    // e.g. pkgWeight is 2.5 lbs and numWeight is ~1.13 -> definitely Kg!
+    if (pkgWeight && !isNaN(Number(pkgWeight)) && !isNaN(numWeight) && numWeight > 0) {
+      const pNum = Number(pkgWeight);
+      const isLbsToKg = Math.abs((pNum * 0.453592) - numWeight) < 0.08;
+      const isKgToLbs = Math.abs((pNum * 2.20462) - numWeight) < 0.15;
+      if (isLbsToKg) {
+        unit = 'Kg';
+      } else if (isKgToLbs) {
+        unit = 'Lb';
+      }
+    }
+  }
+
+  const cleanNum = isNaN(numWeight) ? rawStr.replace(/[^\d.]/g, '') || rawStr : numWeight.toString();
+
+  let unitLabel = 'lb';
+  let unitPlural = 'lbs';
+  let equivalentStr = '';
+
+  if (unit === 'Kg') {
+    unitLabel = 'kg';
+    unitPlural = 'kg';
+    if (!isNaN(numWeight)) {
+      let inLbs = (numWeight * 2.20462).toFixed(2).replace(/\.00$/, '');
+      if (pkgWeight && !isNaN(Number(pkgWeight)) && Math.abs(Number(pkgWeight) - Number(inLbs)) <= 0.05) {
+        inLbs = String(pkgWeight);
+      }
+      equivalentStr = `(${inLbs} lbs)`;
+    }
+  } else if (unit === 'ft³') {
+    unitLabel = 'ft³';
+    unitPlural = 'ft³';
+  } else {
+    unitLabel = 'lb';
+    unitPlural = 'lbs';
+    if (!isNaN(numWeight)) {
+      let inKg = (numWeight * 0.453592).toFixed(2).replace(/\.00$/, '');
+      if (pkgWeight && !isNaN(Number(pkgWeight)) && pkgUnit?.toLowerCase().includes('kg') && Math.abs(Number(pkgWeight) - Number(inKg)) <= 0.05) {
+        inKg = String(pkgWeight);
+      }
+      equivalentStr = `(${inKg} kg)`;
+    }
+  }
+
+  const weightFormatted = `${cleanNum} ${unitPlural}`;
+  const weightFull = equivalentStr ? `${cleanNum} ${unitPlural} ${equivalentStr}` : `${cleanNum} ${unitPlural}`;
+  const rateFormatted = rate !== undefined && rate !== null && rate !== '' ? `$${rate} / ${unitLabel}` : '';
+
+  return {
+    unit,
+    unitLabel,
+    unitPlural,
+    cleanNum,
+    weightFormatted,
+    weightFull,
+    equivalentStr,
+    rateFormatted
+  };
+}
+
 export function formatTrackingDate(dateString: string): string {
   if (!dateString) return '';
   const date = new Date(dateString);

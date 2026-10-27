@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, User, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
-import { parseClientAddress } from '@/lib/billing';
+import { parseClientAddress, formatPackageWeightAndRate } from '@/lib/billing';
 
 // Static Modules for quick navigation
 const MODULES = [
@@ -306,18 +306,20 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                           amount: it.amount !== undefined && it.amount !== null ? Number(it.amount) : null,
                           weight: it.weight !== undefined && it.weight !== null ? String(it.weight) : null,
                           rate: it.rate !== undefined && it.rate !== null ? String(it.rate) : null,
+                          service: it.service_name || '',
                         };
                       }
                     }
                     return null;
                   })();
 
-                  const rawWeight = matchedInvoiceItem?.weight || item.weight;
-                  const weightStr = rawWeight 
-                    ? (String(rawWeight).toLowerCase().includes('lb') || String(rawWeight).toLowerCase().includes('kg') 
-                        ? String(rawWeight) 
-                        : `${rawWeight} lbs`) 
-                    : null;
+                  const invWeightInfo = formatPackageWeightAndRate({
+                    weight: matchedInvoiceItem?.weight || item.weight,
+                    serviceName: matchedInvoiceItem?.service,
+                    rate: matchedInvoiceItem?.rate,
+                    pkgWeight: item.weight
+                  });
+                  const weightStr = invWeightInfo.weightFull || (item.weight ? `${item.weight}` : null);
 
                   return (
                     <button 
@@ -405,18 +407,25 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                           </div>
                           <div className="text-xs text-gray-500 truncate">
                             {inv.clients?.name || 'Cliente'}
-                            {matchedItem && (
-                              <>
-                                <span className="text-brand-blue font-mono font-bold ml-1">
-                                  • Tracking: {matchedItem.tracking_number}
-                                </span>
-                                {matchedItem.weight && (
-                                  <span className="text-gray-700 font-semibold ml-1">
-                                    • Peso: {matchedItem.weight} {String(matchedItem.weight).toLowerCase().includes('lb') || String(matchedItem.weight).toLowerCase().includes('kg') ? '' : 'lbs'}
+                            {matchedItem && (() => {
+                              const itemWeightInfo = formatPackageWeightAndRate({
+                                weight: matchedItem.weight,
+                                serviceName: matchedItem.service_name,
+                                rate: matchedItem.rate
+                              });
+                              return (
+                                <>
+                                  <span className="text-brand-blue font-mono font-bold ml-1">
+                                    • Tracking: {matchedItem.tracking_number}
                                   </span>
-                                )}
-                              </>
-                            )}
+                                  {itemWeightInfo.weightFormatted && (
+                                    <span className="text-gray-700 font-semibold ml-1">
+                                      • Peso: {itemWeightInfo.weightFull}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
