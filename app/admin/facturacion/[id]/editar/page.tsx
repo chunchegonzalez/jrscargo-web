@@ -89,14 +89,20 @@ export default function EditarFacturaPage() {
         setNotes(inv.notes || '');
         
         if (inv.items && inv.items.length > 0) {
+          const firstService = inv.items[0]?.service_name || '';
+          const detected = detectServiceUnit(firstService);
+          if (detected) {
+            setWeightUnit(detected);
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setItems(inv.items.map((it: any) => ({
             id: it.id,
-            service_name: it.service_name,
+            service_name: it.service_name || '',
             tracking_number: it.tracking_number || '',
-            weight: it.weight || '',
-            rate: it.rate || '',
-            amount: Number(it.amount)
+            weight: it.weight !== undefined && it.weight !== null ? String(it.weight) : '',
+            rate: it.rate !== undefined && it.rate !== null ? String(it.rate) : '',
+            amount: it.amount !== undefined && it.amount !== null ? Number(it.amount) : 0
           })));
         }
       } else {
@@ -155,49 +161,8 @@ export default function EditarFacturaPage() {
   };
 
   const handleWeightUnitChange = (newUnit: WeightUnitType) => {
-    if (newUnit === weightUnit) return;
-    const oldUnit = weightUnit;
+    // Solo cambia la etiqueta de unidad visual seleccionada, sin alterar los pesos ni importes existentes
     setWeightUnit(newUnit);
-    
-    setItems(prev => prev.map(item => {
-      if (!item.weight) return item;
-      const w = Number(item.weight);
-      if (isNaN(w) || w <= 0) return item;
-
-      let updatedWeightNum = w;
-      if (oldUnit === 'Lb' && newUnit === 'Kg') {
-        updatedWeightNum = w * 0.453592;
-      } else if (oldUnit === 'Kg' && newUnit === 'Lb') {
-        updatedWeightNum = w * 2.20462;
-      }
-      const updatedWeight = updatedWeightNum.toFixed(2).replace(/\.00$/, '');
-      const r = Number(item.rate) || 0;
-      const amount = r > 0 ? Number((Number(updatedWeight) * r).toFixed(2)) : Number(item.amount);
-      
-      return { ...item, weight: updatedWeight, amount };
-    }));
-  };
-
-  const handleTrackingBlur = async (itemId: number, trackingNumber: string) => {
-    if (!trackingNumber) return;
-    try {
-      const res = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber)}`);
-      const data = await res.json();
-      if (data.status === 'SUCCESS' && data.rawData?.package?.weight) {
-        let apiWeight = Number(data.rawData.package.weight);
-        const apiUnit = (data.rawData.package.weightUnit || 'lbs').toLowerCase();
-        
-        if (apiUnit.includes('lb') && weightUnit === 'Kg') {
-          apiWeight = apiWeight * 0.453592;
-        } else if ((apiUnit.includes('kg') || apiUnit.includes('kilo')) && weightUnit === 'Lb') {
-          apiWeight = apiWeight * 2.20462;
-        }
-        
-        handleItemChange(itemId, 'weight', apiWeight.toFixed(2).replace(/\.00$/, ''));
-      }
-    } catch (e) {
-      console.error('Error fetching tracking for weight:', e);
-    }
   };
 
   const detectServiceUnit = (name: string): WeightUnitType | null => {
@@ -231,39 +196,35 @@ export default function EditarFacturaPage() {
   };
 
   const handleItemChange = (id: number, field: string, value: string) => {
-    if (field === 'service_name') {
-      const autoUnit = detectServiceUnit(value);
-      if (autoUnit && autoUnit !== weightUnit) {
-        handleWeightUnitChange(autoUnit);
-      }
-    }
-
     setItems(prev => prev.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         
-        // Auto-fill rate if a catalog service is selected
+        // Al seleccionar un servicio del catálogo, solo sugerir tarifa por defecto si la tarifa actual está vacía
         if (field === 'service_name') {
            const available = catalogServices.length > 0 ? [...catalogServices, ...DEFAULT_SERVICES] : DEFAULT_SERVICES;
            const foundService = available.find(s => s.name.toUpperCase() === value.toUpperCase());
-           if (foundService) {
+           if (foundService && (!updatedItem.rate || Number(updatedItem.rate) === 0)) {
              updatedItem.rate = foundService.default_rate.toString();
+             const w = Number(updatedItem.weight) || 0;
+             const r = Number(updatedItem.rate) || 0;
+             if (w > 0 && r > 0 && (!updatedItem.amount || Number(updatedItem.amount) === 0)) {
+               updatedItem.amount = Number((w * r).toFixed(2));
+             }
            }
-
-           // recalculate amount if weight is present
-           const w = Number(updatedItem.weight) || 0;
-           const r = Number(updatedItem.rate) || 0;
-           updatedItem.amount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : 0;
         }
 
-        // Auto calculate amount if rate and weight are present
+        // Recalcular importe únicamente cuando el usuario edita manualmente el peso o la tarifa
         if (field === 'weight' || field === 'rate') {
           const w = Number(field === 'weight' ? value : item.weight) || 0;
           const r = Number(field === 'rate' ? value : item.rate) || 0;
-          updatedItem.amount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : Number(updatedItem.amount);
+          if (w > 0 && r > 0) {
+            updatedItem.amount = Number((w * r).toFixed(2));
+          }
         }
+
         if (field === 'amount') {
-           updatedItem.amount = Number(value) || 0;
+           updatedItem.amount = value === '' ? '' : Number(value);
         }
         return updatedItem;
       }
@@ -578,7 +539,6 @@ export default function EditarFacturaPage() {
                     placeholder={isWeb ? "Detalle / Referencia (Opcional)" : "Tracking (Obligatorio)"} 
                     value={item.tracking_number} 
                     onChange={e => handleItemChange(item.id, 'tracking_number', e.target.value)}
-                    onBlur={() => !isWeb && handleTrackingBlur(item.id, item.tracking_number || '')}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue font-mono"
                   />
                 </div>

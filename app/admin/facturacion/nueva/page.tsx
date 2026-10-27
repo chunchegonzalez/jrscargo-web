@@ -183,6 +183,12 @@ export default function NuevaFacturaPage() {
   const handleTrackingBlur = async (itemId: number, trackingNumber: string) => {
     if (!trackingNumber) return;
     try {
+      // Si el usuario ya ingresó un peso manualmente, NO sobreescribirlo
+      const currentItem = items.find(it => it.id === itemId);
+      if (currentItem && currentItem.weight && Number(currentItem.weight) > 0) {
+        return;
+      }
+
       const res = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber)}`);
       const data = await res.json();
       if (data.status === 'SUCCESS' && data.rawData?.package?.weight) {
