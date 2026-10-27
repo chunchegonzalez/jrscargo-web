@@ -35,6 +35,7 @@ interface InvoiceItem {
   id: string;
   invoice_number?: string;
   total?: number;
+  status?: string;
   currency?: string;
   clients?: {
     name?: string;
@@ -44,6 +45,15 @@ interface InvoiceItem {
     tracking_number?: string;
     service_name?: string;
     amount?: number;
+    weight?: string | number;
+    rate?: string | number;
+  }>;
+  invoice_items?: Array<{
+    tracking_number?: string;
+    service_name?: string;
+    amount?: number;
+    weight?: string | number;
+    rate?: string | number;
   }>;
 }
 
@@ -119,7 +129,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
 
       Promise.all([
         fetch('/api/clients').then(r => r.json()).catch(() => ({ success: false, data: [] })),
-        fetch('/api/invoices').then(r => r.json()).catch(() => ({ success: false, data: [] })),
+        fetch('/api/invoices?includeItems=true').then(r => r.json()).catch(() => ({ success: false, data: [] })),
         fetch('/api/inventory').then(r => r.json()).catch(() => ({ success: false, data: [] }))
       ])
         .then(([clientsRes, invoicesRes, invRes]) => {
@@ -186,7 +196,8 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
     const clientName = (i.clients?.name || '').toLowerCase();
     const matchesNum = invNum.includes(q);
     const matchesClient = clientName.includes(q);
-    const matchesItemTracking = Array.isArray(i.items) && i.items.some(it => matchTracking(query, it.tracking_number));
+    const invItems = i.items || i.invoice_items;
+    const matchesItemTracking = Array.isArray(invItems) && invItems.some(it => matchTracking(query, it.tracking_number));
     return matchesNum || matchesClient || matchesItemTracking;
   }).slice(0, 5);
 
@@ -281,6 +292,33 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                   const rd = item.created_at || item.received_date;
                   const dateStr = rd ? new Date(rd).toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: '2-digit', month: 'short', year: 'numeric' }) : '';
                   
+                  // Buscar si este paquete tiene una línea de factura asociada
+                  const matchedInvoiceItem = (() => {
+                    if (!trackingNum) return null;
+                    for (const inv of invoices) {
+                      const list = inv.items || inv.invoice_items || [];
+                      const it = list.find((line: { tracking_number?: string }) => matchTracking(trackingNum, line.tracking_number));
+                      if (it) {
+                        return {
+                          invoiceId: inv.id,
+                          invoiceNumber: inv.invoice_number,
+                          invoiceStatus: inv.status,
+                          amount: it.amount !== undefined && it.amount !== null ? Number(it.amount) : null,
+                          weight: it.weight !== undefined && it.weight !== null ? String(it.weight) : null,
+                          rate: it.rate !== undefined && it.rate !== null ? String(it.rate) : null,
+                        };
+                      }
+                    }
+                    return null;
+                  })();
+
+                  const rawWeight = matchedInvoiceItem?.weight || item.weight;
+                  const weightStr = rawWeight 
+                    ? (String(rawWeight).toLowerCase().includes('lb') || String(rawWeight).toLowerCase().includes('kg') 
+                        ? String(rawWeight) 
+                        : `${rawWeight} lbs`) 
+                    : null;
+
                   return (
                     <button 
                       key={i} 
@@ -301,10 +339,25 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                               {item.company}
                             </span>
                           )}
+                          {matchedInvoiceItem?.amount !== undefined && matchedInvoiceItem.amount !== null && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-mono whitespace-nowrap">
+                              ${matchedInvoiceItem.amount.toFixed(2)} USD
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
-                          <span className="font-medium">{clientName}</span>
-                          {item.weight ? <span className="text-gray-400">• {item.weight}</span> : null}
+                          <span className="font-medium text-gray-700">{clientName}</span>
+                          {weightStr ? <span className="text-gray-700 font-semibold">• Peso: {weightStr}</span> : null}
+                          {matchedInvoiceItem?.amount !== undefined && matchedInvoiceItem.amount !== null ? (
+                            <span className="text-emerald-700 font-black font-mono">
+                              • Costo paquete: ${matchedInvoiceItem.amount.toFixed(2)}
+                            </span>
+                          ) : null}
+                          {matchedInvoiceItem && (
+                            <span className="text-brand-blue font-semibold">
+                              • Factura #{matchedInvoiceItem.invoiceNumber}
+                            </span>
+                          )}
                           {dateStr ? <span className="text-gray-400">• {dateStr}</span> : null}
                         </div>
                       </div>
@@ -322,7 +375,8 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                   <FileText size={11} /> Facturas ({filteredInvoices.length} resultados)
                 </div>
                 {filteredInvoices.map((inv, i) => {
-                  const matchedItem = Array.isArray(inv.items) ? inv.items.find(it => matchTracking(query, it.tracking_number)) : null;
+                  const invItems = inv.items || inv.invoice_items || [];
+                  const matchedItem = Array.isArray(invItems) ? invItems.find((it: { tracking_number?: string }) => matchTracking(query, it.tracking_number)) : null;
 
                   return (
                     <button key={i} onClick={() => handleSelect(`/admin/facturacion/${inv.id}`)}
@@ -332,18 +386,36 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                           <FileText size={14} />
                         </div>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-gray-800 group-hover:text-brand-blue">{inv.invoice_number}</span>
-                            {inv.total !== undefined && (
-                              <span className="text-xs font-bold text-gray-500">${inv.total.toFixed(2)}</span>
+                            {matchedItem && matchedItem.amount !== undefined && matchedItem.amount !== null ? (
+                              <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 font-mono">
+                                Costo paquete: ${Number(matchedItem.amount).toFixed(2)}
+                              </span>
+                            ) : (
+                              inv.total !== undefined && (
+                                <span className="text-xs font-bold text-gray-500">${inv.total.toFixed(2)}</span>
+                              )
+                            )}
+                            {matchedItem && inv.total !== undefined && (
+                              <span className="text-[10px] text-gray-400 font-medium">
+                                (Total factura: ${inv.total.toFixed(2)})
+                              </span>
                             )}
                           </div>
                           <div className="text-xs text-gray-500 truncate">
                             {inv.clients?.name || 'Cliente'}
                             {matchedItem && (
-                              <span className="text-brand-blue font-mono font-bold ml-1">
-                                • Tracking: {matchedItem.tracking_number}
-                              </span>
+                              <>
+                                <span className="text-brand-blue font-mono font-bold ml-1">
+                                  • Tracking: {matchedItem.tracking_number}
+                                </span>
+                                {matchedItem.weight && (
+                                  <span className="text-gray-700 font-semibold ml-1">
+                                    • Peso: {matchedItem.weight} {String(matchedItem.weight).toLowerCase().includes('lb') || String(matchedItem.weight).toLowerCase().includes('kg') ? '' : 'lbs'}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>

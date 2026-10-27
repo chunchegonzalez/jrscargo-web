@@ -52,6 +52,11 @@ interface MatchedInvoice {
   currency?: string;
   issue_date?: string;
   client_name?: string;
+  package_amount?: number | null;
+  package_weight?: string | number | null;
+  package_rate?: string | number | null;
+  package_service?: string;
+  package_tracking?: string;
 }
 
 function formatDate(ds: string | null | undefined): string {
@@ -241,6 +246,15 @@ export default function TrackingPage() {
                   >
                     <FileText size={14} className="text-brand-yellow" />
                     <span>Factura: #{matchedInvoice.invoice_number}</span>
+                    {matchedInvoice.package_amount !== undefined && matchedInvoice.package_amount !== null ? (
+                      <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        ${matchedInvoice.package_amount.toFixed(2)} USD
+                      </span>
+                    ) : (
+                      <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        ${matchedInvoice.total.toFixed(2)} USD
+                      </span>
+                    )}
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${matchedInvoice.status === 'Pagada' ? 'bg-green-500 text-white' : 'bg-amber-400 text-amber-950'}`}>
                       {matchedInvoice.status}
                     </span>
@@ -265,14 +279,15 @@ export default function TrackingPage() {
                   <p className="text-sm font-bold text-gray-800">{consignatario}</p>
                 </div>
               )}
-              {pkg.weight && (
+              {(pkg.weight || matchedInvoice?.package_weight || localItem?.weight) && (
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Peso</p>
                   <p className="text-sm font-bold text-gray-800">
                     {(() => {
-                      const num = parseFloat(String(pkg.weight));
-                      const unit = (pkg.weightUnit || 'lbs').toLowerCase();
-                      if (isNaN(num)) return `${pkg.weight} ${pkg.weightUnit || 'lbs'}`;
+                      const effWeight = pkg.weight || matchedInvoice?.package_weight || localItem?.weight;
+                      const num = parseFloat(String(effWeight));
+                      const unit = (pkg.weightUnit || (typeof matchedInvoice?.package_service === 'string' && matchedInvoice.package_service.toLowerCase().includes('kg') ? 'kg' : 'lbs')).toLowerCase();
+                      if (isNaN(num)) return `${effWeight} ${unit}`;
                       if (unit.includes('kg')) {
                         const lbs = (num * 2.20462).toFixed(2);
                         return `${num} kg (${lbs} lbs)`;
@@ -282,6 +297,11 @@ export default function TrackingPage() {
                       }
                     })()}
                   </p>
+                  {matchedInvoice?.package_weight && (
+                    <p className="text-[10px] text-brand-blue font-semibold mt-1">
+                      Facturado: {matchedInvoice.package_weight} {String(matchedInvoice.package_weight).toLowerCase().includes('lb') || String(matchedInvoice.package_weight).toLowerCase().includes('kg') ? '' : 'lbs'}
+                    </p>
+                  )}
                 </div>
               )}
               {pkg.volumetricWeight && (
@@ -306,25 +326,59 @@ export default function TrackingPage() {
 
               {/* Factura asociada card in grid */}
               {matchedInvoice ? (
-                <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3">
-                  <p className="text-[10px] text-brand-blue uppercase font-black mb-1 flex items-center gap-1">
-                    <FileText size={12} /> Factura Asociada
-                  </p>
-                  <div className="flex items-center justify-between gap-1">
-                    <Link
-                      href={`/admin/facturacion/${matchedInvoice.id}`}
-                      className="text-sm font-black text-brand-blue hover:underline inline-flex items-center gap-1"
-                    >
-                      #{matchedInvoice.invoice_number}
-                      <ExternalLink size={12} className="text-gray-400" />
-                    </Link>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${matchedInvoice.status === 'Pagada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'}`}>
-                      {matchedInvoice.status}
-                    </span>
+                <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <p className="text-[10px] text-brand-blue uppercase font-black flex items-center gap-1">
+                        <FileText size={12} /> Factura Asociada
+                      </p>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${matchedInvoice.status === 'Pagada' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800'}`}>
+                        {matchedInvoice.status}
+                      </span>
+                    </div>
+                    <div className="mb-2">
+                      <Link
+                        href={`/admin/facturacion/${matchedInvoice.id}`}
+                        className="text-sm font-black text-brand-blue hover:underline inline-flex items-center gap-1"
+                      >
+                        #{matchedInvoice.invoice_number}
+                        <ExternalLink size={12} className="text-gray-400" />
+                      </Link>
+                    </div>
+
+                    {/* Detalle específico del paquete consultado */}
+                    <div className="bg-white/95 rounded-lg p-2.5 border border-blue-100/80 shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600 font-semibold">Costo paquete:</span>
+                        <span className="text-sm font-black text-emerald-700 font-mono">
+                          {matchedInvoice.package_amount !== undefined && matchedInvoice.package_amount !== null
+                            ? `$${matchedInvoice.package_amount.toFixed(2)} ${matchedInvoice.currency || 'USD'}`
+                            : `$${matchedInvoice.total.toFixed(2)} ${matchedInvoice.currency || 'USD'}`}
+                        </span>
+                      </div>
+                      {matchedInvoice.package_weight && (
+                        <div className="flex items-center justify-between text-[11px] text-gray-500">
+                          <span>Peso paquete:</span>
+                          <span className="font-bold text-gray-800 font-mono">
+                            {matchedInvoice.package_weight} {String(matchedInvoice.package_weight).toLowerCase().includes('lb') || String(matchedInvoice.package_weight).toLowerCase().includes('kg') ? '' : 'lbs'}
+                          </span>
+                        </div>
+                      )}
+                      {matchedInvoice.package_rate && Number(matchedInvoice.package_rate) > 0 && (
+                        <div className="flex items-center justify-between text-[10px] text-gray-400">
+                          <span>Tarifa:</span>
+                          <span className="font-medium text-gray-600 font-mono">
+                            ${matchedInvoice.package_rate} / {matchedInvoice.package_service?.toLowerCase().includes('kg') ? 'kg' : 'lb'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-1 font-medium">
-                    Total: <strong className="text-gray-800">${matchedInvoice.total.toFixed(2)} {matchedInvoice.currency || 'USD'}</strong>
-                  </p>
+
+                  <div className="pt-2 mt-2 border-t border-blue-200/50 flex items-center justify-between text-[10px] text-gray-500">
+                    <span>Total factura:</span>
+                    <strong className="text-gray-700 font-mono">${matchedInvoice.total.toFixed(2)} {matchedInvoice.currency || 'USD'}</strong>
+                  </div>
                 </div>
               ) : (
                 <div className="bg-gray-50 rounded-xl p-3 border border-dashed border-gray-200 flex flex-col justify-between">
@@ -387,15 +441,22 @@ export default function TrackingPage() {
                     {matchedInvoice && (
                       <Link
                         href={`/admin/facturacion/${matchedInvoice.id}`}
-                        className="text-[11px] font-black text-brand-blue bg-white px-2.5 py-0.5 rounded-lg border border-brand-blue/20 hover:bg-brand-blue hover:text-white transition-colors inline-flex items-center gap-1"
+                        className="text-[11px] font-black text-brand-blue bg-white px-2.5 py-0.5 rounded-lg border border-brand-blue/20 hover:bg-brand-blue hover:text-white transition-colors inline-flex items-center gap-1.5"
                       >
-                        <FileText size={11} /> Factura #{matchedInvoice.invoice_number} ({matchedInvoice.status})
+                        <FileText size={11} /> 
+                        <span>Factura #{matchedInvoice.invoice_number}</span>
+                        {matchedInvoice.package_amount !== undefined && matchedInvoice.package_amount !== null && (
+                          <span className="text-emerald-700 font-mono font-bold">(${matchedInvoice.package_amount.toFixed(2)})</span>
+                        )}
+                        <span className="text-gray-400 font-normal">({matchedInvoice.status})</span>
                       </Link>
                     )}
                   </div>
                   <p className="text-[11px] text-gray-500 mt-0.5">
                     Estado: <span className="font-semibold text-gray-700">{(localItem.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'Por Entregar (En Bodega CR)'}</span>
                     {matchedInvoice ? ` • Factura: #${matchedInvoice.invoice_number}` : ''}
+                    {matchedInvoice?.package_amount !== undefined && matchedInvoice?.package_amount !== null ? ` • Costo paquete: $${matchedInvoice.package_amount.toFixed(2)}` : ''}
+                    {matchedInvoice?.package_weight || localItem.weight ? ` • Peso: ${matchedInvoice?.package_weight || localItem.weight} lbs` : ''}
                     {localItem.client_name ? ` • Cliente: ${localItem.client_name}` : ''}
                     {` • Recibido: ${formatDate(localItem.received_date || localItem.created_at)}`}
                   </p>

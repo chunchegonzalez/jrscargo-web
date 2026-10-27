@@ -441,7 +441,9 @@ export async function getInvoices(opts?: { includeItems?: boolean }) {
     }
     for (const inv of invoices) {
       inv.invoice_payments = paymentsMap.get(inv.id) || [];
-      inv.invoice_items = itemsMap.get(inv.id) || [];
+      const itemLines = itemsMap.get(inv.id) || [];
+      inv.invoice_items = itemLines;
+      inv.items = itemLines;
     }
   } else {
     for (const inv of invoices) {
