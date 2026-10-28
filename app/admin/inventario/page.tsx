@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import Link from 'next/link';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDate, formatCostaRicaISO, extractCompanyAndClient } from '@/lib/billing';
@@ -71,10 +71,63 @@ export default function BodegaInventario() {
   };
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [colTracking, setColTracking] = useState('');
+  const [colClient, setColClient] = useState('');
   const [filterCompany, setFilterCompany] = useState('Todas');
+  const [filterWeight, setFilterWeight] = useState('Todos');
+  const [filterInvoice, setFilterInvoice] = useState('Todas');
+  const [colInvoiceSearch, setColInvoiceSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
   const [filterDate, setFilterDate] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  type SortField = 'tracking' | 'client' | 'company' | 'weight' | 'invoice' | 'date' | 'status';
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'date' || field === 'weight' ? 'desc' : 'asc');
+    }
+  };
+
+  const hasActiveFilters =
+    searchQuery.trim() !== '' ||
+    colTracking.trim() !== '' ||
+    colClient.trim() !== '' ||
+    filterCompany !== 'Todas' ||
+    filterWeight !== 'Todos' ||
+    filterInvoice !== 'Todas' ||
+    colInvoiceSearch.trim() !== '' ||
+    filterStatus !== 'Todos' ||
+    filterDate !== '';
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setColTracking('');
+    setColClient('');
+    setFilterCompany('Todas');
+    setFilterWeight('Todos');
+    setFilterInvoice('Todas');
+    setColInvoiceSearch('');
+    setFilterStatus('Todos');
+    setFilterDate('');
+  };
+
+  const getInvoiceForTracking = useCallback((trackingId: string) => {
+    if (!trackingId) return undefined;
+    const clean = trackingId.trim().toUpperCase();
+    const direct = invoiceMap.get(clean);
+    if (direct) return direct;
+    const stripped = clean.replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+    if (stripped !== clean && stripped.length >= 8) {
+      return invoiceMap.get(stripped);
+    }
+    return undefined;
+  }, [invoiceMap]);
 
   const loadInventory = useCallback(async () => {
     try {
@@ -113,7 +166,12 @@ export default function BodegaInventario() {
           if (inv.invoice_items) {
             inv.invoice_items.forEach(item => {
               if (item.tracking_number) {
-                map.set(item.tracking_number.trim().toUpperCase(), { number: inv.invoice_number, id: inv.id });
+                const rawTrack = item.tracking_number.trim().toUpperCase();
+                map.set(rawTrack, { number: inv.invoice_number, id: inv.id });
+                const stripped = rawTrack.replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+                if (stripped !== rawTrack && stripped.length >= 8 && !map.has(stripped)) {
+                  map.set(stripped, { number: inv.invoice_number, id: inv.id });
+                }
               }
             });
           }
@@ -132,22 +190,110 @@ export default function BodegaInventario() {
     loadInventory();
   }, [loadInventory]);
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = (item.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (item.client || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
-    
-    const isDelivered = (item.status || '').toLowerCase().includes('entregad');
-    const matchesStatus = filterStatus === 'Todos' ||
-      (filterStatus === 'En Bodega' && !isDelivered) ||
-      (filterStatus === 'Entregado' && isDelivered);
-    
-    // Compare YYYY-MM-DD
-    const itemDateString = formatCostaRicaISO(item.createdAt);
-    const matchesDate = !filterDate || itemDateString === filterDate;
+  const filteredInventory = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const qTrack = colTracking.trim().toLowerCase();
+    const qClient = colClient.trim().toLowerCase();
+    const qInvNum = colInvoiceSearch.trim().toLowerCase();
 
-    return matchesSearch && matchesCompany && matchesStatus && matchesDate;
-  });
+    const filtered = inventory.filter(item => {
+      const inv = getInvoiceForTracking(item.id);
+      const invNumber = (inv?.number || '').toLowerCase();
+
+      const matchesSearch =
+        !q ||
+        (item.id || '').toLowerCase().includes(q) ||
+        (item.client || '').toLowerCase().includes(q) ||
+        (item.company || '').toLowerCase().includes(q) ||
+        invNumber.includes(q);
+
+      const matchesColTracking = !qTrack || (item.id || '').toLowerCase().includes(qTrack);
+      const matchesColClient = !qClient || (item.client || '').toLowerCase().includes(qClient);
+      const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
+
+      // Weight filter (in lbs)
+      const numWeight = parseFloat(String(item.weight || '0')) || 0;
+      const matchesWeight =
+        filterWeight === 'Todos' ||
+        (filterWeight === 'light' && numWeight > 0 && numWeight <= 5) ||
+        (filterWeight === 'medium' && numWeight > 5 && numWeight <= 15) ||
+        (filterWeight === 'heavy' && numWeight > 15);
+
+      // Invoice filter
+      const matchesInvoice =
+        filterInvoice === 'Todas' ||
+        (filterInvoice === 'Facturado' && !!inv) ||
+        (filterInvoice === 'Sin Factura' && !inv);
+
+      const matchesColInvoiceSearch = !qInvNum || invNumber.includes(qInvNum);
+
+      const isDelivered = (item.status || '').toLowerCase().includes('entregad');
+      const matchesStatus =
+        filterStatus === 'Todos' ||
+        (filterStatus === 'En Bodega' && !isDelivered) ||
+        (filterStatus === 'Entregado' && isDelivered);
+
+      // Compare YYYY-MM-DD
+      const itemDateString = formatCostaRicaISO(item.createdAt);
+      const matchesDate = !filterDate || itemDateString === filterDate;
+
+      return (
+        matchesSearch &&
+        matchesColTracking &&
+        matchesColClient &&
+        matchesCompany &&
+        matchesWeight &&
+        matchesInvoice &&
+        matchesColInvoiceSearch &&
+        matchesStatus &&
+        matchesDate
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === 'tracking') {
+        comparison = (a.id || '').localeCompare(b.id || '', 'es', { numeric: true });
+      } else if (sortField === 'client') {
+        comparison = (a.client || '').localeCompare(b.client || '', 'es', { sensitivity: 'base' });
+      } else if (sortField === 'company') {
+        comparison = (a.company || '').localeCompare(b.company || '', 'es', { sensitivity: 'base' });
+      } else if (sortField === 'weight') {
+        const wA = parseFloat(String(a.weight || '0')) || 0;
+        const wB = parseFloat(String(b.weight || '0')) || 0;
+        comparison = wA - wB;
+      } else if (sortField === 'invoice') {
+        const invA = getInvoiceForTracking(a.id)?.number || '';
+        const invB = getInvoiceForTracking(b.id)?.number || '';
+        if (invA && !invB) comparison = 1;
+        else if (!invA && invB) comparison = -1;
+        else comparison = invA.localeCompare(invB, 'es', { numeric: true });
+      } else if (sortField === 'date') {
+        const tA = new Date(a.createdAt || 0).getTime();
+        const tB = new Date(b.createdAt || 0).getTime();
+        comparison = tA - tB;
+      } else if (sortField === 'status') {
+        const sA = (a.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'En Bodega';
+        const sB = (b.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'En Bodega';
+        comparison = sA.localeCompare(sB, 'es');
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [
+    inventory,
+    searchQuery,
+    colTracking,
+    colClient,
+    filterCompany,
+    filterWeight,
+    filterInvoice,
+    colInvoiceSearch,
+    filterStatus,
+    filterDate,
+    sortField,
+    sortOrder,
+    getInvoiceForTracking
+  ]);
 
   const activePackages = filteredInventory.filter(p => !(p.status || '').toLowerCase().includes('entregad')).length;
 
@@ -207,13 +353,13 @@ export default function BodegaInventario() {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* Barra de herramientas */}
         <div className="p-4 border-b border-gray-100 flex flex-col xl:flex-row gap-4 justify-between items-stretch xl:items-center bg-gray-50">
-          <div className="relative w-full xl:max-w-md">
+          <div className="relative w-full xl:max-w-sm">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search className="text-gray-400" size={18} />
             </div>
             <input 
               type="text" 
-              placeholder="Buscar por tracking, cliente..."
+              placeholder="Buscar por tracking, cliente o factura..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-0 text-sm shadow-xs"
@@ -231,6 +377,18 @@ export default function BodegaInventario() {
               className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue shadow-xs"
               title="Filtrar por fecha de ingreso"
             />
+
+            <select
+              value={filterInvoice}
+              onChange={(e) => setFilterInvoice(e.target.value)}
+              className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue shadow-xs"
+              title="Filtrar por estado de facturación"
+            >
+              <option value="Todas">Todas las Facturas</option>
+              <option value="Facturado">Con Factura (Facturados)</option>
+              <option value="Sin Factura">Sin Factura (Pendientes)</option>
+            </select>
+
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -253,6 +411,28 @@ export default function BodegaInventario() {
               <option value="TRINITY BOX">TRINITY BOX</option>
             </select>
 
+            <select
+              value={filterWeight}
+              onChange={(e) => setFilterWeight(e.target.value)}
+              className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-brand-blue font-semibold text-sm hover:bg-gray-50 transition-colors focus:ring-0 focus:border-brand-blue shadow-xs"
+              title="Filtrar por rango de peso"
+            >
+              <option value="Todos">Todos los Pesos</option>
+              <option value="light">Hasta 5 lbs</option>
+              <option value="medium">5 a 15 lbs</option>
+              <option value="heavy">Más de 15 lbs</option>
+            </select>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
+                title="Restablecer todos los filtros"
+              >
+                <X size={14} /> Limpiar
+              </button>
+            )}
+
             <span className="px-3.5 py-2 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-xl shrink-0 self-center">
               {filteredInventory.length} {filteredInventory.length === 1 ? 'Línea' : 'Líneas'}
             </span>
@@ -263,16 +443,201 @@ export default function BodegaInventario() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold">
+              {/* Fila de Encabezados Ordenables */}
+              <tr className="bg-white border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-bold select-none">
                 <th className="p-4 pl-6 text-center w-14">#</th>
-                <th className="p-4">Tracking</th>
-                <th className="p-4">Cliente</th>
-                <th className="p-4">Empresa</th>
-                <th className="p-4">Peso</th>
-                <th className="p-4">Factura</th>
-                <th className="p-4">Fecha de Ingreso</th>
-                <th className="p-4">Estado Interno</th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('tracking')}
+                  title="Ordenar por Tracking"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Tracking</span>
+                    {sortField === 'tracking' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('client')}
+                  title="Ordenar por Cliente"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Cliente</span>
+                    {sortField === 'client' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('company')}
+                  title="Ordenar por Empresa"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Empresa</span>
+                    {sortField === 'company' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('weight')}
+                  title="Ordenar por Peso"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Peso</span>
+                    {sortField === 'weight' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('invoice')}
+                  title="Ordenar por Factura"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Factura</span>
+                    {sortField === 'invoice' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('date')}
+                  title="Ordenar por Fecha de Ingreso"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Fecha de Ingreso</span>
+                    {sortField === 'date' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleSort('status')}
+                  title="Ordenar por Estado Interno"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Estado Interno</span>
+                    {sortField === 'status' ? (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-brand-blue" /> : <ArrowDown size={14} className="text-brand-blue" />
+                    ) : (
+                      <ArrowUpDown size={14} className="text-gray-300" />
+                    )}
+                  </div>
+                </th>
                 <th className="p-4 pr-6 text-right">Acciones</th>
+              </tr>
+
+              {/* Fila de Filtros Directos por Columna */}
+              <tr className="bg-gray-50/70 border-b border-gray-100 text-xs">
+                <th className="py-2 px-2 pl-6 text-center text-gray-300">
+                  <Filter size={12} className="mx-auto" />
+                </th>
+                <th className="py-2 px-3">
+                  <input
+                    type="text"
+                    placeholder="Filtrar tracking..."
+                    value={colTracking}
+                    onChange={(e) => setColTracking(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-normal text-gray-700 focus:border-brand-blue focus:outline-none"
+                  />
+                </th>
+                <th className="py-2 px-3">
+                  <input
+                    type="text"
+                    placeholder="Filtrar cliente..."
+                    value={colClient}
+                    onChange={(e) => setColClient(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-normal text-gray-700 focus:border-brand-blue focus:outline-none"
+                  />
+                </th>
+                <th className="py-2 px-3">
+                  <select
+                    value={filterCompany}
+                    onChange={(e) => setFilterCompany(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:border-brand-blue focus:outline-none"
+                  >
+                    <option value="Todas">Todas</option>
+                    <option value="JRS CARGO">JRS CARGO</option>
+                    <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+                    <option value="JR LOGISTICS">JR LOGISTICS</option>
+                    <option value="TRINITY BOX">TRINITY BOX</option>
+                  </select>
+                </th>
+                <th className="py-2 px-3">
+                  <select
+                    value={filterWeight}
+                    onChange={(e) => setFilterWeight(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:border-brand-blue focus:outline-none"
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="light">≤ 5 lbs</option>
+                    <option value="medium">5 - 15 lbs</option>
+                    <option value="heavy">&gt; 15 lbs</option>
+                  </select>
+                </th>
+                <th className="py-2 px-3">
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={filterInvoice}
+                      onChange={(e) => setFilterInvoice(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:border-brand-blue focus:outline-none"
+                    >
+                      <option value="Todas">Todas</option>
+                      <option value="Facturado">Facturado</option>
+                      <option value="Sin Factura">Sin Factura</option>
+                    </select>
+                  </div>
+                </th>
+                <th className="py-2 px-3">
+                  <input
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-normal text-gray-700 focus:border-brand-blue focus:outline-none"
+                  />
+                </th>
+                <th className="py-2 px-3">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:border-brand-blue focus:outline-none"
+                  >
+                    <option value="Todos">Todos</option>
+                    <option value="En Bodega">En Bodega</option>
+                    <option value="Entregado">Entregados</option>
+                  </select>
+                </th>
+                <th className="py-2 px-3 pr-6 text-right">
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-[11px] font-bold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                      title="Limpiar filtros"
+                    >
+                      <X size={12} /> Limpiar
+                    </button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
@@ -310,7 +675,7 @@ export default function BodegaInventario() {
                   </td>
                   <td className="p-4 whitespace-nowrap">
                     {(() => {
-                      const inv = invoiceMap.get(item.id.trim().toUpperCase());
+                      const inv = getInvoiceForTracking(item.id);
                       if (inv) {
                         return (
                           <Link href={'/admin/facturacion/' + inv.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-brand-blue rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors">
