@@ -1,17 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { Menu, X, UserCircle, PackageOpen, ChevronRight, MessageCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useHalloween } from '@/components/ui/HalloweenProvider';
 import { HalloweenMiniPumpkin } from '@/components/ui/HalloweenIcons';
 
 export default function Header() {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('inicio');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isNavScrollingRef = useRef(false);
+  const navScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { language, setLanguage, t } = useLanguage();
   const { isHalloween } = useHalloween();
 
@@ -23,6 +27,44 @@ export default function Header() {
     { id: 'como-funciona', name: t.nav.howItWorks, href: '/#como-funciona' },
     { id: 'contacto', name: t.nav.contact, href: '/#contacto' },
   ];
+
+  // Dynamically update browser tab title based on current public route or active section
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (pathname === '/') {
+      const sectionLabels: Record<string, string> = {
+        'tracking': t.nav.tracking,
+        'tarifas': t.nav.rates,
+        'cotizador': t.nav.calculator,
+        'como-funciona': t.nav.howItWorks,
+        'contacto': t.nav.contact,
+      };
+      const label = sectionLabels[activeSection];
+      document.title = label ? `JRS CARGO CR - ${label}` : 'JRS CARGO CR';
+      return;
+    }
+
+    if (pathname?.startsWith('/tracking')) {
+      document.title = `JRS CARGO CR - ${t.nav.tracking}`;
+    } else if (pathname?.startsWith('/tarifas')) {
+      document.title = `JRS CARGO CR - ${t.nav.rates}`;
+    } else if (pathname?.startsWith('/como-funciona')) {
+      document.title = `JRS CARGO CR - ${t.nav.howItWorks}`;
+    } else if (pathname?.startsWith('/casillero')) {
+      document.title = 'JRS CARGO CR - Casillero';
+    } else if (pathname?.startsWith('/registro')) {
+      document.title = `JRS CARGO CR - ${t.nav.register}`;
+    } else if (pathname?.startsWith('/login')) {
+      document.title = `JRS CARGO CR - ${t.nav.login}`;
+    } else if (pathname?.startsWith('/terminos-y-condiciones') || pathname?.startsWith('/terms')) {
+      document.title = 'JRS CARGO CR - Términos y Condiciones';
+    } else if (pathname?.startsWith('/politica-de-privacidad') || pathname?.startsWith('/privacy')) {
+      document.title = 'JRS CARGO CR - Política de Privacidad';
+    } else {
+      document.title = 'JRS CARGO CR';
+    }
+  }, [pathname, activeSection, language, t]);
 
   // Prevent background scroll when mobile menu is open
   useEffect(() => {
@@ -43,6 +85,11 @@ export default function Header() {
       const scrollY = window.scrollY;
       setIsScrolled(scrollY > 20);
 
+      if (isNavScrollingRef.current) {
+        ticking = false;
+        return;
+      }
+
       // Section scroll spy
       const sections = ['contacto', 'como-funciona', 'cotizador', 'tarifas', 'tracking'];
       let found = '';
@@ -50,7 +97,7 @@ export default function Header() {
         const el = document.getElementById(id);
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (rect.top <= 220 && rect.bottom >= 100) {
+          if (rect.top <= 240 && rect.bottom >= 100) {
             found = id;
             break;
           }
@@ -72,19 +119,42 @@ export default function Header() {
       }
     };
 
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && ['tracking', 'tarifas', 'cotizador', 'como-funciona', 'contacto'].includes(hash)) {
+        setActiveSection(hash);
+      } else if (!hash && window.scrollY < 250) {
+        setActiveSection('inicio');
+      }
+    };
+
+    handleHashChange();
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('hashchange', handleHashChange);
     updateScrollState();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     (e.currentTarget as HTMLElement)?.blur();
     setIsMobileMenuOpen(false);
 
+    const lockNavScroll = () => {
+      isNavScrollingRef.current = true;
+      if (navScrollTimeoutRef.current) clearTimeout(navScrollTimeoutRef.current);
+      navScrollTimeoutRef.current = setTimeout(() => {
+        isNavScrollingRef.current = false;
+      }, 750);
+    };
+
     if (href === '/') {
       if (window.location.pathname === '/') {
         e.preventDefault();
+        lockNavScroll();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         history.pushState(null, '', '/');
         setActiveSection('inicio');
@@ -97,6 +167,7 @@ export default function Header() {
       const element = document.getElementById(targetId);
       if (element) {
         e.preventDefault();
+        lockNavScroll();
         const headerOffset = 90;
         const elementPosition = element.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.pageYOffset - headerOffset;

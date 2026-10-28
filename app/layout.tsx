@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.jrscargocr.com'),
-  title: 'Casillero en Miami Gratis | JRS CARGO Costa Rica',
+  title: 'JRS CARGO CR',
   description:
     'Abrí tu casillero en Miami gratis y comprá en Amazon, SHEIN, eBay y más. Recibí en Costa Rica desde $7/lb aéreo, con tracking en vivo. También casillero en España y China.',
   keywords: [

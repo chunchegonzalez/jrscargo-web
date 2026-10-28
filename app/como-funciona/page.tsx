@@ -3,7 +3,7 @@ import HowItWorks from '@/components/sections/HowItWorks';
 import Rates from '@/components/sections/Rates';
 
 export const metadata: Metadata = {
-  title: '¿Cómo Funciona el Casillero? | Guía Paso a Paso | JRS CARGO',
+  title: 'JRS CARGO CR - ¿Cómo funciona?',
   description: 'Aprende cómo comprar en tiendas de Estados Unidos y recibir tus compras en Costa Rica en 4 simples pasos con JRS CARGO.',
   keywords: ['como funciona casillero', 'pasos para comprar en USA', 'importar a Costa Rica', 'guia compras por internet Costa Rica'],
   openGraph: {

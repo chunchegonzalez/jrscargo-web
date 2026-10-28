@@ -51,6 +51,10 @@ export default function TrackingSearch() {
     e.preventDefault();
     if (!trackingNumber.trim()) return;
 
+    if (typeof document !== 'undefined') {
+      document.title = `JRS CARGO CR - Tracking ${trackingNumber.trim().toUpperCase()}`;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber.trim())}`, {

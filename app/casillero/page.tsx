@@ -19,7 +19,7 @@ const SITE = 'https://www.jrscargocr.com';
 const REGISTER_URL = 'https://worldboxcr.com/jrscargo/register';
 
 export const metadata: Metadata = {
-  title: 'Casillero en Miami Gratis para Costa Rica | JRS CARGO',
+  title: 'JRS CARGO CR - Casillero',
   description:
     'Abrí tu casillero en Miami 100% gratis, sin mensualidades. Comprá en Amazon, SHEIN, eBay, Walmart y más, y recibí en Costa Rica desde $7/lb aéreo con tracking en vivo.',
   keywords: [

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import TrackingSearch from '@/components/sections/TrackingSearch';
 
 export const metadata: Metadata = {
-  title: 'Rastrear Mi Paquete | Tracking en Tiempo Real | JRS CARGO',
+  title: 'JRS CARGO CR - Tracking',
   description: 'Rastrea tus paquetes y compras internacionales de Miami, España y China a Costa Rica. Consulta el estado de tu guía en tiempo real.',
   keywords: ['tracking Costa Rica', 'rastreo de paquetes', 'JRS CARGO tracking', 'rastrear compras Miami', 'rastreo casillero Costa Rica'],
   openGraph: {

@@ -3,7 +3,7 @@ import Rates from '@/components/sections/Rates';
 import QuoteCalculator from '@/components/sections/QuoteCalculator';
 
 export const metadata: Metadata = {
-  title: 'Tarifas Aéreas y Marítimas | Cotizador | JRS CARGO Costa Rica',
+  title: 'JRS CARGO CR - Tarifas',
   description: 'Conoce nuestras tarifas: Aéreo Miami $7/lb, España $15/lb, China $17/lb, Marítimo $30/ft³. Cotiza tu flete y entregas a domicilio en Costa Rica.',
   keywords: ['tarifas casillero Costa Rica', 'precio por libra Miami', 'flete aéreo Costa Rica', 'flete marítimo Costa Rica', 'cotizar envíos USA Costa Rica'],
   openGraph: {
