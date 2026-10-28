@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, UserPlus, ChevronDown } from 'lucide-react';
@@ -48,6 +48,8 @@ export default function NuevaFacturaPage() {
     { id: 1, service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }
   ]);
   const [notes, setNotes] = useState('Gracias por elegir a JRS CARGO.');
+  const lastFetchedTrackingRef = useRef<Record<number, string>>({});
+  const trackingTimerRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   // New client state
   const [newClient, setNewClient] = useState({ name: '', email: '', phone: '', address: 'Costa Rica' });
@@ -146,7 +148,22 @@ export default function NuevaFacturaPage() {
   };
 
   const handleAddItem = () => {
-    setItems(prev => [...prev, { id: Date.now() + Math.random(), service_name: '', tracking_number: '', weight: '', rate: '', amount: 0 }]);
+    setItems(prev => {
+      const lastItem = prev[prev.length - 1];
+      const newId = Date.now() + Math.random();
+      lastFetchedTrackingRef.current[newId] = '';
+      return [
+        ...prev,
+        {
+          id: newId,
+          service_name: lastItem?.service_name || '',
+          tracking_number: '',
+          weight: '',
+          rate: lastItem?.rate || '',
+          amount: 0
+        }
+      ];
+    });
   };
 
   const handleRemoveItem = (id: number) => {
@@ -181,27 +198,46 @@ export default function NuevaFacturaPage() {
   };
 
   const handleTrackingBlur = async (itemId: number, trackingNumber: string) => {
-    if (!trackingNumber) return;
-    try {
-      // Si el usuario ya ingresó un peso manualmente, NO sobreescribirlo
-      const currentItem = items.find(it => it.id === itemId);
-      if (currentItem && currentItem.weight && Number(currentItem.weight) > 0) {
-        return;
-      }
+    const cleanTracking = (trackingNumber || '').trim();
+    if (!cleanTracking) return;
 
-      const res = await fetch(`/api/tracking?number=${encodeURIComponent(trackingNumber)}`);
+    const upperTracking = cleanTracking.toUpperCase();
+    if (lastFetchedTrackingRef.current[itemId] === upperTracking) {
+      return;
+    }
+    lastFetchedTrackingRef.current[itemId] = upperTracking;
+
+    try {
+      const res = await fetch(`/api/tracking?number=${encodeURIComponent(cleanTracking)}`);
       const data = await res.json();
       if (data.status === 'SUCCESS' && data.rawData?.package?.weight) {
-        let apiWeight = Number(data.rawData.package.weight);
+        const rawWeight = Number(data.rawData.package.weight);
+        if (!rawWeight || isNaN(rawWeight) || rawWeight <= 0) return;
         const apiUnit = (data.rawData.package.weightUnit || 'lbs').toLowerCase();
-        
-        if (apiUnit.includes('lb') && weightUnit === 'Kg') {
-          apiWeight = apiWeight * 0.453592;
-        } else if ((apiUnit.includes('kg') || apiUnit.includes('kilo')) && weightUnit === 'Lb') {
-          apiWeight = apiWeight * 2.20462;
-        }
-        
-        handleItemChange(itemId, 'weight', apiWeight.toFixed(2).replace(/\.00$/, ''));
+
+        setItems(prev => prev.map(item => {
+          if (item.id !== itemId) return item;
+          if ((item.tracking_number || '').trim().toUpperCase() !== upperTracking) return item;
+
+          const rowUnit = detectServiceUnit(item.service_name) || weightUnit;
+          let convertedWeight = rawWeight;
+          if (apiUnit.includes('lb') && rowUnit === 'Kg') {
+            convertedWeight = rawWeight * 0.453592;
+          } else if ((apiUnit.includes('kg') || apiUnit.includes('kilo')) && rowUnit === 'Lb') {
+            convertedWeight = rawWeight * 2.20462;
+          }
+
+          const formattedWeight = convertedWeight.toFixed(2).replace(/\.00$/, '');
+          const r = Number(item.rate) || 0;
+          const w = Number(formattedWeight) || 0;
+          const updatedAmount = w > 0 && r > 0 ? Number((w * r).toFixed(2)) : item.amount;
+
+          return {
+            ...item,
+            weight: formattedWeight,
+            amount: updatedAmount
+          };
+        }));
       }
     } catch (e) {
       console.error('Error fetching tracking for weight:', e);
@@ -239,6 +275,20 @@ export default function NuevaFacturaPage() {
   };
 
   const handleItemChange = (id: number, field: string, value: string) => {
+    if (field === 'tracking_number') {
+      if (trackingTimerRef.current[id]) {
+        clearTimeout(trackingTimerRef.current[id]);
+      }
+      const trimmed = value.trim();
+      if (!trimmed) {
+        lastFetchedTrackingRef.current[id] = '';
+      } else if (trimmed.length >= 5) {
+        trackingTimerRef.current[id] = setTimeout(() => {
+          handleTrackingBlur(id, trimmed);
+        }, 450);
+      }
+    }
+
     if (field === 'service_name') {
       const autoUnit = detectServiceUnit(value);
       if (autoUnit && autoUnit !== weightUnit) {
