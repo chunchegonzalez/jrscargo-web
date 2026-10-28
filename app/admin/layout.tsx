@@ -8,6 +8,33 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
 import GlobalSearch from '../components/GlobalSearch';
 
+function getAdminPageTitle(pathname: string): string {
+  if (!pathname) return 'Panel de JRS';
+  if (pathname === '/admin') return 'Vista General | Panel de JRS';
+  if (pathname.startsWith('/admin/bodega/masivo')) return 'Acción Masiva | Panel de JRS';
+  if (pathname.startsWith('/admin/bodega')) return 'Escanear Individual | Panel de JRS';
+  if (pathname.startsWith('/admin/inventario')) return 'Inventario CR | Panel de JRS';
+  if (pathname.startsWith('/admin/tracking')) return 'Tracking de Paquetes | Panel de JRS';
+  if (pathname.startsWith('/admin/entregas/masivo')) return 'Entregas Masivas | Panel de JRS';
+  if (pathname.startsWith('/admin/facturacion/nueva')) return 'Nueva Factura | Facturas a Clientes | Panel de JRS';
+  if (pathname.startsWith('/admin/facturacion/') && pathname.endsWith('/editar')) return 'Editar Factura | Facturas a Clientes | Panel de JRS';
+  if (pathname.startsWith('/admin/facturacion')) return 'Facturas a Clientes | Panel de JRS';
+  if (pathname.startsWith('/admin/cuentas-por-cobrar/recibir')) return 'Recibir Pago | Cuentas por cobrar | Panel de JRS';
+  if (pathname.startsWith('/admin/cuentas-por-cobrar/estado-cuenta')) return 'Estado de Cuenta | Cuentas por cobrar | Panel de JRS';
+  if (pathname.startsWith('/admin/cuentas-por-cobrar')) return 'Cuentas por cobrar | Panel de JRS';
+  if (pathname.startsWith('/admin/gastos/nuevo')) return 'Nuevo Gasto | Gastos y Compras | Panel de JRS';
+  if (pathname.startsWith('/admin/gastos')) return 'Gastos y Compras | Panel de JRS';
+  if (pathname.startsWith('/admin/contabilidad/pagos')) return 'Historial de Pagos | Panel de JRS';
+  if (pathname.startsWith('/admin/clientes')) return 'Clientes | Panel de JRS';
+  if (pathname.startsWith('/admin/chat-bot')) return 'Chat Bot (Clari) | Panel de JRS';
+  if (pathname.startsWith('/admin/correos')) return 'Actividad de Correos | Panel de JRS';
+  if (pathname.startsWith('/admin/monitor')) return 'Monitoreo Web | Panel de JRS';
+  if (pathname.startsWith('/admin/ajustes')) return 'Ajustes de Sistema | Panel de JRS';
+  if (pathname.startsWith('/admin/servicios')) return 'Servicios y Tarifas | Panel de JRS';
+  if (pathname.startsWith('/admin/login')) return 'Iniciar Sesión | Panel de JRS';
+  return 'Panel de JRS';
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -56,12 +83,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Close mobile menu on route change and set tab title to Panel de JRS
+  // Close mobile menu on route change and set dynamic tab title based on active menu section
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsProfileDropdownOpen(false);
     if (typeof document !== 'undefined') {
-      document.title = 'Panel de JRS';
+      document.title = getAdminPageTitle(pathname);
     }
   }, [pathname]);
 
