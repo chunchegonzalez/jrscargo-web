@@ -120,6 +120,12 @@ export default function EstadoDeCuentaPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (client?.name) {
+      document.title = `JRS CARGO CR - ${String(client.name)}`;
+    }
+  }, [client?.name]);
+
   if (loading) return <div className="p-12 text-center text-slate-400 text-sm">Cargando estado de cuenta...</div>;
 
   const todayStr = new Date().toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' });

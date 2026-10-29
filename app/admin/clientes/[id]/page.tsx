@@ -77,6 +77,12 @@ export default function ClientProfilePage({ params }: { params: { id: string } }
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (client?.name) {
+      document.title = `JRS CARGO CR - ${client.name}`;
+    }
+  }, [client?.name]);
+
   const handleDeletePayment = async (paymentId: string) => {
     if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas anular este pago? El saldo de las facturas asociadas volverá a estar pendiente.'))) return;
     try {
