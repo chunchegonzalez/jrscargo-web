@@ -93,8 +93,8 @@ export default function InvoiceViewPage() {
     loadInvoice();
   }, [loadInvoice]);
 
-  if (loading) return <div className="text-center p-20 text-gray-500">Cargando factura...</div>;
-  if (!invoice) return <div className="text-center p-20 text-red-500">Factura no encontrada.</div>;
+  if (loading) return <div className="text-center p-20 text-slate-400 text-sm">Cargando factura...</div>;
+  if (!invoice) return <div className="text-center p-20 text-red-500 text-sm">Factura no encontrada.</div>;
 
   let displayStatus = invoice.status;
   let paidAmount = 0;
@@ -109,40 +109,76 @@ export default function InvoiceViewPage() {
   const totalColones = (Number(invoice.total) * exchangeRate).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 print:space-y-0 print:m-0 print:p-0 print:max-w-none">
+    <div className="max-w-5xl mx-auto space-y-5 print:space-y-0 print:m-0 print:p-0 print:max-w-none">
       {/* Actions - hidden on print */}
-      <div className="flex items-center justify-between print:hidden">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/facturacion" className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500">
-            <ArrowLeft size={20} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] print:hidden">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/facturacion"
+            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+            title="Volver a Facturación"
+          >
+            <ArrowLeft size={16} />
           </Link>
-          <h1 className="text-2xl font-black text-brand-blue">Factura {invoice.invoice_number}</h1>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">Factura {invoice.invoice_number}</h1>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                displayStatus === 'Pagada' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' :
+                displayStatus === 'Anulada' ? 'bg-red-50 text-red-700 border-red-200/80' :
+                'bg-amber-50 text-amber-700 border-amber-200/80'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  displayStatus === 'Pagada' ? 'bg-emerald-500' :
+                  displayStatus === 'Anulada' ? 'bg-red-500' :
+                  'bg-amber-500'
+                }`} />
+                {displayStatus}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Emitida el {formatDisplayDate(invoice.issue_date)} · {invoice.clients?.name}</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {invoice.status !== 'Anulada' && (
-            <button onClick={handleVoidInvoice} className="px-4 py-2 bg-orange-100 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
-              <Ban size={18} /> Anular
+            <button
+              onClick={handleVoidInvoice}
+              className="h-9 px-3 bg-amber-50 text-amber-700 border border-amber-200/80 rounded-lg hover:bg-amber-100 inline-flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer"
+            >
+              <Ban size={14} /> Anular
             </button>
           )}
-          <button onClick={handleDeleteInvoice} className="px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
-            <Trash2 size={18} /> Eliminar
+          <button
+            onClick={handleDeleteInvoice}
+            className="h-9 px-3 bg-red-50 text-red-700 border border-red-200/80 rounded-lg hover:bg-red-100 inline-flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer"
+          >
+            <Trash2 size={14} /> Eliminar
           </button>
-          <Link href={`/admin/facturacion/${id}/editar`} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-bold shadow-sm transition-all">
+          <Link
+            href={`/admin/facturacion/${id}/editar`}
+            className="h-9 px-3.5 bg-white border border-slate-200/90 text-slate-700 rounded-lg hover:bg-slate-50 inline-flex items-center text-xs font-semibold shadow-2xs transition-all"
+          >
             Editar
           </Link>
           {displayStatus !== 'Pagada' && displayStatus !== 'Anulada' && (invoice.clients?.id || invoice.client_id) && (
-            <Link href={`/admin/cuentas-por-cobrar/recibir/${invoice.clients?.id || invoice.client_id}`} className="px-4 py-2 bg-[#0A2636] text-white rounded-lg text-sm font-bold shadow-sm transition-all">
+            <Link
+              href={`/admin/cuentas-por-cobrar/recibir/${invoice.clients?.id || invoice.client_id}`}
+              className="h-9 px-3.5 bg-[#0B1D2B] hover:bg-[#123147] text-brand-yellow rounded-lg inline-flex items-center text-xs font-semibold shadow-2xs transition-all"
+            >
               Cobrar
             </Link>
           )}
-          <button onClick={() => window.print()} className="px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 flex items-center gap-2 text-sm font-bold shadow-sm transition-all">
-            <Printer size={18} /> Imprimir
+          <button
+            onClick={() => window.print()}
+            className="h-9 px-3.5 bg-brand-blue text-white rounded-lg hover:bg-[#0e354b] inline-flex items-center gap-1.5 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          >
+            <Printer size={14} /> Imprimir
           </button>
         </div>
       </div>
 
       {/* ========== INVOICE DOCUMENT ========== */}
-      <div className="bg-white shadow-lg print:shadow-none mx-auto flex flex-col" style={{ maxWidth: '210mm', minHeight: '297mm' }}>
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] print:rounded-none print:border-none print:shadow-none mx-auto flex flex-col" style={{ maxWidth: '210mm', minHeight: '297mm' }}>
         
         <div className="px-12 pt-10 pb-8 flex-1 flex flex-col">
           

@@ -169,11 +169,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <ModalProvider>
-      <div className="min-h-screen bg-[#FAFAFA] print:bg-white print:h-auto print:min-h-0 print:block flex text-gray-900 selection:bg-brand-accent selection:text-white">
+      <div className="min-h-screen bg-[#F8FAFC] print:bg-white print:h-auto print:min-h-0 print:block flex text-slate-900 selection:bg-brand-accent selection:text-white">
         {/* Mobile overlay */}
         {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 lg:hidden print:hidden animate-fade-in"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-40 lg:hidden print:hidden animate-fade-in"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -430,8 +430,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       } print:ml-0 print:block print:h-auto print:min-h-0`}>
         
         {/* Top Header */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 h-20 flex items-center px-4 md:px-8 justify-between gap-4 sticky top-0 z-30 print:hidden">
-          <div className="flex items-center gap-3 shrink-0">
+        <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 h-16 flex items-center px-4 md:px-6 justify-between gap-3 sticky top-0 z-30 print:hidden">
+          <div className="flex items-center gap-2.5 shrink-0">
             {/* Sidebar Toggle (Mobile & Desktop) */}
             <button 
               onClick={() => {
@@ -441,32 +441,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   setIsMobileMenuOpen(true);
                 }
               }}
-              className="p-2 text-gray-600 hover:text-brand-blue hover:bg-brand-blue/10 rounded-xl transition-colors flex items-center justify-center"
+              className="w-8 h-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center cursor-pointer"
               title={isDesktopSidebarOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
             >
-              <Menu size={22} />
+              <Menu size={18} />
             </button>
-            <h2 className="text-xl font-black text-gray-800 tracking-tight hidden sm:block">Sistema de Gestión</h2>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400">Sistema de Gestión</span>
+              <span className="text-slate-300 text-xs">/</span>
+              <span className="text-xs font-bold text-slate-800 bg-slate-100/90 border border-slate-200/70 px-2 py-0.5 rounded-md">
+                {getAdminPageTitle(pathname).split(' | ')[0]}
+              </span>
+            </div>
           </div>
           
-          <div className="flex-1 max-w-2xl px-2 sm:px-4">
+          <div className="flex-1 max-w-xl px-1 sm:px-3">
             <GlobalSearch role={currentUser?.role} />
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Live Bot Alert Pill in Top Header */}
             <Link
               href="/admin/chat-bot"
-              className={`relative p-2.5 rounded-2xl border transition-all flex items-center gap-2 ${
+              className={`relative h-9 px-2.5 rounded-lg border transition-all flex items-center gap-1.5 ${
                 botUnreadCount > 0
-                  ? 'bg-red-50 border-red-200 text-red-600 shadow-sm animate-pulse'
-                  : 'bg-gray-50 border-gray-200/80 text-gray-500 hover:text-brand-blue hover:bg-brand-blue/5'
+                  ? 'bg-red-50 border-red-200 text-red-600 shadow-2xs animate-pulse'
+                  : 'bg-white border-slate-200/80 text-slate-500 hover:text-brand-blue hover:bg-slate-50'
               }`}
               title="Consultas en vivo del Bot Clari"
             >
-              <Bell size={18} />
+              <Bell size={15} />
               {botUnreadCount > 0 && (
-                <span className="text-xs font-black">
+                <span className="text-[11px] font-bold">
                   {botUnreadCount} {botUnreadCount === 1 ? 'Consulta' : 'Consultas'}
                 </span>
               )}
@@ -474,144 +480,144 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             {/* User Profile Capsule with Interactive Dropdown */}
             <div ref={profileDropdownRef} className="relative shrink-0">
-            <button
-              onClick={() => setIsProfileDropdownOpen(prev => !prev)}
-              className={`group flex items-center gap-3 p-1.5 sm:pl-3.5 sm:pr-2 sm:py-1.5 rounded-2xl transition-all duration-200 border cursor-pointer select-none ${
-                isProfileDropdownOpen 
-                  ? 'bg-brand-blue/5 border-brand-blue/30 shadow-md ring-4 ring-brand-blue/10' 
-                  : 'bg-white hover:bg-gray-50/80 border-gray-200/80 hover:border-brand-blue/30 shadow-sm hover:shadow'
-              }`}
-            >
-              <div className="text-right hidden sm:flex flex-col justify-center">
-                <p className="text-[13px] font-black text-gray-900 uppercase tracking-wide leading-tight group-hover:text-brand-blue transition-colors">
-                  {currentUser?.username || 'Cargando...'}
-                </p>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">
-                  {currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}
-                </p>
-              </div>
+              <button
+                onClick={() => setIsProfileDropdownOpen(prev => !prev)}
+                className={`group flex items-center gap-2.5 h-9 pl-1.5 pr-2 sm:pl-2.5 sm:pr-2 rounded-lg transition-all duration-150 border cursor-pointer select-none ${
+                  isProfileDropdownOpen 
+                    ? 'bg-slate-50 border-brand-blue/30 ring-2 ring-brand-blue/10' 
+                    : 'bg-white hover:bg-slate-50 border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="text-right hidden sm:flex flex-col justify-center">
+                  <p className="text-xs font-bold text-slate-800 leading-none group-hover:text-brand-blue transition-colors">
+                    {currentUser?.username || 'Cargando...'}
+                  </p>
+                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5 leading-none">
+                    {currentUser?.role === 'admin' ? 'Administrador' : 'Operador'}
+                  </p>
+                </div>
 
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0B1D2B] via-brand-blue to-[#1B5E86] shadow-md shadow-brand-blue/20 flex items-center justify-center text-white font-black text-xs border-2 border-white tracking-wider transition-transform duration-200 group-hover:scale-105">
-                {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
-              </div>
+                <div className="w-7 h-7 rounded-md bg-[#0B1D2B] flex items-center justify-center text-brand-yellow font-bold text-[11px] tracking-wider shrink-0">
+                  {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
+                </div>
 
-              <ChevronDown 
-                size={14} 
-                className={`text-gray-400 hidden sm:block transition-transform duration-200 ${
-                  isProfileDropdownOpen ? 'rotate-180 text-brand-blue font-bold' : 'group-hover:text-gray-600'
-                }`} 
-              />
-            </button>
+                <ChevronDown 
+                  size={13} 
+                  className={`text-slate-400 hidden sm:block transition-transform duration-150 ${
+                    isProfileDropdownOpen ? 'rotate-180 text-brand-blue' : 'group-hover:text-slate-600'
+                  }`} 
+                />
+              </button>
 
-            {/* Dropdown Menu */}
-            {isProfileDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* Header inside dropdown */}
-                <div className="p-3 border-b border-gray-100 bg-gray-50/70 rounded-xl mb-1">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0B1D2B] to-brand-blue text-white font-black flex items-center justify-center text-xs shadow-sm shrink-0">
-                      {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-black text-gray-900 text-sm truncate uppercase tracking-tight">
-                        {currentUser?.username || 'Usuario'}
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <ShieldCheck size={12} className="text-brand-blue shrink-0" />
-                        <span className="text-[11px] font-bold text-gray-500">
-                          {currentUser?.role === 'admin' ? 'Administrador Principal' : 'Operador de Bodega'}
-                        </span>
+              {/* Dropdown Menu */}
+              {isProfileDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200/90 p-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  {/* Header inside dropdown */}
+                  <div className="p-2.5 border-b border-slate-100 bg-slate-50/70 rounded-lg mb-1">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-[#0B1D2B] text-brand-yellow font-bold flex items-center justify-center text-xs shrink-0">
+                        {currentUser?.username ? currentUser.username.substring(0, 2).toUpperCase() : 'AD'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-900 text-xs truncate">
+                          {currentUser?.username || 'Usuario'}
+                        </p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <ShieldCheck size={11} className="text-brand-blue shrink-0" />
+                          <span className="text-[10px] font-medium text-slate-500">
+                            {currentUser?.role === 'admin' ? 'Administrador Principal' : 'Operador de Bodega'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Quick actions */}
-                <div className="space-y-0.5 py-1">
-                  {currentUser?.role === 'admin' && (
+                  {/* Quick actions */}
+                  <div className="space-y-0.5 py-0.5">
+                    {currentUser?.role === 'admin' && (
+                      <Link
+                        href="/admin/ajustes"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:text-brand-blue hover:bg-slate-50 rounded-lg transition-colors"
+                      >
+                        <Settings size={14} className="text-slate-400" />
+                        <span>Ajustes del Sistema</span>
+                      </Link>
+                    )}
                     <Link
-                      href="/admin/ajustes"
+                      href="/admin/inventario"
                       onClick={() => setIsProfileDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-gray-700 hover:text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:text-brand-blue hover:bg-slate-50 rounded-lg transition-colors"
                     >
-                      <Settings size={15} className="text-gray-400" />
-                      <span>Ajustes del Sistema</span>
+                      <Package size={14} className="text-slate-400" />
+                      <span>Inventario Costa Rica</span>
                     </Link>
-                  )}
-                  <Link
-                    href="/admin/inventario"
-                    onClick={() => setIsProfileDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-gray-700 hover:text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
-                  >
-                    <Package size={15} className="text-gray-400" />
-                    <span>Inventario Costa Rica</span>
-                  </Link>
-                  {currentUser?.role === 'admin' && (
-                    <Link
-                      href="/admin/clientes"
-                      onClick={() => setIsProfileDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-gray-700 hover:text-brand-blue hover:bg-brand-blue/5 rounded-xl transition-colors"
-                    >
-                      <Users size={15} className="text-gray-400" />
-                      <span>Directorio de Clientes</span>
-                    </Link>
-                  )}
-                </div>
+                    {currentUser?.role === 'admin' && (
+                      <Link
+                        href="/admin/clientes"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:text-brand-blue hover:bg-slate-50 rounded-lg transition-colors"
+                      >
+                        <Users size={14} className="text-slate-400" />
+                        <span>Directorio de Clientes</span>
+                      </Link>
+                    )}
+                  </div>
 
-                {/* Logout Button */}
-                <div className="border-t border-gray-100 pt-1 mt-1">
-                  <button
-                    onClick={() => { setIsProfileDropdownOpen(false); handleLogout(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <LogOut size={15} />
-                    <span>Cerrar Sesión</span>
-                  </button>
+                  {/* Logout Button */}
+                  <div className="border-t border-slate-100 pt-1 mt-1">
+                    <button
+                      onClick={() => { setIsProfileDropdownOpen(false); handleLogout(); }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <LogOut size={14} />
+                      <span>Cerrar Sesión</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Live Floating Toast Alert when a new Bot Consultation arrives */}
         {latestBotAlert && !pathname.startsWith('/admin/chat-bot') && (
-          <div className="fixed bottom-5 right-5 z-50 max-w-sm bg-[#0B1D2B] text-white p-4 rounded-2xl shadow-2xl border border-brand-yellow/40 animate-slide-up print:hidden">
+          <div className="fixed bottom-5 right-5 z-50 max-w-sm bg-[#0B1D2B] text-white p-4 rounded-xl shadow-2xl border border-brand-yellow/40 animate-slide-up print:hidden">
             <div className="flex items-start justify-between gap-3 mb-2">
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 animate-bounce">
-                  <Bell size={16} />
+                <span className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center shrink-0 animate-bounce">
+                  <Bell size={15} />
                 </span>
                 <div>
-                  <p className="text-xs font-black text-brand-yellow uppercase tracking-wider">
+                  <p className="text-xs font-bold text-brand-yellow uppercase tracking-wider">
                     🔔 Nueva Consulta en Clari Bot
                   </p>
-                  <p className="text-xs font-bold text-white truncate">
+                  <p className="text-xs font-semibold text-white truncate">
                     {latestBotAlert.name} ({latestBotAlert.email})
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setLatestBotAlert(null)}
-                className="text-gray-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1"
               >
                 <X size={15} />
               </button>
             </div>
-            <p className="text-xs text-gray-300 bg-white/5 p-2.5 rounded-xl mb-3 line-clamp-2">
+            <p className="text-xs text-slate-300 bg-white/5 p-2.5 rounded-lg mb-3 line-clamp-2">
               &quot;{latestBotAlert.preview}&quot;
             </p>
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setLatestBotAlert(null)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/10"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-white/10"
               >
                 Cerrar
               </button>
               <Link
                 href="/admin/chat-bot"
                 onClick={() => setLatestBotAlert(null)}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-md"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
               >
                 Ir y Tomar el Mando →
               </Link>
@@ -619,7 +625,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         )}
 
-        <div className="p-4 md:p-8 min-w-0 print:p-0 print:overflow-visible">
+        <div className="p-4 md:p-6 min-w-0 print:p-0 print:overflow-visible">
           {children}
         </div>
       </main>

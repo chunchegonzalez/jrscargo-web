@@ -243,7 +243,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
   };
 
   return (
-    <div ref={wrapperRef} className="relative w-full max-w-2xl mx-auto">
+    <div ref={wrapperRef} className="relative w-full max-w-xl mx-auto">
       <div className="relative group">
         <input 
           type="text" 
@@ -252,14 +252,20 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleInputKeyDown}
           placeholder="Buscar tracking, clientes, facturas o módulos..." 
-          className="w-full bg-gray-100/80 border border-transparent hover:bg-gray-50 hover:border-gray-200 focus:bg-white focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 rounded-full px-5 py-2.5 pl-11 text-sm font-medium text-gray-700 transition-all outline-none placeholder-gray-400"
+          className="w-full h-9 bg-slate-50/90 border border-slate-200/80 hover:bg-white hover:border-slate-300 focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 rounded-lg px-3.5 pl-9 pr-14 text-xs sm:text-[13px] font-medium text-slate-800 transition-all outline-none placeholder-slate-400"
         />
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-blue transition-colors" size={18} />
-        {isFetching && query.trim().length > 0 && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-blue animate-spin" size={16} />}
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors" size={15} />
+        {isFetching && query.trim().length > 0 ? (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue animate-spin" size={14} />
+        ) : (
+          <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-slate-200/60 text-slate-500 text-[10px] font-semibold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+            Enter
+          </span>
+        )}
       </div>
 
       {isOpen && query.length > 0 && (
-        <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[999] max-h-[70vh] flex flex-col">
+        <div className="absolute top-full left-0 w-full mt-1.5 bg-white rounded-xl shadow-2xl border border-slate-200/90 overflow-hidden z-[999] max-h-[70vh] flex flex-col">
           <div className="overflow-y-auto p-2">
             {!hasResults && !isFetching && (
               <div className="p-4 text-center">

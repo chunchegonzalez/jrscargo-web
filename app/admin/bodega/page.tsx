@@ -235,50 +235,72 @@ export default function BodegaScanner() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="w-full max-w-5xl mx-auto space-y-5">
+      {/* Encabezado compacto y elegante */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand-blue mb-1">Escáner de Bodega</h1>
-          <p className="text-gray-500 text-sm">Escanea los paquetes entrantes para registrarlos en Costa Rica.</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Escáner de Bodega</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
+              Operación Individual
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Escanea los paquetes entrantes para registrarlos o despacharlos en Costa Rica.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/bodega/masivo"
-            className="px-4 py-2.5 bg-brand-blue text-white rounded-xl text-xs font-bold hover:bg-brand-blue/90 transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Layers size={15} />
-            <span>Acción Masiva</span>
-          </Link>
+        <div className="flex items-center gap-2 flex-wrap">
           {packageData && (
-            <button onClick={resetScanner} className="px-3 py-2 text-xs font-bold text-brand-red hover:underline">
+            <button
+              onClick={resetScanner}
+              className="h-9 px-3.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm inline-flex items-center gap-1.5 transition-all cursor-pointer"
+            >
               Escanear Otro Paquete
             </button>
           )}
+          <Link
+            href="/admin/bodega/masivo"
+            className="h-9 px-3.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white font-semibold text-xs sm:text-sm transition-all inline-flex items-center gap-1.5 shadow-2xs"
+          >
+            <Layers size={14} />
+            <span>Acción Masiva</span>
+          </Link>
         </div>
       </div>
 
       {!packageData && (
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 mb-8">
-          <form onSubmit={handleScan} className="relative">
-            <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-              <ScanBarcode size={28} className="text-brand-blue" />
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-2.5">
+            <label className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold flex items-center gap-1.5">
+              <ScanBarcode size={14} className="text-brand-blue" />
+              Lectura de Código de Barras / Tracking
+            </label>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Lector Activo
+            </span>
+          </div>
+          <form onSubmit={handleScan} className="relative flex flex-col sm:flex-row gap-2.5">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <ScanBarcode size={20} className="text-slate-400" />
+              </div>
+              <input
+                ref={inputRef}
+                type="text"
+                value={scannedCode}
+                onChange={(e) => setScannedCode(e.target.value)}
+                disabled={isLoading}
+                placeholder="Pistola de código de barras lista..."
+                className="w-full h-11 pl-11 pr-4 rounded-lg bg-white border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm font-mono font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-sans placeholder:font-normal transition-all disabled:opacity-50"
+                autoComplete="off"
+                autoFocus
+              />
             </div>
-            <input
-              ref={inputRef}
-              type="text"
-              value={scannedCode}
-              onChange={(e) => setScannedCode(e.target.value)}
-              disabled={isLoading}
-              placeholder="Pistola de código de barras lista..."
-              className="w-full pl-16 pr-6 py-5 rounded-2xl bg-gray-50 border-2 border-gray-200 text-brand-blue font-bold text-2xl placeholder:text-gray-400 focus:border-brand-blue focus:ring-0 focus:bg-white transition-all disabled:opacity-50"
-              autoComplete="off"
-              autoFocus
-            />
-            <button 
+            <button
               type="submit"
               disabled={isLoading || !scannedCode.trim()}
-              className="absolute right-3 top-3 bottom-3 bg-brand-blue text-white px-6 rounded-xl font-bold hover:bg-brand-red disabled:opacity-50 transition-colors"
+              className="h-11 px-6 bg-brand-blue hover:bg-[#0e354b] text-white rounded-lg font-semibold text-xs sm:text-sm transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
               {isLoading ? 'Buscando...' : 'Buscar'}
             </button>
@@ -288,58 +310,96 @@ export default function BodegaScanner() {
 
       {/* Resultados de la búsqueda */}
       {packageData && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl shadow-sm border border-brand-blue/20 overflow-hidden animate-fade-in">
-            <div className="bg-brand-blue/5 p-6 border-b border-brand-blue/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Package size={24} className="text-brand-blue" />
-                <h3 className="text-xl font-bold text-brand-blue">
-                  Tracking: {packageData.tracking}
-                </h3>
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden animate-fade-in">
+            <div className="bg-slate-50/95 px-5 py-3.5 border-b border-slate-200/90 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
+                  <Package size={16} />
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold leading-none">
+                    Tracking Identificado
+                  </p>
+                  <h3 className="text-sm sm:text-base font-bold font-mono text-slate-900 mt-0.5">
+                    {packageData.tracking}
+                  </h3>
+                </div>
               </div>
-              <span className={`font-bold px-4 py-1.5 rounded-full text-sm ${localStatus?.toLowerCase().includes('entregad') ? 'bg-green-100 text-green-700' : localStatus ? 'bg-brand-blue text-white' : packageData.isManual ? 'bg-orange-100 text-orange-700' : 'bg-brand-yellow/20 text-brand-blue'}`}>
-                {localStatus?.toLowerCase().includes('entregad') ? 'Entregado' : localStatus ? 'En Bodega' : (packageData.isManual ? 'Registro Manual' : 'Encontrado en Worldbox')}
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                  localStatus?.toLowerCase().includes('entregad')
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : localStatus
+                    ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20'
+                    : packageData.isManual
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-sky-50 text-sky-700 border-sky-200'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    localStatus?.toLowerCase().includes('entregad')
+                      ? 'bg-emerald-500'
+                      : localStatus
+                      ? 'bg-brand-blue'
+                      : packageData.isManual
+                      ? 'bg-amber-500'
+                      : 'bg-sky-500'
+                  }`}
+                />
+                {localStatus?.toLowerCase().includes('entregad')
+                  ? 'Entregado'
+                  : localStatus
+                  ? 'En Bodega'
+                  : packageData.isManual
+                  ? 'Registro Manual'
+                  : 'Encontrado en Worldbox'}
               </span>
             </div>
 
-            <div className="p-8 grid md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="mb-4 relative">
-                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Consignatario</p>
-                    <div className="relative">
-                      <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        value={packageData.consignatario || ''}
-                        onChange={(e) => setPackageData({ ...packageData, consignatario: e.target.value })}
-                        className="w-full pl-10 pr-4 py-4 rounded-xl border border-gray-100 bg-gray-50 text-brand-blue font-bold focus:border-brand-blue focus:ring-0 focus:bg-white transition-colors"
-                      />
-                    </div>
+            <div className="p-5 sm:p-6 grid md:grid-cols-12 gap-6">
+              <div className="md:col-span-7 space-y-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                    Consignatario
+                  </label>
+                  <div className="relative">
+                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={packageData.consignatario || ''}
+                      onChange={(e) => setPackageData({ ...packageData, consignatario: e.target.value })}
+                      className="w-full h-10 pl-9 pr-3.5 rounded-lg border border-slate-200/90 bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm font-semibold text-slate-800 transition-all"
+                    />
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Peso</p>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                      Peso
+                    </label>
                     {packageData.isManual ? (
-                      <div className="flex bg-gray-50 rounded-xl border border-gray-100 focus-within:border-brand-blue transition-colors overflow-hidden">
+                      <div className="flex h-10 bg-white rounded-lg border border-slate-200/90 focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/10 transition-all overflow-hidden">
                         <input
                           type="number"
                           value={packageData.weight || ''}
                           onChange={(e) => setPackageData({ ...packageData, weight: e.target.value })}
-                          className="w-full bg-transparent p-4 font-medium text-brand-blue focus:outline-none"
+                          className="w-full bg-transparent px-3 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none"
                           placeholder="Ej. 1.5"
                         />
                         <select
                           value={packageData.weightUnit || 'lbs'}
                           onChange={(e) => setPackageData({ ...packageData, weightUnit: e.target.value })}
-                          className="bg-transparent border-l border-gray-100 px-4 font-medium text-brand-blue focus:outline-none cursor-pointer"
+                          className="bg-slate-50 border-l border-slate-200/90 px-2.5 text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none cursor-pointer"
                         >
                           <option value="lbs">lbs</option>
                           <option value="kgs">kgs</option>
                         </select>
                       </div>
                     ) : (
-                      <p className="text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100">
+                      <div className="h-10 px-3.5 rounded-lg border border-slate-200/80 bg-slate-50/70 flex items-center text-xs sm:text-sm font-semibold text-slate-800 font-mono">
                         {(() => {
                           const num = parseFloat(String(packageData.weight));
                           const unit = (packageData.weightUnit || 'lbs').toLowerCase();
@@ -352,15 +412,17 @@ export default function BodegaScanner() {
                             return `${num} lbs (${kg} kg)`;
                           }
                         })()}
-                      </p>
+                      </div>
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Empresa</p>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                      Empresa
+                    </label>
                     <select
                       value={packageData.provider || 'JRS CARGO'}
                       onChange={(e) => setPackageData({ ...packageData, provider: e.target.value })}
-                      className="w-full text-brand-text-gray font-medium bg-gray-50 p-4 rounded-xl border border-gray-100 focus:border-brand-blue focus:ring-0 cursor-pointer"
+                      className="w-full h-10 px-3 bg-white rounded-lg border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm font-medium text-slate-800 cursor-pointer transition-all"
                     >
                       <option value="JRS CARGO">JRS CARGO</option>
                       <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
@@ -371,80 +433,82 @@ export default function BodegaScanner() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Descripción</p>
+                  <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                    Descripción
+                  </label>
                   {packageData.isManual ? (
                     <textarea
                       value={packageData.description || ''}
                       onChange={(e) => setPackageData({ ...packageData, description: e.target.value })}
-                      className="w-full text-brand-blue font-medium bg-gray-50 p-4 rounded-xl border border-gray-100 focus:border-brand-blue focus:outline-none focus:ring-0 transition-colors"
+                      className="w-full p-3 bg-white rounded-lg border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 transition-all"
                       rows={2}
                       placeholder="Agrega una descripción o contenido del paquete..."
                     />
                   ) : (
-                    <p className="text-brand-text-gray bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
-                      {packageData.description}
-                    </p>
+                    <div className="min-h-[42px] px-3.5 py-2.5 rounded-lg border border-slate-200/80 bg-slate-50/70 text-xs sm:text-sm text-slate-700">
+                      {packageData.description || 'Sin descripción registrada'}
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Acciones */}
-              <div className="flex flex-col gap-4">
+              <div className="md:col-span-5 flex flex-col">
                 {!localStatus && (
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 flex flex-col justify-center text-center">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                      <CheckCircle2 size={32} className="text-gray-400" />
+                  <div className="bg-slate-50/80 rounded-xl p-5 border border-slate-200/80 flex-1 flex flex-col justify-center text-center">
+                    <div className="w-11 h-11 bg-white rounded-lg border border-slate-200/80 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                      <CheckCircle2 size={22} className="text-brand-blue" />
                     </div>
-                    <h4 className="text-lg font-bold text-brand-blue mb-2">Ingresar a Bodega CR</h4>
-                    <p className="text-gray-500 text-sm mb-6 text-balance">
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900 mb-1">Ingresar a Bodega CR</h4>
+                    <p className="text-slate-500 text-xs mb-5 text-balance leading-relaxed">
                       Al confirmar, este paquete será trasladado a tu sistema de inventario local. El cliente verá que ya está en Costa Rica.
                     </p>
-                    <button 
+                    <button
                       onClick={handleRegisterLocal}
-                      className="btn-primary py-4 w-full shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
+                      className="h-10 px-4 w-full bg-brand-blue hover:bg-[#0e354b] text-white rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                     >
-                      Confirmar Recepción <ArrowRight size={20} />
+                      Confirmar Recepción <ArrowRight size={16} />
                     </button>
                   </div>
                 )}
 
                 {localStatus && !localStatus.toLowerCase().includes('entregad') && (
-                  <div className="bg-green-50 rounded-2xl p-6 border border-green-100 flex-1 flex flex-col justify-center text-center">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                      <CheckCircle2 size={32} className="text-green-500" />
+                  <div className="bg-emerald-50/60 rounded-xl p-5 border border-emerald-200/80 flex-1 flex flex-col justify-center text-center">
+                    <div className="w-11 h-11 bg-white rounded-lg border border-emerald-200/80 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                      <CheckCircle2 size={22} className="text-emerald-600" />
                     </div>
-                    <h4 className="text-lg font-bold text-green-800 mb-2">Paquete en Bodega</h4>
-                    <p className="text-green-600/80 text-sm mb-6 text-balance">
+                    <h4 className="text-sm sm:text-base font-bold text-emerald-950 mb-1">Paquete en Bodega</h4>
+                    <p className="text-emerald-700/80 text-xs mb-5 text-balance leading-relaxed">
                       El paquete está listo para ser entregado al cliente.
                     </p>
-                    <button 
+                    <button
                       onClick={handleDeliver}
-                      className="bg-green-600 text-white font-bold rounded-xl py-4 w-full shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
+                      className="h-10 px-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                     >
-                      Entregar al Cliente <ArrowRight size={20} />
+                      Entregar al Cliente <ArrowRight size={16} />
                     </button>
                   </div>
                 )}
 
                 {localStatus?.includes('Entregado') && (
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 flex flex-col justify-center text-center opacity-90">
-                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-gray-200">
-                      <CheckCircle2 size={32} className="text-gray-400" />
+                  <div className="bg-slate-50/80 rounded-xl p-5 border border-slate-200/80 flex-1 flex flex-col justify-center text-center">
+                    <div className="w-11 h-11 bg-white rounded-lg border border-slate-200/80 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+                      <CheckCircle2 size={22} className="text-slate-400" />
                     </div>
-                    <h4 className="text-lg font-bold text-gray-500 mb-2">Paquete Entregado</h4>
-                    <p className="text-gray-400 text-sm mb-6 text-balance">
+                    <h4 className="text-sm sm:text-base font-bold text-slate-700 mb-1">Paquete Entregado</h4>
+                    <p className="text-slate-500 text-xs mb-5 text-balance leading-relaxed">
                       Este paquete ya fue entregado al cliente.
                     </p>
-                    <div className="flex flex-col gap-3">
-                      <button 
+                    <div className="flex flex-col gap-2">
+                      <button
                         onClick={resetScanner}
-                        className="bg-white border-2 border-gray-200 text-gray-500 font-bold rounded-xl py-3 w-full hover:border-brand-blue hover:text-brand-blue transition-colors flex items-center justify-center"
+                        className="h-9 px-4 w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium text-xs sm:text-sm transition-colors flex items-center justify-center cursor-pointer"
                       >
                         Escanear Nuevo
                       </button>
-                      <button 
+                      <button
                         onClick={handleRevertDeliver}
-                        className="bg-transparent text-brand-red text-xs font-bold py-2 hover:underline transition-colors"
+                        className="bg-transparent text-brand-red text-xs font-semibold py-1.5 hover:underline transition-colors cursor-pointer"
                       >
                         ¿Fue un error? Devolver a Inventario
                       </button>
@@ -457,21 +521,27 @@ export default function BodegaScanner() {
 
           {/* Historial (Solo si hay acciones locales) */}
           {history.length > 0 && (
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in p-6">
-              <h4 className="font-bold text-brand-blue mb-6">Historial Local</h4>
-              <div className="space-y-4">
+            <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden animate-fade-in">
+              <div className="bg-slate-50/95 border-b border-slate-200/90 px-5 py-3 flex items-center justify-between">
+                <h4 className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                  Historial Local ({history.length})
+                </h4>
+              </div>
+              <div className="divide-y divide-slate-100">
                 {history.map((event, i) => (
-                  <div key={i} className="flex gap-4 items-start relative pb-4">
-                    {i !== history.length - 1 && (
-                      <div className="absolute top-8 bottom-0 left-[11px] w-0.5 bg-gray-100"></div>
-                    )}
-                    <div className="w-6 h-6 rounded-full bg-brand-blue flex-shrink-0 z-10 border-4 border-white shadow-sm mt-1"></div>
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex-1">
-                      <p className="font-bold text-brand-blue">{event.action}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs font-semibold text-gray-500">
-                        <span className="bg-white px-2 py-1 rounded border border-gray-200">{event.date}</span>
-                        <span>👤 {event.user}</span>
-                      </div>
+                  <div
+                    key={i}
+                    className="py-2.5 px-5 hover:bg-slate-50/90 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[13px]"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2 h-2 rounded-full bg-brand-blue shrink-0" />
+                      <span className="font-semibold text-slate-800">{event.action}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-xs text-slate-500 sm:shrink-0 pl-4 sm:pl-0">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/70 font-mono text-[11px] text-slate-600">
+                        {event.date}
+                      </span>
+                      <span className="font-medium text-slate-600">👤 {event.user}</span>
                     </div>
                   </div>
                 ))}

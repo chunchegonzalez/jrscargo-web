@@ -181,139 +181,209 @@ export default function BodegaMasivo() {
   const detectedCount = text.split('\n').filter(t => t.trim().length > 0).length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="w-full max-w-5xl mx-auto space-y-5">
+      {/* Header compacto y elegante */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand-blue mb-1">
-            {mode === 'recepcion' ? 'Recepción Masiva' : 'Entrega Masiva'}
-          </h1>
-          <p className="text-gray-500 text-sm">
-            {mode === 'recepcion' 
-              ? 'Escanea múltiples trackings a la vez para ingresarlos a la Bodega CR.' 
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              {mode === 'recepcion' ? 'Recepción Masiva' : 'Entrega Masiva'}
+            </h1>
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                mode === 'recepcion'
+                  ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/15'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}
+            >
+              Lote CR
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            {mode === 'recepcion'
+              ? 'Escanea múltiples trackings a la vez para ingresarlos a la Bodega CR.'
               : 'Escanea múltiples trackings a la vez para marcar los paquetes como Entregados al cliente.'}
           </p>
         </div>
-        <Link 
-          href="/admin/bodega" 
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue hover:text-brand-blue/80 bg-white border border-gray-200 px-3.5 py-2 rounded-xl shadow-sm transition-colors"
-        >
-          <ArrowLeft size={14} /> Volver a escáner individual
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/bodega"
+            className="h-9 px-3.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm inline-flex items-center gap-1.5 transition-all"
+          >
+            <ArrowLeft size={14} className="text-slate-500" />
+            <span>Volver a escáner individual</span>
+          </Link>
+        </div>
       </div>
 
       {/* Tabs Selector de Modo: Recepción Masiva vs Entrega Masiva */}
-      <div className="bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 inline-flex w-full sm:w-auto gap-1">
+      <div className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 inline-flex w-full sm:w-auto gap-1">
         <button
           onClick={() => { setMode('recepcion'); setResults([]); }}
           disabled={isProcessing}
-          className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 sm:flex-initial h-9 px-4 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
             mode === 'recepcion'
-              ? 'bg-brand-blue text-white shadow-md'
-              : 'text-gray-500 hover:text-brand-blue hover:bg-gray-50'
+              ? 'bg-brand-blue text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           }`}
         >
-          <PackagePlus size={18} />
+          <PackagePlus size={15} />
           <span>Recepción Masiva</span>
         </button>
         <button
           onClick={() => { setMode('entrega'); setResults([]); }}
           disabled={isProcessing}
-          className={`flex-1 sm:flex-initial px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 sm:flex-initial h-9 px-4 rounded-lg font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
             mode === 'entrega'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-gray-500 hover:text-emerald-700 hover:bg-gray-50'
+              ? 'bg-emerald-600 text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
           }`}
         >
-          <PackageCheck size={18} />
+          <PackageCheck size={15} />
           <span>Entrega Masiva</span>
         </button>
       </div>
 
-      {/* Rectángulo Fijo de Escaneo Masivo */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-bold text-gray-700">
-            Escanea los paquetes para {mode === 'recepcion' ? 'ingreso' : 'entrega'} (uno por línea):
+      {/* Tarjeta Principal de Escaneo Masivo */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
+        <div className="px-5 py-3.5 bg-slate-50/95 border-b border-slate-200/90 flex flex-wrap items-center justify-between gap-2">
+          <label className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+            Escanea los paquetes para {mode === 'recepcion' ? 'ingreso' : 'entrega'} (uno por línea)
           </label>
-          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-            mode === 'recepcion' ? 'bg-blue-50 text-brand-blue' : 'bg-emerald-50 text-emerald-700'
-          }`}>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+              mode === 'recepcion'
+                ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                mode === 'recepcion' ? 'bg-brand-blue' : 'bg-emerald-500'
+              }`}
+            />
             Modo: {mode === 'recepcion' ? 'Recepción a Bodega' : 'Entrega a Cliente'}
           </span>
         </div>
-        
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            disabled={isProcessing}
-            placeholder="Ejemplo:
+
+        <div className="p-5 space-y-4">
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              disabled={isProcessing}
+              placeholder="Ejemplo:
 9400109205568123456789
 1Z9999999999999999
 TBA123456789000..."
-            className={`w-full h-56 p-4 rounded-2xl bg-gray-50 border-2 font-mono font-bold text-sm focus:ring-2 focus:bg-white transition-all disabled:opacity-50 resize-none outline-none leading-relaxed ${
-              mode === 'recepcion' 
-                ? 'border-brand-blue/80 text-brand-blue focus:border-brand-blue focus:ring-brand-blue/20' 
-                : 'border-emerald-600/80 text-emerald-800 focus:border-emerald-600 focus:ring-emerald-600/20'
-            }`}
-          />
-        </div>
-        
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-1">
-          <p className="text-sm text-gray-600 font-bold">
-            Total detectados: <span className={`font-black ${mode === 'recepcion' ? 'text-brand-blue' : 'text-emerald-700'}`}>{detectedCount}</span>
-          </p>
-          <button 
-            onClick={handleProcess}
-            disabled={isProcessing || detectedCount === 0}
-            className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50 ${
-              mode === 'recepcion'
-                ? 'bg-brand-blue hover:bg-brand-blue/90 shadow-brand-blue/20'
-                : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
-            }`}
-          >
-            {isProcessing ? (
-              <><Loader2 className="animate-spin" size={18} /> Procesando...</>
-            ) : (
-              <><Play size={18} /> Procesar {mode === 'recepcion' ? 'Recepción' : 'Entrega'}</>
-            )}
-          </button>
+              className={`w-full h-56 p-3.5 rounded-lg bg-white border border-slate-200/90 font-mono font-medium text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all disabled:opacity-50 resize-none leading-relaxed ${
+                mode === 'recepcion'
+                  ? 'focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10'
+                  : 'focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10'
+              }`}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-1">
+            <div className="inline-flex items-center gap-2 text-xs sm:text-sm text-slate-600 font-medium">
+              <span>Total detectados:</span>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-md font-bold tabular-nums text-xs border ${
+                  mode === 'recepcion'
+                    ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}
+              >
+                {detectedCount} {detectedCount === 1 ? 'paquete' : 'paquetes'}
+              </span>
+            </div>
+            <button
+              onClick={handleProcess}
+              disabled={isProcessing || detectedCount === 0}
+              className={`h-10 px-5 rounded-lg text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer ${
+                mode === 'recepcion'
+                  ? 'bg-brand-blue hover:bg-[#0e354b]'
+                  : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="animate-spin" size={15} /> Procesando...
+                </>
+              ) : (
+                <>
+                  <Play size={15} /> Procesar {mode === 'recepcion' ? 'Recepción' : 'Entrega'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Log de Resultados */}
       {results.length > 0 && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
-            <h3 className="font-bold text-brand-blue flex items-center gap-2">
-              <Layers size={18} />
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden animate-fade-in">
+          <div className="px-4 py-3 border-b border-slate-200/90 flex flex-wrap items-center justify-between gap-2 bg-slate-50/95">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Layers size={15} className="text-brand-blue" />
               Resultados del Proceso ({mode === 'recepcion' ? 'Recepción' : 'Entrega'})
             </h3>
-            <div className="flex gap-3 text-xs font-bold">
-              <span className="text-green-700 bg-green-100 px-3 py-1 rounded-xl">Exitosos: {successCount}</span>
-              <span className="text-red-700 bg-red-100 px-3 py-1 rounded-xl">Errores: {errorCount}</span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Exitosos: {successCount}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                Errores: {errorCount}
+              </span>
             </div>
           </div>
-          <div className="p-6">
-            <div className="grid gap-2.5 max-h-80 overflow-y-auto pr-1">
-              {results.map((res, i) => (
-                <div key={i} className={`flex items-center justify-between p-3.5 rounded-xl border text-xs ${res.status === 'success' ? 'bg-green-50/70 border-green-200' : 'bg-red-50/70 border-red-200'}`}>
-                  <div className="flex items-center gap-2.5">
-                    {res.status === 'success' ? (
-                      <CheckCircle2 className="text-green-600 shrink-0" size={16} />
-                    ) : (
-                      <XCircle className="text-red-600 shrink-0" size={16} />
-                    )}
-                    <span className="font-bold font-mono text-gray-800">{res.tracking}</span>
-                  </div>
-                  <span className={`font-bold ${res.status === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-                    {res.message}
-                  </span>
-                </div>
-              ))}
-            </div>
+
+          <div className="max-h-80 overflow-y-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10">
+                <tr>
+                  <th className="py-2.5 px-3.5 w-12">#</th>
+                  <th className="py-2.5 px-3.5">Tracking</th>
+                  <th className="py-2.5 px-3.5">Estado</th>
+                  <th className="py-2.5 px-3.5 text-right">Detalle</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-[13px]">
+                {results.map((res, i) => (
+                  <tr key={i} className="hover:bg-slate-50/90 transition-colors">
+                    <td className="py-2.5 px-3.5 text-slate-400 font-mono text-xs tabular-nums">
+                      {i + 1}
+                    </td>
+                    <td className="py-2.5 px-3.5 font-mono font-semibold text-slate-800">
+                      {res.tracking}
+                    </td>
+                    <td className="py-2.5 px-3.5">
+                      {res.status === 'success' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                          <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                          Completado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
+                          <XCircle size={12} className="text-red-600 shrink-0" />
+                          Error
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      className={`py-2.5 px-3.5 text-right font-medium ${
+                        res.status === 'success' ? 'text-emerald-700' : 'text-red-600'
+                      }`}
+                    >
+                      {res.message}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
