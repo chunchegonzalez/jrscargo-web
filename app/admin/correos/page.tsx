@@ -19,7 +19,8 @@ import {
   Check,
   Calendar,
   FileText,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
@@ -495,41 +496,41 @@ export default function ActividadCorreosPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+    <div className="space-y-5">
       {/* Cabecera */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-brand-blue">Actividad de Correos</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-blue-50 text-brand-blue border border-blue-200">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Actividad de Correos</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
               Regla 4 Días
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-gray-500">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Monitorea qué comprobantes se enviarán automáticamente a los 4 días de creación, cuáles están retenidos por{' '}
-            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-bold">pendiente@pendiente</code> y el historial de envíos.
+            <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-semibold text-xs">pendiente@pendiente</code> y el historial de envíos.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Toggle Auto-Send */}
           <button
             type="button"
             onClick={toggleAutoSendEnabled}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 ${
+            className={`h-9 px-3.5 rounded-lg text-xs font-semibold border transition-all inline-flex items-center gap-1.5 cursor-pointer ${
               autoSendEnabled
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-                : 'bg-gray-100 border-gray-200 text-gray-600 hover:bg-gray-200'
+                ? 'bg-emerald-50 border-emerald-200/80 text-emerald-800 hover:bg-emerald-100'
+                : 'bg-white border-slate-200/90 text-slate-600 hover:bg-slate-50'
             }`}
           >
             {autoSendEnabled ? (
               <>
-                <Play size={14} className="text-emerald-600 fill-emerald-600" />
+                <Play size={13} className="text-emerald-600 fill-emerald-600" />
                 <span>Envío Automático (4 días): Activo</span>
               </>
             ) : (
               <>
-                <Pause size={14} className="text-gray-500" />
+                <Pause size={13} className="text-slate-500" />
                 <span>Envío Automático: Pausado</span>
               </>
             )}
@@ -541,16 +542,16 @@ export default function ActividadCorreosPage() {
               type="button"
               onClick={handleSendAllReady}
               disabled={isBatchSending}
-              className="px-4 py-2.5 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white text-xs font-black uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+              className="h-9 px-3.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
               {isBatchSending ? (
                 <>
-                  <RefreshCw size={15} className="animate-spin" />
+                  <RefreshCw size={14} className="animate-spin" />
                   <span>Enviando lote...</span>
                 </>
               ) : (
                 <>
-                  <Send size={15} />
+                  <Send size={14} />
                   <span>Enviar {classified.ready4Days.length} Listos Ahora (4+ días)</span>
                 </>
               )}
@@ -560,132 +561,121 @@ export default function ActividadCorreosPage() {
           <button
             type="button"
             onClick={loadInvoices}
-            className="p-2.5 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="h-9 px-3.5 rounded-lg bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             title="Actualizar lista"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-brand-blue' : 'text-slate-500'} />
+            <span>Actualizar</span>
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <button
           type="button"
           onClick={() => setActiveTab('listos_4d')}
-          className={`text-left bg-white rounded-2xl p-5 border transition-all shadow-xs ${
+          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
             activeTab === 'listos_4d'
-              ? 'border-amber-400 ring-2 ring-amber-400/20'
-              : 'border-gray-100 hover:border-amber-200'
+              ? 'border-amber-400 ring-2 ring-amber-400/15 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
           }`}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Sparkles size={22} />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-50 text-amber-700">
-              4+ días sin enviar
-            </span>
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Listos para Envío Auto</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{classified.ready4Days.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">4+ días y correo válido</p>
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Listos para Envío Auto</p>
-          <p className="text-2xl font-black text-gray-900 mt-0.5">{classified.ready4Days.length}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Cumplieron 4+ días y tienen correo válido</p>
+          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Sparkles size={18} />
+          </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('programados')}
-          className={`text-left bg-white rounded-2xl p-5 border transition-all shadow-xs ${
+          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
             activeTab === 'programados'
-              ? 'border-blue-400 ring-2 ring-blue-400/20'
-              : 'border-gray-100 hover:border-blue-200'
+              ? 'border-brand-blue ring-2 ring-brand-blue/15 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
           }`}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center">
-              <Clock size={22} />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-50 text-brand-blue">
-              En espera (&lt; 4 días)
-            </span>
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Programados Próximos</p>
+            <p className="text-2xl font-black text-brand-blue tabular-nums mt-1">{classified.scheduledUnder4Days.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">En espera (&lt; 4 días)</p>
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Programados Próximos</p>
-          <p className="text-2xl font-black text-brand-blue mt-0.5">{classified.scheduledUnder4Days.length}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Se enviarán al cumplir 4 días de creación</p>
+          <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
+            <Clock size={18} />
+          </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('retenidos')}
-          className={`text-left bg-white rounded-2xl p-5 border transition-all shadow-xs ${
+          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
             activeTab === 'retenidos'
-              ? 'border-red-400 ring-2 ring-red-400/20'
-              : 'border-gray-100 hover:border-red-200'
+              ? 'border-red-400 ring-2 ring-red-400/15 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
           }`}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-red-50 text-red-500 flex items-center justify-center">
-              <AlertTriangle size={22} />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-red-50 text-red-700">
-              No enviar
-            </span>
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Retenidos (pendiente@)</p>
+            <p className="text-2xl font-black text-red-600 tabular-nums mt-1">{classified.blockedPendingEmail.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sin correo válido</p>
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Retenidos (pendiente@)</p>
-          <p className="text-2xl font-black text-red-600 mt-0.5">{classified.blockedPendingEmail.length}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Excluidos por tener pendiente@pendiente</p>
+          <div className="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+            <AlertTriangle size={18} />
+          </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('enviados')}
-          className={`text-left bg-white rounded-2xl p-5 border transition-all shadow-xs ${
+          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
             activeTab === 'enviados'
-              ? 'border-emerald-400 ring-2 ring-emerald-400/20'
-              : 'border-gray-100 hover:border-emerald-200'
+              ? 'border-emerald-400 ring-2 ring-emerald-400/15 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
           }`}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <MailCheck size={22} />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
-              Entregados
-            </span>
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Correos Enviados</p>
+            <p className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{classified.sentHistory.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Comprobantes entregados</p>
           </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Correos Enviados</p>
-          <p className="text-2xl font-black text-emerald-700 mt-0.5">{classified.sentHistory.length}</p>
-          <p className="text-[11px] text-gray-500 mt-1">Comprobantes enviados con éxito</p>
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <MailCheck size={18} />
+          </div>
         </button>
       </div>
 
       {/* Activity Log (Session Live Log) */}
       {activityLog.length > 0 && (
-        <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
+        <div className="bg-slate-900 text-white rounded-xl p-4 shadow-sm border border-slate-800">
+          <div className="flex items-center justify-between mb-2.5">
+            <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               Registro de Actividad Reciente ({activityLog.length})
             </h3>
             <button
               type="button"
               onClick={() => setActivityLog([])}
-              className="text-[11px] text-slate-400 hover:text-white transition-colors"
+              className="text-[11px] text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
               Limpiar registro
             </button>
           </div>
-          <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+          <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
             {activityLog.map(log => (
               <div
                 key={log.id}
-                className="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700/60"
+                className="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   {log.type === 'error' ? (
-                    <XCircle size={14} className="text-red-400 shrink-0" />
+                    <XCircle size={13} className="text-red-400 shrink-0" />
                   ) : (
-                    <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+                    <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
                   )}
                   <span className="font-mono font-bold text-amber-300 shrink-0">#{log.invoiceNumber}</span>
                   <span className="font-semibold text-white truncate">{log.clientName}</span>
@@ -693,7 +683,7 @@ export default function ActividadCorreosPage() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-slate-300">{log.detail}</span>
-                  <span className="text-[10px] font-mono text-slate-400">{log.timestamp}</span>
+                  <span className="text-[10px] font-mono text-slate-400 tabular-nums">{log.timestamp}</span>
                 </div>
               </div>
             ))}
@@ -702,9 +692,9 @@ export default function ActividadCorreosPage() {
       )}
 
       {/* Main Table Card */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
         {/* Tabs & Search Bar */}
-        <div className="p-4 sm:p-6 border-b border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
             {[
               {
@@ -742,16 +732,16 @@ export default function ActividadCorreosPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                   activeTab === tab.id
-                    ? 'bg-brand-blue text-white shadow-xs'
-                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    ? 'bg-brand-blue text-white shadow-2xs'
+                    : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-                    activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-200/70 text-gray-700'
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold tabular-nums ${
+                    activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                   }`}
                 >
                   {tab.count}
@@ -761,14 +751,23 @@ export default function ActividadCorreosPage() {
           </div>
 
           <div className="relative w-full lg:w-72">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Buscar factura, cliente o correo..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-brand-blue"
+              className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
             />
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -776,25 +775,25 @@ export default function ActividadCorreosPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                <th className="p-4">Creación</th>
-                <th className="p-4">Factura</th>
-                <th className="p-4">Cliente y Correo</th>
-                <th className="p-4 text-right">Monto</th>
-                <th className="p-4">Estado del Correo / Programación</th>
-                <th className="p-4 text-right">Acciones</th>
+              <tr className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-none">
+                <th className="py-2.5 px-3.5 pl-5">Creación</th>
+                <th className="py-2.5 px-3.5">Factura</th>
+                <th className="py-2.5 px-3.5">Cliente y Correo</th>
+                <th className="py-2.5 px-3.5 text-right">Monto</th>
+                <th className="py-2.5 px-3.5">Estado del Correo / Programación</th>
+                <th className="py-2.5 px-3.5 pr-5 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100 text-[13px]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-gray-500 text-sm">
+                  <td colSpan={6} className="py-10 px-4 text-center text-slate-400 text-sm">
                     Cargando actividad de correos...
                   </td>
                 </tr>
               ) : visibleInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-gray-500 text-sm">
+                  <td colSpan={6} className="py-10 px-4 text-center text-slate-400 text-sm">
                     No hay registros en esta categoría.
                   </td>
                 </tr>
@@ -808,10 +807,10 @@ export default function ActividadCorreosPage() {
                   const isSending = !!sendingIds[inv.id];
 
                   return (
-                    <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="p-4 text-xs sm:text-sm text-gray-600 whitespace-nowrap">
-                        <div className="font-semibold text-gray-800">{formatDisplayDate(inv.issue_date)}</div>
-                        <div className="text-[11px] text-gray-400">
+                    <tr key={inv.id} className="hover:bg-slate-50/90 transition-colors">
+                      <td className="py-2.5 px-3.5 pl-5 text-slate-600 whitespace-nowrap tabular-nums">
+                        <div className="font-semibold text-slate-800">{formatDisplayDate(inv.issue_date)}</div>
+                        <div className="text-[11px] text-slate-400">
                           {daysElapsed === 0
                             ? 'Hoy'
                             : daysElapsed === 1
@@ -820,22 +819,22 @@ export default function ActividadCorreosPage() {
                         </div>
                       </td>
 
-                      <td className="p-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
                         <Link
                           href={'/admin/facturacion/' + inv.id}
-                          className="font-mono font-bold text-sm text-brand-blue hover:underline inline-flex items-center gap-1"
+                          className="font-mono font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
                         >
                           #{inv.invoice_number}
-                          <ExternalLink size={12} className="opacity-60" />
+                          <ExternalLink size={11} className="opacity-60" />
                         </Link>
                         <div className="mt-0.5">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                               stats.displayStatus === 'Pagada'
-                                ? 'bg-green-100 text-green-700'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
                                 : stats.displayStatus === 'Vencida'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-orange-100 text-orange-700'
+                                  ? 'bg-red-50 text-red-700 border-red-200/80'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200/80'
                             }`}
                           >
                             {stats.displayStatus}
@@ -843,14 +842,14 @@ export default function ActividadCorreosPage() {
                         </div>
                       </td>
 
-                      <td className="p-4">
-                        <div className="font-bold text-sm text-gray-900">{inv.clients?.name || 'Cliente'}</div>
+                      <td className="py-2.5 px-3.5">
+                        <div className="font-semibold text-slate-900">{inv.clients?.name || 'Cliente'}</div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span
                             className={`text-xs font-medium ${
                               isPendingEmail
-                                ? 'text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200 font-bold'
-                                : 'text-gray-500'
+                                ? 'text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-200/80 font-semibold'
+                                : 'text-slate-500'
                             }`}
                           >
                             {inv.clients?.email || 'Sin correo'}
@@ -869,7 +868,7 @@ export default function ActividadCorreosPage() {
                                 });
                                 setNewClientEmail('');
                               }}
-                              className="text-[11px] font-bold text-brand-blue hover:underline inline-flex items-center gap-1"
+                              className="text-[11px] font-semibold text-brand-blue hover:underline inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Edit3 size={11} />
                               Asignar correo
@@ -878,61 +877,61 @@ export default function ActividadCorreosPage() {
                         </div>
                       </td>
 
-                      <td className="p-4 text-right whitespace-nowrap">
-                        <span className="font-black text-sm text-gray-900">
+                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap tabular-nums">
+                        <span className="font-bold text-slate-900">
                           {formatCurrency(Number(inv.total), stats.currency)}
                         </span>
                       </td>
 
                       {/* Estado / Programación */}
-                      <td className="p-4">
+                      <td className="py-2.5 px-3.5">
                         {inv.email_sent_at ? (
                           <div className="inline-flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg w-fit">
-                              <MailCheck size={14} />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                              <MailCheck size={13} />
                               Enviado
                             </span>
-                            <span className="text-[11px] text-gray-400 mt-0.5">
+                            <span className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
                               {formatEmailDate(inv.email_sent_at)}
                             </span>
                           </div>
                         ) : stats.displayStatus === 'Pagada' || inv.status === 'Pagada' ? (
                           <div className="inline-flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-lg w-fit">
-                              <CheckCircle2 size={13} className="text-emerald-600" />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                              <CheckCircle2 size={12} className="text-emerald-600" />
                               No enviar (Factura Pagada)
                             </span>
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-slate-400">
                               Excluida por estar cancelada en su totalidad
                             </span>
                           </div>
                         ) : isPendingEmail ? (
                           <div className="inline-flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg w-fit">
-                              <AlertTriangle size={13} />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                              <AlertTriangle size={12} />
                               No se enviará (pendiente@pendiente)
                             </span>
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-slate-400">
                               Bloqueado hasta actualizar correo del cliente
                             </span>
                           </div>
                         ) : daysElapsed >= 4 ? (
                           <div className="inline-flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg w-fit">
-                              <Sparkles size={13} className="text-amber-600" />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full w-fit">
+                              <Sparkles size={12} className="text-amber-600" />
                               Listo para Envío Automático ({daysElapsed} días)
                             </span>
-                            <span className="text-[11px] text-gray-500">
+                            <span className="text-[11px] text-slate-500">
                               Cumplió el plazo de 4 días ({scheduledDate})
                             </span>
                           </div>
                         ) : (
                           <div className="inline-flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg w-fit">
-                              <Calendar size={13} className="text-brand-blue" />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue bg-brand-blue/[0.08] border border-brand-blue/15 px-2.5 py-0.5 rounded-full w-fit">
+                              <Calendar size={12} className="text-brand-blue" />
                               Se enviará en {daysRemaining} {daysRemaining === 1 ? 'día' : 'días'} ({scheduledDate})
                             </span>
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-slate-400">
                               Envío automático al cumplir 4 días
                             </span>
                           </div>
@@ -940,8 +939,8 @@ export default function ActividadCorreosPage() {
                       </td>
 
                       {/* Acciones */}
-                      <td className="p-4 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center justify-end gap-2">
+                      <td className="py-2.5 px-3.5 pr-5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1.5">
                           {isPendingEmail ? (
                             <button
                               type="button"
@@ -956,9 +955,9 @@ export default function ActividadCorreosPage() {
                                 });
                                 setNewClientEmail('');
                               }}
-                              className="px-3 py-1.5 rounded-lg bg-brand-blue/10 hover:bg-brand-blue/20 text-brand-blue text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                              className="h-8 px-2.5 rounded-lg bg-brand-blue/10 hover:bg-brand-blue/20 text-brand-blue text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Edit3 size={13} />
+                              <Edit3 size={12} />
                               Editar Correo
                             </button>
                           ) : (
@@ -967,7 +966,7 @@ export default function ActividadCorreosPage() {
                                 type="button"
                                 disabled={isSending}
                                 onClick={() => sendSingleInvoice(inv, 'manual')}
-                                className="px-3 py-1.5 rounded-lg bg-brand-blue hover:bg-brand-blue/90 text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+                                className="h-8 px-2.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white text-xs font-semibold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                                 title={inv.email_sent_at ? 'Reenviar ahora con 1 clic' : 'Enviar correo ahora'}
                               >
                                 {isSending ? (
@@ -986,7 +985,7 @@ export default function ActividadCorreosPage() {
                               <button
                                 type="button"
                                 onClick={() => openCustomEmailModal(inv)}
-                                className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors"
+                                className="h-8 px-2.5 rounded-lg bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors inline-flex items-center justify-center cursor-pointer"
                                 title="Personalizar asunto o mensaje antes de enviar"
                               >
                                 <Mail size={13} />
@@ -999,17 +998,17 @@ export default function ActividadCorreosPage() {
                               type="button"
                               disabled={isSending}
                               onClick={() => handleMarkAsOmitted(inv)}
-                              className="px-2.5 py-1.5 rounded-lg bg-gray-50 hover:bg-emerald-50 text-gray-500 hover:text-emerald-700 border border-gray-200 hover:border-emerald-200 text-xs font-bold transition-colors inline-flex items-center gap-1"
+                              className="h-8 px-2.5 rounded-lg bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/90 hover:border-emerald-200 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
                               title="Marcar como ya enviado / omitir del envío automático sin mandar correo"
                             >
-                              <Check size={13} />
+                              <Check size={12} />
                               <span>Omitir</span>
                             </button>
                           )}
 
                           <Link
                             href={'/admin/facturacion/' + inv.id}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-brand-blue hover:bg-gray-100 transition-colors"
+                            className="p-1.5 rounded-md text-slate-400 hover:text-brand-blue hover:bg-slate-100 transition-colors"
                             title="Ver detalle de factura"
                           >
                             <FileText size={15} />
@@ -1028,36 +1027,36 @@ export default function ActividadCorreosPage() {
       {/* Modal para Asignar Correo a Cliente con pendiente@pendiente */}
       {editClientModal?.isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setEditClientModal(null)}
         >
           <div
-            className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden"
+            className="bg-white rounded-xl border border-slate-200/90 shadow-2xl w-full max-w-md overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
-                <Edit3 size={18} />
+            <div className="px-5 py-4 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <Edit3 size={16} className="text-brand-blue" />
                 Actualizar Correo del Cliente
               </h3>
               <button
                 type="button"
                 onClick={() => setEditClientModal(null)}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
               >
-                &times;
+                <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleSaveClientEmail} className="p-6 space-y-4">
+            <form onSubmit={handleSaveClientEmail} className="p-5 space-y-4">
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
-                <p className="text-base font-bold text-gray-900 mt-0.5">{editClientModal.clientName}</p>
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Cliente</p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">{editClientModal.clientName}</p>
                 <p className="text-xs text-red-600 font-medium mt-0.5">
                   Correo actual: {editClientModal.currentEmail}
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Nuevo Correo Electrónico
                 </label>
                 <input
@@ -1066,21 +1065,21 @@ export default function ActividadCorreosPage() {
                   placeholder="cliente@ejemplo.com"
                   value={newClientEmail}
                   onChange={e => setNewClientEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditClientModal(null)}
-                  className="px-4 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 text-sm transition-colors"
+                  className="h-9 px-4 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 text-xs transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingClientEmail}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-brand-blue text-white hover:bg-brand-blue/90 text-sm transition-colors disabled:opacity-50"
+                  className="h-9 px-5 rounded-lg font-semibold bg-brand-blue text-white hover:bg-[#0e354b] text-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isSavingClientEmail ? 'Guardando...' : 'Guardar Correo'}
                 </button>
@@ -1093,39 +1092,39 @@ export default function ActividadCorreosPage() {
       {/* Modal para Personalizar Envío de Correo */}
       {emailModalOpen && emailInvoice && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setEmailModalOpen(false)}
         >
           <div
-            className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white rounded-xl border border-slate-200/90 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
             onClick={e => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
-              <h3 className="font-bold text-brand-blue text-lg flex items-center gap-2">
-                <Mail size={20} />
+            <div className="px-5 py-4 border-b border-slate-200/80 flex justify-between items-center bg-slate-50/60 shrink-0">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <Mail size={16} className="text-brand-blue" />
                 Enviar Comprobante #{emailInvoice.invoice_number}
               </h3>
               <button
                 type="button"
                 onClick={() => setEmailModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
               >
-                &times;
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-5 space-y-3.5 overflow-y-auto">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Destinatario (Para)
                 </label>
-                <p className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 font-medium">
+                <p className="h-9 px-3 flex items-center bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-700 font-medium">
                   {emailInvoice.clients?.email}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Con Copia (CC) - Opcional
                 </label>
                 <input
@@ -1133,40 +1132,40 @@ export default function ActividadCorreosPage() {
                   value={emailCc}
                   onChange={e => setEmailCc(e.target.value)}
                   placeholder="segundo@correo.com"
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium text-gray-800"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Asunto
                 </label>
                 <input
                   type="text"
                   value={emailSubject}
                   onChange={e => setEmailSubject(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium text-gray-800"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 font-medium text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Mensaje
                 </label>
                 <textarea
                   rows={4}
                   value={emailMessage}
                   onChange={e => setEmailMessage(e.target.value)}
-                  className="w-full p-4 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue font-medium text-gray-700 leading-relaxed resize-none"
+                  className="w-full p-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 text-slate-800 leading-relaxed resize-none"
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 shrink-0">
+            <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/60 flex justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setEmailModalOpen(false)}
-                className="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors text-sm"
+                className="h-9 px-4 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors text-xs cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1174,7 +1173,7 @@ export default function ActividadCorreosPage() {
                 type="button"
                 onClick={confirmCustomSendEmail}
                 disabled={isSendingModal}
-                className="px-6 py-2.5 rounded-xl font-bold bg-brand-blue text-white hover:bg-brand-blue/90 transition-colors text-sm flex items-center gap-2 disabled:opacity-50"
+                className="h-9 px-5 rounded-lg font-semibold bg-brand-blue text-white hover:bg-[#0e354b] transition-colors text-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 {isSendingModal ? 'Enviando...' : 'Confirmar y Enviar'}
               </button>

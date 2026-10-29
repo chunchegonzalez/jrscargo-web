@@ -386,21 +386,42 @@ export default function NuevaFacturaPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/facturacion" className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500">
-          <ArrowLeft size={20} />
-        </Link>
-        <h1 className="text-2xl font-black text-brand-blue">Nueva Factura</h1>
+    <div className="max-w-5xl mx-auto space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/facturacion"
+            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors"
+            title="Volver a Facturación"
+          >
+            <ArrowLeft size={16} />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Factura</h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15 font-mono">
+                {invoiceNumber}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Registra un nuevo comprobante de cobro para cliente.</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleSaveInvoice}
+          disabled={loading}
+          className="h-9 px-3.5 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+        >
+          <Save size={15} /> {loading ? 'Guardando...' : 'Guardar Factura'}
+        </button>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl p-5 md:p-6 border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         {/* Cabecera Factura */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 border-b border-gray-100 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 border-b border-slate-200/80 pb-6">
           
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cliente</label>
               {!showNewClientForm ? (
                 <div className="flex gap-2 relative">
                   <div className="relative w-full">
@@ -414,10 +435,10 @@ export default function NuevaFacturaPage() {
                       }}
                       onFocus={() => setIsClientDropdownOpen(true)}
                       onBlur={() => setTimeout(() => setIsClientDropdownOpen(false), 150)}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+                      className="w-full h-9 px-3.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
                     />
                     {isClientDropdownOpen && (
-                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-slate-100">
                         {clients.filter(c => c.name.toLowerCase().includes(searchClientTerm.toLowerCase())).map(c => (
                           <div 
                             key={c.id} 
@@ -428,101 +449,105 @@ export default function NuevaFacturaPage() {
                               const fixedDiscount = Number(c.discount_percent) || 0;
                               setDiscountPercent(fixedDiscount);
                             }}
-                            className={`px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-center justify-between ${selectedClientId === c.id ? 'bg-brand-blue/5 font-bold text-brand-blue' : 'text-gray-700'}`}
+                            className={`px-3.5 py-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between ${selectedClientId === c.id ? 'bg-brand-blue/5 font-bold text-brand-blue' : 'text-slate-700'}`}
                           >
                             <div>
-                              <div className="text-sm font-medium">{c.name}</div>
-                              <div className="text-xs text-gray-400">{c.email}</div>
+                              <div className="text-xs sm:text-sm font-medium">{c.name}</div>
+                              <div className="text-[11px] text-slate-400">{c.email}</div>
                             </div>
                             {Number(c.discount_percent || 0) > 0 && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200 shrink-0">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold text-[11px] border border-emerald-200/80 shrink-0">
                                 🏷️ {c.discount_percent}% desc
                               </span>
                             )}
                           </div>
                         ))}
                         {clients.filter(c => c.name.toLowerCase().includes(searchClientTerm.toLowerCase())).length === 0 && (
-                          <div className="px-4 py-3 text-sm text-gray-500 text-center">No se encontraron clientes.</div>
+                          <div className="px-4 py-3 text-xs text-slate-400 text-center">No se encontraron clientes.</div>
                         )}
                       </div>
                     )}
                   </div>
-                  <button onClick={() => setShowNewClientForm(true)} className="p-2.5 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 rounded-xl shrink-0" title="Nuevo Cliente">
-                    <UserPlus size={20} />
+                  <button
+                    onClick={() => setShowNewClientForm(true)}
+                    className="h-9 px-3 bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/15 border border-brand-blue/20 rounded-lg inline-flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                    title="Nuevo Cliente"
+                  >
+                    <UserPlus size={16} />
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleCreateClient} className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
-                  <h4 className="text-sm font-bold text-brand-blue mb-2">Crear Cliente Rápido</h4>
-                  <input required placeholder="Nombre Completo" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                  <input required type="email" placeholder="Correo Electrónico" value={newClient.email} onChange={e => setNewClient({...newClient, email: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                <form onSubmit={handleCreateClient} className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 space-y-2.5">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1">Crear Cliente Rápido</h4>
+                  <input required placeholder="Nombre Completo" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm" />
+                  <input required type="email" placeholder="Correo Electrónico" value={newClient.email} onChange={e => setNewClient({...newClient, email: e.target.value})} className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm" />
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="tel" placeholder="Nº de Teléfono" value={newClient.phone} onChange={e => setNewClient({...newClient, phone: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                    <select value={newClient.address} onChange={e => setNewClient({...newClient, address: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                    <input type="tel" placeholder="Nº de Teléfono" value={newClient.phone} onChange={e => setNewClient({...newClient, phone: e.target.value})} className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm" />
+                    <select value={newClient.address} onChange={e => setNewClient({...newClient, address: e.target.value})} className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm">
                       <option value="Costa Rica">Costa Rica</option>
                       <option value="Estados Unidos">Estados Unidos</option>
                       <option value="Nicaragua">Nicaragua</option>
                       <option value="Otro">Otro País</option>
                     </select>
                   </div>
-                  <div className="flex gap-2 pt-2">
-                    <button type="submit" className="flex-1 py-2 bg-brand-blue text-white rounded-lg text-sm font-bold">Guardar</button>
-                    <button type="button" onClick={() => setShowNewClientForm(false)} className="py-2 px-4 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold">Cancelar</button>
+                  <div className="flex gap-2 pt-1">
+                    <button type="submit" className="flex-1 h-8 bg-brand-blue text-white rounded-lg text-xs font-semibold">Guardar</button>
+                    <button type="button" onClick={() => setShowNewClientForm(false)} className="h-8 px-3 bg-slate-200/80 text-slate-700 rounded-lg text-xs font-semibold">Cancelar</button>
                   </div>
                 </form>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nota para cliente</label>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nota para cliente</label>
               <textarea 
                 value={notes} 
                 onChange={e => setNotes(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue resize-none"
+                rows={3}
+                className="w-full p-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 resize-none transition-all"
               />
             </div>
           </div>
 
-          <div className="space-y-4 md:pl-8">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="space-y-4 md:pl-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">N.º Factura</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">N.º Factura</label>
                 <input 
                   type="text" 
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white font-bold text-brand-blue text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs" 
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200/90 bg-white font-mono font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
                   required 
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Moneda</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Moneda</label>
                 <select 
                   value="USD"
                   disabled
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 font-bold text-brand-blue text-sm cursor-not-allowed shadow-xs"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200/90 bg-slate-50 font-semibold text-slate-600 text-xs sm:text-sm cursor-not-allowed"
                 >
                   <option value="USD">USD ($)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">T. Cambio</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">T. Cambio</label>
                 <input 
                   type="number"
                   value={exchangeRate}
                   onChange={(e) => setExchangeRate(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white font-bold text-brand-blue text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200/90 bg-white font-semibold text-slate-800 text-xs sm:text-sm tabular-nums focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
                   min="1"
                   step="1"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Unidad</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Unidad</label>
                 <select 
                   value={weightUnit}
                   onChange={(e) => handleWeightUnitChange(e.target.value as WeightUnitType)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white font-bold text-brand-blue text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs cursor-pointer"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200/90 bg-white font-semibold text-slate-800 text-xs sm:text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all cursor-pointer"
                 >
                   <option value="Lb">Libras (Lb)</option>
                   <option value="Kg">Kilos (Kg)</option>
@@ -530,12 +555,12 @@ export default function NuevaFacturaPage() {
                 </select>
               </div>
               <div className="col-span-2 sm:col-span-2">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Fecha de Emisión</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Fecha de Emisión</label>
                 <input 
                   type="date" 
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all shadow-xs" 
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200/90 bg-white text-slate-800 font-medium text-xs sm:text-sm focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
                   required 
                 />
               </div>
@@ -544,16 +569,16 @@ export default function NuevaFacturaPage() {
         </div>
 
         {/* Productos / Servicios */}
-        <div className="space-y-4 mb-10">
+        <div className="space-y-3 mb-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Productos o Servicios</h3>
-            <span className="px-3 py-1 bg-brand-blue/10 text-brand-blue text-xs font-black rounded-full">
+            <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Productos o Servicios</h3>
+            <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-md tabular-nums">
               {items.length} {items.length === 1 ? 'línea' : 'líneas'}
             </span>
           </div>
           
-          <div className="border border-gray-200 rounded-xl bg-white">
-            <div className="bg-gray-50 grid grid-cols-12 gap-2 p-3 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:grid items-center rounded-t-xl">
+          <div className="border border-slate-200/80 rounded-xl bg-white">
+            <div className="bg-slate-50/95 grid grid-cols-12 gap-2 py-2.5 px-3.5 border-b border-slate-200/90 text-[11px] font-semibold text-slate-500 uppercase tracking-wider hidden md:grid items-center rounded-t-xl">
               <div className="col-span-1 text-center">#</div>
               <div className="col-span-4">Producto/Servicio</div>
               <div className="col-span-3">Nº Rastreo</div>
@@ -570,14 +595,14 @@ export default function NuevaFacturaPage() {
               ));
 
               return (
-              <div key={item.id} className="p-3 border-b border-gray-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+              <div key={item.id} className="py-2.5 px-3.5 border-b border-slate-100 last:border-0 grid grid-cols-1 md:grid-cols-12 gap-2 items-center hover:bg-slate-50/50 transition-colors">
                 <div className="hidden md:flex justify-center items-center">
-                  <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-500 font-bold text-xs flex items-center justify-center">
+                  <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
                     {index + 1}
                   </span>
                 </div>
                 <div className="md:col-span-4 relative">
-                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Línea #{index + 1} - Producto / Servicio</div>
+                  <div className="md:hidden text-[11px] font-semibold text-slate-400 mb-1">Línea #{index + 1} - Producto / Servicio</div>
                   <div className="relative">
                     <input 
                       placeholder="Seleccionar o escribir servicio..." 
@@ -588,7 +613,7 @@ export default function NuevaFacturaPage() {
                       }}
                       onFocus={() => setActiveServiceDropdown(item.id)}
                       onBlur={() => setTimeout(() => setActiveServiceDropdown(null), 250)}
-                      className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue uppercase font-medium text-gray-800"
+                      className="w-full h-9 pl-3 pr-8 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue uppercase font-medium text-slate-800"
                     />
                     <button
                       type="button"
@@ -597,16 +622,16 @@ export default function NuevaFacturaPage() {
                         e.preventDefault();
                         setActiveServiceDropdown(activeServiceDropdown === item.id ? null : item.id);
                       }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-brand-blue cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-brand-blue cursor-pointer"
                       title="Ver catálogo de servicios"
                     >
-                      <ChevronDown size={16} className={`transition-transform duration-200 ${activeServiceDropdown === item.id ? 'rotate-180 text-brand-blue' : ''}`} />
+                      <ChevronDown size={15} className={`transition-transform duration-200 ${activeServiceDropdown === item.id ? 'rotate-180 text-brand-blue' : ''}`} />
                     </button>
                   </div>
 
                   {activeServiceDropdown === item.id && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-100 min-w-[280px]">
-                      <div className="p-2 bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-wider sticky top-0 border-b border-gray-100">
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100 min-w-[280px]">
+                      <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 border-b border-slate-100">
                         Catálogo de Servicios Disponibles
                       </div>
                       {availableServices
@@ -619,16 +644,16 @@ export default function NuevaFacturaPage() {
                             handleItemChange(item.id, 'service_name', s.name);
                             setActiveServiceDropdown(null);
                           }}
-                          className="px-3 py-2.5 hover:bg-brand-blue/5 cursor-pointer flex justify-between items-center transition-colors group"
+                          className="px-3 py-2 hover:bg-brand-blue/5 cursor-pointer flex justify-between items-center transition-colors group"
                         >
-                          <span className="text-xs font-bold text-gray-700 group-hover:text-brand-blue">{s.name}</span>
-                          <span className="text-xs font-black text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-lg shrink-0 ml-2">
+                          <span className="text-xs font-semibold text-slate-700 group-hover:text-brand-blue">{s.name}</span>
+                          <span className="text-xs font-bold text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-md shrink-0 ml-2 tabular-nums">
                             ${Number(s.default_rate).toFixed(2)}
                           </span>
                         </div>
                       ))}
                       {availableServices.filter(s => !item.service_name || s.name.toLowerCase().includes(item.service_name.toLowerCase())).length === 0 && (
-                        <div className="px-4 py-3 text-xs text-gray-500 text-center">
+                        <div className="px-4 py-3 text-xs text-slate-500 text-center">
                           Usar personalizado: &quot;{item.service_name}&quot;
                         </div>
                       )}
@@ -636,49 +661,54 @@ export default function NuevaFacturaPage() {
                   )}
                 </div>
                 <div className="md:col-span-3">
-                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Nº Rastreo</div>
+                  <div className="md:hidden text-[11px] font-semibold text-slate-400 mb-1">Nº Rastreo</div>
                   <input 
                     required={!isWeb}
                     placeholder={isWeb ? "Detalle / Referencia (Opcional)" : "Tracking (Obligatorio)"} 
                     value={item.tracking_number} 
                     onChange={e => handleItemChange(item.id, 'tracking_number', e.target.value)}
                     onBlur={() => !isWeb && handleTrackingBlur(item.id, item.tracking_number || '')}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue font-mono"
+                    className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue font-mono text-slate-800"
                   />
                 </div>
                 <div className="md:col-span-1">
-                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">{isWeb ? 'Cantidad' : `Medida (${weightUnit})`}</div>
+                  <div className="md:hidden text-[11px] font-semibold text-slate-400 mb-1">{isWeb ? 'Cantidad' : `Medida (${weightUnit})`}</div>
                   <input 
                     type="number" 
                     placeholder={isWeb ? "Cant." : weightUnit} 
                     value={item.weight} 
                     onChange={e => handleItemChange(item.id, 'weight', e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"
+                    className="w-full h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue text-center tabular-nums"
                   />
                 </div>
                 <div className="md:col-span-1">
-                  <div className="md:hidden text-xs font-bold text-gray-400 mb-1">{isWeb ? 'Precio ($)' : `Tarifa ($/${weightUnit})`}</div>
+                  <div className="md:hidden text-[11px] font-semibold text-slate-400 mb-1">{isWeb ? 'Precio ($)' : `Tarifa ($/${weightUnit})`}</div>
                   <input 
                     type="number" 
                     placeholder={isWeb ? "$/Und" : `$/${weightUnit}`} 
                     value={item.rate} 
                     onChange={e => handleItemChange(item.id, 'rate', e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue text-center"
+                    className="w-full h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-brand-blue text-center tabular-nums"
                   />
                 </div>
-                <div className="md:col-span-2 flex items-center gap-2">
+                <div className="md:col-span-2 flex items-center gap-1.5">
                   <div className="flex-1">
-                    <div className="md:hidden text-xs font-bold text-gray-400 mb-1">Importe ($)</div>
+                    <div className="md:hidden text-[11px] font-semibold text-slate-400 mb-1">Importe ($)</div>
                     <input 
                       type="number" 
                       placeholder="0.00" 
                       value={item.amount || ''} 
                       onChange={e => handleItemChange(item.id, 'amount', e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-brand-blue focus:outline-none focus:border-brand-blue text-right"
+                      className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:border-brand-blue text-right tabular-nums"
                     />
                   </div>
-                  <button type="button" onClick={() => handleRemoveItem(item.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-auto md:mt-0">
-                    <Trash2 size={18} />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveItem(item.id)}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mt-auto md:mt-0 cursor-pointer"
+                    title="Eliminar línea"
+                  >
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
@@ -687,28 +717,34 @@ export default function NuevaFacturaPage() {
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            <button type="button" onClick={handleAddItem} className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-blue/80 px-2 py-1 rounded-lg hover:bg-brand-blue/5 transition-colors">
-              <Plus size={16} /> Agregar línea
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="h-8 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-blue bg-brand-blue/[0.06] hover:bg-brand-blue/10 border border-brand-blue/15 rounded-lg transition-colors cursor-pointer"
+            >
+              <Plus size={14} /> Agregar línea
             </button>
-            <span className="text-xs font-bold text-gray-500">
-              Total de líneas: <span className="text-brand-blue font-black">{items.length}</span>
+            <span className="text-xs font-medium text-slate-500">
+              Total de líneas: <span className="text-slate-900 font-bold tabular-nums">{items.length}</span>
             </span>
           </div>
         </div>
 
         {/* Totales y Guardar */}
-        <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-end gap-6">
+        <div className="border-t border-slate-200/80 pt-6 flex flex-col md:flex-row justify-between items-end gap-5">
           <div className="w-full md:w-1/2">
-            <p className="text-xs text-gray-500 mb-2">Esta factura se guardará en estado <span className="font-bold text-orange-500">Pendiente</span>. Podrás enviarla por correo desde el dashboard principal.</p>
+            <p className="text-xs text-slate-500">
+              Esta factura se guardará en estado <span className="font-semibold text-amber-600">Pendiente</span>. Podrás enviarla por correo desde el panel principal.
+            </p>
           </div>
           
-          <div className="w-full md:w-1/3 bg-gray-50 p-6 rounded-2xl border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-bold text-gray-600">Subtotal</span>
-              <span className="text-sm font-bold text-gray-800">${subtotal.toFixed(2)}</span>
+          <div className="w-full md:w-80 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="font-medium text-slate-600">Subtotal</span>
+              <span className="font-semibold text-slate-800 tabular-nums">${subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="font-medium text-slate-600 flex items-center gap-2">
                 Descuento
                 <div className="relative">
                   <input 
@@ -717,36 +753,42 @@ export default function NuevaFacturaPage() {
                     max="100"
                     value={discountPercent}
                     onChange={e => setDiscountPercent(Number(e.target.value) || 0)}
-                    className="w-20 pl-2 pr-6 py-1 bg-white border border-gray-200 rounded text-right focus:outline-none focus:border-brand-blue [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="w-16 h-7 pl-2 pr-5 bg-white border border-slate-200/90 rounded-md text-right text-xs font-semibold focus:outline-none focus:border-brand-blue [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none tabular-nums"
                   />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">%</span>
+                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-[11px]">%</span>
                 </div>
               </span>
-              <span className="text-sm font-bold text-green-600">-${discountAmount.toFixed(2)}</span>
+              <span className="font-semibold text-emerald-600 tabular-nums">-${discountAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center pt-4 border-t border-gray-200 mb-2">
-              <span className="text-sm font-black text-brand-blue uppercase tracking-wider">Total (USD)</span>
-              <span className="text-xl font-black text-brand-blue">${total.toFixed(2)}</span>
+            <div className="flex justify-between items-center pt-2.5 border-t border-slate-200/80">
+              <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">Total (USD)</span>
+              <span className="text-xl font-black text-slate-900 tabular-nums">${total.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-brand-blue/5 rounded-xl border border-brand-blue/10">
-              <span className="text-xs font-bold text-gray-600 flex flex-col">
+            <div className="flex justify-between items-center p-2.5 bg-white rounded-lg border border-slate-200/80">
+              <span className="text-xs font-semibold text-slate-600 flex flex-col">
                 <span>Total Ref. (CRC)</span>
-                <span className="text-[10px] font-normal opacity-70">T.C. {exchangeRate}</span>
+                <span className="text-[10px] font-normal text-slate-400">T.C. ₡{exchangeRate}</span>
               </span>
-              <span className="text-lg font-black text-brand-blue">
+              <span className="text-sm font-black text-brand-blue tabular-nums">
                 ₡{(total * exchangeRate).toFixed(2)}
               </span>
             </div>
           </div>
         </div>
         
-        <div className="mt-8 flex justify-end">
+        <div className="mt-6 flex justify-end gap-2">
+          <Link
+            href="/admin/facturacion"
+            className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs inline-flex items-center transition-colors"
+          >
+            Cancelar
+          </Link>
           <button 
             onClick={handleSaveInvoice}
             disabled={loading}
-            className="btn-primary"
+            className="h-9 px-4 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
           >
-            <Save size={20} /> {loading ? 'Guardando...' : 'Guardar y Cerrar'}
+            <Save size={15} /> {loading ? 'Guardando...' : 'Guardar y Cerrar'}
           </button>
         </div>
 

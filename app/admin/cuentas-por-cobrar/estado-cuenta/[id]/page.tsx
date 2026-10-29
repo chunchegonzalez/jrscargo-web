@@ -120,7 +120,7 @@ export default function EstadoDeCuentaPage() {
     loadData();
   }, [loadData]);
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Cargando estado de cuenta...</div>;
+  if (loading) return <div className="p-12 text-center text-slate-400 text-sm">Cargando estado de cuenta...</div>;
 
   const todayStr = new Date().toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const clientName = String(client?.name || 'Cliente');
@@ -146,17 +146,29 @@ export default function EstadoDeCuentaPage() {
   }
 
   return (
-    <div className="w-full bg-white print:m-0 print:p-0 min-h-screen">
+    <div className="max-w-5xl mx-auto space-y-4 print:space-y-0 print:m-0 print:p-0 print:max-w-none">
       
       {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gray-50/50 print:hidden">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/cuentas-por-cobrar" className="text-gray-400 hover:text-gray-600">
-            <ArrowLeft size={24} />
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/cuentas-por-cobrar"
+            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
+            title="Volver a Cuentas por Cobrar"
+          >
+            <ArrowLeft size={16} />
           </Link>
-          <h1 className="text-xl font-bold text-gray-800">Estado de Cuenta</h1>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">Estado de Cuenta</h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
+                {clientName}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Extracto detallado de facturas, pagos y antigüedad de saldo.</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
               const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.jrscargocr.com';
@@ -165,43 +177,64 @@ export default function EstadoDeCuentaPage() {
               setCopiedLink(true);
               setTimeout(() => setCopiedLink(false), 2500);
             }}
-            className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-brand-blue font-bold rounded-lg text-sm shadow-sm flex items-center gap-1.5 transition-colors"
+            className="h-9 px-3 bg-brand-blue/[0.08] hover:bg-brand-blue/15 text-brand-blue border border-brand-blue/15 font-semibold rounded-lg text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Copiar enlace público para el cliente"
           >
-            {copiedLink ? <Check size={16} className="text-green-600" /> : <Link2 size={16} />}
+            {copiedLink ? <Check size={14} className="text-emerald-600" /> : <Link2 size={14} />}
             <span>{copiedLink ? '¡Enlace copiado!' : 'Copiar Enlace Cliente'}</span>
           </button>
           <a
             href={`/estado-cuenta/${clientId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-gray-500 hover:text-brand-blue hover:bg-gray-100 rounded-lg transition-colors"
+            className="h-9 w-9 inline-flex items-center justify-center text-slate-500 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors"
             title="Abrir vista pública del cliente en nueva pestaña"
           >
-            <ExternalLink size={18} />
+            <ExternalLink size={15} />
           </a>
-          <button onClick={() => router.push('/admin/cuentas-por-cobrar/recibir/' + clientId)} className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold rounded-lg text-sm shadow-sm">
+          <button
+            onClick={() => router.push('/admin/cuentas-por-cobrar/recibir/' + clientId)}
+            className="h-9 px-3.5 bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg text-xs shadow-2xs inline-flex items-center transition-colors cursor-pointer"
+          >
             Recibir Pago
           </button>
-          <button onClick={() => window.print()} className="px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold rounded-lg text-sm shadow-sm flex items-center gap-2">
-            <Printer size={16} /> Imprimir PDF
+          <button
+            onClick={() => window.print()}
+            className="h-9 px-3.5 bg-brand-blue hover:bg-[#0e354b] text-white font-semibold rounded-lg text-xs shadow-2xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Printer size={14} /> Imprimir PDF
           </button>
         </div>
       </div>
 
       {/* Date Filters */}
-      <div className="max-w-4xl mx-auto px-8 py-4 print:hidden flex items-center gap-4 border-b border-gray-100 mb-4">
-        <span className="text-sm font-bold text-gray-600">Filtrar:</span>
-        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue" />
-        <span className="text-gray-400">—</span>
-        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue" />
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] px-4 py-3 print:hidden flex flex-wrap items-center gap-2.5">
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rango de fechas:</span>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs text-slate-700 font-medium focus:outline-none focus:border-brand-blue"
+        />
+        <span className="text-slate-400 text-xs">—</span>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs text-slate-700 font-medium focus:outline-none focus:border-brand-blue"
+        />
         {(startDate || endDate) && (
-          <button onClick={() => { setStartDate(''); setEndDate(''); }} className="text-sm text-brand-blue hover:underline font-medium">Limpiar</button>
+          <button
+            onClick={() => { setStartDate(''); setEndDate(''); }}
+            className="h-8 px-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+          >
+            Limpiar
+          </button>
         )}
       </div>
 
       {/* ========== PRINTABLE DOCUMENT ========== */}
-      <div className="max-w-4xl mx-auto px-8 pb-12 print:px-0 bg-white">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] px-8 pb-12 print:px-0 print:rounded-none print:border-none print:shadow-none">
         
         {/* Header */}
         <div className="flex justify-between items-start pt-8 mb-2">

@@ -325,108 +325,143 @@ export default function AdminChatBotPage() {
   return (
     <div className="space-y-5">
       {/* Header & Alert Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-blue text-brand-yellow flex items-center justify-center shadow-sm">
-              <Bot size={22} />
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                Central de Chat Clari &amp; Toma de Mando
-                {unreadSessionsCount > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-red-500 text-white animate-pulse">
-                    🔔 {unreadSessionsCount} {unreadSessionsCount === 1 ? 'Alerta' : 'Alertas'}
-                  </span>
-                )}
-              </h1>
-              <p className="text-xs text-gray-500">
-                Monitorea en vivo las consultas reales de clientes registrados, toma el mando como agente y gestiona sus datos.
-              </p>
-            </div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Central de Chat Clari
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
+              <Bot size={12} /> Toma de Mando
+            </span>
+            {unreadSessionsCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200 animate-pulse">
+                🔔 {unreadSessionsCount} {unreadSessionsCount === 1 ? 'Alerta' : 'Alertas'}
+              </span>
+            )}
           </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Monitorea en vivo las consultas reales de clientes registrados, toma el mando como agente y gestiona sus datos.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setSoundEnabled((prev) => !prev)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
+            className={`h-9 px-3.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 border transition-all cursor-pointer ${
               soundEnabled
-                ? 'bg-amber-50 border-amber-200 text-amber-800'
-                : 'bg-gray-50 border-gray-200 text-gray-500'
+                ? 'bg-amber-50 border-amber-200/80 text-amber-800 hover:bg-amber-100/70'
+                : 'bg-white border-slate-200/90 text-slate-600 hover:bg-slate-50'
             }`}
             title="Activar/Desactivar sonido de alerta al recibir nuevas consultas"
           >
-            {soundEnabled ? <Bell size={15} className="text-amber-600" /> : <BellOff size={15} />}
+            {soundEnabled ? <Bell size={14} className="text-amber-600" /> : <BellOff size={14} />}
             <span>{soundEnabled ? 'Alertas Sonoras: ON' : 'Silenciado'}</span>
           </button>
 
           <button
             onClick={() => fetchSessions(false)}
-            className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+            className="h-9 px-3.5 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             title="Actualizar conversaciones"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={isLoading ? 'animate-spin text-brand-blue' : 'text-slate-500'} />
+            <span>Actualizar</span>
           </button>
         </div>
       </div>
 
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-            <Bell size={20} />
-          </div>
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'unread' ? 'all' : 'unread')}
+          className={`text-left bg-white p-4 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
+            statusFilter === 'unread'
+              ? 'border-red-400 ring-2 ring-red-500/10 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
+          }`}
+        >
           <div>
-            <p className="text-[11px] font-bold text-gray-400 uppercase">Alertas / Nuevas</p>
-            <p className="text-2xl font-black text-gray-900">{unreadSessionsCount}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Alertas / Nuevas</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{unreadSessionsCount}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Requieren atención</p>
           </div>
-        </div>
+          <div className="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+            <Bell size={18} />
+          </div>
+        </button>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Headset size={20} />
-          </div>
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'agent' ? 'all' : 'agent')}
+          className={`text-left bg-white p-4 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
+            statusFilter === 'agent'
+              ? 'border-emerald-500 ring-2 ring-emerald-500/10 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
+          }`}
+        >
           <div>
-            <p className="text-[11px] font-bold text-gray-400 uppercase">Agente en Mando</p>
-            <p className="text-2xl font-black text-emerald-600">{activeAgentCount}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Agente en Mando</p>
+            <p className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{activeAgentCount}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Control manual vivo</p>
           </div>
-        </div>
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Headset size={18} />
+          </div>
+        </button>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center shrink-0">
-            <Bot size={20} />
-          </div>
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'bot' ? 'all' : 'bot')}
+          className={`text-left bg-white p-4 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
+            statusFilter === 'bot'
+              ? 'border-brand-blue ring-2 ring-brand-blue/10 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
+          }`}
+        >
           <div>
-            <p className="text-[11px] font-bold text-gray-400 uppercase">Atendidas por Bot</p>
-            <p className="text-2xl font-black text-brand-blue">{activeBotCount}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Atendidas por Bot</p>
+            <p className="text-2xl font-black text-brand-blue tabular-nums mt-1">{activeBotCount}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Modo automático IA</p>
           </div>
-        </div>
+          <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
+            <Bot size={18} />
+          </div>
+        </button>
 
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <User size={20} />
-          </div>
+        <button
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={`text-left bg-white p-4 rounded-xl border transition-all flex items-center justify-between group cursor-pointer ${
+            statusFilter === 'all'
+              ? 'border-brand-blue/40 ring-2 ring-brand-blue/10 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
+          }`}
+        >
           <div>
-            <p className="text-[11px] font-bold text-gray-400 uppercase">Total Consultas</p>
-            <p className="text-2xl font-black text-gray-900">{sessions.length}</p>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Consultas</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{sessions.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sesiones registradas</p>
           </div>
-        </div>
+          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <User size={18} />
+          </div>
+        </button>
       </div>
 
       {/* Main 3-Column Live Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[640px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-[640px]">
         {/* Left Column: Conversations List (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-100 shadow-xs flex flex-col overflow-hidden h-[660px]">
-          <div className="p-3.5 border-b border-gray-100 space-y-2.5">
+        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] flex flex-col overflow-hidden h-[660px]">
+          <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 space-y-2.5">
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar por nombre, correo, teléfono, guía..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-brand-blue"
+                className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
               />
             </div>
 
@@ -441,10 +476,10 @@ export default function AdminChatBotPage() {
                 <button
                   key={tab.id}
                   onClick={() => setStatusFilter(tab.id as typeof statusFilter)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${
+                  className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors cursor-pointer ${
                     statusFilter === tab.id
-                      ? 'bg-brand-blue text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-brand-blue text-white shadow-2xs'
+                      : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   {tab.label}
@@ -453,9 +488,9 @@ export default function AdminChatBotPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 text-[13px]">
             {filteredSessions.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-xs">
+              <div className="p-8 text-center text-slate-400 text-xs">
                 No hay conversaciones activas en esta vista.
               </div>
             ) : (
@@ -468,40 +503,40 @@ export default function AdminChatBotPage() {
                   <button
                     key={session.dbId}
                     onClick={() => handleSelectSession(session)}
-                    className={`w-full text-left p-3.5 transition-all hover:bg-slate-50 flex flex-col gap-1.5 relative ${
-                      isSelected ? 'bg-brand-blue/5 border-l-4 border-l-brand-blue' : ''
+                    className={`w-full text-left py-2.5 px-3.5 transition-colors hover:bg-slate-50/90 flex flex-col gap-1.5 relative cursor-pointer ${
+                      isSelected ? 'bg-brand-blue/[0.04] border-l-3 border-l-brand-blue' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-gray-900 truncate flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-slate-900 truncate flex items-center gap-1.5">
                           {session.name}
                           {hasAlert && (
                             <span className="w-2 h-2 rounded-full bg-red-500 animate-ping shrink-0" />
                           )}
                         </p>
-                        <p className="text-[11px] text-gray-500 truncate">{session.email}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{session.email}</p>
                         {session.phone && (
-                          <p className="text-[10px] text-brand-blue font-semibold truncate">
+                          <p className="text-[11px] text-brand-blue font-medium truncate tabular-nums">
                             📱 {session.phone}
                           </p>
                         )}
                       </div>
 
                       <div className="flex flex-col items-end shrink-0 gap-1">
-                        <span className="text-[10px] text-gray-400 font-medium">
+                        <span className="text-[10px] text-slate-400 font-medium tabular-nums">
                           {formatTime(session.updatedAt)}
                         </span>
                         {session.mode === 'agent' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200/80 flex items-center gap-1">
                             <Headset size={10} /> {session.takenBy || 'Agente'}
                           </span>
                         ) : session.status === 'cerrado' ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-slate-100 text-slate-600 border-slate-200/80">
                             Resuelto
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-brand-blue flex items-center gap-1">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15 flex items-center gap-1">
                             <Bot size={10} /> Clari AI
                           </span>
                         )}
@@ -513,7 +548,7 @@ export default function AdminChatBotPage() {
                         {session.trackings.map((trk) => (
                           <span
                             key={trk}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 border border-amber-200/80 text-amber-800 text-[10px] font-bold"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/80 text-amber-800 text-[10px] font-mono font-semibold"
                           >
                             <Package size={10} /> {trk}
                           </span>
@@ -522,11 +557,11 @@ export default function AdminChatBotPage() {
                     )}
 
                     <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <p className="text-[11px] text-gray-600 truncate">
+                      <p className="text-[11px] text-slate-600 truncate">
                         {lastMsg ? lastMsg.content.replace(/\*/g, '') : 'Consulta activa'}
                       </p>
                       {session.unreadForAdmin > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0 tabular-nums">
                           {session.unreadForAdmin}
                         </span>
                       )}
@@ -539,57 +574,57 @@ export default function AdminChatBotPage() {
         </div>
 
         {/* Center Column: Live Chat Console & Takeover Controls (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-gray-100 shadow-xs flex flex-col overflow-hidden h-[660px]">
+        <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] flex flex-col overflow-hidden h-[660px]">
           {!selectedSession ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-400">
-              <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-3 text-brand-blue/40">
-                <Headset size={32} />
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+              <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-center mb-3 text-brand-blue/50">
+                <Headset size={24} />
               </div>
-              <p className="text-sm font-bold text-gray-700 mb-1">Selecciona una conversación</p>
-              <p className="text-xs text-gray-400 max-w-xs">
+              <p className="text-sm font-semibold text-slate-700 mb-1">Selecciona una conversación</p>
+              <p className="text-xs text-slate-400 max-w-xs">
                 Haz clic en cualquier consulta de la lista izquierda para ver los mensajes en vivo, tomar el mando o guardar los datos del cliente.
               </p>
             </div>
           ) : (
             <>
               {/* Top Takeover Bar */}
-              <div className="p-4 bg-[#0B1D2B] text-white flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="p-3.5 bg-[#0B1D2B] text-white flex flex-wrap items-center justify-between gap-2.5 shrink-0">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-black text-sm truncate">{selectedSession.name}</h3>
+                    <h3 className="font-bold text-sm truncate">{selectedSession.name}</h3>
                     {selectedSession.mode === 'agent' ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500 text-white flex items-center gap-1">
                         <Headset size={11} /> En Mando ({selectedSession.takenBy || 'Agente'})
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-yellow/20 text-brand-yellow flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-yellow/20 text-brand-yellow flex items-center gap-1">
                         <Bot size={11} /> Modo Automático Clari
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-300 truncate">
+                  <p className="text-[11px] text-slate-300 truncate">
                     {selectedSession.email}
                     {selectedSession.phone ? ` • 📱 ${selectedSession.phone}` : ''}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {selectedSession.mode !== 'agent' ? (
                     <button
                       onClick={handleTakeOver}
                       disabled={isTakingOver}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                      className="h-8 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
                     >
-                      <HandMetal size={14} />
+                      <HandMetal size={13} />
                       <span>Tomar el Mando</span>
                     </button>
                   ) : (
                     <button
                       onClick={handleReleaseToBot}
                       disabled={isTakingOver}
-                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                      className="h-8 px-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                     >
-                      <Bot size={14} className="text-brand-yellow" />
+                      <Bot size={13} className="text-brand-yellow" />
                       <span>Devolver a Clari</span>
                     </button>
                   )}
@@ -597,10 +632,10 @@ export default function AdminChatBotPage() {
                   {selectedSession.status !== 'cerrado' && (
                     <button
                       onClick={handleCloseSession}
-                      className="p-2 rounded-xl bg-white/10 hover:bg-emerald-500/20 text-gray-300 hover:text-emerald-300 transition-colors"
+                      className="h-8 w-8 rounded-lg bg-white/10 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 flex items-center justify-center transition-colors cursor-pointer"
                       title="Marcar consulta como resuelta"
                     >
-                      <CheckCircle2 size={16} />
+                      <CheckCircle2 size={15} />
                     </button>
                   )}
                 </div>
@@ -608,9 +643,9 @@ export default function AdminChatBotPage() {
 
               {/* Status Banner */}
               <div
-                className={`px-4 py-2 text-[11px] font-bold flex items-center justify-between shrink-0 ${
+                className={`px-3.5 py-2 text-[11px] font-medium flex items-center justify-between shrink-0 ${
                   selectedSession.mode === 'agent'
-                    ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200'
+                    ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200/80'
                     : 'bg-amber-50/80 text-amber-900 border-b border-amber-200/70'
                 }`}
               >
@@ -626,12 +661,12 @@ export default function AdminChatBotPage() {
               </div>
 
               {/* Messages History */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/70">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/60">
                 {selectedSession.messages.map((m) => {
                   if (m.role === 'system') {
                     return (
                       <div key={m.id} className="flex justify-center my-2">
-                        <span className="px-3 py-1 rounded-full bg-gray-200/80 text-gray-700 text-[11px] font-bold">
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 text-[11px] font-semibold">
                           {m.content.replace(/\*/g, '')}
                         </span>
                       </div>
@@ -647,20 +682,20 @@ export default function AdminChatBotPage() {
                       className={`flex flex-col ${isCustomer ? 'items-start' : 'items-end'}`}
                     >
                       <div className="flex items-center gap-1.5 mb-1 px-1">
-                        <span className="text-[10px] font-extrabold text-gray-500">
+                        <span className="text-[10px] font-bold text-slate-500">
                           {isCustomer
                             ? `👤 ${selectedSession.name}`
                             : isAgent
                               ? `👨‍💻 ${m.senderName || 'Agente JRS'}`
                               : '🤖 Clari AI'}
                         </span>
-                        <span className="text-[10px] text-gray-400">{formatTime(m.createdAt)}</span>
+                        <span className="text-[10px] text-slate-400 tabular-nums">{formatTime(m.createdAt)}</span>
                       </div>
 
                       <div
-                        className={`max-w-[85%] p-3 rounded-2xl text-xs whitespace-pre-wrap leading-relaxed shadow-2xs ${
+                        className={`max-w-[85%] p-3 rounded-xl text-xs whitespace-pre-wrap leading-relaxed shadow-2xs ${
                           isCustomer
-                            ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-xs'
+                            ? 'bg-white border border-slate-200/90 text-slate-800 rounded-tl-xs'
                             : isAgent
                               ? 'bg-emerald-600 text-white rounded-tr-xs font-medium'
                               : 'bg-[#0B1D2B] text-white rounded-tr-xs'
@@ -675,7 +710,7 @@ export default function AdminChatBotPage() {
               </div>
 
               {/* Quick Agent Responses */}
-              <div className="px-3 py-1.5 bg-white border-t border-gray-100 flex items-center gap-1.5 overflow-x-auto">
+              <div className="px-3 py-1.5 bg-white border-t border-slate-200/80 flex items-center gap-1.5 overflow-x-auto">
                 {[
                   '¡Hola! Te atiende un asesor de JRS Cargo en vivo, ¿en qué te puedo ayudar?',
                   'Con gusto estamos verificando tu número de guía en nuestra bodega.',
@@ -685,7 +720,7 @@ export default function AdminChatBotPage() {
                     key={idx}
                     type="button"
                     onClick={() => setReplyText(quick)}
-                    className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-emerald-50 text-gray-600 hover:text-emerald-700 text-[10px] font-bold whitespace-nowrap transition-colors"
+                    className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 text-[10px] font-semibold whitespace-nowrap transition-colors cursor-pointer"
                   >
                     + Respuesta rápida {idx + 1}
                   </button>
@@ -695,22 +730,22 @@ export default function AdminChatBotPage() {
               {/* Agent Live Input Box */}
               <form
                 onSubmit={handleSendAgentReply}
-                className="p-3 bg-white border-t border-gray-100 flex items-center gap-2 shrink-0"
+                className="p-3 bg-slate-50/60 border-t border-slate-200/80 flex items-center gap-2 shrink-0"
               >
                 <input
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Escribe un mensaje en vivo al cliente (toma el mando automáticamente)..."
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-emerald-600"
+                  className="flex-1 h-9 bg-white border border-slate-200/90 rounded-lg px-3 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                   disabled={isSending}
                 />
                 <button
                   type="submit"
                   disabled={isSending || !replyText.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="h-9 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
                 >
-                  <Send size={14} />
+                  <Send size={13} />
                   <span>Enviar</span>
                 </button>
               </form>
@@ -719,18 +754,18 @@ export default function AdminChatBotPage() {
         </div>
 
         {/* Right Column: Customer Info Card & Persistence in Clients (3 cols) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-xs flex flex-col overflow-hidden h-[660px]">
-          <div className="p-4 border-b border-gray-100 bg-slate-50/50 flex items-center justify-between">
+        <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] flex flex-col overflow-hidden h-[660px]">
+          <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User size={16} className="text-brand-blue" />
-              <h3 className="font-black text-xs text-gray-800 uppercase tracking-wider">
+              <User size={15} className="text-brand-blue" />
+              <h3 className="font-semibold text-[11px] text-slate-700 uppercase tracking-wider">
                 Datos de la Persona
               </h3>
             </div>
             {selectedSession && (
               <button
                 onClick={() => handleDeleteSession(selectedSession.dbId)}
-                className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
+                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                 title="Eliminar registro"
               >
                 <Trash2 size={14} />
@@ -739,63 +774,63 @@ export default function AdminChatBotPage() {
           </div>
 
           {!selectedSession ? (
-            <div className="p-6 text-center text-xs text-gray-400 flex-1 flex items-center justify-center">
+            <div className="p-6 text-center text-xs text-slate-400 flex-1 flex items-center justify-center">
               Selecciona una consulta para ver y guardar la información del cliente.
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <form onSubmit={handleSaveLeadInfo} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                     Nombre del Cliente
                   </label>
                   <div className="relative">
-                    <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       required
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-brand-blue"
+                      className="w-full h-9 pl-8 pr-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                     Correo Electrónico
                   </label>
                   <div className="relative">
-                    <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="email"
                       required
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-brand-blue"
+                      className="w-full h-9 pl-8 pr-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                     Teléfono / WhatsApp
                   </label>
                   <div className="relative">
-                    <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
                       required
                       placeholder="Ej. 8888-8888"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-brand-blue"
+                      className="w-full h-9 pl-8 pr-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 mb-1 flex items-center gap-1">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <FileText size={12} /> Notas de Seguimiento
                   </label>
                   <textarea
@@ -803,14 +838,14 @@ export default function AdminChatBotPage() {
                     placeholder="Agrega detalles sobre el paquete o consulta de esta persona..."
                     value={editNotes}
                     onChange={(e) => setEditNotes(e.target.value)}
-                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:border-brand-blue"
+                    className="w-full p-2.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSavingLead}
-                  className="w-full py-2.5 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="w-full h-9 px-3.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer"
                 >
                   {saveSuccess ? (
                     <>
@@ -832,32 +867,32 @@ export default function AdminChatBotPage() {
                   href={`https://wa.me/${editPhone.replace(/\D/g, '').length === 8 ? `506${editPhone.replace(/\D/g, '')}` : editPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${editName}, te escribimos de JRS Cargo respecto a tu consulta en nuestro sitio web.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-2.5 px-3 rounded-xl bg-[#25D366] hover:bg-[#1fb855] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                  className="w-full h-9 px-3.5 rounded-lg bg-[#25D366] hover:bg-[#1fb855] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all"
                 >
-                  <MessageCircle size={15} />
-                  <span>Contactar Cliente por WhatsApp</span>
+                  <MessageCircle size={14} />
+                  <span>Contactar por WhatsApp</span>
                   <ExternalLink size={12} />
                 </a>
               )}
 
               {/* Trackings Queried by Customer */}
-              <div className="pt-3 border-t border-gray-100">
-                <p className="text-[11px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1.5">
+              <div className="pt-3 border-t border-slate-200/80">
+                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Package size={13} className="text-brand-blue" /> Guías Consultadas
                 </p>
                 {selectedSession.trackings.length === 0 ? (
-                  <p className="text-xs text-gray-400">Ninguna guía detectada aún.</p>
+                  <p className="text-xs text-slate-400">Ninguna guía detectada aún.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {selectedSession.trackings.map((trk) => (
                       <div
                         key={trk}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs font-bold text-amber-900"
+                        className="flex items-center justify-between px-3 py-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs font-mono font-semibold text-amber-900"
                       >
                         <span className="truncate">{trk}</span>
                         <a
                           href={`/admin/tracking`}
-                          className="text-[11px] text-brand-blue underline flex items-center gap-1 shrink-0"
+                          className="text-[11px] font-sans font-semibold text-brand-blue hover:underline flex items-center gap-1 shrink-0"
                         >
                           Ver <ExternalLink size={11} />
                         </a>
@@ -868,7 +903,7 @@ export default function AdminChatBotPage() {
               </div>
 
               {/* Metadata */}
-              <div className="pt-3 border-t border-gray-100 text-[11px] text-gray-400 space-y-1">
+              <div className="pt-3 border-t border-slate-200/80 text-[11px] text-slate-400 space-y-1">
                 <p className="flex items-center gap-1.5">
                   <Clock size={12} /> Inicio: {formatTime(selectedSession.createdAt)}
                 </p>

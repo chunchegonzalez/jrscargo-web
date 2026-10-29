@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Edit2, Check, X, Tag } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Tag, DollarSign } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Service = {
@@ -101,35 +101,76 @@ export default function ServiciosPage() {
     }
   };
 
+  const avgRate = services.length > 0
+    ? services.reduce((acc, s) => acc + (Number(s.default_rate) || 0), 0) / services.length
+    : 0;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand-blue mb-2">Servicios y Tarifas</h1>
-          <p className="text-gray-500">Gestiona tu catálogo de servicios y sus tarifas predeterminadas.</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Servicios y Tarifas</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15 tabular-nums">
+              {services.length} activos
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Gestiona tu catálogo de servicios logísticos y sus tarifas predeterminadas por libra o unidad.
+          </p>
         </div>
         {!showNewForm && (
-          <button onClick={() => setShowNewForm(true)} className="btn-primary shrink-0 flex items-center gap-2">
-            <Plus size={20} /> Nuevo Servicio
+          <button
+            onClick={() => setShowNewForm(true)}
+            className="h-9 px-3.5 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer w-fit"
+          >
+            <Plus size={15} />
+            <span>Nuevo Servicio</span>
           </button>
         )}
       </div>
 
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Servicios Registrados</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{services.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Disponibles en facturación</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
+            <Tag size={18} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Tarifa Promedio Base</p>
+            <p className="text-2xl font-black text-emerald-700 tabular-nums mt-1">${avgRate.toFixed(2)}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">En dólares (USD)</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <DollarSign size={18} />
+          </div>
+        </div>
+      </div>
+
       {showNewForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-end animate-fade-in">
+        <form onSubmit={handleCreate} className="bg-white rounded-xl p-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)] border border-slate-200/80 flex flex-col sm:flex-row gap-3 items-end animate-fade-in">
           <div className="flex-1 w-full">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nombre del Servicio</label>
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Nombre del Servicio</label>
             <input 
               required
               autoFocus
               placeholder="Ej: MARITIMO"
               value={newName}
               onChange={e => setNewName(e.target.value.toUpperCase())}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
             />
           </div>
-          <div className="w-full md:w-48">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tarifa ($)</label>
+          <div className="w-full sm:w-44">
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Tarifa ($)</label>
             <input 
               type="number"
               step="0.01"
@@ -137,84 +178,91 @@ export default function ServiciosPage() {
               placeholder="Ej: 7.00"
               value={newRate}
               onChange={e => setNewRate(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-blue"
+              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
             />
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <button type="submit" className="flex-1 px-6 py-2.5 bg-brand-blue text-white font-bold rounded-xl hover:bg-brand-blue/90 transition-colors">Guardar</button>
-            <button type="button" onClick={() => setShowNewForm(false)} className="px-4 py-2.5 bg-gray-100 text-gray-500 font-bold rounded-xl hover:bg-gray-200 transition-colors">Cancelar</button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button type="submit" className="h-9 px-4 bg-brand-blue text-white text-xs font-semibold rounded-lg hover:bg-[#0e354b] transition-colors shadow-2xs cursor-pointer">
+              Guardar
+            </button>
+            <button type="button" onClick={() => setShowNewForm(false)} className="h-9 px-3.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors cursor-pointer">
+              Cancelar
+            </button>
           </div>
         </form>
       )}
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-            <Tag className="text-brand-blue" size={24} /> 
-            Catálogo de Servicios
+      <div className="bg-white rounded-xl shadow-[0_1px_3px_rgba(15,23,42,0.04)] border border-slate-200/80 overflow-hidden">
+        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+            <Tag className="text-brand-blue" size={15} /> 
+            <span>Catálogo de Servicios</span>
           </h2>
+          <span className="text-xs text-slate-400 font-medium tabular-nums">{services.length} registros</span>
         </div>
         
         {loading ? (
-          <div className="p-12 text-center text-gray-400 font-medium">Cargando servicios...</div>
+          <div className="py-10 px-4 text-center text-slate-400 text-sm">Cargando servicios...</div>
         ) : services.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 font-medium">No hay servicios registrados. Haz clic en &quot;Nuevo Servicio&quot; para agregar uno.</div>
+          <div className="py-10 px-4 text-center text-slate-400 text-sm">No hay servicios registrados. Haz clic en &quot;Nuevo Servicio&quot; para agregar uno.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Servicio</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Tarifa Predeterminada</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
+                <tr className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                  <th className="py-2.5 px-3.5 pl-5">Servicio</th>
+                  <th className="py-2.5 px-3.5">Tarifa Predeterminada</th>
+                  <th className="py-2.5 px-3.5 pr-5 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100 text-[13px]">
                 {services.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="p-4">
+                  <tr key={s.id} className="hover:bg-slate-50/90 transition-colors">
+                    <td className="py-2.5 px-3.5 pl-5">
                       {editingId === s.id ? (
                         <input 
                           autoFocus
                           value={editName}
                           onChange={e => setEditName(e.target.value.toUpperCase())}
-                          className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                          className="w-full max-w-xs h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                         />
                       ) : (
-                        <span className="text-sm font-bold text-gray-800">{s.name}</span>
+                        <span className="font-semibold text-slate-900">{s.name}</span>
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="py-2.5 px-3.5">
                       {editingId === s.id ? (
                         <input 
                           type="number"
                           step="0.01"
                           value={editRate}
                           onChange={e => setEditRate(e.target.value)}
-                          className="w-32 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                          className="w-32 h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                         />
                       ) : (
-                        <span className="text-sm font-bold text-brand-blue">${Number(s.default_rate).toFixed(2)}</span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15 tabular-nums">
+                          ${Number(s.default_rate).toFixed(2)}
+                        </span>
                       )}
                     </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-2.5 px-3.5 pr-5 text-right">
+                      <div className="inline-flex items-center justify-end gap-1">
                         {editingId === s.id ? (
                           <>
-                            <button onClick={() => handleUpdate(s.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Guardar">
-                              <Check size={18} />
+                            <button onClick={() => handleUpdate(s.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer" title="Guardar">
+                              <Check size={15} />
                             </button>
-                            <button onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors" title="Cancelar">
-                              <X size={18} />
+                            <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-md transition-colors cursor-pointer" title="Cancelar">
+                              <X size={15} />
                             </button>
                           </>
                         ) : (
                           <>
-                            <button onClick={() => startEditing(s)} className="p-2 text-gray-400 hover:text-brand-blue hover:bg-gray-50 rounded-lg transition-colors" title="Editar">
-                              <Edit2 size={18} />
+                            <button onClick={() => startEditing(s)} className="p-1.5 text-slate-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-md transition-colors cursor-pointer" title="Editar">
+                              <Edit2 size={15} />
                             </button>
-                            <button onClick={() => handleDelete(s.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Eliminar">
-                              <Trash2 size={18} />
+                            <button onClick={() => handleDelete(s.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer" title="Eliminar">
+                              <Trash2 size={15} />
                             </button>
                           </>
                         )}

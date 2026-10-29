@@ -353,7 +353,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Cargando...</div>;
+  if (loading) return <div className="p-12 text-center text-slate-400 text-sm">Cargando datos del cliente...</div>;
 
   const visibleInvoices = invoices.filter(inv => (inv.currency || 'USD') === currency);
   
@@ -362,23 +362,55 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
   const clientEmail = (client?.email as string) || '-';
 
   return (
-    <div className="w-full bg-white print:m-0 print:p-0 min-h-screen relative font-sans">
+    <div className="max-w-6xl mx-auto space-y-5 print:space-y-0 print:m-0 print:p-0 print:max-w-none relative font-sans">
       
       {/* Header Bar */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gray-50/50 print:hidden">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/cuentas-por-cobrar" className="text-gray-400 hover:text-gray-600 transition-colors">
-            <ArrowLeft size={24} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/cuentas-por-cobrar"
+            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors"
+            title="Volver a Cuentas por Cobrar"
+          >
+            <ArrowLeft size={16} />
           </Link>
-          <h1 className="text-xl font-bold text-gray-800">Recibir pago</h1>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Recibir Pago</h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
+                {clientName}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Aplica cobros a facturas pendientes o genera saldo a favor.</p>
+          </div>
         </div>
-        <button onClick={() => window.print()} className="p-2 text-gray-500 hover:text-gray-800 transition-colors" title="Imprimir">
-          <Printer size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all cursor-pointer"
+            title="Imprimir"
+          >
+            <Printer size={14} className="text-slate-500" />
+            <span>Imprimir</span>
+          </button>
+          <button 
+            onClick={handleSave} 
+            disabled={isSaving || (amountToApply + creditToGenerate) <= 0}
+            className="h-9 px-3.5 bg-brand-blue hover:bg-[#0e354b] text-white rounded-lg text-xs font-semibold transition-all shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            {isSaving
+              ? 'Guardando...'
+              : creditToGenerate > 0 && amountToApply > 0
+                ? `Guardar Pago y Saldo (+$${creditToGenerate.toFixed(2)})`
+                : creditToGenerate > 0
+                  ? `Registrar Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+                  : 'Guardar Pago'}
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="p-6 md:p-8 max-w-6xl mx-auto print:p-0 print:max-w-none">
+      <div className="space-y-5 print:p-0 print:max-w-none">
         
         {/* Print Only Header */}
         <div className="hidden print:block mb-8 pb-4 border-b-2 border-gray-800">
@@ -387,39 +419,39 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         </div>
 
         {/* Top Section */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-8">
-          <div className="md:col-span-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-8 bg-white rounded-xl p-5 border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
-                <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-800">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cliente</label>
+                <div className="w-full h-9 px-3.5 bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm font-bold text-slate-800 flex items-center truncate">
                   {clientName}
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Correo Electrónico</label>
-                <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Correo Electrónico</label>
+                <div className="w-full h-9 px-3.5 bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-600 flex items-center truncate">
                   {clientEmail}
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fecha de Pago</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Fecha de Pago</label>
                 <input 
                   type="date" 
                   value={paymentDate}
                   onChange={e => setPaymentDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Método de pago</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Método de pago</label>
                 <select 
                   value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 >
                   <option value="">Seleccionar...</option>
                   <option value="SINPE">SINPE Móvil</option>
@@ -429,54 +461,55 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Moneda</label>
-                <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Moneda</label>
+                <div className="w-full h-9 px-3 bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 flex items-center">
                   Dólares (USD)
                 </div>
               </div>
               <div className="col-span-1">
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nº de referencia</label>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nº de referencia</label>
                 <input 
                   type="text" 
+                  placeholder="Comprobante..."
                   value={reference}
                   onChange={e => setReference(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 />
               </div>
             </div>
           </div>
 
-          <div className="md:col-span-4 bg-gray-50 p-6 rounded-2xl border border-gray-100 flex flex-col items-end text-right justify-center">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Importe Recibido</p>
+          <div className="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] flex flex-col items-end text-right justify-center">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Importe Recibido</p>
             <div className="flex items-center justify-end gap-1.5 mb-1.5 w-full">
-              <span className="text-2xl font-bold text-gray-400 shrink-0">{currency === 'CRC' ? '₡' : '$'}</span>
+              <span className="text-2xl font-bold text-slate-400 shrink-0">{currency === 'CRC' ? '₡' : '$'}</span>
               <input 
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={totalPaymentAmount}
                 onChange={e => handleGlobalAmountChange(e.target.value)}
-                className="w-full max-w-[220px] bg-transparent text-3xl sm:text-4xl font-black text-gray-900 focus:outline-none text-right placeholder-gray-300 print:text-black print:border-none tracking-tight"
+                className="w-full max-w-[200px] bg-transparent text-3xl sm:text-4xl font-black text-slate-900 focus:outline-none text-right placeholder-slate-300 print:text-black print:border-none tracking-tight tabular-nums"
               />
             </div>
             {parseFloat(totalPaymentAmount || '0') > 0 && (
-              <p className="text-xs font-extrabold text-brand-blue mb-2 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-100">
+              <p className="text-xs font-bold text-brand-blue mb-2 bg-brand-blue/[0.08] px-2 py-0.5 rounded-md border border-brand-blue/15 tabular-nums">
                 ≈ ₡{Math.round(parseFloat(totalPaymentAmount || '0') * exchangeRate).toLocaleString('es-CR')} CRC
               </p>
             )}
-            <p className="text-xs font-bold text-gray-400">
-              Cliente Saldo Pendiente: <span className="text-gray-800 font-black">{formatCurrency(currentBalance, currency)}</span>
+            <p className="text-xs font-medium text-slate-500">
+              Saldo Pendiente: <span className="text-slate-900 font-bold tabular-nums">{formatCurrency(currentBalance, currency)}</span>
             </p>
-            <p className="text-xs font-bold text-gray-400 mt-0.5">
-              Saldo en Colones: <span className="text-brand-blue font-extrabold">₡{Math.round(currentBalance * exchangeRate).toLocaleString('es-CR')} CRC</span>
+            <p className="text-xs font-medium text-slate-500 mt-0.5">
+              Saldo en Colones: <span className="text-brand-blue font-bold tabular-nums">₡{Math.round(currentBalance * exchangeRate).toLocaleString('es-CR')} CRC</span>
             </p>
             {availableCredit > 0 && (
-              <div className="mt-2.5 pt-2.5 border-t border-emerald-200/70 w-full flex flex-col items-end">
-                <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
-                  <Wallet size={13} />
-                  Saldo a Favor Disponible: +{formatCurrency(availableCredit, currency)}
+              <div className="mt-2.5 pt-2.5 border-t border-slate-200/80 w-full flex flex-col items-end">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-md tabular-nums">
+                  <Wallet size={12} />
+                  Saldo a Favor: +{formatCurrency(availableCredit, currency)}
                 </span>
-                <span className="text-[11px] font-bold text-emerald-600 mt-0.5">
+                <span className="text-[11px] font-semibold text-emerald-600 mt-0.5 tabular-nums">
                   ≈ ₡{Math.round(availableCredit * exchangeRate).toLocaleString('es-CR')} CRC
                 </span>
               </div>
@@ -486,21 +519,21 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
         {/* Available Credit Banner */}
         {availableCredit > 0 && (
-          <div className="mb-6 bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
-            <div className="flex items-start sm:items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Wallet size={20} />
+          <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 print:hidden">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Wallet size={18} />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-sm font-black text-emerald-950 uppercase tracking-wide">
+                  <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
                     Cliente con Saldo a Favor Disponible
                   </h4>
-                  <span className="text-xs font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-full">
+                  <span className="text-xs font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full tabular-nums">
                     +{formatCurrency(availableCredit, currency)} (≈ ₡{Math.round(availableCredit * exchangeRate).toLocaleString('es-CR')})
                   </span>
                 </div>
-                <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                <p className="text-xs text-emerald-800 mt-0.5">
                   {visibleInvoices.length > 0
                     ? 'Puedes descontar este saldo a favor automáticamente en las facturas pendientes del cliente.'
                     : 'Este monto quedará disponible para aplicarse cuando el cliente tenga nuevas facturas.'}
@@ -512,9 +545,9 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 type="button"
                 onClick={handleApplyExistingCredit}
                 disabled={isApplyingCredit}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-sm transition-colors shrink-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors shrink-0 disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Sparkles size={15} />
+                <Sparkles size={14} />
                 {isApplyingCredit ? 'Aplicando...' : 'Aplicar Saldo a Favor'}
               </button>
             )}
@@ -522,24 +555,33 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         )}
 
         {/* Transactions Table */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">Transacciones pendientes en {currency} <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{visibleInvoices.length}</span></h3>
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
+          <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
+            <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              Transacciones pendientes en {currency}
+              <span className="text-[11px] font-bold bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-md tabular-nums">{visibleInvoices.length}</span>
+            </h3>
+          </div>
           
-          <div className="overflow-x-auto border border-gray-200 rounded-xl">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="p-4 w-12 print:hidden"></th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Descripción</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Fecha de Vencimiento</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right hidden sm:table-cell">Importe Original</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Saldo Pendiente</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right w-40">Pago</th>
+                <tr className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                  <th className="py-2.5 px-3.5 w-12 print:hidden"></th>
+                  <th className="py-2.5 px-3.5">Descripción</th>
+                  <th className="py-2.5 px-3.5 hidden sm:table-cell">Fecha de Vencimiento</th>
+                  <th className="py-2.5 px-3.5 text-right hidden sm:table-cell">Importe Original</th>
+                  <th className="py-2.5 px-3.5 text-right">Saldo Pendiente</th>
+                  <th className="py-2.5 px-3.5 pr-5 text-right w-40">Pago</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 text-[13px]">
                 {visibleInvoices.length === 0 ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay facturas pendientes en {currency}. Puedes registrar un anticipo o saldo a favor abajo.</td></tr>
+                  <tr>
+                    <td colSpan={6} className="py-10 px-6 text-center text-slate-400">
+                      No hay facturas pendientes en {currency}. Puedes registrar un anticipo o saldo a favor abajo.
+                    </td>
+                  </tr>
                 ) : (
                   visibleInvoices.map(inv => {
                     const invId = inv.id as string;
@@ -555,31 +597,31 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     dueDate.setDate(dueDate.getDate() + 30);
 
                     return (
-                      <tr key={invId} className={`border-b border-gray-100 last:border-0 transition-colors ${isChecked ? 'bg-green-50/30' : 'hover:bg-gray-50/50'}`}>
-                        <td className="p-4 text-center cursor-pointer print:hidden" onClick={() => toggleInvoice(invId, pendingBalance)}>
-                          <div className={`w-5 h-5 mx-auto rounded-md flex items-center justify-center transition-all duration-150 ${
+                      <tr key={invId} className={`transition-colors ${isChecked ? 'bg-emerald-50/30' : 'hover:bg-slate-50/90'}`}>
+                        <td className="py-2.5 px-3.5 text-center cursor-pointer print:hidden" onClick={() => toggleInvoice(invId, pendingBalance)}>
+                          <div className={`w-4 h-4 mx-auto rounded flex items-center justify-center transition-all duration-150 ${
                             isChecked 
-                              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/20 scale-105' 
-                              : 'bg-white border-2 border-gray-300 hover:border-brand-blue hover:bg-brand-blue/5'
+                              ? 'bg-emerald-600 text-white shadow-2xs ring-2 ring-emerald-400/20' 
+                              : 'bg-white border border-slate-300 hover:border-brand-blue'
                           }`}>
-                            {isChecked && <Check size={13} strokeWidth={3.5} />}
+                            {isChecked && <Check size={11} strokeWidth={3.5} />}
                           </div>
                         </td>
-                        <td className="p-4">
-                          <p className="font-bold text-brand-blue text-sm">Factura #{invoiceNumber}</p>
-                          <p className="text-xs text-gray-500">({formatDisplayDate(issueDate)})</p>
+                        <td className="py-2.5 px-3.5">
+                          <p className="font-mono font-bold text-slate-900 text-xs sm:text-sm">Factura #{invoiceNumber}</p>
+                          <p className="text-xs text-slate-400 tabular-nums">Emitida: {formatDisplayDate(issueDate)}</p>
                         </td>
-                        <td className="p-4 text-sm text-gray-600 hidden sm:table-cell">{formatDisplayDate(dueDate.toISOString().split('T')[0])}</td>
-                        <td className="p-4 text-sm font-medium text-gray-600 text-right hidden sm:table-cell">
-                          <div>{formatCurrency(Number(invTotal), currency)}</div>
-                          <div className="text-[11px] text-gray-400 font-normal">₡{Math.round(Number(invTotal) * (Number(inv.exchange_rate) || exchangeRate)).toLocaleString('es-CR')}</div>
+                        <td className="py-2.5 px-3.5 text-xs text-slate-500 hidden sm:table-cell tabular-nums">{formatDisplayDate(dueDate.toISOString().split('T')[0])}</td>
+                        <td className="py-2.5 px-3.5 text-right hidden sm:table-cell tabular-nums">
+                          <div className="font-medium text-slate-700">{formatCurrency(Number(invTotal), currency)}</div>
+                          <div className="text-[11px] text-slate-400">₡{Math.round(Number(invTotal) * (Number(inv.exchange_rate) || exchangeRate)).toLocaleString('es-CR')}</div>
                         </td>
-                        <td className="p-4 text-sm font-medium text-gray-800 text-right">
-                          <div className="font-bold">{formatCurrency(pendingBalance, currency)}</div>
-                          <div className="text-[11px] text-emerald-600 font-bold">₡{Math.round(pendingBalance * (Number(inv.exchange_rate) || exchangeRate)).toLocaleString('es-CR')}</div>
+                        <td className="py-2.5 px-3.5 text-right tabular-nums">
+                          <div className="font-bold text-slate-900">{formatCurrency(pendingBalance, currency)}</div>
+                          <div className="text-[11px] text-emerald-600 font-semibold">₡{Math.round(pendingBalance * (Number(inv.exchange_rate) || exchangeRate)).toLocaleString('es-CR')}</div>
                         </td>
-                        <td className="p-4 text-right">
-                          <div className={`inline-flex items-center justify-end gap-1 px-2.5 py-1.5 rounded-lg border transition-colors ${isChecked ? 'bg-green-50 border-green-300 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                        <td className="py-2.5 px-3.5 pr-5 text-right">
+                          <div className={`inline-flex items-center justify-end gap-1 px-2.5 h-8 rounded-lg border transition-colors ${isChecked ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-slate-50 border-slate-200/90 text-slate-400'}`}>
                             <span className="font-bold text-xs">{currency === 'CRC' ? '₡' : '$'}</span>
                             <input 
                               type="number"
@@ -587,7 +629,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                               value={appAmount}
                               onChange={(e) => handleManualAmountChange(invId, e.target.value, pendingBalance)}
                               placeholder="0.00"
-                              className="w-24 bg-transparent text-right font-black text-sm focus:outline-none text-gray-800"
+                              className="w-20 bg-transparent text-right font-bold text-xs sm:text-sm focus:outline-none text-slate-900 tabular-nums"
                             />
                           </div>
                         </td>
@@ -600,20 +642,20 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           </div>
           
           {/* Saldo a Favor / Overpayment Box & Totals */}
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          <div className="p-4 bg-slate-50/60 border-t border-slate-200/80 grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
             <div className="md:col-span-7 print:hidden">
               {!showCreditBox && creditToGenerate <= 0 ? (
                 <button
                   type="button"
                   onClick={() => setShowCreditBox(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 text-xs font-bold transition-all shadow-2xs"
+                  className="h-9 px-3.5 inline-flex items-center gap-2 rounded-lg bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 text-xs font-semibold transition-all cursor-pointer"
                 >
-                  <Plus size={15} className="text-emerald-600 stroke-[2.5]" />
+                  <Plus size={14} className="text-emerald-600" />
                   <Wallet size={14} className="text-emerald-600" />
                   <span>Generar Saldo a Favor (Pago de más / Anticipo)</span>
                 </button>
               ) : (
-                <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 relative">
+                <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 relative">
                   <button
                     type="button"
                     onClick={() => {
@@ -623,11 +665,11 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     title="Ocultar saldo a favor"
                     className="absolute top-3 right-3 p-1 rounded-lg text-emerald-700/60 hover:text-emerald-900 hover:bg-emerald-100/70 transition-colors"
                   >
-                    <X size={15} />
+                    <X size={14} />
                   </button>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-5">
                     <div>
-                      <label className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <label className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                         <Wallet size={14} className="text-emerald-600" />
                         Generar Saldo a Favor (Pago de más / Anticipo)
                       </label>
@@ -636,8 +678,8 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                       </p>
                     </div>
                     <div className="shrink-0 flex flex-col items-end">
-                      <div className="inline-flex items-center gap-1.5 bg-white border-2 border-emerald-300 focus-within:border-emerald-600 px-3 py-2 rounded-xl shadow-sm">
-                        <span className="text-sm font-black text-emerald-700">+$</span>
+                      <div className="inline-flex items-center gap-1.5 bg-white border border-emerald-300 focus-within:border-emerald-600 px-3 h-9 rounded-lg shadow-2xs">
+                        <span className="text-xs font-bold text-emerald-700">+$</span>
                         <input
                           type="number"
                           step="0.01"
@@ -645,11 +687,11 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                           placeholder="0.00"
                           value={creditInputStr !== '' ? creditInputStr : (creditToGenerate > 0 ? creditToGenerate.toFixed(2) : '')}
                           onChange={e => handleCreditInputChange(e.target.value)}
-                          className="w-28 text-right font-black text-base text-emerald-900 focus:outline-none bg-transparent"
+                          className="w-24 text-right font-bold text-sm text-emerald-900 focus:outline-none bg-transparent tabular-nums"
                         />
                       </div>
                       {creditToGenerate > 0 && (
-                        <span className="text-[11px] font-bold text-emerald-700 mt-1">
+                        <span className="text-[11px] font-semibold text-emerald-700 mt-1 tabular-nums">
                           ≈ +₡{Math.round(creditToGenerate * exchangeRate).toLocaleString('es-CR')} CRC
                         </span>
                       )}
@@ -659,22 +701,22 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               )}
             </div>
 
-            <div className="md:col-span-5 flex flex-col items-end justify-end space-y-1.5 pt-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Monto a Aplicar a Facturas: <span className="text-base font-black text-gray-800 ml-2">{formatCurrency(amountToApply, currency)}</span>
+            <div className="md:col-span-5 flex flex-col items-end justify-end space-y-1.5">
+              <p className="text-xs font-medium text-slate-500">
+                Monto a Aplicar a Facturas: <span className="text-sm font-bold text-slate-900 ml-2 tabular-nums">{formatCurrency(amountToApply, currency)}</span>
               </p>
               {creditToGenerate > 0 && (
-                <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  Saldo a Favor a Generar: <span className="text-base font-black text-emerald-700 ml-1.5">+{formatCurrency(creditToGenerate, currency)}</span>
+                <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/80 tabular-nums">
+                  Saldo a Favor a Generar: <span className="font-bold ml-1">+{formatCurrency(creditToGenerate, currency)}</span>
                 </p>
               )}
-              <div className="pt-1.5 border-t border-gray-200 w-full flex flex-col items-end">
-                <p className="text-sm font-bold text-gray-600 uppercase tracking-wider">
-                  Total Pago Recibido: <span className="text-xl font-black text-green-600 ml-2">{formatCurrency(Number((amountToApply + creditToGenerate).toFixed(2)), currency)}</span>
+              <div className="pt-2 border-t border-slate-200/80 w-full flex flex-col items-end">
+                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Total Pago Recibido: <span className="text-lg font-black text-emerald-600 ml-2 tabular-nums">{formatCurrency(Number((amountToApply + creditToGenerate).toFixed(2)), currency)}</span>
                 </p>
-                <p className="text-xs font-bold text-gray-500 mt-1">
-                  Total en Colones: <span className="text-base font-black text-brand-blue ml-1">₡{Math.round((amountToApply + creditToGenerate) * exchangeRate).toLocaleString('es-CR')} CRC</span>
-                  <span className="text-[10px] text-gray-400 font-medium ml-1.5">(T.C. ₡{exchangeRate})</span>
+                <p className="text-xs font-medium text-slate-500 mt-0.5 tabular-nums">
+                  Total en Colones: <span className="text-sm font-bold text-brand-blue ml-1">₡{Math.round((amountToApply + creditToGenerate) * exchangeRate).toLocaleString('es-CR')} CRC</span>
+                  <span className="text-[10px] text-slate-400 ml-1.5">(T.C. ₡{exchangeRate})</span>
                 </p>
               </div>
             </div>
@@ -682,24 +724,29 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
         </div>
 
         {/* Historial de Pagos Section */}
-        <div className="mt-12">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">Historial de Pagos</h3>
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden print:border-none print:rounded-none print:shadow-none">
+          <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between print:bg-transparent print:px-0">
+            <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              Historial de Pagos del Cliente
+              <span className="text-[11px] font-bold bg-slate-200/70 text-slate-700 px-2 py-0.5 rounded-md tabular-nums">{clientPayments.length}</span>
+            </h3>
+          </div>
           
-          <div className="overflow-x-auto border border-gray-200 rounded-xl print:border-none print:rounded-none">
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 print:bg-transparent print:border-gray-800">
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Método</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Referencia</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Facturas Aplicadas / Saldo</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Monto</th>
-                  <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center print:hidden">Acción</th>
+                <tr className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] uppercase tracking-wider text-slate-500 font-semibold print:bg-transparent print:border-gray-800">
+                  <th className="py-2.5 px-3.5 pl-5">Fecha</th>
+                  <th className="py-2.5 px-3.5">Método</th>
+                  <th className="py-2.5 px-3.5">Referencia</th>
+                  <th className="py-2.5 px-3.5">Facturas Aplicadas / Saldo</th>
+                  <th className="py-2.5 px-3.5 text-right">Monto</th>
+                  <th className="py-2.5 px-3.5 pr-5 text-center print:hidden">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100 text-[13px]">
                 {clientPayments.length === 0 ? (
-                  <tr><td colSpan={6} className="p-8 text-center text-gray-500">No hay pagos registrados.</td></tr>
+                  <tr><td colSpan={6} className="py-10 px-6 text-center text-slate-400">No hay pagos registrados.</td></tr>
                 ) : (
                   clientPayments.map((pay: Record<string, unknown>) => {
                     const payAmt = Number(pay.amount) || 0;
@@ -708,34 +755,39 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     const unappliedCredit = Math.max(0, Number((payAmt - appliedSum).toFixed(2)));
 
                     return (
-                      <tr key={pay.id as string} className="hover:bg-gray-50/50 transition-colors print:hover:bg-transparent">
-                        <td className="p-4 text-sm text-gray-800 font-medium">{pay.payment_date as string}</td>
-                        <td className="p-4 text-sm text-gray-600">{(pay.payment_method as string) || '-'}</td>
-                        <td className="p-4 text-sm text-gray-600">{(pay.reference_number as string) || '-'}</td>
-                        <td className="p-4 text-sm text-gray-500 space-y-1">
+                      <tr key={pay.id as string} className="hover:bg-slate-50/90 transition-colors print:hover:bg-transparent">
+                        <td className="py-2.5 px-3.5 pl-5 text-xs text-slate-500 tabular-nums">{pay.payment_date as string}</td>
+                        <td className="py-2.5 px-3.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                            {(pay.payment_method as string) || '-'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5 font-mono text-xs text-slate-600">{(pay.reference_number as string) || '-'}</td>
+                        <td className="py-2.5 px-3.5 text-slate-600 space-y-1">
                           {invPayments.map((ip: Record<string, unknown>) => (
-                            <div key={`${ip.invoice_id as string}-${ip.amount_applied as number}`}>
-                              #{(ip.invoices as Record<string, unknown>)?.invoice_number as string} <span className="text-xs">(${Number(ip.amount_applied).toFixed(2)})</span>
+                            <div key={`${ip.invoice_id as string}-${ip.amount_applied as number}`} className="text-xs font-medium">
+                              <span className="font-mono font-bold text-slate-800">#{(ip.invoices as Record<string, unknown>)?.invoice_number as string}</span>{' '}
+                              <span className="text-slate-500 tabular-nums">(${Number(ip.amount_applied).toFixed(2)})</span>
                             </div>
                           ))}
                           {unappliedCredit > 0.009 && (
-                            <div className="inline-flex items-center gap-1 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                            <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md tabular-nums">
                               <Wallet size={11} />
                               Saldo a favor disp.: +${unappliedCredit.toFixed(2)}
                             </div>
                           )}
                           {invPayments.length === 0 && unappliedCredit <= 0.009 && (
-                            <span className="text-xs text-gray-400">-</span>
+                            <span className="text-xs text-slate-400">-</span>
                           )}
                         </td>
-                        <td className="p-4 text-sm font-bold text-green-700 text-right">+{formatCurrency(payAmt, (pay.currency as string) || 'USD')}</td>
-                        <td className="p-4 text-center print:hidden">
+                        <td className="py-2.5 px-3.5 font-bold text-emerald-700 text-right tabular-nums">+{formatCurrency(payAmt, (pay.currency as string) || 'USD')}</td>
+                        <td className="py-2.5 px-3.5 pr-5 text-center print:hidden">
                           <button 
                             onClick={() => handleDeletePayment(pay.id as string)}
-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-flex" 
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors inline-flex cursor-pointer" 
                             title="Anular Pago"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={15} />
                           </button>
                         </td>
                       </tr>
@@ -750,51 +802,53 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       </div>
 
       {/* Footer Actions */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 flex items-center justify-between z-40 print:hidden">
-        <button onClick={() => router.push('/admin/cuentas-por-cobrar')} className="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+      <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xs border-t border-slate-200/80 px-6 py-3 flex items-center justify-between z-40 print:hidden">
+        <button onClick={() => router.push('/admin/cuentas-por-cobrar')} className="h-9 px-4 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
           Cancelar
         </button>
-        <button onClick={() => window.print()} className="px-6 py-2.5 rounded-xl font-bold text-brand-blue hover:bg-brand-blue/10 transition-colors">
-          Imprimir Reporte
-        </button>
-        <button 
-          onClick={handleSave} 
-          disabled={isSaving || (amountToApply + creditToGenerate) <= 0}
-          className="px-8 py-2.5 bg-[#0A2636] text-white rounded-xl font-bold hover:bg-[#0A2636]/90 transition-colors shadow-lg shadow-[#0A2636]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {isSaving
-            ? 'Guardando...'
-            : creditToGenerate > 0 && amountToApply > 0
-              ? `Guardar Pago y Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
-              : creditToGenerate > 0
-                ? `Registrar Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
-                : 'Guardar Pago'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => window.print()} className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer">
+            Imprimir Reporte
+          </button>
+          <button 
+            onClick={handleSave} 
+            disabled={isSaving || (amountToApply + creditToGenerate) <= 0}
+            className="h-9 px-5 bg-brand-blue text-white rounded-lg text-xs font-semibold hover:bg-[#0e354b] transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 cursor-pointer"
+          >
+            {isSaving
+              ? 'Guardando...'
+              : creditToGenerate > 0 && amountToApply > 0
+                ? `Guardar Pago y Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+                : creditToGenerate > 0
+                  ? `Registrar Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+                  : 'Guardar Pago'}
+          </button>
+        </div>
       </div>
       
       {/* Spacer for fixed footer */}
-      <div className="h-24 print:hidden"></div>
+      <div className="h-20 print:hidden"></div>
 
       {/* Alert Modal */}
       {alertModal?.isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform transition-all">
-            <div className={`p-6 border-b ${alertModal.type === 'success' ? 'border-green-100 bg-green-50' : 'border-red-100 bg-red-50'}`}>
-              <h3 className={`font-bold text-lg ${alertModal.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-sm overflow-hidden flex flex-col">
+            <div className={`px-5 py-4 border-b ${alertModal.type === 'success' ? 'border-emerald-200/80 bg-emerald-50/70' : 'border-red-200/80 bg-red-50/70'}`}>
+              <h3 className={`font-bold text-sm ${alertModal.type === 'success' ? 'text-emerald-900' : 'text-red-900'}`}>
                 {alertModal.title}
               </h3>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 font-medium">{alertModal.message}</p>
+            <div className="p-5">
+              <p className="text-slate-600 text-xs sm:text-sm font-medium leading-relaxed">{alertModal.message}</p>
             </div>
-            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
+            <div className="px-5 py-3 border-t border-slate-200/80 flex justify-end bg-slate-50/70">
               <button
                 onClick={() => {
                   setAlertModal(null);
                   if (alertModal.onConfirm) alertModal.onConfirm();
                 }}
-                className={`px-6 py-2 rounded-xl font-bold text-white shadow-sm transition-colors ${
-                  alertModal.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-brand-blue hover:bg-brand-blue/90'
+                className={`h-9 px-4 rounded-lg text-xs font-semibold text-white shadow-2xs transition-colors cursor-pointer ${
+                  alertModal.type === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-blue hover:bg-[#0e354b]'
                 }`}
               >
                 Entendido
@@ -806,26 +860,26 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
       {/* Confirm Modal */}
       {confirmModal?.isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-all">
-            <div className="p-6 border-b border-orange-100 bg-orange-50">
-              <h3 className="font-bold text-lg text-orange-800 flex items-center gap-2">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4 animate-fade-in print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-amber-200/80 bg-amber-50/70">
+              <h3 className="font-bold text-sm text-amber-900 flex items-center gap-2">
                 Atención: {confirmModal.title}
               </h3>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 font-medium leading-relaxed">{confirmModal.message}</p>
+            <div className="p-5">
+              <p className="text-slate-600 text-xs sm:text-sm font-medium leading-relaxed">{confirmModal.message}</p>
             </div>
-            <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+            <div className="px-5 py-3 border-t border-slate-200/80 flex justify-end gap-2 bg-slate-50/70">
               <button
                 onClick={() => setConfirmModal(null)}
-                className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors"
+                className="h-9 px-4 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmModal.onConfirm}
-                className="px-5 py-2.5 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-sm"
+                className="h-9 px-4 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-2xs cursor-pointer"
               >
                 Sí, estoy seguro
               </button>

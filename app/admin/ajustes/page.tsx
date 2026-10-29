@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Users, Trash2, Eye, EyeOff, Edit2, Save, 
   Bot, Mail, Search, Copy, Check, 
-  Calendar, RefreshCw, UserCheck, Phone
+  Calendar, RefreshCw, UserCheck, Phone, Shield, Plus
 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDateTime } from '@/lib/billing';
@@ -142,268 +142,369 @@ export default function AjustesPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-black text-brand-blue mb-2">Ajustes del Sistema</h1>
-        <p className="text-gray-500">Gestión de usuarios y registros de contactos del asistente virtual Clari.</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* PANEL: Registros y Contactos del Bot (Leads de Clari) */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-brand-blue/10 via-brand-blue/5 to-transparent">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-brand-blue flex items-center justify-center text-brand-yellow shrink-0 shadow-sm">
-                <Bot size={22} />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">Registros del Bot (Clari)</h2>
-                <p className="text-xs text-gray-400">Clientes que iniciaron chat solicitando atención</p>
-              </div>
-            </div>
-            <span className="text-xs font-bold px-3 py-1 bg-brand-blue/10 text-brand-blue rounded-full">
-              {leads.length} {leads.length === 1 ? 'contacto' : 'contactos'}
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ajustes del Sistema</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
+              Administración
             </span>
           </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Gestión de usuarios administrativos y registros de contactos del asistente virtual Clari.
+          </p>
+        </div>
 
-          <div className="p-6 space-y-4 flex-1 flex flex-col">
+        <button
+          onClick={loadData}
+          disabled={leadsLoading}
+          className="h-9 px-3.5 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer w-fit"
+        >
+          <RefreshCw size={14} className={leadsLoading ? 'animate-spin text-brand-blue' : 'text-slate-500'} />
+          <span>Actualizar Datos</span>
+        </button>
+      </div>
+
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Usuarios del Sistema</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{users.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Cuentas con acceso al panel</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
+            <Users size={18} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Administradores</p>
+            <p className="text-2xl font-black text-brand-blue tabular-nums mt-1">
+              {users.filter(u => u.role === 'admin').length}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Permisos completos</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <Shield size={18} />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Contactos Bot (Clari)</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{leads.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Prospectos capturados</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Bot size={18} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        
+        {/* PANEL: Registros y Contactos del Bot (Leads de Clari) */}
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
+          <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-brand-blue flex items-center justify-center text-brand-yellow shrink-0 shadow-2xs">
+                  <Bot size={16} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Registros del Bot (Clari)</h2>
+                  <p className="text-[11px] text-slate-500">Clientes que iniciaron chat solicitando atención</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15 tabular-nums">
+                {leads.length} {leads.length === 1 ? 'contacto' : 'contactos'}
+              </span>
+            </div>
+
             {/* Buscador de registros */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o correo..."
+                  placeholder="Buscar por nombre, teléfono o correo..."
                   value={leadSearch}
                   onChange={(e) => setLeadSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:ring-0 focus:border-brand-blue focus:bg-white transition-all"
+                  className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
                 />
               </div>
               <button
                 onClick={loadData}
                 disabled={leadsLoading}
-                className="p-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl transition-colors"
+                className="h-9 w-9 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-600 rounded-lg flex items-center justify-center transition-colors cursor-pointer shrink-0"
                 title="Actualizar registros"
               >
-                <RefreshCw size={15} className={leadsLoading ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={leadsLoading ? 'animate-spin text-brand-blue' : ''} />
               </button>
             </div>
+          </div>
 
-            {/* Lista de Registros */}
-            <div className="space-y-3 flex-1 overflow-y-auto max-h-[500px] pr-1">
-              {filteredLeads.length === 0 && !leadsLoading && (
-                <div className="text-center py-12 text-gray-400">
-                  <UserCheck size={36} className="mx-auto mb-2 opacity-30 text-brand-blue" />
-                  <p className="text-sm font-semibold">No hay registros del bot aún.</p>
-                  <p className="text-xs mt-1">Los contactos que ingresen por Clari aparecerán aquí automáticamente.</p>
-                </div>
-              )}
+          {/* Lista de Registros */}
+          <div className="divide-y divide-slate-100 text-[13px] max-h-[540px] overflow-y-auto">
+            {filteredLeads.length === 0 && !leadsLoading && (
+              <div className="text-center py-12 px-4 text-slate-400">
+                <UserCheck size={28} className="mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-medium text-slate-600">No hay registros del bot aún.</p>
+                <p className="text-xs mt-0.5">Los contactos que ingresen por Clari aparecerán aquí automáticamente.</p>
+              </div>
+            )}
 
-              {filteredLeads.map((lead) => {
-                const initials = (lead.name || 'US')
-                  .split(' ')
-                  .map(n => n[0])
-                  .join('')
-                  .substring(0, 2)
-                  .toUpperCase();
+            {filteredLeads.map((lead) => {
+              const initials = (lead.name || 'US')
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase();
 
-                const dateDisplay = lead.created_at ? formatCostaRicaDateTime(lead.created_at) : 'Reciente';
+              const dateDisplay = lead.created_at ? formatCostaRicaDateTime(lead.created_at) : 'Reciente';
 
-                return (
-                  <div key={lead.id} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-brand-blue/30 hover:shadow-sm transition-all flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-brand-blue text-white flex items-center justify-center font-bold text-xs shrink-0">
-                          {initials}
+              return (
+                <div key={lead.id} className="py-2.5 px-3.5 hover:bg-slate-50/90 transition-colors flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-brand-blue/10 border border-brand-blue/15 text-brand-blue flex items-center justify-center font-bold text-xs shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-slate-900 truncate">{lead.name}</p>
+                          {lead.address && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md shrink-0">
+                              {lead.address}
+                            </span>
+                          )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-gray-800 text-sm truncate">{lead.name}</p>
-                            {lead.address && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 bg-brand-blue/10 text-brand-blue rounded-md shrink-0">
-                                {lead.address}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-                            <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                              <Mail size={12} className="shrink-0 text-brand-blue" />
-                              <span>{lead.email}</span>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                          <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                            <Mail size={11} className="shrink-0 text-slate-400" />
+                            <span>{lead.email}</span>
+                          </p>
+                          {lead.phone && (
+                            <p className="text-xs text-slate-500 truncate flex items-center gap-1 tabular-nums">
+                              <Phone size={11} className="shrink-0 text-emerald-600" />
+                              <span>{lead.phone}</span>
                             </p>
-                            {lead.phone && (
-                              <p className="text-xs text-gray-500 truncate flex items-center gap-1">
-                                <Phone size={12} className="shrink-0 text-emerald-600" />
-                                <span>{lead.phone}</span>
-                              </p>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-                      
-                      <button
-                        onClick={() => handleDeleteLead(lead.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                        title="Eliminar registro"
-                      >
-                        <Trash2 size={16} />
-                      </button>
                     </div>
+                    
+                    <button
+                      onClick={() => handleDeleteLead(lead.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors shrink-0 cursor-pointer"
+                      title="Eliminar registro"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 text-xs">
-                      <span className="text-[11px] text-gray-400 flex items-center gap-1">
-                        <Calendar size={12} /> {dateDisplay}
-                      </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pl-10 text-xs">
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1 tabular-nums">
+                      <Calendar size={11} /> {dateDisplay}
+                    </span>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => copyEmail(lead.email)}
-                          className="px-2.5 py-1 bg-white border border-gray-200 hover:border-brand-blue rounded-lg text-[11px] font-semibold text-gray-600 hover:text-brand-blue flex items-center gap-1 transition-colors"
-                        >
-                          {copiedEmail === lead.email ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                          <span>{copiedEmail === lead.email ? 'Copiado' : 'Copiar'}</span>
-                        </button>
-                        <a
-                          href={`mailto:${lead.email}?subject=Atención%20JRS%20CARGO`}
-                          className="px-3 py-1 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all shadow-sm active:scale-95"
-                        >
-                          <Mail size={12} /> Escribir
-                        </a>
-                      </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => copyEmail(lead.email)}
+                        className="h-7 px-2.5 bg-white border border-slate-200/90 hover:border-brand-blue rounded-md text-[11px] font-semibold text-slate-600 hover:text-brand-blue inline-flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        {copiedEmail === lead.email ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                        <span>{copiedEmail === lead.email ? 'Copiado' : 'Copiar'}</span>
+                      </button>
+                      <a
+                        href={`mailto:${lead.email}?subject=Atención%20JRS%20CARGO`}
+                        className="h-7 px-2.5 bg-brand-blue hover:bg-[#0e354b] text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-all shadow-2xs"
+                      >
+                        <Mail size={11} /> Escribir
+                      </a>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Panel de Gestión de Usuarios */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-brand-blue/5">
-            <Users className="text-brand-blue" size={24} />
-            <h2 className="text-xl font-bold text-gray-800">Gestión de Usuarios</h2>
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
+          <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-brand-blue/10 border border-brand-blue/15 text-brand-blue flex items-center justify-center shrink-0">
+                <Users size={16} />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Gestión de Usuarios</h2>
+                <p className="text-[11px] text-slate-500">Accesos y contraseñas del equipo</p>
+              </div>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-slate-100 text-slate-700 border-slate-200/80 tabular-nums">
+              {users.length} activos
+            </span>
           </div>
-          <div className="p-6 space-y-6">
-            
+
+          <div className="p-4 border-b border-slate-200/80 bg-slate-50/30">
             {/* Formulario nuevo usuario */}
-            <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-2xl border border-gray-100 space-y-4">
-              <h3 className="font-bold text-brand-blue text-sm uppercase tracking-wider">Crear Nuevo Usuario</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleCreateUser} className="space-y-3">
+              <h3 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                <Plus size={13} className="text-brand-blue" /> Crear Nuevo Usuario
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Usuario</label>
-                  <input required type="text" value={newUsername} onChange={e => setNewUsername(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-0 focus:border-brand-blue" />
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Usuario</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ej. OperadorBodega"
+                    value={newUsername}
+                    onChange={e => setNewUsername(e.target.value)}
+                    className="w-full h-9 px-3 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Contraseña</label>
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Contraseña</label>
                   <div className="relative">
-                    <input required type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full pl-3 pr-10 py-2 rounded-lg border border-gray-200 text-sm focus:ring-0 focus:border-brand-blue" />
+                    <input
+                      required
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="w-full h-9 pl-3 pr-9 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                    />
                     <button 
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                     >
-                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="flex gap-4 items-end">
+              <div className="flex gap-3 items-end">
                 <div className="flex-1">
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Rol</label>
-                  <select value={newRole} onChange={e => setNewRole(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-0 focus:border-brand-blue">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Rol</label>
+                  <select
+                    value={newRole}
+                    onChange={e => setNewRole(e.target.value)}
+                    className="w-full h-9 px-2.5 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                  >
                     <option value="user">Usuario Regular</option>
                     <option value="admin">Administrador Principal</option>
                   </select>
                 </div>
-                <button type="submit" disabled={loading} className="px-6 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-sm">
-                  {loading ? 'Creando...' : 'Crear Usuario'}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="h-9 px-4 bg-brand-blue hover:bg-[#0e354b] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 text-xs shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>{loading ? 'Creando...' : 'Crear Usuario'}</span>
                 </button>
               </div>
             </form>
+          </div>
 
-            {/* Lista de usuarios */}
-            <div className="space-y-3">
-              <h3 className="font-bold text-gray-500 text-sm uppercase tracking-wider mb-2">Usuarios Registrados</h3>
-              {users.map(u => (
-                <div key={u.id} className="flex flex-col gap-3 p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-gray-800">{u.username}</p>
-                      <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-brand-blue/10 text-brand-blue' : 'bg-gray-200 text-gray-600'}`}>
-                        {u.role === 'admin' ? 'Admin' : 'Regular'}
+          {/* Lista de usuarios */}
+          <div className="divide-y divide-slate-100 text-[13px]">
+            <div className="bg-slate-50/95 border-b border-slate-200/90 py-2 px-3.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+              Usuarios Registrados
+            </div>
+            {users.map(u => (
+              <div key={u.id} className="py-2.5 px-3.5 hover:bg-slate-50/90 transition-colors flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-semibold text-slate-900">{u.username}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                      u.role === 'admin'
+                        ? 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
+                        : 'bg-slate-100 text-slate-600 border-slate-200/80'
+                    }`}>
+                      {u.role === 'admin' ? 'Admin' : 'Regular'}
+                    </span>
+                  </div>
+                  {u.username !== 'AdminJRS' && (
+                    <button
+                      onClick={() => handleDeleteUser(u.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                      title="Eliminar usuario"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+                
+                {/* Password Section */}
+                <div className="bg-slate-50/80 border border-slate-200/70 px-3 py-2 rounded-lg flex items-center justify-between gap-2">
+                  <div className="flex-1 flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Clave:</span>
+                    {editingPasswordFor === u.id ? (
+                      <input 
+                        type="text" 
+                        value={editPasswordValue}
+                        onChange={(e) => setEditPasswordValue(e.target.value)}
+                        className="w-full h-8 px-2.5 bg-white text-xs sm:text-sm text-slate-800 border border-slate-200/90 rounded-lg focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                        placeholder="Nueva contraseña"
+                      />
+                    ) : (
+                      <span className="text-xs font-mono text-slate-600 truncate">
+                        {showPasswordFor === u.id ? (u.password || '••••••••') : '••••••••'}
                       </span>
-                    </div>
-                    {u.username !== 'AdminJRS' && (
-                      <button onClick={() => handleDeleteUser(u.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2 size={18} />
-                      </button>
                     )}
                   </div>
-                  
-                  {/* Password Section (Only for Admins) */}
-                  <div className="bg-white border border-gray-100 p-3 rounded-lg flex items-center justify-between mt-1">
-                    <div className="flex-1 flex flex-col">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Contraseña</span>
-                      {editingPasswordFor === u.id ? (
-                        <input 
-                          type="text" 
-                          value={editPasswordValue}
-                          onChange={(e) => setEditPasswordValue(e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-brand-blue rounded focus:outline-none"
-                          placeholder="Nueva contraseña"
-                        />
-                      ) : (
-                        <span className="text-sm font-mono text-gray-600">
-                          {showPasswordFor === u.id ? (u.password || '••••••••') : '••••••••'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {editingPasswordFor === u.id ? (
-                        <>
-                          <button 
-                            onClick={() => handleUpdatePassword(u.id)} 
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                            title="Guardar"
-                          >
-                            <Save size={16} />
-                          </button>
-                          <button 
-                            onClick={() => { setEditingPasswordFor(null); setEditPasswordValue(''); }} 
-                            className="p-1.5 text-gray-400 hover:bg-gray-100 rounded"
-                            title="Cancelar"
-                          >
-                            <EyeOff size={16} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button 
-                            onClick={() => setShowPasswordFor(showPasswordFor === u.id ? null : u.id)} 
-                            className="p-1.5 text-gray-400 hover:text-gray-600 rounded"
-                            title={showPasswordFor === u.id ? "Ocultar" : "Mostrar"}
-                          >
-                            {showPasswordFor === u.id ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setEditingPasswordFor(u.id);
-                              setEditPasswordValue(u.password || '');
-                            }} 
-                            className="p-1.5 text-brand-blue hover:bg-blue-50 rounded"
-                            title="Editar contraseña"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                        </>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {editingPasswordFor === u.id ? (
+                      <>
+                        <button 
+                          onClick={() => handleUpdatePassword(u.id)} 
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                          title="Guardar"
+                        >
+                          <Save size={14} />
+                        </button>
+                        <button 
+                          onClick={() => { setEditingPasswordFor(null); setEditPasswordValue(''); }} 
+                          className="p-1.5 text-slate-400 hover:bg-slate-200/60 rounded-md transition-colors cursor-pointer"
+                          title="Cancelar"
+                        >
+                          <EyeOff size={14} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={() => setShowPasswordFor(showPasswordFor === u.id ? null : u.id)} 
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition-colors cursor-pointer"
+                          title={showPasswordFor === u.id ? "Ocultar" : "Mostrar"}
+                        >
+                          {showPasswordFor === u.id ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingPasswordFor(u.id);
+                            setEditPasswordValue(u.password || '');
+                          }} 
+                          className="p-1.5 text-brand-blue hover:bg-brand-blue/10 rounded-md transition-colors cursor-pointer"
+                          title="Editar contraseña"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-
+              </div>
+            ))}
           </div>
         </div>
 
