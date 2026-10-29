@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Package, Search, Filter, X, Pencil, Trash2, AlertTriangle, AlertCircle, FileText, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, QrCode, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDate, formatCostaRicaISO, extractCompanyAndClient } from '@/lib/billing';
@@ -45,6 +45,8 @@ export default function BodegaInventario() {
 
   // Invoice mapping: tracking_number -> { invoice_number, invoice_id }
   const [invoiceMap, setInvoiceMap] = useState<Map<string, { number: string; id: string }>>(new Map());
+  // Shelf mapping from JRS Cargo Mobile: tracking_number -> shelfCode
+  const [shelfMap, setShelfMap] = useState<Map<string, string>>(new Map());
 
   const handleViewPhotos = async (trackingId: string) => {
     setLoadingPhotosFor(trackingId);
@@ -178,6 +180,19 @@ export default function BodegaInventario() {
         });
         setInvoiceMap(map);
       }
+
+      // Fetch active shelf assignments from JRS Cargo Mobile
+      const mobRes = await fetch('/api/mobile', { cache: 'no-store' }).catch(() => null);
+      if (mobRes && mobRes.ok) {
+        const mobData = await mobRes.json();
+        const sMap = new Map<string, string>();
+        (mobData.packages || []).forEach((p: { tracking?: string; shelfCode?: string | null }) => {
+          if (p.tracking && p.shelfCode) {
+            sMap.set(p.tracking.trim().toUpperCase(), p.shelfCode);
+          }
+        });
+        setShelfMap(sMap);
+      }
     } catch (error) {
       console.error('Error fetching inventory', error);
     } finally {
@@ -310,6 +325,15 @@ export default function BodegaInventario() {
         </div>
         
         <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+          <Link
+            href="/mobile"
+            className="px-4 py-2.5 rounded-2xl border border-[#0B1D2B] bg-[#0B1D2B] hover:bg-[#123147] text-brand-yellow shadow-xs flex items-center gap-2 font-black text-sm transition-all active:scale-95"
+            title="Abrir aplicación móvil de estantes y códigos QR"
+          >
+            <QrCode size={16} />
+            <span>JRS Mobile (QR)</span>
+          </Link>
+
           <button 
             onClick={() => loadInventory()}
             disabled={isRefreshing}
@@ -666,7 +690,15 @@ export default function BodegaInventario() {
                         <Package size={16} className="text-brand-blue cursor-pointer" />
                       )}
                     </button>
-                    {item.id}
+                    <div className="flex flex-col gap-1">
+                      <span>{item.id}</span>
+                      {shelfMap.get(item.id.trim().toUpperCase()) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#0B1D2B] text-brand-yellow text-[10px] font-black font-mono w-fit">
+                          <MapPin size={10} />
+                          Estante: {shelfMap.get(item.id.trim().toUpperCase())}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4 font-medium text-gray-700">{item.client}</td>
                   <td className="p-4 text-gray-500">{item.company}</td>

@@ -1,0 +1,26 @@
+{
+  "name": "JRS Cargo Mobile — Bodega y Estantes QR",
+  "short_name": "JRS Mobile",
+  "description": "Gestión de inventario físico y ubicaciones de estantes mediante códigos QR para JRS Cargo Costa Rica.",
+  "start_url": "/mobile",
+  "scope": "/mobile",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1D2B",
+  "theme_color": "#0B1D2B",
+  "lang": "es-CR",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

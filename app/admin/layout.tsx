@@ -252,6 +252,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { href: '/admin/bodega/masivo', label: 'Acción Masiva' },
                 { href: '/admin/inventario', label: 'Inventario CR' },
                 { href: '/admin/tracking', label: 'Tracking de Paquetes' },
+                { href: '/mobile', label: 'JRS Cargo Mobile (QR)' },
               ].map(link => {
                 const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
                 return (

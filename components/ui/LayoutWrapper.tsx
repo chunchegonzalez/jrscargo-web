@@ -7,31 +7,31 @@ import PrimeBigDealPopup from './PrimeBigDealPopup';
 
 export function HeaderWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta') || pathname?.startsWith('/mobile')) return null;
   return <Header />;
 }
 
 export function FooterWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta') || pathname?.startsWith('/mobile')) return null;
   return <Footer />;
 }
 
 export function ChatBotWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta') || pathname?.startsWith('/mobile')) return null;
   return <ChatBotWidget />;
 }
 
 export function PrimeBigDealPopupWrapper() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta')) return null;
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta') || pathname?.startsWith('/mobile')) return null;
   return <PrimeBigDealPopup />;
 }
 
 export function MainWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isExcluded = pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta');
+  const isExcluded = pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta') || pathname?.startsWith('/mobile');
   
   return (
     <main className={`flex-1 relative z-10 ${isExcluded ? '' : 'pt-[72px] sm:pt-[88px]'}`}>

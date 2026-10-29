@@ -286,7 +286,14 @@ export default function AdminLogin() {
           // ignore storage errors
         }
 
-        router.push('/admin/bodega');
+        let targetPath = '/admin/bodega';
+        if (typeof window !== 'undefined') {
+          const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+          if (redirectParam && (redirectParam.startsWith('/mobile') || redirectParam.startsWith('/admin'))) {
+            targetPath = redirectParam;
+          }
+        }
+        router.push(targetPath);
         router.refresh();
       } else {
         const data = await res.json();

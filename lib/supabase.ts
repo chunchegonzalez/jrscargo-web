@@ -12,7 +12,7 @@ export const getHeaders = () => {
 
 export async function getInventory() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const res = await fetch(`${url}/rest/v1/local_inventory?order=created_at.desc`, {
+  const res = await fetch(`${url}/rest/v1/local_inventory?id=neq.__JRS_MOBILE_SHELVES_STATE__&order=created_at.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
@@ -76,7 +76,41 @@ export async function updateInventoryItem(id: string, updates: Record<string, un
     body: JSON.stringify(updates)
   });
   if (!res.ok) throw new Error('Error updating item');
-  return res.json();
+  const updatedRows = await res.json();
+
+  // Sincronización automática con JRS Cargo Mobile (liberación al pasar a Entregado o cambio de tracking)
+  try {
+    const { releasePackageOnDelivered, loadMobileState, saveMobileState } = await import('./mobile-shelves');
+    const newStatus = String(updates.status || '').toLowerCase();
+    const targetTracking = String(updates.id || id).trim();
+    const clientName = String(updates.client || (Array.isArray(updatedRows) && updatedRows[0]?.client) || '');
+
+    // Si cambió el código de tracking en /admin/inventario, actualizar la clave de asignación activa
+    if (updates.id && String(updates.id).trim().toUpperCase() !== id.trim().toUpperCase()) {
+      const state = await loadMobileState();
+      const oldKey = id.trim().toUpperCase();
+      const newKey = String(updates.id).trim().toUpperCase();
+      if (state.assignments[oldKey]) {
+        state.assignments[newKey] = {
+          ...state.assignments[oldKey],
+          trackingId: String(updates.id).trim(),
+        };
+        delete state.assignments[oldKey];
+        await saveMobileState(state);
+      }
+    }
+
+    if (newStatus.includes('entregad') || newStatus.includes('eliminad')) {
+      await releasePackageOnDelivered(id, 'Sistema Administrativo', clientName);
+      if (targetTracking !== id) {
+        await releasePackageOnDelivered(targetTracking, 'Sistema Administrativo', clientName);
+      }
+    }
+  } catch (syncErr) {
+    console.error('Error syncing shelf state on updateInventoryItem:', syncErr);
+  }
+
+  return updatedRows;
 }
 
 export async function deleteInventoryItem(id: string) {
