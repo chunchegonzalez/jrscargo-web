@@ -25,6 +25,11 @@ import {
   Box,
   ArrowLeft,
   Power,
+  LogOut,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { generateQrMatrix, generateShelfLabelsPdf } from '@/lib/qr-generator';
 import { formatCostaRicaDateTime } from '@/lib/billing';
@@ -153,6 +158,15 @@ export default function JrsCargoMobilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Autenticación dedicada para JRS Cargo Mobile
+  const [isMobileAuthenticated, setIsMobileAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
   const [user, setUser] = useState<MobileUser | null>(null);
   const [metrics, setMetrics] = useState({
     totalEnBodega: 0,
@@ -269,7 +283,10 @@ export default function JrsCargoMobilePage() {
     try {
       const res = await fetch('/api/mobile', { cache: 'no-store' });
       if (res.status === 401) {
-        window.location.href = '/admin/login?redirect=/mobile';
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('jrs_mobile_session_verified');
+        }
+        setIsMobileAuthenticated(false);
         return;
       }
       const data = await res.json();
@@ -303,10 +320,65 @@ export default function JrsCargoMobilePage() {
   }, [selectedShelfDetail, activeBatchShelf]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const verified = sessionStorage.getItem('jrs_mobile_session_verified') === '1';
+      setIsMobileAuthenticated(verified);
+      setAuthChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileAuthenticated) return;
     fetchMobileData();
     const interval = setInterval(() => fetchMobileData(true), 20000);
     return () => clearInterval(interval);
-  }, [fetchMobileData]);
+  }, [fetchMobileData, isMobileAuthenticated]);
+
+  const handleMobileLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginUsername.trim() || !loginPassword) return;
+    setLoginLoading(true);
+    setLoginError('');
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername.trim(),
+          password: loginPassword,
+          remember: true,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('jrs_mobile_session_verified', '1');
+        }
+        setLoginPassword('');
+        setIsLoading(true);
+        setIsMobileAuthenticated(true);
+      } else {
+        setLoginError(data.error || 'Usuario o contraseña incorrectos.');
+        playBeep('error');
+      }
+    } catch {
+      setLoginError('Error de conexión. Verifica tu acceso a internet.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleMobileLogout = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('jrs_mobile_session_verified');
+    }
+    setIsMobileAuthenticated(false);
+    setUser(null);
+    setLoginPassword('');
+    setLoginError('');
+  };
 
   // Función central para asignar o trasladar un paquete a un estante
   const executeAssignPackage = useCallback(
@@ -737,6 +809,130 @@ export default function JrsCargoMobilePage() {
     }
   };
 
+  if (authChecking) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-[#0B1D2B] text-white">
+        <RefreshCw size={26} className="animate-spin text-brand-yellow" />
+      </div>
+    );
+  }
+
+  // PANTALLA DE INICIO DE SESIÓN EXCLUSIVA DE JRS CARGO MOBILE
+  if (!isMobileAuthenticated) {
+    return (
+      <div className="min-h-dvh flex flex-col justify-between bg-gradient-to-b from-[#0B1D2B] via-[#0F293D] to-[#0B1D2B] text-white p-6 max-w-md mx-auto">
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-brand-yellow/20 border border-brand-yellow/40 flex items-center justify-center text-brand-yellow font-black text-xs">
+              QR
+            </div>
+            <span className="text-xs font-black tracking-wider uppercase text-slate-200">
+              JRS Cargo Mobile
+            </span>
+          </div>
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+              isOnline
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'bg-red-500/20 text-red-300 border border-red-500/30'
+            }`}
+          >
+            {isOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
+            {isOnline ? 'En línea' : 'Sin conexión'}
+          </span>
+        </div>
+
+        <div className="my-auto py-6 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 rounded-3xl bg-brand-yellow/15 border-2 border-brand-yellow/40 flex items-center justify-center mx-auto shadow-xl">
+              <QrCode size={34} className="text-brand-yellow" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight">JRS Cargo Mobile</h1>
+            <p className="text-xs text-slate-300 max-w-xs mx-auto">
+              Ingresa tus credenciales operativas para gestionar estantes y ubicaciones QR de bodega.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleMobileLogin}
+            className="bg-white/10 backdrop-blur-xl border border-white/15 rounded-3xl p-5 space-y-4 shadow-2xl"
+          >
+            {loginError && (
+              <div className="p-3 rounded-2xl bg-red-500/20 border border-red-400/40 text-xs font-bold text-red-200 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-red-300 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300 mb-1.5">
+                Usuario
+              </label>
+              <div className="relative">
+                <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  autoComplete="username"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  placeholder="Tu usuario de JRS Cargo"
+                  className="w-full pl-10 pr-4 py-3.5 bg-[#0B1D2B]/80 border border-white/15 rounded-2xl text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-yellow"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300 mb-1.5">
+                Contraseña
+              </label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-11 py-3.5 bg-[#0B1D2B]/80 border border-white/15 rounded-2xl text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-yellow"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="w-full py-4 rounded-2xl bg-brand-yellow hover:bg-[#e09416] text-[#0B1D2B] font-black text-sm uppercase tracking-wider shadow-lg active:scale-[0.99] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loginLoading ? (
+                <>
+                  <RefreshCw size={17} className="animate-spin" />
+                  <span>Verificando...</span>
+                </>
+              ) : (
+                <span>Iniciar Sesión</span>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <div className="text-center pb-2 space-y-2">
+          <p className="text-[11px] text-slate-400">
+            Sincronizado en tiempo real con el Inventario CR de JRS Cargo
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh flex flex-col pb-24 max-w-md mx-auto bg-[#F4F7FA] shadow-xl relative">
       {/* TOP BAR CORPORATIVO */}
@@ -783,6 +979,14 @@ export default function JrsCargoMobilePage() {
               <ArrowLeft size={13} />
               Admin
             </Link>
+            <button
+              type="button"
+              onClick={handleMobileLogout}
+              className="p-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 transition-colors"
+              title="Cerrar sesión en JRS Cargo Mobile"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </header>

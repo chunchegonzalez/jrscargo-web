@@ -24,18 +24,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get(AUTH_COOKIE_NAME);
 
-  // 1. Protect Admin Pages (/admin/* except /admin/login) and Mobile PWA (/mobile/*)
-  if (
-    (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) ||
-    pathname.startsWith('/mobile')
-  ) {
+  // 1. Protect Admin Pages (/admin/* except /admin/login)
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     const user = await verifySignedCookie(authCookie?.value);
     
     if (!user) {
       const loginUrl = new URL('/admin/login', request.url);
-      if (pathname.startsWith('/mobile')) {
-        loginUrl.searchParams.set('redirect', pathname);
-      }
       const response = NextResponse.redirect(loginUrl);
       if (authCookie) {
         response.cookies.delete(AUTH_COOKIE_NAME);
@@ -62,7 +56,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
-    '/mobile/:path*',
     '/api/:path*',
   ],
 };
