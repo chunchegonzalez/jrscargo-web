@@ -1255,12 +1255,13 @@ export default function PublicEstadoCuentaPage() {
                 ) : (
                   <div className="divide-y divide-slate-200/80">
                     {/* Encabezado de columnas en escritorio */}
-                    <div className="hidden md:grid md:grid-cols-12 gap-3 px-6 py-2.5 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      <div className="col-span-3">Comprobante</div>
-                      <div className="col-span-2">Emisión</div>
-                      <div className="col-span-2">Paquetes</div>
-                      <div className="col-span-2">Estado</div>
-                      <div className="col-span-3 text-right">Saldo / Acciones</div>
+                    <div className="hidden md:grid md:grid-cols-[minmax(140px,1.25fr)_minmax(90px,0.85fr)_minmax(95px,0.85fr)_minmax(105px,0.9fr)_minmax(130px,1.05fr)_255px] md:items-center gap-3 px-6 py-2.5 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <div>Comprobante</div>
+                      <div>Emisión</div>
+                      <div>Paquetes</div>
+                      <div>Estado</div>
+                      <div className="text-right">Saldo</div>
+                      <div className="text-right print:hidden">Acciones</div>
                     </div>
 
                     {displayedInvoices.map(inv => {
@@ -1271,17 +1272,17 @@ export default function PublicEstadoCuentaPage() {
 
                       return (
                         <div key={inv.id} className="transition-colors hover:bg-slate-50/50">
-                          <div className="p-4 sm:px-6 sm:py-3.5 flex flex-col md:grid md:grid-cols-12 md:items-center gap-3">
+                          <div className="p-4 sm:px-6 sm:py-4 flex flex-col md:grid md:grid-cols-[minmax(140px,1.25fr)_minmax(90px,0.85fr)_minmax(95px,0.85fr)_minmax(105px,0.9fr)_minmax(130px,1.05fr)_255px] md:items-center gap-3">
                             {/* 1. Número de comprobante */}
-                            <div className="md:col-span-3 flex items-center justify-between md:justify-start gap-2">
-                              <div>
+                            <div className="flex items-center justify-between md:justify-start gap-2 min-w-0">
+                              <div className="min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono font-bold text-sm text-[#0B2737]">
+                                  <span className="font-mono font-bold text-sm text-[#0B2737] whitespace-nowrap">
                                     #{inv.invoice_number}
                                   </span>
                                   {/* Badge visible en móvil junto al número */}
                                   <span
-                                    className={`md:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                    className={`md:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${
                                       inv.status === 'Pagada'
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                         : inv.status === 'Parcial'
@@ -1295,27 +1296,27 @@ export default function PublicEstadoCuentaPage() {
                                   </span>
                                 </div>
                                 {inv.notes && (
-                                  <p className="text-[11px] text-slate-500 truncate max-w-[220px]" title={inv.notes}>
+                                  <p className="text-[11px] text-slate-500 truncate max-w-[210px] mt-0.5" title={inv.notes}>
                                     {inv.notes}
                                   </p>
                                 )}
                               </div>
 
                               {/* Saldo en móvil arriba a la derecha */}
-                              <div className="md:hidden text-right tabular-nums">
-                                <span className="text-sm font-bold text-[#0B2737] block">
+                              <div className="md:hidden text-right tabular-nums shrink-0">
+                                <span className="text-sm font-bold text-[#0B2737] block whitespace-nowrap">
                                   ${(isPending ? inv.pending : inv.total).toFixed(2)} USD
                                 </span>
                                 {isPending && (
-                                  <span className="text-[11px] font-medium text-slate-500 block">
-                                    ≈ ₡{pendingCRC.toLocaleString('es-CR')}
+                                  <span className="text-[11px] font-medium text-slate-500 block whitespace-nowrap">
+                                    ≈ ₡{pendingCRC.toLocaleString('es-CR')} CRC
                                   </span>
                                 )}
                               </div>
                             </div>
 
                             {/* 2. Fecha de emisión */}
-                            <div className="md:col-span-2 text-xs text-slate-600 flex items-center gap-2 md:block">
+                            <div className="text-xs text-slate-600 flex items-center gap-2 md:block whitespace-nowrap">
                               <span className="md:hidden text-slate-400">Emisión:</span>
                               <span className="font-medium text-slate-700">{formatDisplayDate(inv.issue_date)}</span>
                               {inv.due_date && (
@@ -1326,10 +1327,10 @@ export default function PublicEstadoCuentaPage() {
                             </div>
 
                             {/* 3. Cantidad de paquetes */}
-                            <div className="md:col-span-2 text-xs">
+                            <div className="text-xs whitespace-nowrap">
                               {hasItems ? (
                                 <span className="inline-flex items-center gap-1.5 text-slate-700 font-medium">
-                                  <Package size={13} className="text-[#14445D]" />
+                                  <Package size={13} className="text-[#14445D] shrink-0" />
                                   {inv.items.length} {inv.items.length === 1 ? 'paquete' : 'paquetes'}
                                 </span>
                               ) : (
@@ -1338,10 +1339,10 @@ export default function PublicEstadoCuentaPage() {
                             </div>
 
                             {/* 4. Estado de pago (Escritorio) */}
-                            <div className="hidden md:flex md:col-span-2 items-center">
+                            <div className="hidden md:flex items-center">
                               <div>
                                 <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
                                     inv.status === 'Pagada'
                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                       : inv.status === 'Parcial'
@@ -1352,7 +1353,7 @@ export default function PublicEstadoCuentaPage() {
                                   }`}
                                 >
                                   <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
+                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                                       inv.status === 'Pagada'
                                         ? 'bg-emerald-500'
                                         : inv.status === 'Parcial'
@@ -1363,64 +1364,63 @@ export default function PublicEstadoCuentaPage() {
                                   {inv.status}
                                 </span>
                                 {inv.paid > 0 && isPending && (
-                                  <span className="block text-[10px] text-emerald-700 font-medium mt-0.5 tabular-nums">
+                                  <span className="block text-[10px] text-emerald-700 font-medium mt-0.5 tabular-nums whitespace-nowrap">
                                     Abonado: ${inv.paid.toFixed(2)}
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            {/* 5. Saldo pendiente + Acciones */}
-                            <div className="md:col-span-3 flex flex-col sm:flex-row md:flex-col xl:flex-row xl:items-center justify-between md:justify-end gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-                              <div className="hidden md:block text-right tabular-nums mr-1">
-                                <span className="text-sm font-bold text-[#0B2737] block">
-                                  ${(isPending ? inv.pending : inv.total).toFixed(2)}{' '}
-                                  <span className="text-[11px] font-normal text-slate-400">USD</span>
+                            {/* 5. Saldo pendiente (Escritorio - columna dedicada) */}
+                            <div className="hidden md:block text-right tabular-nums">
+                              <span className="text-sm font-bold text-[#0B2737] block whitespace-nowrap">
+                                ${(isPending ? inv.pending : inv.total).toFixed(2)}{' '}
+                                <span className="text-[11px] font-medium text-slate-400">USD</span>
+                              </span>
+                              {isPending && (
+                                <span className="text-[11px] font-medium text-slate-500 block whitespace-nowrap mt-0.5">
+                                  ≈ ₡{pendingCRC.toLocaleString('es-CR')} CRC
                                 </span>
-                                {isPending && (
-                                  <span className="text-[11px] font-medium text-slate-500 block">
-                                    ≈ ₡{pendingCRC.toLocaleString('es-CR')}
-                                  </span>
-                                )}
-                              </div>
+                              )}
+                            </div>
 
-                              <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap print:hidden">
-                                {hasItems && (
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleInvoiceExpand(inv.id)}
-                                    className={`h-8 px-2.5 rounded-lg text-xs font-medium border inline-flex items-center gap-1 transition-colors cursor-pointer ${
-                                      isExpanded
-                                        ? 'bg-[#0B2737] text-white border-[#0B2737]'
-                                        : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
-                                    }`}
-                                  >
-                                    <span>{isExpanded ? 'Ocultar' : 'Ver paquetes'}</span>
-                                    {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                                  </button>
-                                )}
-
-                                <a
-                                  href={`/api/invoices/${inv.id}/pdf`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 transition-colors"
-                                  title="Descargar comprobante en PDF"
-                                >
-                                  <Download size={13} className="text-[#14445D]" />
-                                  <span>PDF</span>
-                                </a>
-
+                            {/* 6. Acciones (columna dedicada) */}
+                            <div className="flex items-center justify-start md:justify-end gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 print:hidden">
+                              {hasItems && (
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenSendModal(inv)}
-                                  className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-[#14445D] border border-slate-200 inline-flex items-center gap-1 transition-colors cursor-pointer"
-                                  title="Reenviar comprobante por correo electrónico"
+                                  onClick={() => toggleInvoiceExpand(inv.id)}
+                                  className={`h-8 px-2.5 rounded-lg text-xs font-medium border inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                                    isExpanded
+                                      ? 'bg-[#0B2737] text-white border-[#0B2737]'
+                                      : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
+                                  }`}
                                 >
-                                  <Mail size={13} />
-                                  <span>Reenviar</span>
+                                  <span>{isExpanded ? 'Ocultar' : 'Ver paquetes'}</span>
+                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                                 </button>
-                              </div>
+                              )}
+
+                              <a
+                                href={`/api/invoices/${inv.id}/pdf`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors"
+                                title="Descargar comprobante en PDF"
+                              >
+                                <Download size={13} className="text-[#14445D]" />
+                                <span>PDF</span>
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSendModal(inv)}
+                                className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-[#14445D] border border-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                                title="Reenviar comprobante por correo electrónico"
+                              >
+                                <Mail size={13} />
+                                <span>Reenviar</span>
+                              </button>
                             </div>
                           </div>
 
