@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck } from 'lucide-react';
+import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck, Download, Calendar, Printer, FileSpreadsheet } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -56,9 +56,18 @@ export default function FacturacionDashboard() {
   
   // Filter States
   const [filterStatus, setFilterStatus] = useState<string>('Todas');
-  const [filterDate, setFilterDate] = useState<string>('');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [dateRangePreset, setDateRangePreset] = useState<string>('todos');
   const [filterEmail, setFilterEmail] = useState<string>('Todos');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Income Statement Extraction Modal State
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [modalStartDate, setModalStartDate] = useState<string>('');
+  const [modalEndDate, setModalEndDate] = useState<string>('');
+  const [modalStatusFilter, setModalStatusFilter] = useState<string>('Todas');
+  const [modalPreset, setModalPreset] = useState<string>('este-mes');
   
   // Sorting State
   const [sortField, setSortField] = useState<SortField>('date');
@@ -199,6 +208,306 @@ export default function FacturacionDashboard() {
     }
   };
 
+  // Date helpers (Costa Rica Timezone)
+  const getCRDate = useCallback(() => {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  }, []);
+
+  const formatYMD = useCallback((d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }, []);
+
+  const getDateRangeForPreset = useCallback((preset: string): { start: string; end: string } => {
+    const now = getCRDate();
+    if (preset === 'hoy') {
+      const str = formatYMD(now);
+      return { start: str, end: str };
+    }
+    if (preset === 'ayer') {
+      const y = new Date(now);
+      y.setDate(now.getDate() - 1);
+      const str = formatYMD(y);
+      return { start: str, end: str };
+    }
+    if (preset === '7dias') {
+      const s = new Date(now);
+      s.setDate(now.getDate() - 6);
+      return { start: formatYMD(s), end: formatYMD(now) };
+    }
+    if (preset === 'este-mes') {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1);
+      const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { start: formatYMD(s), end: formatYMD(e) };
+    }
+    if (preset === 'mes-anterior') {
+      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const e = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { start: formatYMD(s), end: formatYMD(e) };
+    }
+    if (preset === 'ano') {
+      const s = new Date(now.getFullYear(), 0, 1);
+      const e = new Date(now.getFullYear(), 11, 31);
+      return { start: formatYMD(s), end: formatYMD(e) };
+    }
+    return { start: '', end: '' };
+  }, [getCRDate, formatYMD]);
+
+  const applyDatePreset = useCallback((preset: string) => {
+    setDateRangePreset(preset);
+    const range = getDateRangeForPreset(preset);
+    setFilterStartDate(range.start);
+    setFilterEndDate(range.end);
+  }, [getDateRangeForPreset]);
+
+  const applyModalPreset = useCallback((preset: string) => {
+    setModalPreset(preset);
+    const range = getDateRangeForPreset(preset);
+    setModalStartDate(range.start);
+    setModalEndDate(range.end);
+  }, [getDateRangeForPreset]);
+
+  const openExportModal = useCallback(() => {
+    if (filterStartDate || filterEndDate) {
+      setModalStartDate(filterStartDate);
+      setModalEndDate(filterEndDate);
+      setModalPreset('personalizado');
+    } else {
+      const range = getDateRangeForPreset('este-mes');
+      setModalStartDate(range.start);
+      setModalEndDate(range.end);
+      setModalPreset('este-mes');
+    }
+    setModalStatusFilter(filterStatus !== 'Todas' ? filterStatus : 'Todas');
+    setExportModalOpen(true);
+  }, [filterStartDate, filterEndDate, filterStatus, getDateRangeForPreset]);
+
+  // Export CSV function for Income Statement
+  const handleExportIncomeCSV = useCallback((items: Invoice[], startStr: string, endStr: string) => {
+    const escapeCSV = (val: string | number | undefined | null) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    
+    let totalFact = 0;
+    let totalPag = 0;
+    let totalPend = 0;
+    
+    items.forEach(inv => {
+      const stats = getInvoiceStats(inv);
+      if (stats.currency !== 'CRC') {
+        totalFact += Number(inv.total) || 0;
+        totalPag += stats.paid;
+        totalPend += stats.pending;
+      }
+    });
+
+    const recoveryRate = totalFact > 0 ? ((totalPag / totalFact) * 100).toFixed(1) : '0.0';
+    const nowCR = new Date().toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica' });
+    const periodLabel = (startStr && endStr) 
+      ? (startStr === endStr ? startStr : `${startStr} al ${endStr}`)
+      : startStr 
+      ? `Desde ${startStr}` 
+      : endStr 
+      ? `Hasta ${endStr}` 
+      : 'Histórico Completo';
+
+    const metadata = [
+      ['ESTADO DE INGRESOS Y FACTURACIÓN - JRS CARGO S.A.'],
+      ['Período Auditado', periodLabel],
+      ['Fecha de Emisión del Reporte', nowCR],
+      ['Total de Facturas Auditadas', String(items.length)],
+      ['Total Facturado (USD)', `$${totalFact.toFixed(2)}`],
+      ['Total Cobrado / Ingresos Reales (USD)', `$${totalPag.toFixed(2)}`],
+      ['Saldo Pendiente por Cobrar (USD)', `$${totalPend.toFixed(2)}`],
+      ['Porcentaje de Cobro Conciliado', `${recoveryRate}%`],
+      []
+    ];
+
+    const headers = [
+      '#',
+      'Fecha Emisión',
+      'N.° Factura',
+      'Cliente',
+      'Correo Electrónico',
+      'Moneda',
+      'Total Facturado ($)',
+      'Total Pagado / Ingresos ($)',
+      'Saldo Pendiente ($)',
+      'Estado',
+      'Notificación Correo',
+      'Fecha Último Envío'
+    ];
+
+    const rows = items.map((inv, idx) => {
+      const stats = getInvoiceStats(inv);
+      const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
+      const emailStatus = inv.email_sent_at ? 'Enviado' : 'No enviado';
+      const emailDate = inv.email_sent_at ? formatDisplayDate(inv.email_sent_at) : '—';
+      
+      return [
+        String(idx + 1),
+        escapeCSV(invDate),
+        escapeCSV(inv.invoice_number),
+        escapeCSV(inv.clients?.name || 'Cliente sin nombre'),
+        escapeCSV(inv.clients?.email || ''),
+        escapeCSV(stats.currency || 'USD'),
+        Number(inv.total || 0).toFixed(2),
+        Number(stats.paid || 0).toFixed(2),
+        Number(stats.pending || 0).toFixed(2),
+        escapeCSV(stats.displayStatus),
+        escapeCSV(emailStatus),
+        escapeCSV(emailDate)
+      ].join(',');
+    });
+
+    const metaString = metadata.map(row => row.map(escapeCSV).join(',')).join('\n');
+    const content = '\uFEFF' + metaString + '\n' + headers.join(',') + '\n' + rows.join('\n');
+    
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fileSuffix = (startStr && endStr) 
+      ? (startStr === endStr ? startStr : `${startStr}_a_${endStr}`) 
+      : startStr || endStr || 'historico';
+    a.download = `estado-ingresos-jrs-cargo-${fileSuffix}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  // Printable Income Statement Report (clean window)
+  const handlePrintIncomeReport = useCallback((items: Invoice[], startStr: string, endStr: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    let totalFact = 0;
+    let totalPag = 0;
+    let totalPend = 0;
+    
+    items.forEach(inv => {
+      const stats = getInvoiceStats(inv);
+      if (stats.currency !== 'CRC') {
+        totalFact += Number(inv.total) || 0;
+        totalPag += stats.paid;
+        totalPend += stats.pending;
+      }
+    });
+
+    const recoveryRate = totalFact > 0 ? ((totalPag / totalFact) * 100).toFixed(1) : '0.0';
+    const periodStr = (startStr && endStr) 
+      ? (startStr === endStr ? startStr : `Del ${startStr} al ${endStr}`)
+      : startStr 
+      ? `Desde el ${startStr}` 
+      : endStr 
+      ? `Hasta el ${endStr}` 
+      : 'Histórico Completo';
+
+    const rowsHtml = items.map((inv, idx) => {
+      const stats = getInvoiceStats(inv);
+      const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
+      return `
+        <tr>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${idx + 1}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; white-space: nowrap;">${invDate}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: bold; font-size: 11px;">${inv.invoice_number}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; font-weight: 600;">${inv.clients?.name || 'Cliente'}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: right; font-weight: bold; white-space: nowrap;">$${Number(inv.total || 0).toFixed(2)}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: right; color: #047857; font-weight: bold; white-space: nowrap;">$${Number(stats.paid || 0).toFixed(2)}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: right; color: #b45309; font-weight: bold; white-space: nowrap;">$${Number(stats.pending || 0).toFixed(2)}</td>
+          <td style="padding: 7px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: center;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 600; background: ${stats.displayStatus === 'Pagada' ? '#ecfdf5; color: #065f46;' : stats.displayStatus === 'Anulada' ? '#f1f5f9; color: #64748b;' : '#fffbeb; color: #92400e;'}">
+              ${stats.displayStatus}
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <title>Estado de Ingresos - JRS Cargo S.A.</title>
+          <style>
+            @media print {
+              body { margin: 12mm; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+              .no-print { display: none !important; }
+            }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 24px auto; max-width: 960px; line-height: 1.4; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th { background: #f8fafc; font-size: 10px; text-transform: uppercase; font-weight: 700; color: #64748b; padding: 8px; border-bottom: 2px solid #cbd5e1; }
+          </style>
+        </head>
+        <body>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0B2737; padding-bottom: 12px; margin-bottom: 16px;">
+            <div>
+              <h1 style="font-size: 22px; font-weight: 900; margin: 0; color: #0B2737; letter-spacing: -0.5px;">JRS CARGO S.A.</h1>
+              <p style="font-size: 12px; font-weight: 700; color: #14445D; margin: 2px 0 0; text-transform: uppercase; letter-spacing: 0.5px;">Reporte Oficial de Estado de Ingresos</p>
+              <p style="font-size: 11px; color: #64748b; margin: 3px 0 0;">Período consultado: <strong>${periodStr}</strong></p>
+            </div>
+            <div style="text-align: right; font-size: 11px; color: #64748b;">
+              <p style="margin: 0;">Fecha emisión: <strong>${new Date().toLocaleDateString('es-CR')}</strong></p>
+              <p style="margin: 2px 0 0;">Total facturas: <strong>${items.length}</strong></p>
+              <p style="margin: 2px 0 0;">Recaudación: <strong>${recoveryRate}%</strong></p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b;">Total Facturado</div>
+              <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 4px;">$${totalFact.toFixed(2)} USD</div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Volumen total del período</div>
+            </div>
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px;">
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #065f46;">Ingresos Cobrados</div>
+              <div style="font-size: 20px; font-weight: 900; color: #047857; margin-top: 4px;">$${totalPag.toFixed(2)} USD</div>
+              <div style="font-size: 11px; color: #059669; margin-top: 2px;">${recoveryRate}% efectivamente recaudado</div>
+            </div>
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px;">
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #92400e;">Pendiente de Cobro</div>
+              <div style="font-size: 20px; font-weight: 900; color: #b45309; margin-top: 4px;">$${totalPend.toFixed(2)} USD</div>
+              <div style="font-size: 11px; color: #d97706; margin-top: 2px;">Cuentas por cobrar del período</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align: left;">#</th>
+                <th style="text-align: left;">Fecha</th>
+                <th style="text-align: left;">N.° Factura</th>
+                <th style="text-align: left;">Cliente</th>
+                <th style="text-align: right;">Facturado</th>
+                <th style="text-align: right;">Cobrado</th>
+                <th style="text-align: right;">Pendiente</th>
+                <th style="text-align: center;">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 28px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+            <span>Reporte oficial generado por Sistema JRS Cargo CR</span>
+            <span>Auditoría de Finanzas y Cobros</span>
+          </div>
+
+          <div class="no-print" style="margin-top: 20px; text-align: center;">
+            <button onclick="window.print()" style="padding: 9px 22px; background: #0B2737; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;">
+              Imprimir o Guardar como PDF
+            </button>
+          </div>
+          <script>
+            window.onload = function() { setTimeout(function() { window.print(); }, 400); };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }, []);
+
   // Filtered invoices (Dynamic calculation)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
@@ -207,7 +516,9 @@ export default function FacturacionDashboard() {
       const matchStatus = filterStatus === 'Todas' || effectiveStatus === filterStatus;
       
       const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
-      const matchDate = filterDate === '' || invDate === filterDate;
+      const matchStartDate = !filterStartDate || invDate >= filterStartDate;
+      const matchEndDate = !filterEndDate || invDate <= filterEndDate;
+      const matchDate = matchStartDate && matchEndDate;
       
       const matchEmail = filterEmail === 'Todos' ||
         (filterEmail === 'Enviado' && !!inv.email_sent_at) ||
@@ -221,7 +532,37 @@ export default function FacturacionDashboard() {
 
       return matchStatus && matchDate && matchEmail && matchSearch;
     });
-  }, [invoices, filterStatus, filterDate, filterEmail, searchTerm]);
+  }, [invoices, filterStatus, filterStartDate, filterEndDate, filterEmail, searchTerm]);
+
+  // Modal filtered invoices
+  const modalFilteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const stats = getInvoiceStats(inv);
+      const effectiveStatus = stats.displayStatus;
+      const matchStatus = modalStatusFilter === 'Todas' || effectiveStatus === modalStatusFilter;
+      const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
+      const matchStartDate = !modalStartDate || invDate >= modalStartDate;
+      const matchEndDate = !modalEndDate || invDate <= modalEndDate;
+      return matchStatus && matchStartDate && matchEndDate;
+    });
+  }, [invoices, modalStartDate, modalEndDate, modalStatusFilter]);
+
+  // Modal calculated stats
+  const modalStats = useMemo(() => {
+    let facturado = 0;
+    let pagado = 0;
+    let pendiente = 0;
+    modalFilteredInvoices.forEach(inv => {
+      const stats = getInvoiceStats(inv);
+      if (stats.currency !== 'CRC') {
+        facturado += Number(inv.total) || 0;
+        pagado += stats.paid;
+        pendiente += stats.pending;
+      }
+    });
+    const tasa = facturado > 0 ? (pagado / facturado) * 100 : 0;
+    return { facturado, pagado, pendiente, tasa };
+  }, [modalFilteredInvoices]);
 
   // Sorted invoices based on active column header sort
   const sortedInvoices = useMemo(() => {
@@ -277,11 +618,13 @@ export default function FacturacionDashboard() {
     }
   };
 
-  const hasActiveFilters = filterStatus !== 'Todas' || filterDate !== '' || filterEmail !== 'Todos' || searchTerm !== '';
+  const hasActiveFilters = filterStatus !== 'Todas' || filterStartDate !== '' || filterEndDate !== '' || filterEmail !== 'Todos' || searchTerm !== '';
 
   const clearAllFilters = () => {
     setFilterStatus('Todas');
-    setFilterDate('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setDateRangePreset('todos');
     setFilterEmail('Todos');
     setSearchTerm('');
   };
@@ -291,6 +634,15 @@ export default function FacturacionDashboard() {
     return d.toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: '2-digit', month: '2-digit', year: 'numeric' }) + 
       ' ' + d.toLocaleTimeString('es-CR', { timeZone: 'America/Costa_Rica', hour: '2-digit', minute: '2-digit' });
   };
+
+  const activePeriodLabel = useMemo(() => {
+    if (filterStartDate && filterEndDate) {
+      return filterStartDate === filterEndDate ? formatDisplayDate(filterStartDate) : `${formatDisplayDate(filterStartDate)} – ${formatDisplayDate(filterEndDate)}`;
+    }
+    if (filterStartDate) return `Desde ${formatDisplayDate(filterStartDate)}`;
+    if (filterEndDate) return `Hasta ${formatDisplayDate(filterEndDate)}`;
+    return null;
+  }, [filterStartDate, filterEndDate]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
@@ -303,9 +655,18 @@ export default function FacturacionDashboard() {
               Finanzas
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona las cuentas por cobrar, envía facturas y registra pagos.</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona las cuentas por cobrar, envía facturas y audita estados de ingresos.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            type="button"
+            onClick={openExportModal}
+            className="h-9 px-3.5 rounded-lg border border-emerald-600/30 bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] cursor-pointer"
+            title="Extraer estado de ingresos por rango de fechas (Excel / PDF)"
+          >
+            <Download size={14} />
+            <span>Extraer Ingresos</span>
+          </button>
           <button
             type="button"
             onClick={() => loadInvoices()}
@@ -346,7 +707,9 @@ export default function FacturacionDashboard() {
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 tabular-nums mt-1 truncate">
               {formatCurrency(totalFacturadoUSD, 'USD')}
             </h2>
-            <p className="text-[11px] text-slate-400 mt-1">Volumen en vista actual</p>
+            <p className="text-[11px] text-slate-400 mt-1 truncate">
+              {activePeriodLabel ? `Período: ${activePeriodLabel}` : 'Volumen en vista actual'}
+            </p>
           </div>
           <div className="w-10 h-10 rounded-lg bg-slate-100 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
             <DollarSign size={19} />
@@ -370,7 +733,9 @@ export default function FacturacionDashboard() {
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 tabular-nums mt-1 truncate">
               {formatCurrency(totalPendingUSD, 'USD')}
             </h2>
-            <p className="text-[11px] text-slate-400 mt-1">Saldo por cobrar</p>
+            <p className="text-[11px] text-slate-400 mt-1 truncate">
+              {activePeriodLabel ? `Pendiente: ${activePeriodLabel}` : 'Saldo por cobrar'}
+            </p>
           </div>
           <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
             <AlertCircle size={19} />
@@ -394,7 +759,9 @@ export default function FacturacionDashboard() {
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-700 tabular-nums mt-1 truncate">
               {formatCurrency(totalPaidUSD, 'USD')}
             </h2>
-            <p className="text-[11px] text-slate-400 mt-1">Cobros conciliados</p>
+            <p className="text-[11px] text-slate-400 mt-1 truncate">
+              {activePeriodLabel ? `Ingresos: ${activePeriodLabel}` : 'Cobros conciliados'}
+            </p>
           </div>
           <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
             <CheckCircle2 size={19} />
@@ -446,13 +813,73 @@ export default function FacturacionDashboard() {
               <option value="Enviado">Correo Enviado</option>
               <option value="No enviado">Correo No Enviado</option>
             </select>
-            
-            <input 
-              type="date" 
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
+
+            {/* Presets rápidos de rango */}
+            <select
+              value={dateRangePreset}
+              onChange={(e) => applyDatePreset(e.target.value)}
               className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-            />
+              title="Seleccionar período predeterminado"
+            >
+              <option value="todos">Período: Todo</option>
+              <option value="hoy">Hoy</option>
+              <option value="ayer">Ayer</option>
+              <option value="7dias">Últimos 7 días</option>
+              <option value="este-mes">Este Mes</option>
+              <option value="mes-anterior">Mes Anterior</option>
+              <option value="ano">Año Actual</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+            
+            {/* Selector de Rango de Fechas: Desde X hasta Z */}
+            <div className="flex items-center bg-white border border-slate-200/90 rounded-lg p-0.5 shadow-2xs">
+              <span className="text-[10px] font-bold text-slate-400 pl-2 pr-1 uppercase tracking-wider">Desde</span>
+              <input 
+                type="date" 
+                value={filterStartDate}
+                onChange={(e) => {
+                  setFilterStartDate(e.target.value);
+                  setDateRangePreset('personalizado');
+                }}
+                className="h-8 px-1.5 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                title="Fecha inicio (Desde)"
+              />
+              <span className="text-[10px] font-bold text-slate-400 px-1 uppercase tracking-wider">Hasta</span>
+              <input 
+                type="date" 
+                value={filterEndDate}
+                onChange={(e) => {
+                  setFilterEndDate(e.target.value);
+                  setDateRangePreset('personalizado');
+                }}
+                className="h-8 px-1.5 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                title="Fecha fin (Hasta)"
+              />
+              {(filterStartDate || filterEndDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterStartDate('');
+                    setFilterEndDate('');
+                    setDateRangePreset('todos');
+                  }}
+                  className="px-1.5 py-1 text-slate-400 hover:text-slate-700 transition-colors"
+                  title="Limpiar fechas"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleExportIncomeCSV(filteredInvoices, filterStartDate, filterEndDate)}
+              className="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
+              title="Descargar estado de ingresos filtrado a CSV/Excel"
+            >
+              <FileSpreadsheet size={14} className="text-emerald-600" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+            </button>
 
             {hasActiveFilters && (
               <button
@@ -827,6 +1254,264 @@ export default function FacturacionDashboard() {
           </span>
         </div>
       </div>
+
+      {/* Modal: Extraer Estado de Ingresos desde Fecha X hasta Fecha Z */}
+      {exportModalOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+          onClick={() => setExportModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scale-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="px-5 py-4 border-b border-slate-200/80 flex justify-between items-center bg-slate-50/80 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <FileSpreadsheet size={18} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Extraer Estado de Ingresos</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/70 px-2 py-0.5 rounded-full">
+                      Finanzas
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Consolidado oficial de facturación, ingresos recaudados y cuentas por cobrar por rango de fechas.
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setExportModalOpen(false)} 
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                title="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Presets Rápidos */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Período rápido
+                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { id: 'hoy', label: 'Hoy' },
+                    { id: 'ayer', label: 'Ayer' },
+                    { id: '7dias', label: 'Últimos 7 días' },
+                    { id: 'este-mes', label: 'Este Mes' },
+                    { id: 'mes-anterior', label: 'Mes Anterior' },
+                    { id: 'ano', label: 'Año Actual' },
+                    { id: 'todos', label: 'Histórico Completo' }
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyModalPreset(p.id)}
+                      className={`h-7 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                        modalPreset === p.id
+                          ? 'bg-[#0B2737] text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selectores de Fecha: Desde Fecha X hasta Fecha Z */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Fecha Desde (X)
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="date"
+                      value={modalStartDate}
+                      onChange={e => {
+                        setModalStartDate(e.target.value);
+                        setModalPreset('personalizado');
+                      }}
+                      className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-brand-blue cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Fecha Hasta (Z)
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="date"
+                      value={modalEndDate}
+                      onChange={e => {
+                        setModalEndDate(e.target.value);
+                        setModalPreset('personalizado');
+                      }}
+                      className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-brand-blue cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                    Filtro de Estado
+                  </label>
+                  <select
+                    value={modalStatusFilter}
+                    onChange={e => setModalStatusFilter(e.target.value)}
+                    className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-brand-blue cursor-pointer"
+                  >
+                    <option value="Todas">Todas las facturas</option>
+                    <option value="Pagada">Solo Pagadas (Ingresos)</option>
+                    <option value="Pendiente">Solo Pendientes (Cobros)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Métricas consolidadas del reporte */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-xl">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Total Facturado</span>
+                  <span className="text-xl font-black text-slate-900 tabular-nums block mt-1">
+                    ${modalStats.facturado.toFixed(2)} <span className="text-xs font-semibold text-slate-400">USD</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">
+                    {modalFilteredInvoices.length} {modalFilteredInvoices.length === 1 ? 'factura emitida' : 'facturas emitidas'}
+                  </span>
+                </div>
+
+                <div className="p-3.5 bg-emerald-50/60 border border-emerald-200/70 rounded-xl">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">Ingresos Cobrados</span>
+                  <span className="text-xl font-black text-emerald-700 tabular-nums block mt-1">
+                    ${modalStats.pagado.toFixed(2)} <span className="text-xs font-semibold text-emerald-600">USD</span>
+                  </span>
+                  <span className="text-[11px] text-emerald-700/80 mt-0.5 block font-medium">
+                    {modalStats.tasa.toFixed(1)}% de cobro efectivo
+                  </span>
+                </div>
+
+                <div className="p-3.5 bg-amber-50/60 border border-amber-200/70 rounded-xl">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">Pendiente por Cobrar</span>
+                  <span className="text-xl font-black text-amber-600 tabular-nums block mt-1">
+                    ${modalStats.pendiente.toFixed(2)} <span className="text-xs font-semibold text-amber-500">USD</span>
+                  </span>
+                  <span className="text-[11px] text-amber-700/80 mt-0.5 block font-medium">
+                    Cuentas activas del período
+                  </span>
+                </div>
+              </div>
+
+              {/* Vista previa de facturas a extraer */}
+              <div className="border border-slate-200/80 rounded-xl overflow-hidden">
+                <div className="px-3.5 py-2 bg-slate-100/70 border-b border-slate-200/80 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700">
+                    Vista previa de comprobantes ({modalFilteredInvoices.length})
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {modalStartDate && modalEndDate 
+                      ? (modalStartDate === modalEndDate ? formatDisplayDate(modalStartDate) : `${formatDisplayDate(modalStartDate)} al ${formatDisplayDate(modalEndDate)}`)
+                      : 'Período completo'}
+                  </span>
+                </div>
+
+                {modalFilteredInvoices.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">
+                    No hay facturas registradas en el rango de fechas seleccionado.
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 text-xs">
+                    {modalFilteredInvoices.slice(0, 10).map((inv, idx) => {
+                      const stats = getInvoiceStats(inv);
+                      const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
+                      return (
+                        <div key={inv.id || idx} className="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50">
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-900">{inv.invoice_number}</span>
+                            <span className="text-slate-400 text-[11px]">{formatDisplayDate(invDate)}</span>
+                            <span className="text-slate-600 truncate max-w-[160px] sm:max-w-xs">{inv.clients?.name || 'Cliente'}</span>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 tabular-nums">
+                            <span className="font-semibold text-slate-900">${Number(inv.total || 0).toFixed(2)}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                              stats.displayStatus === 'Pagada' 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {stats.displayStatus}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {modalFilteredInvoices.length > 10 && (
+                      <div className="px-3.5 py-2 text-center text-[11px] text-slate-400 bg-slate-50/50">
+                        ... y {modalFilteredInvoices.length - 10} facturas más incluidas en la exportación
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer con Acciones de Descarga */}
+            <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterStartDate(modalStartDate);
+                  setFilterEndDate(modalEndDate);
+                  setFilterStatus(modalStatusFilter);
+                  setDateRangePreset('personalizado');
+                  setExportModalOpen(false);
+                }}
+                className="text-xs font-semibold text-brand-blue hover:underline cursor-pointer"
+              >
+                Aplicar fechas a la vista principal →
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button 
+                  type="button"
+                  onClick={() => setExportModalOpen(false)} 
+                  className="h-9 px-3.5 font-semibold text-xs text-slate-600 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  disabled={modalFilteredInvoices.length === 0}
+                  onClick={() => handlePrintIncomeReport(modalFilteredInvoices, modalStartDate, modalEndDate)}
+                  className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
+                  title="Imprimir o guardar reporte en PDF"
+                >
+                  <Printer size={14} className="text-slate-600" />
+                  <span>Imprimir / PDF</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={modalFilteredInvoices.length === 0}
+                  onClick={() => handleExportIncomeCSV(modalFilteredInvoices, modalStartDate, modalEndDate)}
+                  className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
+                  title="Descargar reporte completo en archivo Excel (CSV)"
+                >
+                  <Download size={14} />
+                  <span>Descargar Excel (CSV)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Email Modal */}
       {emailModalOpen && emailInvoice && (
