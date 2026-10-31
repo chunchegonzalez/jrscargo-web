@@ -469,7 +469,7 @@ export function generateIncomeReportXlsx(
     { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheetXml) }
   ]);
 
-  const blob = new Blob([zipBytes], {
+  const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
 
@@ -670,7 +670,7 @@ export function generateInventoryReportXlsx(items: InventoryExportRow[]): void {
     { name: 'xl/worksheets/sheet1.xml', data: encoder.encode(sheetXml) }
   ]);
 
-  const blob = new Blob([zipBytes], {
+  const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
 
