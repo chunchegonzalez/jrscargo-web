@@ -32,6 +32,7 @@ import {
   User
 } from 'lucide-react';
 import Link from 'next/link';
+import { generateInventoryReportXlsx } from '@/lib/excel-export';
 import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDate, formatCostaRicaISO, extractCompanyAndClient } from '@/lib/billing';
 
@@ -398,37 +399,25 @@ export default function BodegaInventario() {
   const activePackages = filteredInventory.filter(p => !(p.status || '').toLowerCase().includes('entregad')).length;
   const deliveredPackages = filteredInventory.filter(p => (p.status || '').toLowerCase().includes('entregad')).length;
 
-  const handleExportCSV = () => {
-    const headers = ['#', 'Tracking', 'Cliente', 'Empresa', 'Peso', 'Factura', 'Estante', 'Fecha de Ingreso', 'Estado Interno'];
-    const escapeCSV = (val: string) => `"${String(val || '').replace(/"/g, '""')}"`;
-
+  const handleExportExcel = () => {
     const rows = filteredInventory.map((item, idx) => {
       const inv = getInvoiceForTracking(item.id)?.number || 'Sin Factura';
       const shelf = shelfMap.get(item.id.trim().toUpperCase()) || '';
       const statusLabel = (item.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'En Bodega';
-      return [
-        String(idx + 1),
-        escapeCSV(item.id),
-        escapeCSV(item.client),
-        escapeCSV(item.company || 'JRS CARGO'),
-        escapeCSV(item.weight),
-        escapeCSV(inv),
-        escapeCSV(shelf),
-        escapeCSV(item.date),
-        escapeCSV(statusLabel)
-      ].join(',');
+      return {
+        index: idx + 1,
+        tracking: item.id,
+        client: item.client,
+        company: item.company || 'JRS CARGO',
+        weight: item.weight,
+        invoice: inv,
+        shelf: shelf,
+        date: item.date,
+        status: statusLabel
+      };
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `inventario-jrs-cargo-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    generateInventoryReportXlsx(rows);
   };
 
   const toggleColumn = (col: ColumnKey) => {
@@ -470,13 +459,13 @@ export default function BodegaInventario() {
           </Link>
 
           <button
-            onClick={handleExportCSV}
+            onClick={handleExportExcel}
             disabled={filteredInventory.length === 0}
             className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs inline-flex items-center gap-1.5 font-medium text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-            title="Exportar vista actual a CSV"
+            title="Exportar inventario actual a Microsoft Excel (.xlsx)"
           >
-            <Download size={14} className="text-slate-500" />
-            <span>Exportar</span>
+            <Download size={14} className="text-emerald-600" />
+            <span>Exportar Excel</span>
           </button>
 
           <button

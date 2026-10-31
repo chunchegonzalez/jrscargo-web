@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link';
 import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck, Download, Calendar, Printer, FileSpreadsheet } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
+import { generateIncomeReportXlsx } from '@/lib/excel-export';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Invoice = {
@@ -282,97 +283,9 @@ export default function FacturacionDashboard() {
     setExportModalOpen(true);
   }, [filterStartDate, filterEndDate, filterStatus, getDateRangeForPreset]);
 
-  // Export CSV function for Income Statement
-  const handleExportIncomeCSV = useCallback((items: Invoice[], startStr: string, endStr: string) => {
-    const escapeCSV = (val: string | number | undefined | null) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-    
-    let totalFact = 0;
-    let totalPag = 0;
-    let totalPend = 0;
-    
-    items.forEach(inv => {
-      const stats = getInvoiceStats(inv);
-      if (stats.currency !== 'CRC') {
-        totalFact += Number(inv.total) || 0;
-        totalPag += stats.paid;
-        totalPend += stats.pending;
-      }
-    });
-
-    const recoveryRate = totalFact > 0 ? ((totalPag / totalFact) * 100).toFixed(1) : '0.0';
-    const nowCR = new Date().toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica' });
-    const periodLabel = (startStr && endStr) 
-      ? (startStr === endStr ? startStr : `${startStr} al ${endStr}`)
-      : startStr 
-      ? `Desde ${startStr}` 
-      : endStr 
-      ? `Hasta ${endStr}` 
-      : 'Histórico Completo';
-
-    const metadata = [
-      ['ESTADO DE INGRESOS Y FACTURACIÓN - JRS CARGO S.A.'],
-      ['Período Auditado', periodLabel],
-      ['Fecha de Emisión del Reporte', nowCR],
-      ['Total de Facturas Auditadas', String(items.length)],
-      ['Total Facturado (USD)', `$${totalFact.toFixed(2)}`],
-      ['Total Cobrado / Ingresos Reales (USD)', `$${totalPag.toFixed(2)}`],
-      ['Saldo Pendiente por Cobrar (USD)', `$${totalPend.toFixed(2)}`],
-      ['Porcentaje de Cobro Conciliado', `${recoveryRate}%`],
-      []
-    ];
-
-    const headers = [
-      '#',
-      'Fecha Emisión',
-      'N.° Factura',
-      'Cliente',
-      'Correo Electrónico',
-      'Moneda',
-      'Total Facturado ($)',
-      'Total Pagado / Ingresos ($)',
-      'Saldo Pendiente ($)',
-      'Estado',
-      'Notificación Correo',
-      'Fecha Último Envío'
-    ];
-
-    const rows = items.map((inv, idx) => {
-      const stats = getInvoiceStats(inv);
-      const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
-      const emailStatus = inv.email_sent_at ? 'Enviado' : 'No enviado';
-      const emailDate = inv.email_sent_at ? formatDisplayDate(inv.email_sent_at) : '—';
-      
-      return [
-        String(idx + 1),
-        escapeCSV(invDate),
-        escapeCSV(inv.invoice_number),
-        escapeCSV(inv.clients?.name || 'Cliente sin nombre'),
-        escapeCSV(inv.clients?.email || ''),
-        escapeCSV(stats.currency || 'USD'),
-        Number(inv.total || 0).toFixed(2),
-        Number(stats.paid || 0).toFixed(2),
-        Number(stats.pending || 0).toFixed(2),
-        escapeCSV(stats.displayStatus),
-        escapeCSV(emailStatus),
-        escapeCSV(emailDate)
-      ].join(',');
-    });
-
-    const metaString = metadata.map(row => row.map(escapeCSV).join(',')).join('\n');
-    const content = '\uFEFF' + metaString + '\n' + headers.join(',') + '\n' + rows.join('\n');
-    
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const fileSuffix = (startStr && endStr) 
-      ? (startStr === endStr ? startStr : `${startStr}_a_${endStr}`) 
-      : startStr || endStr || 'historico';
-    a.download = `estado-ingresos-jrs-cargo-${fileSuffix}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // Export Excel function for Income Statement (.xlsx nativo de Microsoft Excel)
+  const handleExportIncomeExcel = useCallback((items: Invoice[], startStr: string, endStr: string) => {
+    generateIncomeReportXlsx(items, startStr, endStr);
   }, []);
 
   // Printable Income Statement Report (clean window)
@@ -873,12 +786,12 @@ export default function FacturacionDashboard() {
 
             <button
               type="button"
-              onClick={() => handleExportIncomeCSV(filteredInvoices, filterStartDate, filterEndDate)}
+              onClick={() => handleExportIncomeExcel(filteredInvoices, filterStartDate, filterEndDate)}
               className="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-              title="Descargar estado de ingresos filtrado a CSV/Excel"
+              title="Descargar estado de ingresos filtrado en Microsoft Excel (.xlsx)"
             >
               <FileSpreadsheet size={14} className="text-emerald-600" />
-              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="hidden sm:inline">Exportar Excel</span>
             </button>
 
             {hasActiveFilters && (
@@ -1500,12 +1413,12 @@ export default function FacturacionDashboard() {
                 <button
                   type="button"
                   disabled={modalFilteredInvoices.length === 0}
-                  onClick={() => handleExportIncomeCSV(modalFilteredInvoices, modalStartDate, modalEndDate)}
+                  onClick={() => handleExportIncomeExcel(modalFilteredInvoices, modalStartDate, modalEndDate)}
                   className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
-                  title="Descargar reporte completo en archivo Excel (CSV)"
+                  title="Descargar reporte completo en archivo nativo de Microsoft Excel (.xlsx)"
                 >
-                  <Download size={14} />
-                  <span>Descargar Excel (CSV)</span>
+                  <FileSpreadsheet size={15} />
+                  <span>Descargar Excel (.xlsx)</span>
                 </button>
               </div>
             </div>
