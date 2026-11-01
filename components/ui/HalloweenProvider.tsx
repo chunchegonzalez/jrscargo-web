@@ -15,6 +15,11 @@ export function HalloweenProvider({ children }: { children: React.ReactNode }) {
   const [isHalloween, setIsHalloween] = useState(false);
 
   useEffect(() => {
+    try {
+      localStorage.removeItem('halloween_override');
+    } catch {
+      // ignore
+    }
     const active = isHalloweenActive();
     setIsHalloween(active);
 

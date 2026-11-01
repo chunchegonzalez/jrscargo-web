@@ -13,15 +13,15 @@
  */
 
 // Developer toggle: Set to `true` to force enable, `false` to force disable, or `null` for automatic date schedule.
-export const HALLOWEEN_MANUAL_OVERRIDE: boolean | null = null;
+export const HALLOWEEN_MANUAL_OVERRIDE: boolean | null = false;
 
-// Cutoff timestamp: 2026-11-02 00:00:00 in America/Costa_Rica
+// Cutoff timestamp: Halloween 2026 has concluded
 export const HALLOWEEN_END_YEAR = 2026;
-export const HALLOWEEN_END_MONTH = 11; // November
-export const HALLOWEEN_END_DAY = 2;
-export const HALLOWEEN_END_HOUR = 0;
-export const HALLOWEEN_END_MINUTE = 0;
-export const HALLOWEEN_END_SECOND = 0;
+export const HALLOWEEN_END_MONTH = 10; // Concluded on Oct 31
+export const HALLOWEEN_END_DAY = 31;
+export const HALLOWEEN_END_HOUR = 23;
+export const HALLOWEEN_END_MINUTE = 59;
+export const HALLOWEEN_END_SECOND = 59;
 
 /**
  * Returns date parts in America/Costa_Rica timezone
