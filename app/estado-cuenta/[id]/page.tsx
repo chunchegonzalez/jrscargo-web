@@ -868,39 +868,42 @@ export default function PublicEstadoCuentaPage() {
             <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-xl p-5 border border-slate-200/90 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     Resumen mensual
                   </span>
-                  <div className="relative min-w-0">
-                    <select
-                      value={selectedMonth}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMonth(e.target.value)}
-                      aria-label="Seleccionar mes del resumen"
-                      className="text-[11px] font-semibold text-[#0B2737] bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-md pl-2.5 pr-6 py-1 cursor-pointer focus:outline-none focus:border-[#14445D] focus-visible:ring-2 focus-visible:ring-[#14445D] appearance-none"
-                    >
-                      {availableMonths.map((m: string) => (
-                        <option key={m} value={m}>
-                          {formatMonthName(m)}
-                        </option>
-                      ))}
-                      <option value="all">Histórico Total</option>
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                  </div>
+                  <Calendar size={13} className="text-slate-400 shrink-0" />
                 </div>
 
-                <div className="mt-3.5 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                <div className="relative w-full mt-2">
+                  <select
+                    value={selectedMonth}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMonth(e.target.value)}
+                    aria-label="Seleccionar mes del resumen"
+                    className="w-full h-8 text-xs font-semibold text-[#0B2737] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg pl-3 pr-8 cursor-pointer transition-colors focus:outline-none focus:border-[#14445D] focus-visible:ring-2 focus-visible:ring-[#14445D] appearance-none"
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none', backgroundImage: 'none' }}
+                  >
+                    {availableMonths.map((m: string) => (
+                      <option key={m} value={m}>
+                        {formatMonthName(m)}
+                      </option>
+                    ))}
+                    <option value="all">Histórico Total</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-xs text-slate-500 whitespace-nowrap">
-                      Monto facturado {monthLabel}
+                      Facturado {monthLabel}
                     </span>
                     <span className="text-sm font-bold text-[#0B2737] tabular-nums whitespace-nowrap">
                       {formatUSD(monthInvoiced)} <span className="text-[11px] font-medium text-slate-400">USD</span>
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                     <span className="text-xs text-slate-500 whitespace-nowrap">
-                      Pagos aplicados {monthLabel}
+                      Pagos {monthLabel}
                     </span>
                     <span className="text-sm font-bold text-emerald-700 tabular-nums whitespace-nowrap">
                       {formatUSD(monthPaid)} <span className="text-[11px] font-medium text-emerald-600/80">USD</span>
