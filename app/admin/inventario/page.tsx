@@ -206,11 +206,23 @@ export default function BodegaInventario() {
     (trackingId: string) => {
       if (!trackingId) return undefined;
       const clean = trackingId.trim().toUpperCase();
-      const direct = invoiceMap.get(clean);
+      const compact = clean.replace(/[\s-]+/g, '');
+      const direct = invoiceMap.get(clean) || invoiceMap.get(compact);
       if (direct) return direct;
-      const stripped = clean.replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
-      if (stripped !== clean && stripped.length >= 8) {
-        return invoiceMap.get(stripped);
+
+      const stripped = compact.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+      if (stripped !== compact && stripped.length >= 8) {
+        const byStripped = invoiceMap.get(stripped);
+        if (byStripped) return byStripped;
+      }
+
+      // Suffix / substring fallback for long carrier barcodes (>= 10 chars)
+      if (compact.length >= 10) {
+        for (const [k, val] of invoiceMap.entries()) {
+          if (k.length >= 10 && (compact.endsWith(k) || k.endsWith(compact))) {
+            return val;
+          }
+        }
       }
       return undefined;
     },
@@ -250,15 +262,30 @@ export default function BodegaInventario() {
       if (invRes.ok) {
         const invData = await invRes.json();
         const map = new Map<string, { number: string; id: string }>();
-        (invData.data || []).forEach((inv: { id: string; invoice_number: string; invoice_items?: { tracking_number?: string }[] }) => {
+        const registerTrackKey = (key: string, val: { number: string; id: string }) => {
+          if (!key) return;
+          if (!map.has(key)) {
+            map.set(key, val);
+          }
+        };
+
+        (invData.data || []).forEach((inv: { id: string; invoice_number: string; status?: string; invoice_items?: { tracking_number?: string }[] }) => {
+          if (inv.status === 'Anulada') return;
           if (inv.invoice_items) {
+            const invRef = { number: inv.invoice_number, id: inv.id };
             inv.invoice_items.forEach(item => {
               if (item.tracking_number) {
                 const rawTrack = item.tracking_number.trim().toUpperCase();
-                map.set(rawTrack, { number: inv.invoice_number, id: inv.id });
-                const stripped = rawTrack.replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
-                if (stripped !== rawTrack && stripped.length >= 8 && !map.has(stripped)) {
-                  map.set(stripped, { number: inv.invoice_number, id: inv.id });
+                registerTrackKey(rawTrack, invRef);
+
+                // Split if multiple trackings were entered separated by comma, slash, or whitespace
+                const tokens = rawTrack.split(/[,/;\s]+/).map(t => t.replace(/[\s-]+/g, '')).filter(t => t.length >= 6);
+                for (const tok of tokens) {
+                  registerTrackKey(tok, invRef);
+                  const stripped = tok.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+                  if (stripped !== tok && stripped.length >= 8) {
+                    registerTrackKey(stripped, invRef);
+                  }
                 }
               }
             });

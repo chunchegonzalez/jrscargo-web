@@ -10,14 +10,39 @@ export const getHeaders = () => {
   };
 };
 
+// Paginates automatically past Supabase PostgREST's 1,000-row default max-rows limit
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAllRows<T = any>(endpointUrl: string, throwOnError = true): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  const MAX_PAGES = 25;
+  const allRows: T[] = [];
+  const sep = endpointUrl.includes('?') ? '&' : '?';
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const offset = page * PAGE_SIZE;
+    const pagedUrl = `${endpointUrl}${sep}limit=${PAGE_SIZE}&offset=${offset}`;
+    const res = await fetch(pagedUrl, {
+      headers: getHeaders(),
+      cache: 'no-store'
+    });
+    if (!res.ok) {
+      if (throwOnError && page === 0) {
+        throw new Error(`Supabase fetch error (${res.status})`);
+      }
+      break;
+    }
+    const chunk: T[] = await res.json();
+    if (!Array.isArray(chunk) || chunk.length === 0) break;
+    allRows.push(...chunk);
+    if (chunk.length < PAGE_SIZE) break;
+  }
+
+  return allRows;
+}
+
 export async function getInventory() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const res = await fetch(`${url}/rest/v1/local_inventory?id=neq.__JRS_MOBILE_SHELVES_STATE__&order=created_at.desc`, {
-    headers: getHeaders(),
-    cache: 'no-store'
-  });
-  if (!res.ok) throw new Error('Error fetching inventory');
-  return res.json();
+  return fetchAllRows(`${url}/rest/v1/local_inventory?id=neq.__JRS_MOBILE_SHELVES_STATE__&order=created_at.desc`);
 }
 
 export async function getInventoryItem(id: string) {
@@ -428,37 +453,28 @@ export async function updateExpense(id: string, expense: Record<string, unknown>
 export async function getInvoices(opts?: { includeItems?: boolean }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const includeItems = opts?.includeItems ?? false;
-  
-  // Parallel fetch: invoices + payments always, items only when needed
-  const fetches: Promise<Response | null>[] = [
-    fetch(`${url}/rest/v1/invoices?select=id,invoice_number,issue_date,total,status,client_id,currency,email_sent_at,exchange_rate,created_at,clients(id,name,email,address)&order=created_at.desc`, {
-      headers: getHeaders(),
-      cache: 'no-store'
-    }),
-    fetch(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, {
-      headers: getHeaders(),
-      cache: 'no-store'
-    }).catch(() => null)
+
+  const invoiceSelect = includeItems
+    ? 'id,invoice_number,issue_date,total,status,client_id,currency,email_sent_at,exchange_rate,created_at,clients(id,name,email,address),invoice_items(invoice_id,tracking_number,service_name,amount,weight,rate)'
+    : 'id,invoice_number,issue_date,total,status,client_id,currency,email_sent_at,exchange_rate,created_at,clients(id,name,email,address)';
+
+  // Parallel paginated fetch: invoices + payments always, items also fetched with full pagination as fallback
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fetches: Promise<any[]>[] = [
+    fetchAllRows(`${url}/rest/v1/invoices?select=${invoiceSelect}&order=created_at.desc`, true),
+    fetchAllRows(`${url}/rest/v1/invoice_payments?select=invoice_id,amount_applied`, false)
   ];
 
   if (includeItems) {
     fetches.push(
-      fetch(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, {
-        headers: getHeaders(),
-        cache: 'no-store'
-      }).catch(() => null)
+      fetchAllRows(`${url}/rest/v1/invoice_items?select=invoice_id,tracking_number,service_name,amount,weight,rate`, false)
     );
   }
 
   const results = await Promise.all(fetches);
-  const [resInv, resPay] = results;
-  const resItems = includeItems ? results[2] : null;
-
-  if (!resInv || !resInv.ok) throw new Error('Error fetching invoices');
-  const invoices = await resInv.json();
-
-  const payments = resPay && resPay.ok ? await resPay.json() : [];
-  const items = resItems && resItems.ok ? await resItems.json() : [];
+  const invoices = results[0] || [];
+  const payments = results[1] || [];
+  const items = includeItems ? (results[2] || []) : [];
 
   // Group payments and items by invoice_id with Map for O(N) instant lookups
   const paymentsMap = new Map<string, Array<Record<string, unknown>>>();
@@ -475,7 +491,9 @@ export async function getInvoices(opts?: { includeItems?: boolean }) {
     }
     for (const inv of invoices) {
       inv.invoice_payments = paymentsMap.get(inv.id) || [];
-      const itemLines = itemsMap.get(inv.id) || [];
+      const embeddedItems = Array.isArray(inv.invoice_items) && inv.invoice_items.length > 0 ? inv.invoice_items : null;
+      const mappedItems = itemsMap.get(inv.id) || [];
+      const itemLines = embeddedItems && embeddedItems.length >= mappedItems.length ? embeddedItems : mappedItems;
       inv.invoice_items = itemLines;
       inv.items = itemLines;
     }
