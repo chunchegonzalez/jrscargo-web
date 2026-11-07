@@ -96,12 +96,13 @@ export function detectServiceUnit(name?: string | null): WeightUnitType {
     return 'ft³';
   }
 
-  // 2. Mayorista Aéreo / Madrid / Kilos -> Kilos (Kg)
+  // 2. Mayorista Aéreo / Madrid / Tony / Kilos -> Kilos (Kg)
   if (
     norm.includes('MAYORISTA AEREO') ||
     norm.includes('AEREO MADRID') ||
     (norm.includes('MAYORISTA') && norm.includes('AEREO')) ||
     (norm.includes('MAYORISTA') && norm.includes('MADRID')) ||
+    norm.includes('TONY') ||
     norm.includes('(KG)') ||
     norm.includes('POR KILO') ||
     norm.includes('KILO') ||
@@ -155,16 +156,13 @@ export function formatPackageWeightAndRate({
     // 1. Detect from service name
     unit = detectServiceUnit(serviceName);
 
-    // 2. Cross-check with reference package weight if available
+    // 2. Cross-check with reference package weight if available (only if service wasn't explicitly Kg/ft³)
     // e.g. pkgWeight is 2.5 lbs and numWeight is ~1.13 -> definitely Kg!
-    if (pkgWeight && !isNaN(Number(pkgWeight)) && !isNaN(numWeight) && numWeight > 0) {
+    if (unit === 'Lb' && pkgWeight && !isNaN(Number(pkgWeight)) && !isNaN(numWeight) && numWeight > 0) {
       const pNum = Number(pkgWeight);
       const isLbsToKg = Math.abs((pNum * 0.453592) - numWeight) < 0.08;
-      const isKgToLbs = Math.abs((pNum * 2.20462) - numWeight) < 0.15;
       if (isLbsToKg) {
         unit = 'Kg';
-      } else if (isKgToLbs) {
-        unit = 'Lb';
       }
     }
   }

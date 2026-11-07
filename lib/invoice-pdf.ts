@@ -273,7 +273,7 @@ export async function generateInvoicePdf(invoice: InvoiceDataForPdf): Promise<Bu
       unitLabel = 'und';
     } else if (sNameUpper.includes('MARITIMO') || sNameUpper.includes('MARÍTIMO') || sNameUpper.includes('FT3') || sNameUpper.includes('PIE')) {
       unitLabel = 'ft3';
-    } else if (sNameUpper.includes('MAYORISTA AEREO') || sNameUpper.includes('MAYORISTA AÉREO') || sNameUpper.includes('MADRID')) {
+    } else if (sNameUpper.includes('MAYORISTA AEREO') || sNameUpper.includes('MAYORISTA AÉREO') || sNameUpper.includes('MADRID') || sNameUpper.includes('TONY') || sNameUpper.includes('KILO') || sNameUpper.includes('KG')) {
       unitLabel = 'kg';
     }
     const weightStr = item.weight !== undefined && item.weight !== null && item.weight !== '' ? `${item.weight} ${unitLabel}` : '-';

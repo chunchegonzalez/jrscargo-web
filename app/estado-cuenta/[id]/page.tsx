@@ -50,6 +50,7 @@ function getItemUnit(serviceName?: string, weight?: string | number): string {
     sUpper.includes('MAYORISTA AEREO') ||
     sUpper.includes('MAYORISTA AÉREO') ||
     sUpper.includes('MADRID') ||
+    sUpper.includes('TONY') ||
     sUpper.includes('KILO') ||
     sUpper.includes('KG')
   )

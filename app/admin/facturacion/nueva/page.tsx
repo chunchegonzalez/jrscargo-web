@@ -256,12 +256,17 @@ export default function NuevaFacturaPage() {
       return 'ft³';
     }
 
-    // 2. Mayorista Aéreo / Madrid -> Kilos (Kg)
+    // 2. Mayorista Aéreo / Madrid / Tony -> Kilos (Kg)
     if (
       norm.includes('MAYORISTA AEREO') ||
       norm.includes('AEREO MADRID') ||
       (norm.includes('MAYORISTA') && norm.includes('AEREO')) ||
-      (norm.includes('MAYORISTA') && norm.includes('MADRID'))
+      (norm.includes('MAYORISTA') && norm.includes('MADRID')) ||
+      norm.includes('TONY') ||
+      norm.includes('(KG)') ||
+      norm.includes('POR KILO') ||
+      norm.includes('KILO') ||
+      norm.includes('KG')
     ) {
       return 'Kg';
     }

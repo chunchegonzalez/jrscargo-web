@@ -23,7 +23,7 @@ function buildItemRow(item: InvoiceItem): string {
     unitLabel = 'und';
   } else if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE')) {
     unitLabel = 'ft³';
-  } else if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID')) {
+  } else if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') || sUpper.includes('TONY') || sUpper.includes('KILO') || sUpper.includes('KG')) {
     unitLabel = 'kg';
   }
 

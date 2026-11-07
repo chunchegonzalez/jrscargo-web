@@ -14,7 +14,7 @@ function detectPackageUnit(serviceName?: string, weight?: string | number): stri
   const sUpper = String(serviceName || '').toUpperCase();
   if (sUpper.includes('COMPRA') || sUpper.includes('SITIO WEB')) return 'und';
   if (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE') || sUpper.includes('CUBIC')) return 'ft³';
-  if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') || sUpper.includes('KILO') || sUpper.includes('KG')) return 'kg';
+  if (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') || sUpper.includes('TONY') || sUpper.includes('KILO') || sUpper.includes('KG')) return 'kg';
   return 'lb';
 }
 

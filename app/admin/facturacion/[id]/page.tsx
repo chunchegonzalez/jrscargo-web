@@ -241,7 +241,7 @@ export default function InvoiceViewPage() {
                   ? 'und'
                   : (sUpper.includes('MARITIMO') || sUpper.includes('MARÍTIMO') || sUpper.includes('FT3') || sUpper.includes('PIE'))
                   ? 'ft³'
-                  : (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') ? 'kg' : 'lb');
+                  : (sUpper.includes('MAYORISTA AEREO') || sUpper.includes('MAYORISTA AÉREO') || sUpper.includes('MADRID') || sUpper.includes('TONY') || sUpper.includes('KILO') || sUpper.includes('KG') ? 'kg' : 'lb');
                 return (
                   <tr key={item.id} className="border-b border-gray-100">
                     <td className="py-3 text-gray-400">{index + 1}.</td>
