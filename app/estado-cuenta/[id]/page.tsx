@@ -5,8 +5,6 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import {
   CheckCircle2,
-  Clock,
-  FileText,
   Printer,
   Copy,
   Check,
@@ -69,6 +67,24 @@ function formatWeightWithUnit(weight?: string | number, serviceName?: string): s
   return `${wStr} ${unit}`;
 }
 
+function formatUSD(amount?: number | string | null): string {
+  const num = Number(amount || 0);
+  if (isNaN(num)) return '$0.00';
+  return (
+    '$' +
+    num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  );
+}
+
+function formatCRC(amount?: number | string | null): string {
+  const num = Math.round(Number(amount || 0));
+  if (isNaN(num)) return '₡0';
+  return '₡' + num.toLocaleString('es-CR');
+}
+
 function getMonthKey(dateStr?: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -97,7 +113,7 @@ function formatMonthShort(monthKey: string): string {
   const m = parseInt(parts[1], 10) - 1;
   const d = new Date(y, m, 1);
   const monthName = d.toLocaleDateString('es-CR', { month: 'short' });
-  return monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  return monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
 }
 
 interface InvoiceItem {
@@ -183,10 +199,11 @@ export default function PublicEstadoCuentaPage() {
 
   // Welcome Splash Screen state (executes on every new entry to the portal)
   const [showSplash, setShowSplash] = useState(true);
-  const [splashEntered, setSplashEntered] = useState(false);
+  const [splashLogoReady, setSplashLogoReady] = useState(false);
+  const [splashTextReady, setSplashTextReady] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
   const [minSplashTimeElapsed, setMinSplashTimeElapsed] = useState(false);
-  const [progressPercent, setProgressPercent] = useState(18);
+  const [progressPercent, setProgressPercent] = useState(12);
 
   // Navigation & filter states
   const [activeTab, setActiveTab] = useState<'pendientes' | 'pagadas' | 'todas' | 'pagos' | 'paquetes'>('pendientes');
@@ -211,19 +228,25 @@ export default function PublicEstadoCuentaPage() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
-  // Welcome screen entry animation & minimum duration timer (1.35s)
+  // Choreographed Welcome Splash Screen sequence
   useEffect(() => {
-    const enterFrame = requestAnimationFrame(() => {
-      setSplashEntered(true);
-      setProgressPercent(65);
+    const frame1 = requestAnimationFrame(() => {
+      setSplashLogoReady(true);
+      setProgressPercent(42);
     });
+
+    const textTimer = setTimeout(() => {
+      setSplashTextReady(true);
+      setProgressPercent(74);
+    }, 180);
 
     const minTimer = setTimeout(() => {
       setMinSplashTimeElapsed(true);
-    }, 1350);
+    }, 1500);
 
     return () => {
-      cancelAnimationFrame(enterFrame);
+      cancelAnimationFrame(frame1);
+      clearTimeout(textTimer);
       clearTimeout(minTimer);
     };
   }, []);
@@ -237,10 +260,23 @@ export default function PublicEstadoCuentaPage() {
       setSplashFadingOut(true);
       const hideTimer = setTimeout(() => {
         setShowSplash(false);
-      }, 380);
+      }, 450);
       return () => clearTimeout(hideTimer);
     }
   }, [loading, minSplashTimeElapsed, showSplash, splashFadingOut]);
+
+  // Close modal with Escape key for keyboard accessibility
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && emailModalOpen && !isSending) {
+        setEmailModalOpen(false);
+        setEmailSuccess(false);
+        setSendError(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [emailModalOpen, isSending]);
 
   // Dynamic browser tab title: "JRS CARGO CR - <Nombre del Cliente>"
   useEffect(() => {
@@ -386,45 +422,90 @@ export default function PublicEstadoCuentaPage() {
     }
   };
 
+  // ==================== 2. PANTALLA DE BIENVENIDA CON ANIMACIÓN DEL LOGO ====================
   const splashOverlay = showSplash ? (
     <div
       role="status"
       aria-live="polite"
       aria-label="Bienvenido a JRS Cargo, cargando estado de cuenta"
-      className={`fixed inset-0 z-[100] bg-[#0B2737] flex flex-col items-center justify-center p-6 select-none print:hidden transition-opacity duration-350 ease-out motion-reduce:transition-none ${
-        splashFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      className={`fixed inset-0 z-[100] bg-[#0B2737] flex flex-col items-center justify-center p-6 select-none print:hidden overflow-hidden transition-all duration-500 ease-out motion-reduce:transition-none ${
+        splashFadingOut ? 'opacity-0 scale-[1.015] pointer-events-none' : 'opacity-100 scale-100'
       }`}
+      style={{
+        backgroundImage:
+          'radial-gradient(circle at 50% 42%, rgba(20, 68, 93, 0.65) 0%, rgba(11, 39, 55, 0.98) 65%, #071924 100%)'
+      }}
     >
+      {/* Halo ambiental sutil detrás del emblema */}
       <div
-        className={`flex flex-col items-center text-center transition-all duration-500 ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:scale-100 ${
-          splashEntered ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.94]'
+        aria-hidden="true"
+        className={`pointer-events-none absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#14445D]/35 blur-3xl transition-all duration-700 ease-out motion-reduce:transition-none ${
+          splashLogoReady ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
         }`}
-      >
-        {/* Contenedor limpio para preservar el contraste exacto del logo original */}
-        <div className="bg-white rounded-2xl px-8 py-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] border border-white/10 mb-6 flex items-center justify-center">
-          <Image
-            src="/logo.png"
-            alt="JRS Cargo"
-            width={180}
-            height={110}
-            className="w-auto h-20 sm:h-24 object-contain"
-            priority
-          />
+      />
+
+      <div className="relative z-10 flex flex-col items-center text-center max-w-sm w-full">
+        {/* Tarjeta del Logo Oficial con revelación suave y destello de luz sutil */}
+        <div
+          className={`relative group transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:scale-100 motion-reduce:translate-y-0 ${
+            splashLogoReady ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-[0.94] translate-y-2.5'
+          }`}
+        >
+          {/* Borde exterior translúcido de precisión */}
+          <div className="p-1.5 rounded-[26px] bg-gradient-to-b from-white/15 to-white/5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/10">
+            <div className="relative overflow-hidden bg-white rounded-[20px] px-9 py-7 sm:px-11 sm:py-8 flex items-center justify-center shadow-inner">
+              {/* Efecto de barrido de luz sutil sobre la tarjeta */}
+              <div
+                aria-hidden="true"
+                className={`pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-slate-100/70 to-transparent skew-x-[-20deg] transition-transform duration-1000 ease-out motion-reduce:hidden ${
+                  splashTextReady ? 'translate-x-[200%]' : '-translate-x-full'
+                }`}
+              />
+              <Image
+                src="/logo.png"
+                alt="JRS Cargo S.A."
+                width={200}
+                height={120}
+                className="relative z-10 w-auto h-20 sm:h-24 object-contain"
+                priority
+              />
+            </div>
+          </div>
         </div>
 
-        <p className="text-white text-base sm:text-lg font-semibold tracking-tight">
-          Bienvenido a JRS Cargo
-        </p>
-        <p className="text-slate-400 text-xs mt-1">
-          {loading ? 'Consultando estado de cuenta...' : 'Estado de cuenta verificado'}
-        </p>
+        {/* Texto de bienvenida con entrada escalonada */}
+        <div
+          className={`mt-7 transition-all duration-500 ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${
+            splashTextReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+          }`}
+        >
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#FFC44D] mb-2.5">
+            Portal Oficial de Clientes
+          </span>
+          <h1 className="text-white text-lg sm:text-xl font-bold tracking-tight">
+            Bienvenido a JRS Cargo
+          </h1>
+          <p className="text-slate-300/80 text-xs sm:text-[13px] mt-1 font-normal">
+            {loading ? 'Verificando tu estado de cuenta en tiempo real...' : 'Estado de cuenta sincronizado'}
+          </p>
+        </div>
 
-        {/* Indicador de progreso minimalista sincronizado con el estado real de carga */}
-        <div className="w-44 h-1 bg-[#14445D] rounded-full overflow-hidden mt-5">
-          <div
-            className="h-full bg-[#FFC44D] rounded-full transition-all duration-300 ease-out motion-reduce:transition-none"
-            style={{ width: `${progressPercent}%` }}
-          />
+        {/* Indicador de progreso elegante sincronizado con la carga real */}
+        <div
+          className={`w-52 sm:w-56 mt-6 transition-all duration-500 delay-75 ease-out motion-reduce:transition-none ${
+            splashTextReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'
+          }`}
+        >
+          <div className="h-1.5 w-full bg-[#14445D]/70 rounded-full overflow-hidden p-[1px] ring-1 ring-white/10">
+            <div
+              className="h-full bg-gradient-to-r from-[#FFC44D] to-[#ffd782] rounded-full transition-all duration-300 ease-out motion-reduce:transition-none shadow-[0_0_10px_rgba(255,196,77,0.5)]"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium mt-2 px-0.5 tabular-nums">
+            <span>JRS Cargo S.A.</span>
+            <span>{progressPercent}%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -456,7 +537,7 @@ export default function PublicEstadoCuentaPage() {
               href="https://wa.me/50672601238"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full h-10 bg-[#0B2737] hover:bg-[#14445D] text-white font-semibold text-xs sm:text-sm rounded-lg inline-flex items-center justify-center gap-2 transition-colors"
+              className="w-full h-10 bg-[#0B2737] hover:bg-[#14445D] text-white font-semibold text-xs sm:text-sm rounded-lg inline-flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] focus-visible:ring-offset-2"
             >
               <MessageCircle size={16} />
               <span>Contactar a Soporte JRS Cargo</span>
@@ -468,15 +549,16 @@ export default function PublicEstadoCuentaPage() {
   }
 
   const { client, stats, invoices, payments } = data;
-  const pendingInvoices = invoices.filter(inv => inv.pending > 0.01 && inv.status !== 'Anulada');
-  const paidInvoices = invoices.filter(inv => inv.pending <= 0.01 && inv.status !== 'Anulada');
+  const activeValidInvoices = invoices.filter(inv => inv.status !== 'Anulada');
+  const pendingInvoices = activeValidInvoices.filter(inv => inv.pending > 0.01);
+  const paidInvoices = activeValidInvoices.filter(inv => inv.pending <= 0.01);
 
   const displayedInvoices = (
     activeTab === 'pendientes'
       ? pendingInvoices
       : activeTab === 'pagadas'
       ? paidInvoices
-      : invoices
+      : activeValidInvoices
   ).filter(inv => {
     if (activeTab !== 'pendientes' && historyMonthFilter !== 'all') {
       if (getMonthKey(inv.issue_date) !== historyMonthFilter) return false;
@@ -511,7 +593,7 @@ export default function PublicEstadoCuentaPage() {
     return true;
   });
 
-  const whatsappPaymentMsg = `Hola JRS Cargo, adjunto comprobante de pago para la cuenta de *${client.name}* (Saldo pendiente: $${stats.totalBalanceUSD.toFixed(2)} USD / ₡${stats.totalBalanceCRC.toLocaleString('es-CR')}).`;
+  const whatsappPaymentMsg = `Hola JRS Cargo, adjunto comprobante de pago para la cuenta de *${client.name}* (Saldo pendiente: ${formatUSD(stats.totalBalanceUSD)} USD / ${formatCRC(stats.totalBalanceCRC)} CRC).`;
 
   const isHistoryMode = activeTab === 'pagadas' || activeTab === 'todas' || activeTab === 'pagos';
 
@@ -522,7 +604,7 @@ export default function PublicEstadoCuentaPage() {
       <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] pb-16 print:bg-white print:p-0 print:pb-0">
         {/* ==================== 3. ENCABEZADO PRINCIPAL ==================== */}
         <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 print:hidden">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
             {/* Izquierda: Logo JRS Cargo + Portal de Clientes + JRS Cargo S.A. */}
             <div className="flex items-center gap-3 min-w-0">
               <Image
@@ -535,7 +617,7 @@ export default function PublicEstadoCuentaPage() {
               />
               <div className="h-5 w-px bg-slate-200 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-semibold text-[#0B2737] leading-tight truncate">
+                <p className="text-xs sm:text-sm font-bold text-[#0B2737] leading-tight truncate">
                   Portal de Clientes
                 </p>
                 <p className="text-[11px] text-slate-500 leading-tight truncate">
@@ -549,7 +631,8 @@ export default function PublicEstadoCuentaPage() {
               <button
                 type="button"
                 onClick={copyShareLink}
-                className="h-9 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                aria-label="Copiar enlace directo al estado de cuenta"
+                className="h-9 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] focus-visible:ring-offset-1"
                 title="Copiar enlace directo a este estado de cuenta"
               >
                 {copiedLink ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} className="text-slate-400" />}
@@ -559,7 +642,8 @@ export default function PublicEstadoCuentaPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="h-9 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#14445D] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                aria-label="Imprimir o descargar estado de cuenta en PDF"
+                className="h-9 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#14445D] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] focus-visible:ring-offset-1"
                 title="Imprimir o guardar estado de cuenta en PDF"
               >
                 <Printer size={14} className="text-[#FFC44D]" />
@@ -570,33 +654,33 @@ export default function PublicEstadoCuentaPage() {
           </div>
         </header>
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 space-y-5 print:p-0 print:max-w-none print:space-y-4">
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-7 space-y-5 print:p-0 print:max-w-none print:space-y-4">
           {/* Encabezado exclusivo para versión impresa / PDF */}
-          <div className="hidden print:flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
+          <div className="hidden print:flex items-center justify-between border-b border-slate-300 pb-4 mb-4">
             <div className="flex items-center gap-3">
               <Image src="/logo.png" alt="JRS Cargo" width={110} height={48} className="h-10 w-auto object-contain" />
               <div>
                 <p className="text-sm font-bold text-[#0B2737]">JRS Cargo S.A.</p>
-                <p className="text-xs text-slate-500">Estado de Cuenta Oficial</p>
+                <p className="text-xs text-slate-500">Estado de Cuenta Oficial • Portal de Clientes</p>
               </div>
             </div>
-            <div className="text-right text-xs text-slate-600">
+            <div className="text-right text-xs text-slate-600 tabular-nums">
               <p>Emisión: {new Date().toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-              <p>Tipo de cambio: ₡{stats.exchangeRate} / $1.00 USD</p>
+              <p>Tipo de cambio oficial: ₡{stats.exchangeRate} CRC = $1.00 USD</p>
             </div>
           </div>
 
           {/* ==================== 4. IDENTIFICACIÓN DEL CLIENTE ==================== */}
           <section
             aria-label="Identificación del cliente"
-            className="bg-white rounded-xl border border-slate-200/90 px-4 py-3.5 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            className="bg-white rounded-xl border border-slate-200/90 px-4 py-3.5 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#14445D]">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#14445D]">
                   Estado de cuenta
                 </span>
-                <span className="text-slate-300">•</span>
+                <span className="text-slate-300" aria-hidden="true">•</span>
                 <span className="text-[11px] text-slate-500">
                   Actualizado al {new Date().toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
@@ -608,13 +692,13 @@ export default function PublicEstadoCuentaPage() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
                   {client.email && (
                     <span className="inline-flex items-center gap-1.5">
-                      <Mail size={13} className="text-slate-400 shrink-0" />
+                      <Mail size={13} className="text-slate-400 shrink-0" aria-hidden="true" />
                       <span className="truncate">{client.email}</span>
                     </span>
                   )}
                   {client.phone && (
                     <span className="inline-flex items-center gap-1.5">
-                      <Phone size={13} className="text-slate-400 shrink-0" />
+                      <Phone size={13} className="text-slate-400 shrink-0" aria-hidden="true" />
                       <span>{client.phone}</span>
                     </span>
                   )}
@@ -622,47 +706,50 @@ export default function PublicEstadoCuentaPage() {
               )}
             </div>
 
-            <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
-              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+            <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1.5 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                 Tipo de cambio oficial
               </span>
-              <span className="text-xs font-semibold text-[#0B2737] bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/80 tabular-nums">
+              <span className="text-xs font-bold text-[#0B2737] bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/80 tabular-nums">
                 ₡{stats.exchangeRate} CRC = $1.00 USD
               </span>
             </div>
           </section>
 
-          {/* ==================== 5. RESUMEN FINANCIERO ==================== */}
-          <section aria-label="Resumen financiero" className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Protagonista visual: Saldo Total Pendiente */}
-            <div className="lg:col-span-5 bg-[#0B2737] text-white rounded-xl p-5 sm:p-6 border border-[#14445D] flex flex-col justify-between">
+          {/* ==================== 5. RESUMEN FINANCIERO EQUILIBRADO ==================== */}
+          <section
+            aria-label="Resumen financiero de la cuenta"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 print:grid-cols-4"
+          >
+            {/* Tarjeta 1 (Protagonista): Saldo Total Pendiente (4 columnas en escritorio) */}
+            <div className="sm:col-span-2 lg:col-span-4 bg-[#0B2737] text-white rounded-xl p-5 border border-[#14445D] flex flex-col justify-between shadow-xs">
               <div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
                     Saldo total pendiente
                   </span>
                   {stats.totalBalanceUSD > 0.01 ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFC44D]/15 text-[#FFC44D] border border-[#FFC44D]/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#FFC44D]" />
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFC44D]/15 text-[#FFC44D] border border-[#FFC44D]/35">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#FFC44D]" aria-hidden="true" />
                       Pendiente de pago
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                      <CheckCircle2 size={12} />
+                      <CheckCircle2 size={12} aria-hidden="true" />
                       Cuenta al día
                     </span>
                   )}
                 </div>
 
-                <div className="mt-3">
+                <div className="mt-3.5">
                   <div className="flex items-baseline gap-2 flex-wrap tabular-nums">
                     <span className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
-                      ${stats.totalBalanceUSD.toFixed(2)}
+                      {formatUSD(stats.totalBalanceUSD)}
                     </span>
-                    <span className="text-sm font-semibold text-slate-300">USD</span>
+                    <span className="text-xs font-semibold text-slate-300 uppercase">USD</span>
                   </div>
                   <p className="text-sm sm:text-base font-semibold text-[#FFC44D] mt-1 tabular-nums">
-                    ≈ ₡{stats.totalBalanceCRC.toLocaleString('es-CR')}{' '}
+                    ≈ {formatCRC(stats.totalBalanceCRC)}{' '}
                     <span className="text-xs font-normal text-slate-300">CRC</span>
                   </p>
                 </div>
@@ -671,15 +758,17 @@ export default function PublicEstadoCuentaPage() {
               <div className="mt-5 pt-3.5 border-t border-white/10 flex items-center justify-between gap-2 text-xs text-slate-300">
                 <span>
                   {stats.pendingInvoicesCount === 0
-                    ? 'Sin comprobantes pendientes'
+                    ? 'Sin comprobantes pendientes de pago'
                     : `${stats.pendingInvoicesCount} ${
-                        stats.pendingInvoicesCount === 1 ? 'comprobante pendiente' : 'comprobantes pendientes'
+                        stats.pendingInvoicesCount === 1
+                          ? 'comprobante pendiente de pago'
+                          : 'comprobantes pendientes de pago'
                       }`}
                 </span>
                 {stats.totalBalanceUSD > 0.01 && (
                   <a
                     href="#metodos-pago"
-                    className="text-xs font-semibold text-[#FFC44D] hover:underline print:hidden"
+                    className="text-xs font-semibold text-[#FFC44D] hover:underline whitespace-nowrap print:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFC44D] rounded"
                   >
                     Ver datos de pago ↓
                   </a>
@@ -687,134 +776,142 @@ export default function PublicEstadoCuentaPage() {
               </div>
             </div>
 
-            {/* Indicadores operativos secundarios */}
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* KPI 1: Comprobantes pendientes */}
-              <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 flex flex-col justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 block">
-                    Comprobantes pendientes
+            {/* Tarjeta 2: Comprobantes pendientes de pago (2.5 -> 3 columnas) */}
+            <div className="lg:col-span-3 bg-white rounded-xl p-5 border border-slate-200/90 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Comprobantes pendientes de pago
                   </span>
-                  <div className="mt-2 flex items-baseline gap-2 tabular-nums">
-                    <span className="text-2xl sm:text-3xl font-bold text-[#0B2737]">
-                      {stats.pendingInvoicesCount}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {stats.pendingInvoicesCount === 1 ? 'comprobante' : 'comprobantes'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                    {stats.pendingInvoicesCount > 0
-                      ? 'Facturas emitidas con saldo pendiente de cancelar.'
-                      : 'Todos tus comprobantes están pagados.'}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Total histórico</span>
-                  <span className="font-semibold text-slate-700 tabular-nums">{invoices.length} emitidos</span>
-                </div>
-              </div>
-
-              {/* KPI 2: Paquetes por retirar */}
-              <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      Paquetes por retirar
-                    </span>
-                    {stats.pendingPackagesCount > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-[#FFC44D]" title="Disponibles en bodega" />
-                    )}
-                  </div>
-                  <div className="mt-2 flex items-baseline gap-2 tabular-nums">
-                    <span className="text-2xl sm:text-3xl font-bold text-[#0B2737]">
-                      {stats.pendingPackagesCount}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {stats.pendingPackagesCount === 1 ? 'paquete' : 'paquetes'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                    {stats.pendingPackagesCount > 0
-                      ? 'Disponibles en bodega de Costa Rica.'
-                      : 'No tienes paquetes pendientes de retiro.'}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  {stats.pendingPackagesCount > 0 ? (
-                    <>
-                      <span className="text-slate-500 tabular-nums">
-                        {stats.pendingPackagesWeight > 0 ? `${stats.pendingPackagesWeight} lbs` : 'En bodega'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveTab('paquetes');
-                          document.getElementById('seccion-comprobantes')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="font-semibold text-[#14445D] hover:underline cursor-pointer print:hidden"
-                      >
-                        Ver paquetes →
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-emerald-700 font-medium inline-flex items-center gap-1">
-                        <CheckCircle2 size={13} /> Al día
-                      </span>
-                      <span className="text-slate-400">Bodega CR</span>
-                    </>
+                  {stats.pendingInvoicesCount > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" title="Pendientes de pago" />
                   )}
                 </div>
+                <div className="mt-2.5 flex items-baseline gap-2 tabular-nums">
+                  <span className="text-2xl sm:text-3xl font-bold text-[#0B2737]">
+                    {stats.pendingInvoicesCount}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500">
+                    {stats.pendingInvoicesCount === 1 ? 'comprobante por pagar' : 'comprobantes por pagar'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  {stats.pendingInvoicesCount > 0
+                    ? 'Comprobantes emitidos con saldo pendiente de cancelación.'
+                    : 'Todos tus comprobantes se encuentran cancelados.'}
+                </p>
               </div>
 
-              {/* KPI 3: Actividad del mes */}
-              <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
-                      Actividad
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-400">Total histórico</span>
+                <span className="font-semibold text-slate-700 tabular-nums">
+                  {activeValidInvoices.length} {activeValidInvoices.length === 1 ? 'emitido' : 'emitidos'}
+                </span>
+              </div>
+            </div>
+
+            {/* Tarjeta 3: Paquetes por retirar (2 columnas -> le damos 2 o 2.5 con proporción limpia) */}
+            <div className="lg:col-span-2 bg-white rounded-xl p-5 border border-slate-200/90 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <div>
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Paquetes por retirar
+                  </span>
+                  {stats.pendingPackagesCount > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-[#FFC44D] shrink-0" title="Disponibles en bodega" />
+                  )}
+                </div>
+                <div className="mt-2.5 flex items-baseline gap-1.5 tabular-nums">
+                  <span className="text-2xl sm:text-3xl font-bold text-[#0B2737]">
+                    {stats.pendingPackagesCount}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500">
+                    {stats.pendingPackagesCount === 1 ? 'paquete' : 'paquetes'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  {stats.pendingPackagesCount > 0
+                    ? 'Disponibles en bodega CR.'
+                    : 'Sin paquetes pendientes.'}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                {stats.pendingPackagesCount > 0 ? (
+                  <>
+                    <span className="text-slate-500 font-medium tabular-nums whitespace-nowrap">
+                      {stats.pendingPackagesWeight > 0 ? `${stats.pendingPackagesWeight} lbs` : 'En bodega'}
                     </span>
-                    <div className="relative">
-                      <select
-                        value={selectedMonth}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMonth(e.target.value)}
-                        aria-label="Seleccionar período de resumen"
-                        className="text-[11px] font-semibold text-[#0B2737] bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-md pl-2 pr-5 py-0.5 cursor-pointer focus:outline-none focus:border-[#14445D] appearance-none"
-                      >
-                        {availableMonths.map((m: string) => (
-                          <option key={m} value={m}>
-                            {formatMonthName(m)}
-                          </option>
-                        ))}
-                        <option value="all">Histórico Total</option>
-                      </select>
-                      <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                    </div>
-                  </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('paquetes');
+                        document.getElementById('seccion-comprobantes')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="font-semibold text-[#14445D] hover:underline cursor-pointer whitespace-nowrap print:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] rounded"
+                    >
+                      Ver paquetes →
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-emerald-700 font-medium inline-flex items-center gap-1 whitespace-nowrap">
+                      <CheckCircle2 size={13} /> Al día
+                    </span>
+                    <span className="text-slate-400 whitespace-nowrap">Bodega CR</span>
+                  </>
+                )}
+              </div>
+            </div>
 
-                  <div className="mt-3 space-y-2.5">
-                    <div className="flex items-baseline justify-between pt-1">
-                      <span className="text-xs text-slate-500">Facturado {monthLabel}</span>
-                      <span className="text-sm font-bold text-[#0B2737] tabular-nums">
-                        ${monthInvoiced.toFixed(2)} USD
-                      </span>
-                    </div>
-                    <div className="flex items-baseline justify-between pt-2 border-t border-slate-100">
-                      <span className="text-xs text-slate-500">Pagos {monthLabel}</span>
-                      <span className="text-sm font-bold text-emerald-700 tabular-nums">
-                        ${monthPaid.toFixed(2)} USD
-                      </span>
-                    </div>
+            {/* Tarjeta 4: Resumen mensual (3 columnas en escritorio para evitar cortes de texto) */}
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-xl p-5 border border-slate-200/90 flex flex-col justify-between shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                    Resumen mensual
+                  </span>
+                  <div className="relative min-w-0">
+                    <select
+                      value={selectedMonth}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedMonth(e.target.value)}
+                      aria-label="Seleccionar mes del resumen"
+                      className="text-[11px] font-semibold text-[#0B2737] bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-md pl-2.5 pr-6 py-1 cursor-pointer focus:outline-none focus:border-[#14445D] focus-visible:ring-2 focus-visible:ring-[#14445D] appearance-none"
+                    >
+                      {availableMonths.map((m: string) => (
+                        <option key={m} value={m}>
+                          {formatMonthName(m)}
+                        </option>
+                      ))}
+                      <option value="all">Histórico Total</option>
+                    </select>
+                    <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                   </div>
                 </div>
 
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Moneda base</span>
-                  <span className="font-medium text-slate-600">USD / CRC</span>
+                <div className="mt-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      Monto facturado {monthLabel}
+                    </span>
+                    <span className="text-sm font-bold text-[#0B2737] tabular-nums whitespace-nowrap">
+                      {formatUSD(monthInvoiced)} <span className="text-[11px] font-medium text-slate-400">USD</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100">
+                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                      Pagos aplicados {monthLabel}
+                    </span>
+                    <span className="text-sm font-bold text-emerald-700 tabular-nums whitespace-nowrap">
+                      {formatUSD(monthPaid)} <span className="text-[11px] font-medium text-emerald-600/80">USD</span>
+                    </span>
+                  </div>
                 </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                <span>Moneda base</span>
+                <span className="font-semibold text-slate-600">USD / CRC (₡{stats.exchangeRate})</span>
               </div>
             </div>
           </section>
@@ -823,27 +920,27 @@ export default function PublicEstadoCuentaPage() {
           {(stats.creditBalanceUSD || 0) > 0.01 && (
             <section
               aria-label="Saldo a favor disponible"
-              className="bg-emerald-50/70 border border-emerald-200 rounded-xl px-4 py-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              className="bg-emerald-50/80 border border-emerald-200 rounded-xl px-4 py-3.5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={18} />
+                  <CheckCircle2 size={18} aria-hidden="true" />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
                     Saldo a favor disponible en tu cuenta
                   </p>
                   <p className="text-xs text-emerald-800 mt-0.5">
-                    Este monto se aplicará automáticamente a tus próximos paquetes o comprobantes.
+                    Este saldo a favor se aplicará automáticamente a tus próximos paquetes o comprobantes.
                   </p>
                 </div>
               </div>
-              <div className="sm:text-right tabular-nums shrink-0">
-                <p className="text-lg font-bold text-emerald-700">
-                  +${Number(stats.creditBalanceUSD).toFixed(2)} USD
+              <div className="sm:text-right tabular-nums shrink-0 pl-12 sm:pl-0">
+                <p className="text-lg font-bold text-emerald-700 whitespace-nowrap">
+                  +{formatUSD(stats.creditBalanceUSD)} USD
                 </p>
-                <p className="text-xs font-medium text-emerald-600">
-                  ≈ ₡{Math.round(Number(stats.creditBalanceUSD) * (stats.exchangeRate || 500)).toLocaleString('es-CR')} CRC
+                <p className="text-xs font-medium text-emerald-600 whitespace-nowrap">
+                  ≈ {formatCRC(Number(stats.creditBalanceUSD) * (stats.exchangeRate || 500))} CRC
                 </p>
               </div>
             </section>
@@ -852,14 +949,14 @@ export default function PublicEstadoCuentaPage() {
           {/* ==================== 7. MÉTODOS DE PAGO (SELECTOR INTERACTIVO) ==================== */}
           <section
             id="metodos-pago"
-            aria-label="Métodos de pago"
-            className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-6 print:border-slate-200"
+            aria-label="Métodos de pago autorizados"
+            className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.03)] print:border-slate-200"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
                 <h2 className="text-base font-bold text-[#0B2737]">Métodos de pago autorizados</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Selecciona el método de tu preferencia para ver las instrucciones y reportar tu pago.
+                  Selecciona el método de tu preferencia para consultar las instrucciones y reportar tu pago.
                 </p>
               </div>
 
@@ -868,9 +965,9 @@ export default function PublicEstadoCuentaPage() {
                   href={`https://wa.me/50672601238?text=${encodeURIComponent(whatsappPaymentMsg)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="h-9 px-4 rounded-lg bg-[#0B2737] hover:bg-[#14445D] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 transition-colors shadow-2xs"
+                  className="h-9 px-4 rounded-lg bg-[#0B2737] hover:bg-[#14445D] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] focus-visible:ring-offset-1"
                 >
-                  <MessageCircle size={15} className="text-[#FFC44D]" />
+                  <MessageCircle size={15} className="text-[#FFC44D]" aria-hidden="true" />
                   <span>Reportar un pago</span>
                 </a>
               </div>
@@ -881,50 +978,56 @@ export default function PublicEstadoCuentaPage() {
               <div
                 role="tablist"
                 aria-label="Opciones de pago"
-                className="grid grid-cols-3 gap-2 p-1 bg-slate-100/90 rounded-lg border border-slate-200/70 max-w-lg print:hidden"
+                className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/90 rounded-lg border border-slate-200/70 max-w-lg print:hidden"
               >
                 <button
                   type="button"
                   role="tab"
+                  id="tab-sinpe"
                   aria-selected={selectedPaymentMethod === 'sinpe'}
+                  aria-controls="panel-sinpe"
                   onClick={() => setSelectedPaymentMethod('sinpe')}
-                  className={`h-9 px-3 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`h-9 px-3 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                     selectedPaymentMethod === 'sinpe'
                       ? 'bg-white text-[#0B2737] shadow-2xs border border-slate-200/80'
                       : 'text-slate-600 hover:text-[#0B2737]'
                   }`}
                 >
-                  <Smartphone size={14} />
+                  <Smartphone size={14} aria-hidden="true" />
                   <span>SINPE Móvil</span>
                 </button>
 
                 <button
                   type="button"
                   role="tab"
+                  id="tab-transferencia"
                   aria-selected={selectedPaymentMethod === 'transferencia'}
+                  aria-controls="panel-transferencia"
                   onClick={() => setSelectedPaymentMethod('transferencia')}
-                  className={`h-9 px-3 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`h-9 px-3 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                     selectedPaymentMethod === 'transferencia'
                       ? 'bg-white text-[#0B2737] shadow-2xs border border-slate-200/80'
                       : 'text-slate-600 hover:text-[#0B2737]'
                   }`}
                 >
-                  <Building2 size={14} />
+                  <Building2 size={14} aria-hidden="true" />
                   <span>Transferencia</span>
                 </button>
 
                 <button
                   type="button"
                   role="tab"
+                  id="tab-efectivo"
                   aria-selected={selectedPaymentMethod === 'efectivo'}
+                  aria-controls="panel-efectivo"
                   onClick={() => setSelectedPaymentMethod('efectivo')}
-                  className={`h-9 px-3 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`h-9 px-3 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                     selectedPaymentMethod === 'efectivo'
                       ? 'bg-white text-[#0B2737] shadow-2xs border border-slate-200/80'
                       : 'text-slate-600 hover:text-[#0B2737]'
                   }`}
                 >
-                  <Banknote size={14} />
+                  <Banknote size={14} aria-hidden="true" />
                   <span>Efectivo</span>
                 </button>
               </div>
@@ -932,9 +1035,14 @@ export default function PublicEstadoCuentaPage() {
               {/* Contenido desplegado según el método seleccionado */}
               <div className="mt-3.5">
                 {selectedPaymentMethod === 'sinpe' && (
-                  <div className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div
+                    id="panel-sinpe"
+                    role="tabpanel"
+                    aria-labelledby="tab-sinpe"
+                    className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-[#0B2737]">SINPE Móvil Oficial</span>
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                           Acreditación inmediata
@@ -960,7 +1068,7 @@ export default function PublicEstadoCuentaPage() {
                       <button
                         type="button"
                         onClick={copySinpeNumber}
-                        className="h-8 px-3 rounded-md bg-[#14445D] hover:bg-[#0B2737] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="h-8 px-3 rounded-md bg-[#14445D] hover:bg-[#0B2737] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B2737]"
                       >
                         {copiedSinpe ? <Check size={13} className="text-[#FFC44D]" /> : <Copy size={13} />}
                         <span>{copiedSinpe ? 'Copiado' : 'Copiar número'}</span>
@@ -970,9 +1078,14 @@ export default function PublicEstadoCuentaPage() {
                 )}
 
                 {selectedPaymentMethod === 'transferencia' && (
-                  <div className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div
+                    id="panel-transferencia"
+                    role="tabpanel"
+                    aria-labelledby="tab-transferencia"
+                    className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-[#0B2737]">Transferencia Bancaria (CRC / USD)</span>
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700">
                           JRS Cargo S.A.
@@ -994,7 +1107,7 @@ export default function PublicEstadoCuentaPage() {
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-9 px-3.5 rounded-lg bg-white hover:bg-slate-100 text-[#0B2737] border border-slate-200 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors"
+                        className="h-9 px-3.5 rounded-lg bg-white hover:bg-slate-100 text-[#0B2737] border border-slate-200 font-semibold text-xs inline-flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D]"
                       >
                         <MessageCircle size={14} className="text-emerald-600" />
                         <span>Solicitar cuentas IBAN</span>
@@ -1004,9 +1117,14 @@ export default function PublicEstadoCuentaPage() {
                 )}
 
                 {selectedPaymentMethod === 'efectivo' && (
-                  <div className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div
+                    id="panel-efectivo"
+                    role="tabpanel"
+                    aria-labelledby="tab-efectivo"
+                    className="rounded-lg bg-slate-50/80 border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-[#0B2737]">Pago en Efectivo en Sucursal</span>
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                           Contra retiro
@@ -1038,11 +1156,11 @@ export default function PublicEstadoCuentaPage() {
           {/* ==================== 6. COMPROBANTES E HISTORIAL ==================== */}
           <section
             id="seccion-comprobantes"
-            aria-label="Comprobantes y paquetes"
-            className="bg-white rounded-xl border border-slate-200/90 overflow-hidden print:border-none"
+            aria-label="Comprobantes pendientes de pago e historial"
+            className="bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] print:border-none print:shadow-none"
           >
             {/* Barra de navegación de comprobantes */}
-            <div className="p-4 sm:px-6 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+            <div className="p-4 sm:px-6 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
               <div>
                 <h2 className="text-base font-bold text-[#0B2737]">
                   {activeTab === 'pendientes'
@@ -1050,27 +1168,33 @@ export default function PublicEstadoCuentaPage() {
                     : activeTab === 'paquetes'
                     ? 'Paquetes pendientes por retirar'
                     : activeTab === 'pagos'
-                    ? 'Historial de pagos y abonos'
+                    ? 'Historial de pagos aplicados'
                     : 'Historial de comprobantes'}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {activeTab === 'pendientes'
-                    ? 'Detalle de comprobantes activos pendientes de cancelación.'
+                    ? 'Detalle de comprobantes activos con saldo pendiente de cancelación.'
                     : activeTab === 'paquetes'
-                    ? 'Paquetes registrados en bodega pendientes de retiro.'
-                    : 'Consulta tus comprobantes pagados y los abonos aplicados a tu cuenta.'}
+                    ? 'Paquetes disponibles en la bodega de Costa Rica listos para retiro.'
+                    : 'Consulta tus comprobantes cancelados y los pagos aplicados a tu cuenta.'}
                 </p>
               </div>
 
-              {/* Navegación clara: Pendientes | Pagados / Historial | Paquetes */}
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200/70 self-start sm:self-auto">
+              {/* Navegación por pestañas accesible */}
+              <div
+                role="tablist"
+                aria-label="Secciones de comprobantes y paquetes"
+                className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200/70 self-start md:self-auto"
+              >
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'pendientes'}
                   onClick={() => {
                     setActiveTab('pendientes');
                     setSearchQuery('');
                   }}
-                  className={`h-8 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  className={`h-8 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                     activeTab === 'pendientes'
                       ? 'bg-[#0B2737] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-[#0B2737]'
@@ -1088,12 +1212,14 @@ export default function PublicEstadoCuentaPage() {
 
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={isHistoryMode}
                   onClick={() => {
                     if (!isHistoryMode) {
                       setActiveTab(paidInvoices.length > 0 ? 'pagadas' : 'todas');
                     }
                   }}
-                  className={`h-8 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  className={`h-8 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                     isHistoryMode
                       ? 'bg-[#0B2737] text-white shadow-2xs'
                       : 'text-slate-600 hover:text-[#0B2737]'
@@ -1112,11 +1238,13 @@ export default function PublicEstadoCuentaPage() {
                 {stats.pendingPackagesCount > 0 && (
                   <button
                     type="button"
+                    role="tab"
+                    aria-selected={activeTab === 'paquetes'}
                     onClick={() => {
                       setActiveTab('paquetes');
                       setSearchQuery('');
                     }}
-                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                       activeTab === 'paquetes'
                         ? 'bg-[#0B2737] text-white shadow-2xs'
                         : 'text-slate-600 hover:text-[#0B2737]'
@@ -1136,65 +1264,67 @@ export default function PublicEstadoCuentaPage() {
             </div>
 
             {/* Barra de filtros secundaria (cuando se consulta Historial o hay varios comprobantes) */}
-            {(isHistoryMode || pendingInvoices.length > 3) && activeTab !== 'paquetes' && (
+            {(isHistoryMode || pendingInvoices.length > 2 || searchQuery.trim() !== '') && activeTab !== 'paquetes' && (
               <div className="px-4 py-3 sm:px-6 bg-slate-50/70 border-b border-slate-200/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 print:hidden">
                 {isHistoryMode ? (
-                  <div className="flex items-center gap-1.5 overflow-x-auto">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
                     <button
                       type="button"
                       onClick={() => setActiveTab('pagadas')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                      className={`h-8 px-3 rounded-md text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                         activeTab === 'pagadas'
                           ? 'bg-[#14445D] text-white'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
                       }`}
                     >
-                      Pagados ({paidInvoices.length})
+                      Comprobantes pagados ({paidInvoices.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('todas')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                      className={`h-8 px-3 rounded-md text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                         activeTab === 'todas'
                           ? 'bg-[#14445D] text-white'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
                       }`}
                     >
-                      Todos ({invoices.length})
+                      Todos los emitidos ({activeValidInvoices.length})
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('pagos')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                      className={`h-8 px-3 rounded-md text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
                         activeTab === 'pagos'
                           ? 'bg-[#14445D] text-white'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
                       }`}
                     >
-                      Abonos recibidos ({payments.length})
+                      Pagos aplicados ({payments.length})
                     </button>
                   </div>
                 ) : (
                   <span className="text-xs text-slate-500">
-                    Filtra por número de comprobante o número de guía (tracking)
+                    Busca por número de comprobante, servicio o número de guía (tracking)
                   </span>
                 )}
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="relative flex-1 sm:w-60">
+                  <div className="relative flex-1 sm:w-64">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
+                      aria-label={activeTab === 'pagos' ? 'Buscar referencia o método de pago' : 'Buscar comprobante o número de guía'}
                       placeholder={activeTab === 'pagos' ? 'Buscar referencia o método...' : 'Buscar comprobante o guía...'}
-                      className="w-full h-8 pl-8 pr-7 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#14445D]"
+                      className="w-full h-8 pl-8 pr-7 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#14445D] focus:ring-2 focus:ring-[#14445D]/15"
                     />
                     {searchQuery && (
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        aria-label="Limpiar búsqueda"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                         title="Limpiar búsqueda"
                       >
                         <X size={13} />
@@ -1225,7 +1355,7 @@ export default function PublicEstadoCuentaPage() {
               </div>
             )}
 
-            {/* ================= LISTADO DE COMPROBANTES ================= */}
+            {/* ================= LISTADO DE COMPROBANTES (TABLA EN ESCRITORIO / TARJETAS EN MÓVIL) ================= */}
             {(activeTab === 'pendientes' || activeTab === 'pagadas' || activeTab === 'todas') && (
               <div>
                 {displayedInvoices.length === 0 ? (
@@ -1240,165 +1370,350 @@ export default function PublicEstadoCuentaPage() {
                     </p>
                     <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                       {activeTab === 'pendientes'
-                        ? 'No tienes saldos ni comprobantes pendientes por cancelar en este momento.'
-                        : 'Intenta seleccionar otro mes o limpiar la búsqueda.'}
+                        ? 'No tienes saldos ni comprobantes pendientes de pago en este momento.'
+                        : 'Intenta seleccionar otro mes o limpiar el filtro de búsqueda.'}
                     </p>
-                    {activeTab === 'pendientes' && invoices.length > 0 && (
+                    {activeTab === 'pendientes' && activeValidInvoices.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setActiveTab('pagadas')}
                         className="mt-4 h-8 px-3.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 text-[#0B2737] transition-colors cursor-pointer"
                       >
-                        Consultar historial de comprobantes ({invoices.length})
+                        Consultar historial de comprobantes ({activeValidInvoices.length})
                       </button>
                     )}
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-200/80">
-                    {/* Encabezado de columnas en escritorio */}
-                    <div className="hidden md:grid md:grid-cols-[minmax(140px,1.25fr)_minmax(90px,0.85fr)_minmax(95px,0.85fr)_minmax(105px,0.9fr)_minmax(130px,1.05fr)_255px] md:items-center gap-3 px-6 py-2.5 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                      <div>Comprobante</div>
-                      <div>Emisión</div>
-                      <div>Paquetes</div>
-                      <div>Estado</div>
-                      <div className="text-right">Saldo</div>
-                      <div className="text-right print:hidden">Acciones</div>
+                  <>
+                    {/* 1. VISTA ESCRITORIO (>= lg) Y MODO IMPRESIÓN: Tabla semántica sin solapamientos */}
+                    <div className="hidden lg:block print:block overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <th scope="col" className="py-3 pl-6 pr-3">Comprobante</th>
+                            <th scope="col" className="py-3 px-3">Emisión</th>
+                            <th scope="col" className="py-3 px-3">Paquetes</th>
+                            <th scope="col" className="py-3 px-3">Estado</th>
+                            <th scope="col" className="py-3 px-3 text-right">Facturado</th>
+                            <th scope="col" className="py-3 pl-3 pr-5 text-right">Saldo pendiente</th>
+                            <th scope="col" className="py-3 pl-3 pr-6 text-right print:hidden">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200/80 text-xs">
+                          {displayedInvoices.map(inv => {
+                            const isExpanded = !!expandedInvoices[inv.id];
+                            const hasItems = inv.items && inv.items.length > 0;
+                            const isPending = inv.pending > 0.01 && inv.status !== 'Anulada';
+                            const pendingCRC = Math.round(inv.pending * stats.exchangeRate);
+                            const totalCRC = Math.round(inv.total * stats.exchangeRate);
+
+                            return (
+                              <React.Fragment key={inv.id}>
+                                <tr className="hover:bg-slate-50/60 transition-colors align-middle">
+                                  {/* Columna 1: Comprobante */}
+                                  <td className="py-3.5 pl-6 pr-3">
+                                    <div className="font-mono font-bold text-sm text-[#0B2737] whitespace-nowrap">
+                                      #{inv.invoice_number}
+                                    </div>
+                                    {inv.notes && (
+                                      <p className="text-[11px] text-slate-500 truncate max-w-[200px] mt-0.5" title={inv.notes}>
+                                        {inv.notes}
+                                      </p>
+                                    )}
+                                  </td>
+
+                                  {/* Columna 2: Emisión */}
+                                  <td className="py-3.5 px-3 whitespace-nowrap">
+                                    <span className="font-medium text-slate-700 block">
+                                      {formatDisplayDate(inv.issue_date)}
+                                    </span>
+                                    {inv.due_date && (
+                                      <span className="text-[11px] text-slate-400 block mt-0.5">
+                                        Vence: {formatDisplayDate(inv.due_date)}
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Columna 3: Paquetes */}
+                                  <td className="py-3.5 px-3 whitespace-nowrap">
+                                    {hasItems ? (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100/90 text-slate-700 font-semibold">
+                                        <Package size={13} className="text-[#14445D] shrink-0" aria-hidden="true" />
+                                        <span>
+                                          {inv.items.length} {inv.items.length === 1 ? 'paquete' : 'paquetes'}
+                                        </span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400">—</span>
+                                    )}
+                                  </td>
+
+                                  {/* Columna 4: Estado */}
+                                  <td className="py-3.5 px-3 whitespace-nowrap">
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                        inv.status === 'Pagada'
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                          : inv.status === 'Parcial'
+                                          ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                                      }`}
+                                    >
+                                      <span
+                                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                          inv.status === 'Pagada' ? 'bg-emerald-500' : 'bg-amber-500'
+                                        }`}
+                                        aria-hidden="true"
+                                      />
+                                      {inv.status === 'Pagada'
+                                        ? 'Pagado'
+                                        : inv.status === 'Parcial'
+                                        ? 'Abono parcial'
+                                        : 'Pendiente de pago'}
+                                    </span>
+                                    {inv.paid > 0 && isPending && (
+                                      <span className="block text-[10px] text-emerald-700 font-semibold mt-1 tabular-nums">
+                                        Abonado: {formatUSD(inv.paid)} USD
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Columna 5: Facturado */}
+                                  <td className="py-3.5 px-3 text-right tabular-nums whitespace-nowrap">
+                                    <span className="text-xs font-semibold text-slate-700 block">
+                                      {formatUSD(inv.total)} <span className="text-[10px] text-slate-400">USD</span>
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                                      ≈ {formatCRC(totalCRC)}
+                                    </span>
+                                  </td>
+
+                                  {/* Columna 6: Saldo pendiente (separada claramente de Acciones) */}
+                                  <td className="py-3.5 pl-3 pr-5 text-right tabular-nums whitespace-nowrap">
+                                    {isPending ? (
+                                      <>
+                                        <span className="text-sm font-bold text-[#0B2737] block">
+                                          {formatUSD(inv.pending)}{' '}
+                                          <span className="text-[11px] font-semibold text-slate-500">USD</span>
+                                        </span>
+                                        <span className="text-[11px] font-medium text-amber-700 block mt-0.5">
+                                          ≈ {formatCRC(pendingCRC)} CRC
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-sm font-bold text-emerald-700 block">
+                                          $0.00 <span className="text-[11px] font-medium text-emerald-600">USD</span>
+                                        </span>
+                                        <span className="text-[10px] font-medium text-emerald-600 block mt-0.5">
+                                          Cancelado
+                                        </span>
+                                      </>
+                                    )}
+                                  </td>
+
+                                  {/* Columna 7: Acciones dedicadas */}
+                                  <td className="py-3.5 pl-3 pr-6 text-right whitespace-nowrap print:hidden">
+                                    <div className="inline-flex items-center justify-end gap-1.5">
+                                      {hasItems && (
+                                        <button
+                                          type="button"
+                                          aria-expanded={isExpanded}
+                                          onClick={() => toggleInvoiceExpand(inv.id)}
+                                          className={`h-8 px-2.5 rounded-lg text-xs font-semibold border inline-flex items-center gap-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] ${
+                                            isExpanded
+                                              ? 'bg-[#0B2737] text-white border-[#0B2737]'
+                                              : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
+                                          }`}
+                                        >
+                                          <span>{isExpanded ? 'Ocultar' : 'Ver paquetes'}</span>
+                                          {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                        </button>
+                                      )}
+
+                                      <a
+                                        href={`/api/invoices/${inv.id}/pdf`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={`Descargar PDF del comprobante ${inv.invoice_number}`}
+                                        className="h-8 px-2.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D]"
+                                        title="Descargar comprobante en PDF"
+                                      >
+                                        <Download size={13} className="text-[#14445D]" />
+                                        <span>PDF</span>
+                                      </a>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenSendModal(inv)}
+                                        aria-label={`Reenviar comprobante ${inv.invoice_number} por correo`}
+                                        className="h-8 px-2.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-[#14445D] border border-slate-200 inline-flex items-center gap-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D]"
+                                        title="Reenviar comprobante por correo electrónico"
+                                      >
+                                        <Mail size={13} />
+                                        <span>Reenviar</span>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+
+                                {/* Fila desplegable con el detalle de paquetes */}
+                                {hasItems && (
+                                  <tr className={`${isExpanded ? '' : 'hidden print:table-row'} bg-slate-50/90`}>
+                                    <td colSpan={7} className="px-6 py-3.5 border-t border-slate-200/60">
+                                      <div className="bg-white rounded-lg border border-slate-200/90 overflow-hidden">
+                                        <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200/70 flex items-center justify-between text-[11px] font-semibold text-slate-600">
+                                          <span>
+                                            Desglose de paquetes del comprobante #{inv.invoice_number}
+                                          </span>
+                                          <span className="tabular-nums text-slate-500">
+                                            {inv.items.length} {inv.items.length === 1 ? 'ítem' : 'ítems'}
+                                          </span>
+                                        </div>
+                                        <table className="w-full text-xs text-left">
+                                          <thead>
+                                            <tr className="bg-slate-50/60 text-slate-500 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider">
+                                              <th className="py-2 px-3.5">Servicio</th>
+                                              <th className="py-2 px-3.5">Tracking / Guía</th>
+                                              <th className="py-2 px-3.5 text-right">Peso / Medida</th>
+                                              <th className="py-2 px-3.5 text-right">Monto</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-100">
+                                            {inv.items.map((it, idx) => (
+                                              <tr key={idx} className="text-slate-700">
+                                                <td className="py-2 px-3.5 font-medium">{it.service_name}</td>
+                                                <td className="py-2 px-3.5 font-mono text-[#14445D] font-semibold select-all">
+                                                  {it.tracking_number || '—'}
+                                                </td>
+                                                <td className="py-2 px-3.5 text-right text-slate-600 tabular-nums whitespace-nowrap">
+                                                  {it.weight ? formatWeightWithUnit(it.weight, it.service_name) : '—'}
+                                                </td>
+                                                <td className="py-2 px-3.5 text-right font-semibold text-[#0B2737] tabular-nums whitespace-nowrap">
+                                                  {formatUSD(it.amount)} USD
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
 
-                    {displayedInvoices.map(inv => {
-                      const isExpanded = !!expandedInvoices[inv.id];
-                      const hasItems = inv.items && inv.items.length > 0;
-                      const isPending = inv.pending > 0.01 && inv.status !== 'Anulada';
-                      const pendingCRC = Math.round(inv.pending * stats.exchangeRate);
+                    {/* 2. VISTA MÓVIL Y TABLET (< lg): Tarjetas limpias y completas sin comprimir datos */}
+                    <div className="lg:hidden print:hidden divide-y divide-slate-200/80">
+                      {displayedInvoices.map(inv => {
+                        const isExpanded = !!expandedInvoices[inv.id];
+                        const hasItems = inv.items && inv.items.length > 0;
+                        const isPending = inv.pending > 0.01 && inv.status !== 'Anulada';
+                        const pendingCRC = Math.round(inv.pending * stats.exchangeRate);
 
-                      return (
-                        <div key={inv.id} className="transition-colors hover:bg-slate-50/50">
-                          <div className="p-4 sm:px-6 sm:py-4 flex flex-col md:grid md:grid-cols-[minmax(140px,1.25fr)_minmax(90px,0.85fr)_minmax(95px,0.85fr)_minmax(105px,0.9fr)_minmax(130px,1.05fr)_255px] md:items-center gap-3">
-                            {/* 1. Número de comprobante */}
-                            <div className="flex items-center justify-between md:justify-start gap-2 min-w-0">
+                        return (
+                          <div key={inv.id} className="p-4 sm:p-5 space-y-3.5 bg-white">
+                            {/* Cabecera de la tarjeta: Comprobante + Estado a la izquierda, Saldo a la derecha */}
+                            <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono font-bold text-sm text-[#0B2737] whitespace-nowrap">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-mono font-bold text-base text-[#0B2737]">
                                     #{inv.invoice_number}
                                   </span>
-                                  {/* Badge visible en móvil junto al número */}
                                   <span
-                                    className={`md:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${
+                                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
                                       inv.status === 'Pagada'
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                        : inv.status === 'Parcial'
-                                        ? 'bg-sky-50 text-sky-800 border-sky-200'
-                                        : inv.status === 'Anulada'
-                                        ? 'bg-slate-100 text-slate-400 border-slate-200 line-through'
                                         : 'bg-amber-50 text-amber-800 border-amber-200'
                                     }`}
                                   >
-                                    {inv.status}
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        inv.status === 'Pagada' ? 'bg-emerald-500' : 'bg-amber-500'
+                                      }`}
+                                    />
+                                    {inv.status === 'Pagada'
+                                      ? 'Pagado'
+                                      : inv.status === 'Parcial'
+                                      ? 'Abono parcial'
+                                      : 'Pendiente de pago'}
                                   </span>
                                 </div>
                                 {inv.notes && (
-                                  <p className="text-[11px] text-slate-500 truncate max-w-[210px] mt-0.5" title={inv.notes}>
-                                    {inv.notes}
-                                  </p>
+                                  <p className="text-xs text-slate-500 mt-1 line-clamp-1">{inv.notes}</p>
                                 )}
                               </div>
 
-                              {/* Saldo en móvil arriba a la derecha */}
-                              <div className="md:hidden text-right tabular-nums shrink-0">
-                                <span className="text-sm font-bold text-[#0B2737] block whitespace-nowrap">
-                                  ${(isPending ? inv.pending : inv.total).toFixed(2)} USD
+                              <div className="text-right tabular-nums shrink-0">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                                  {isPending ? 'Saldo pendiente' : 'Total pagado'}
+                                </span>
+                                <span className="text-base font-bold text-[#0B2737] block whitespace-nowrap">
+                                  {formatUSD(isPending ? inv.pending : inv.total)} USD
                                 </span>
                                 {isPending && (
-                                  <span className="text-[11px] font-medium text-slate-500 block whitespace-nowrap">
-                                    ≈ ₡{pendingCRC.toLocaleString('es-CR')} CRC
+                                  <span className="text-xs font-medium text-amber-700 block whitespace-nowrap">
+                                    ≈ {formatCRC(pendingCRC)} CRC
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            {/* 2. Fecha de emisión */}
-                            <div className="text-xs text-slate-600 flex items-center gap-2 md:block whitespace-nowrap">
-                              <span className="md:hidden text-slate-400">Emisión:</span>
-                              <span className="font-medium text-slate-700">{formatDisplayDate(inv.issue_date)}</span>
-                              {inv.due_date && (
-                                <span className="text-[11px] text-slate-400 md:block">
-                                  Vence: {formatDisplayDate(inv.due_date)}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* 3. Cantidad de paquetes */}
-                            <div className="text-xs whitespace-nowrap">
-                              {hasItems ? (
-                                <span className="inline-flex items-center gap-1.5 text-slate-700 font-medium">
-                                  <Package size={13} className="text-[#14445D] shrink-0" />
-                                  {inv.items.length} {inv.items.length === 1 ? 'paquete' : 'paquetes'}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">—</span>
-                              )}
-                            </div>
-
-                            {/* 4. Estado de pago (Escritorio) */}
-                            <div className="hidden md:flex items-center">
+                            {/* Resumen intermedio en grilla de 3 columnas */}
+                            <div className="grid grid-cols-3 gap-2 py-2.5 px-3 rounded-lg bg-slate-50 border border-slate-200/70 text-xs">
                               <div>
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
-                                    inv.status === 'Pagada'
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : inv.status === 'Parcial'
-                                      ? 'bg-sky-50 text-sky-800 border-sky-200'
-                                      : inv.status === 'Anulada'
-                                      ? 'bg-slate-100 text-slate-400 border-slate-200 line-through'
-                                      : 'bg-amber-50 text-amber-800 border-amber-200'
-                                  }`}
-                                >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                      inv.status === 'Pagada'
-                                        ? 'bg-emerald-500'
-                                        : inv.status === 'Parcial'
-                                        ? 'bg-sky-500'
-                                        : 'bg-amber-500'
-                                    }`}
-                                  />
-                                  {inv.status}
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                                  Emisión
                                 </span>
-                                {inv.paid > 0 && isPending && (
-                                  <span className="block text-[10px] text-emerald-700 font-medium mt-0.5 tabular-nums whitespace-nowrap">
-                                    Abonado: ${inv.paid.toFixed(2)}
-                                  </span>
-                                )}
+                                <span className="font-semibold text-slate-700 tabular-nums mt-0.5 block">
+                                  {formatDisplayDate(inv.issue_date)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                                  Paquetes
+                                </span>
+                                <span className="font-semibold text-slate-700 mt-0.5 inline-flex items-center gap-1">
+                                  <Package size={12} className="text-[#14445D]" />
+                                  {hasItems ? `${inv.items.length} ${inv.items.length === 1 ? 'paq.' : 'paq.'}` : '—'}
+                                </span>
+                              </div>
+                              <div className="text-right tabular-nums">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+                                  Monto facturado
+                                </span>
+                                <span className="font-semibold text-slate-700 mt-0.5 block">
+                                  {formatUSD(inv.total)} USD
+                                </span>
                               </div>
                             </div>
 
-                            {/* 5. Saldo pendiente (Escritorio - columna dedicada) */}
-                            <div className="hidden md:block text-right tabular-nums">
-                              <span className="text-sm font-bold text-[#0B2737] block whitespace-nowrap">
-                                ${(isPending ? inv.pending : inv.total).toFixed(2)}{' '}
-                                <span className="text-[11px] font-medium text-slate-400">USD</span>
-                              </span>
-                              {isPending && (
-                                <span className="text-[11px] font-medium text-slate-500 block whitespace-nowrap mt-0.5">
-                                  ≈ ₡{pendingCRC.toLocaleString('es-CR')} CRC
-                                </span>
-                              )}
-                            </div>
+                            {inv.paid > 0 && isPending && (
+                              <div className="flex items-center justify-between px-3 py-1.5 rounded-md bg-emerald-50/70 border border-emerald-200/70 text-xs text-emerald-800 tabular-nums">
+                                <span>Pagos aplicados a este comprobante:</span>
+                                <strong className="font-bold">+{formatUSD(inv.paid)} USD</strong>
+                              </div>
+                            )}
 
-                            {/* 6. Acciones (columna dedicada) */}
-                            <div className="flex items-center justify-start md:justify-end gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 print:hidden">
+                            {/* Botones de acción en móvil cómodos y sin recortes */}
+                            <div className="flex items-center gap-2 pt-0.5">
                               {hasItems && (
                                 <button
                                   type="button"
+                                  aria-expanded={isExpanded}
                                   onClick={() => toggleInvoiceExpand(inv.id)}
-                                  className={`h-8 px-2.5 rounded-lg text-xs font-medium border inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                                  className={`flex-1 h-9 px-3 rounded-lg text-xs font-semibold border inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                                     isExpanded
                                       ? 'bg-[#0B2737] text-white border-[#0B2737]'
-                                      : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
+                                      : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                                   }`}
                                 >
-                                  <span>{isExpanded ? 'Ocultar' : 'Ver paquetes'}</span>
-                                  {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                  <span>{isExpanded ? 'Ocultar paquetes' : 'Ver paquetes'}</span>
+                                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                 </button>
                               )}
 
@@ -1406,71 +1721,64 @@ export default function PublicEstadoCuentaPage() {
                                 href={`/api/invoices/${inv.id}/pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors"
-                                title="Descargar comprobante en PDF"
+                                className="h-9 px-3.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 inline-flex items-center justify-center gap-1.5 transition-colors shrink-0"
                               >
-                                <Download size={13} className="text-[#14445D]" />
+                                <Download size={14} className="text-[#14445D]" />
                                 <span>PDF</span>
                               </a>
 
                               <button
                                 type="button"
                                 onClick={() => handleOpenSendModal(inv)}
-                                className="h-8 px-2.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-[#14445D] border border-slate-200 inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer"
-                                title="Reenviar comprobante por correo electrónico"
+                                className="h-9 px-3.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-[#14445D] border border-slate-200 inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
                               >
-                                <Mail size={13} />
+                                <Mail size={14} />
                                 <span>Reenviar</span>
                               </button>
                             </div>
-                          </div>
 
-                          {/* Desglose desplegable de paquetes del comprobante */}
-                          {hasItems && (isExpanded || typeof window === 'undefined') && (
-                            <div className="px-4 py-3 sm:px-6 bg-slate-50/90 border-t border-slate-200/70">
-                              <div className="overflow-x-auto bg-white rounded-lg border border-slate-200/80">
-                                <table className="w-full text-xs text-left">
-                                  <thead>
-                                    <tr className="bg-slate-50 text-slate-500 border-b border-slate-100 text-[10px] font-semibold uppercase tracking-wider">
-                                      <th className="py-2 px-3">Servicio</th>
-                                      <th className="py-2 px-3">Tracking / Guía</th>
-                                      <th className="py-2 px-3 text-right">Peso / Medida</th>
-                                      <th className="py-2 px-3 text-right">Monto</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-100">
-                                    {inv.items.map((it, idx) => (
-                                      <tr key={idx} className="text-slate-700">
-                                        <td className="py-2 px-3 font-medium">{it.service_name}</td>
-                                        <td className="py-2 px-3 font-mono text-[#14445D] font-semibold select-all">
-                                          {it.tracking_number || '—'}
-                                        </td>
-                                        <td className="py-2 px-3 text-right text-slate-600 tabular-nums">
+                            {/* Paquetes desplegados en móvil */}
+                            {hasItems && isExpanded && (
+                              <div className="pt-2 space-y-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                  Detalle de paquetes ({inv.items.length})
+                                </p>
+                                <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/60 overflow-hidden">
+                                  {inv.items.map((it, idx) => (
+                                    <div key={idx} className="p-3 flex items-center justify-between gap-3 text-xs">
+                                      <div className="min-w-0">
+                                        <p className="font-semibold text-[#0B2737] truncate">{it.service_name}</p>
+                                        <p className="font-mono text-[11px] text-[#14445D] font-medium mt-0.5 break-all">
+                                          {it.tracking_number || 'Sin guía'}
+                                        </p>
+                                      </div>
+                                      <div className="text-right tabular-nums shrink-0">
+                                        <span className="font-bold text-[#0B2737] block">
+                                          {formatUSD(it.amount)} USD
+                                        </span>
+                                        <span className="text-[11px] text-slate-500 block">
                                           {it.weight ? formatWeightWithUnit(it.weight, it.service_name) : '—'}
-                                        </td>
-                                        <td className="py-2 px-3 text-right font-semibold text-[#0B2737] tabular-nums">
-                                          ${Number(it.amount || 0).toFixed(2)}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
 
                 {activeTab === 'pendientes' && paidInvoices.length > 0 && (
-                  <div className="px-4 py-3 sm:px-6 bg-slate-50/60 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 print:hidden">
+                  <div className="px-4 py-3.5 sm:px-6 bg-slate-50/70 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 print:hidden">
                     <span>
-                      Tienes <strong className="font-semibold text-slate-700">{paidInvoices.length}</strong>{' '}
+                      Además, cuentas con <strong className="font-semibold text-slate-700">{paidInvoices.length}</strong>{' '}
                       {paidInvoices.length === 1
-                        ? 'comprobante cancelado en tu historial.'
-                        : 'comprobantes cancelados en tu historial.'}
+                        ? 'comprobante pagado en tu historial.'
+                        : 'comprobantes pagados en tu historial.'}
                     </span>
                     <button
                       type="button"
@@ -1502,7 +1810,7 @@ export default function PublicEstadoCuentaPage() {
                     {data.pendingPackages.map((pkg, idx) => (
                       <div
                         key={pkg.id || idx}
-                        className="p-4 sm:px-6 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors"
+                        className="p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors"
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1511,7 +1819,7 @@ export default function PublicEstadoCuentaPage() {
                               {pkg.status}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5 flex-wrap">
                             {pkg.tracking_number ? (
                               <span>
                                 Guía:{' '}
@@ -1540,8 +1848,10 @@ export default function PublicEstadoCuentaPage() {
 
                         {pkg.amount !== undefined && pkg.amount > 0 && (
                           <div className="sm:text-right tabular-nums shrink-0">
-                            <span className="text-[10px] font-semibold uppercase text-slate-400 block">Monto</span>
-                            <span className="text-sm font-bold text-[#0B2737]">${Number(pkg.amount).toFixed(2)} USD</span>
+                            <span className="text-[10px] font-semibold uppercase text-slate-400 block">
+                              Monto facturado
+                            </span>
+                            <span className="text-sm font-bold text-[#0B2737]">{formatUSD(pkg.amount)} USD</span>
                           </div>
                         )}
                       </div>
@@ -1556,36 +1866,38 @@ export default function PublicEstadoCuentaPage() {
               <div>
                 {displayedPayments.length === 0 ? (
                   <div className="p-10 sm:p-12 text-center">
-                    <p className="font-semibold text-[#0B2737] text-sm">No se encontraron abonos con este filtro</p>
+                    <p className="font-semibold text-[#0B2737] text-sm">No se encontraron pagos aplicados con este filtro</p>
                     <p className="text-xs text-slate-500 mt-1">
-                      Tus pagos y transferencias se mostrarán aquí una vez aplicados a tu cuenta.
+                      Tus pagos y transferencias se mostrarán aquí una vez conciliados en tu cuenta.
                     </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/80 text-slate-500 uppercase tracking-wider border-b border-slate-200/80 text-[11px] font-semibold">
-                          <th className="py-2.5 px-4 sm:px-6">Fecha</th>
-                          <th className="py-2.5 px-4">Método</th>
-                          <th className="py-2.5 px-4">Referencia</th>
-                          <th className="py-2.5 px-4">Comprobantes aplicados</th>
-                          <th className="py-2.5 px-4 sm:px-6 text-right">Monto</th>
+                        <tr className="bg-slate-50/90 text-slate-500 uppercase tracking-wider border-b border-slate-200/80 text-[11px] font-bold">
+                          <th scope="col" className="py-3 px-4 sm:px-6">Fecha</th>
+                          <th scope="col" className="py-3 px-4">Método</th>
+                          <th scope="col" className="py-3 px-4">Referencia</th>
+                          <th scope="col" className="py-3 px-4">Comprobantes aplicados</th>
+                          <th scope="col" className="py-3 px-4 sm:px-6 text-right">Pago aplicado</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200/70">
                         {displayedPayments.map(p => (
                           <tr key={p.id} className="hover:bg-slate-50/60">
-                            <td className="py-3 px-4 sm:px-6 font-medium text-slate-700 whitespace-nowrap">
+                            <td className="py-3.5 px-4 sm:px-6 font-medium text-slate-700 whitespace-nowrap">
                               {formatDisplayDate(p.payment_date)}
                             </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200/80">
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 font-semibold rounded border border-slate-200/80">
                                 {p.payment_method || 'Pago'}
                               </span>
                             </td>
-                            <td className="py-3 px-4 font-mono text-slate-600">{p.reference_number || '—'}</td>
-                            <td className="py-3 px-4 text-slate-700">
+                            <td className="py-3.5 px-4 font-mono text-slate-600 whitespace-nowrap">
+                              {p.reference_number || '—'}
+                            </td>
+                            <td className="py-3.5 px-4 text-slate-700">
                               {Array.isArray(p.invoice_payments) && p.invoice_payments.length > 0 ? (
                                 <div className="flex flex-wrap gap-1.5">
                                   {p.invoice_payments.map(ip => (
@@ -1595,7 +1907,7 @@ export default function PublicEstadoCuentaPage() {
                                     >
                                       #{ip.invoices?.invoice_number || 'Comprobante'}
                                       <span className="text-slate-500 tabular-nums">
-                                        (${Number(ip.amount_applied).toFixed(2)})
+                                        ({formatUSD(ip.amount_applied)})
                                       </span>
                                     </span>
                                   ))}
@@ -1604,8 +1916,8 @@ export default function PublicEstadoCuentaPage() {
                                 <span className="text-slate-400">—</span>
                               )}
                             </td>
-                            <td className="py-3 px-4 sm:px-6 text-right font-bold text-emerald-700 tabular-nums whitespace-nowrap">
-                              +${Number(p.amount || 0).toFixed(2)} USD
+                            <td className="py-3.5 px-4 sm:px-6 text-right font-bold text-emerald-700 tabular-nums whitespace-nowrap">
+                              +{formatUSD(p.amount)} USD
                             </td>
                           </tr>
                         ))}
@@ -1618,18 +1930,24 @@ export default function PublicEstadoCuentaPage() {
           </section>
 
           {/* Pie de página institucional */}
-          <footer className="pt-4 text-center text-xs text-slate-400 space-y-1">
+          <footer className="pt-4 text-center text-xs text-slate-400 space-y-1 print:pt-6 print:border-t print:border-slate-200">
             <p className="font-semibold text-slate-500">JRS Cargo S.A.</p>
             <p>San Pablo de Heredia, Costa Rica • WhatsApp Soporte: +506 7260-1238 • info@jrscargocr.com</p>
           </footer>
-        </div>
+        </main>
 
         {/* Modal para Reenviar Comprobante */}
         {emailModalOpen && emailInvoice && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-reenviar-titulo"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-[1px] print:hidden"
+          >
             <div className="bg-white rounded-xl max-w-md w-full p-5 sm:p-6 shadow-xl border border-slate-200 relative animate-fade-in">
               <button
                 type="button"
+                aria-label="Cerrar ventana"
                 onClick={() => {
                   if (!isSending) {
                     setEmailModalOpen(false);
@@ -1637,7 +1955,7 @@ export default function PublicEstadoCuentaPage() {
                     setSendError(null);
                   }
                 }}
-                className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                 title="Cerrar ventana"
               >
                 <X size={18} />
@@ -1648,9 +1966,11 @@ export default function PublicEstadoCuentaPage() {
                   <Mail size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold text-[#0B2737] truncate">Reenviar comprobante</h3>
+                  <h3 id="modal-reenviar-titulo" className="text-base font-bold text-[#0B2737] truncate">
+                    Reenviar comprobante
+                  </h3>
                   <p className="text-xs text-slate-500 tabular-nums">
-                    Comprobante #{emailInvoice.invoice_number} • ${emailInvoice.total.toFixed(2)} USD
+                    Comprobante #{emailInvoice.invoice_number} • {formatUSD(emailInvoice.total)} USD
                   </p>
                 </div>
               </div>
@@ -1690,26 +2010,35 @@ export default function PublicEstadoCuentaPage() {
                       <strong className="text-[#0B2737] font-semibold">#{emailInvoice.invoice_number}</strong>
                     </div>
                     <div className="flex justify-between text-slate-500">
-                      <span>Monto total:</span>
+                      <span>Monto facturado:</span>
                       <strong className="text-[#0B2737] font-semibold tabular-nums">
-                        ${emailInvoice.total.toFixed(2)} USD
+                        {formatUSD(emailInvoice.total)} USD
                       </strong>
                     </div>
+                    {emailInvoice.pending > 0.01 && (
+                      <div className="flex justify-between text-slate-500">
+                        <span>Saldo pendiente:</span>
+                        <strong className="text-amber-700 font-semibold tabular-nums">
+                          {formatUSD(emailInvoice.pending)} USD
+                        </strong>
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    <label htmlFor="recipient-email-input" className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Correo electrónico de destino
                     </label>
                     <div className="relative">
                       <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
+                        id="recipient-email-input"
                         type="email"
                         required
                         value={recipientEmail}
                         onChange={e => setRecipientEmail(e.target.value)}
                         placeholder="ejemplo@correo.com"
-                        className="w-full h-10 pl-9 pr-3.5 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#14445D]"
+                        className="w-full h-10 pl-9 pr-3.5 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#14445D] focus:ring-2 focus:ring-[#14445D]/15"
                       />
                     </div>
                   </div>
@@ -1725,7 +2054,7 @@ export default function PublicEstadoCuentaPage() {
                     <button
                       type="button"
                       onClick={() => setEmailModalOpen(false)}
-                      className="h-9 px-4 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                      className="h-9 px-4 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                       disabled={isSending}
                     >
                       Cancelar
