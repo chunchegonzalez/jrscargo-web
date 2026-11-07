@@ -218,11 +218,13 @@ export default function BodegaInventario() {
 
       // Suffix / substring fallback for long carrier barcodes (>= 10 chars)
       if (compact.length >= 10) {
-        for (const [k, val] of invoiceMap.entries()) {
-          if (k.length >= 10 && (compact.endsWith(k) || k.endsWith(compact))) {
-            return val;
+        let matchedVal: { number: string; id: string } | undefined;
+        invoiceMap.forEach((val, k) => {
+          if (!matchedVal && k.length >= 10 && (compact.endsWith(k) || k.endsWith(compact))) {
+            matchedVal = val;
           }
-        }
+        });
+        if (matchedVal) return matchedVal;
       }
       return undefined;
     },
