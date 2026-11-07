@@ -694,8 +694,8 @@ export default function ActividadCorreosPage() {
       {/* Main Table Card */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
         {/* Tabs & Search Bar */}
-        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
+          <div className="inline-flex flex-wrap items-center bg-white border border-slate-200/90 rounded-lg p-0.5 gap-0.5 shadow-2xs">
             {[
               {
                 id: 'cola' as TabFilter,
@@ -732,10 +732,10 @@ export default function ActividadCorreosPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                className={`h-8 px-2.5 rounded-md text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
                   activeTab === tab.id
                     ? 'bg-brand-blue text-white shadow-2xs'
-                    : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-100'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -750,24 +750,29 @@ export default function ActividadCorreosPage() {
             ))}
           </div>
 
-          <div className="relative w-full lg:w-72">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Buscar factura, cliente o correo..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X size={14} />
-              </button>
-            )}
+          <div className="flex items-center gap-2 w-full xl:w-auto">
+            <div className="relative flex-1 xl:w-72">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Buscar factura, cliente o correo..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums shrink-0">
+              {visibleInvoices.length} {visibleInvoices.length === 1 ? 'registro' : 'registros'}
+            </span>
           </div>
         </div>
 

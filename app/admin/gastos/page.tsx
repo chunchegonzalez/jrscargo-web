@@ -238,7 +238,7 @@ export default function GastosPage() {
 
       {/* Contenedor Principal: Barra de filtros + Tabla */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="relative flex-1 min-w-0 sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
             <input 
@@ -246,24 +246,28 @@ export default function GastosPage() {
               placeholder="Buscar proveedor o categoría..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+              className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={14} />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select 
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
+              className={`h-9 px-3 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                selectedMonth !== 'all'
+                  ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                  : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+              }`}
             >
               <option value="all">Mes: Todos los meses</option>
               <option value="0">Enero</option>
@@ -280,7 +284,17 @@ export default function GastosPage() {
               <option value="11">Diciembre</option>
             </select>
 
-            <span className="h-9 px-3 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center tabular-nums">
+            {(searchTerm || selectedMonth !== 'all') && (
+              <button
+                type="button"
+                onClick={() => { setSearchTerm(''); setSelectedMonth('all'); }}
+                className="h-9 px-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <X size={13} /> Limpiar
+              </button>
+            )}
+
+            <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
               {filteredExpenses.length} {filteredExpenses.length === 1 ? 'registro' : 'registros'}
             </span>
           </div>

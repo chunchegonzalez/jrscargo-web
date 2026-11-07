@@ -293,22 +293,22 @@ export default function ClientesPage() {
       {/* Lista de Clientes */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
         {/* Toolbar de búsqueda y filtros */}
-        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 space-y-2.5">
-          <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
-            <div className="relative flex-1 min-w-0 lg:max-w-md">
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 space-y-2.5">
+          <div className="flex flex-col xl:flex-row gap-2.5 items-stretch xl:items-center justify-between">
+            <div className="relative flex-1 min-w-0 xl:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
               <input 
                 type="text" 
                 placeholder="Buscar por nombre, correo, teléfono o cédula..." 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 transition-all" 
+                className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 shadow-2xs focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 transition-all" 
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X size={14} />
                 </button>
@@ -316,12 +316,41 @@ export default function ClientesPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              {/* Segmented Filter Pills */}
+              <div className="inline-flex flex-wrap items-center bg-white border border-slate-200/90 rounded-lg p-0.5 gap-0.5 shadow-2xs">
+                {[
+                  { key: 'todos' as const, label: 'Todos', count: clients.length },
+                  { key: 'con_descuento' as const, label: 'Con Descuento', count: withDiscountCount },
+                  { key: 'con_saldo' as const, label: 'Con Saldo', count: withBalanceCount },
+                  { key: 'sin_facturas' as const, label: 'Sin Facturas', count: withoutInvoicesCount },
+                  { key: 'nuevos' as const, label: 'Nuevos (30d)', count: newClientsCount },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setStatusFilter(f.key)}
+                    className={'h-8 px-2.5 rounded-md text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ' + (
+                      statusFilter === f.key
+                        ? 'bg-brand-blue text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    )}
+                  >
+                    <span>{f.label}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full tabular-nums ${
+                      statusFilter === f.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="h-5 w-px bg-slate-200/90 hidden sm:block mx-0.5" />
+
               <div className="flex items-center gap-1.5">
-                <ArrowUpDown size={13} className="text-slate-400" />
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                  className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-slate-700 font-medium text-xs hover:border-slate-300 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-colors"
+                  className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-slate-700 font-medium text-xs shadow-2xs hover:border-slate-300 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-colors cursor-pointer"
                 >
                   <option value="nombre">Ordenar: Nombre A-Z</option>
                   <option value="descuento">Mayor Descuento</option>
@@ -329,40 +358,22 @@ export default function ClientesPage() {
                   <option value="facturas">Más Facturas</option>
                   <option value="reciente">Más Reciente</option>
                 </select>
-              </div>
-              <span className="h-9 px-3 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center tabular-nums">
-                {filteredClients.length} resultados
-              </span>
-            </div>
-          </div>
 
-          {/* Filter Pills Row */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <Filter size={13} className="text-slate-400 mr-1" />
-            {[
-              { key: 'todos' as const, label: 'Todos', count: clients.length },
-              { key: 'con_descuento' as const, label: 'Con Descuento Fijo', count: withDiscountCount },
-              { key: 'con_saldo' as const, label: 'Con Saldo', count: withBalanceCount },
-              { key: 'sin_facturas' as const, label: 'Sin Facturas', count: withoutInvoicesCount },
-              { key: 'nuevos' as const, label: 'Nuevos (30d)', count: newClientsCount },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => setStatusFilter(f.key)}
-                className={'h-7 px-2.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ' + (
-                  statusFilter === f.key
-                    ? 'bg-brand-blue text-white shadow-2xs'
-                    : 'bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-100'
+                {(searchTerm || statusFilter !== 'todos') && (
+                  <button
+                    type="button"
+                    onClick={() => { setSearchTerm(''); setStatusFilter('todos'); }}
+                    className="h-9 px-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <X size={13} /> Limpiar
+                  </button>
                 )}
-              >
-                <span>{f.label}</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full tabular-nums ${
-                  statusFilter === f.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {f.count}
+
+                <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
+                  {filteredClients.length} resultados
                 </span>
-              </button>
-            ))}
+              </div>
+            </div>
           </div>
         </div>
 

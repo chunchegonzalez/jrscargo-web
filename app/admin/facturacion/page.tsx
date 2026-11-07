@@ -684,129 +684,152 @@ export default function FacturacionDashboard() {
 
       {/* Lista de Facturas */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
-          <div className="relative flex-1 min-w-0 lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
-            <input 
-              type="text" 
-              placeholder="Buscar cliente, correo o n.º de factura..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-2">
-            <select 
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-            >
-              <option value="Todas">Estado: Todos</option>
-              <option value="Pendiente">Pendientes</option>
-              <option value="Pagada">Pagadas</option>
-              <option value="Vencida">Vencidas</option>
-            </select>
-
-            <select 
-              value={filterEmail}
-              onChange={(e) => setFilterEmail(e.target.value)}
-              className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-            >
-              <option value="Todos">Correo: Todos</option>
-              <option value="Enviado">Correo Enviado</option>
-              <option value="No enviado">Correo No Enviado</option>
-            </select>
-
-            {/* Presets rápidos de rango */}
-            <select
-              value={dateRangePreset}
-              onChange={(e) => applyDatePreset(e.target.value)}
-              className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-              title="Seleccionar período predeterminado"
-            >
-              <option value="todos">Período: Todo</option>
-              <option value="hoy">Hoy</option>
-              <option value="ayer">Ayer</option>
-              <option value="7dias">Últimos 7 días</option>
-              <option value="este-mes">Este Mes</option>
-              <option value="mes-anterior">Mes Anterior</option>
-              <option value="ano">Año Actual</option>
-              <option value="personalizado">Personalizado</option>
-            </select>
-            
-            {/* Selector de Rango de Fechas: Desde X hasta Z */}
-            <div className="flex items-center bg-white border border-slate-200/90 rounded-lg p-0.5 shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 pl-2 pr-1 uppercase tracking-wider">Desde</span>
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 space-y-2.5">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
+            {/* Búsqueda principal */}
+            <div className="relative flex-1 min-w-0 xl:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
               <input 
-                type="date" 
-                value={filterStartDate}
-                onChange={(e) => {
-                  setFilterStartDate(e.target.value);
-                  setDateRangePreset('personalizado');
-                }}
-                className="h-8 px-1.5 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
-                title="Fecha inicio (Desde)"
+                type="text" 
+                placeholder="Buscar cliente, correo o n.º de factura..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
               />
-              <span className="text-[10px] font-bold text-slate-400 px-1 uppercase tracking-wider">Hasta</span>
-              <input 
-                type="date" 
-                value={filterEndDate}
-                onChange={(e) => {
-                  setFilterEndDate(e.target.value);
-                  setDateRangePreset('personalizado');
-                }}
-                className="h-8 px-1.5 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
-                title="Fecha fin (Hasta)"
-              />
-              {(filterStartDate || filterEndDate) && (
+              {searchTerm && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setFilterStartDate('');
-                    setFilterEndDate('');
-                    setDateRangePreset('todos');
-                  }}
-                  className="px-1.5 py-1 text-slate-400 hover:text-slate-700 transition-colors"
-                  title="Limpiar fechas"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  <X size={12} />
+                  <X size={14} />
                 </button>
               )}
             </div>
+            
+            {/* Controles de filtrado agrupados */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <select 
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={`h-9 px-2.5 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    filterStatus !== 'Todas'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <option value="Todas">Estado: Todos</option>
+                  <option value="Pendiente">Pendientes</option>
+                  <option value="Pagada">Pagadas</option>
+                  <option value="Vencida">Vencidas</option>
+                </select>
 
-            <button
-              type="button"
-              onClick={() => handleExportIncomeExcel(filteredInvoices, filterStartDate, filterEndDate)}
-              className="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-              title="Descargar estado de ingresos filtrado en Microsoft Excel (.xlsx)"
-            >
-              <FileSpreadsheet size={14} className="text-emerald-600" />
-              <span className="hidden sm:inline">Exportar Excel</span>
-            </button>
+                <select 
+                  value={filterEmail}
+                  onChange={(e) => setFilterEmail(e.target.value)}
+                  className={`h-9 px-2.5 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    filterEmail !== 'Todos'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <option value="Todos">Correo: Todos</option>
+                  <option value="Enviado">Correo Enviado</option>
+                  <option value="No enviado">Correo No Enviado</option>
+                </select>
 
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                className="h-9 px-3 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 rounded-lg text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1 shrink-0 cursor-pointer"
-                title="Restablecer todos los filtros"
-              >
-                <X size={13} /> Limpiar
-              </button>
-            )}
+                {/* Presets rápidos de rango */}
+                <select
+                  value={dateRangePreset}
+                  onChange={(e) => applyDatePreset(e.target.value)}
+                  className={`h-9 px-2.5 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    dateRangePreset !== 'todos'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                  title="Seleccionar período predeterminado"
+                >
+                  <option value="todos">Período: Todo</option>
+                  <option value="hoy">Hoy</option>
+                  <option value="ayer">Ayer</option>
+                  <option value="7dias">Últimos 7 días</option>
+                  <option value="este-mes">Este Mes</option>
+                  <option value="mes-anterior">Mes Anterior</option>
+                  <option value="ano">Año Actual</option>
+                  <option value="personalizado">Rango personalizado</option>
+                </select>
+                
+                {/* Selector compacto de Rango de Fechas: Desde X hasta Z */}
+                <div className="inline-flex items-center h-9 bg-white border border-slate-200/90 rounded-lg px-2 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 pr-1 uppercase tracking-wider">Desde</span>
+                  <input 
+                    type="date" 
+                    value={filterStartDate}
+                    onChange={(e) => {
+                      setFilterStartDate(e.target.value);
+                      setDateRangePreset('personalizado');
+                    }}
+                    className="h-7 px-1 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                    title="Fecha inicio (Desde)"
+                  />
+                  <span className="text-slate-300 px-1">—</span>
+                  <span className="text-[10px] font-bold text-slate-400 pr-1 uppercase tracking-wider">Hasta</span>
+                  <input 
+                    type="date" 
+                    value={filterEndDate}
+                    onChange={(e) => {
+                      setFilterEndDate(e.target.value);
+                      setDateRangePreset('personalizado');
+                    }}
+                    className="h-7 px-1 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
+                    title="Fecha fin (Hasta)"
+                  />
+                  {(filterStartDate || filterEndDate) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterStartDate('');
+                        setFilterEndDate('');
+                        setDateRangePreset('todos');
+                      }}
+                      className="pl-1.5 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                      title="Limpiar fechas"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-            <span className="h-9 px-3 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center tabular-nums">
-              {filteredInvoices.length} de {invoices.length}
-            </span>
+              <div className="h-5 w-px bg-slate-200/90 hidden sm:block mx-0.5" />
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleExportIncomeExcel(filteredInvoices, filterStartDate, filterEndDate)}
+                  className="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
+                  title="Descargar estado de ingresos filtrado en Microsoft Excel (.xlsx)"
+                >
+                  <FileSpreadsheet size={14} className="text-emerald-600" />
+                  <span className="hidden sm:inline">Exportar Excel</span>
+                </button>
+
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="h-9 px-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 rounded-lg text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1 shrink-0 cursor-pointer"
+                    title="Restablecer todos los filtros"
+                  >
+                    <X size={13} /> Limpiar
+                  </button>
+                )}
+
+                <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
+                  {filteredInvoices.length} de {invoices.length}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

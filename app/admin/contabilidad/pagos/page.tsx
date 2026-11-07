@@ -154,7 +154,7 @@ export default function HistorialPagosPage() {
 
       {/* Lista de Pagos */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="relative flex-1 min-w-0 lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
             <input 
@@ -162,39 +162,39 @@ export default function HistorialPagosPage() {
               placeholder="Buscar cliente, referencia, método o factura..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-4 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
+              className="w-full h-9 pl-9 pr-4 bg-white border border-slate-200/90 rounded-lg shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
             />
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Desde:</span>
+            <div className="inline-flex items-center h-9 bg-white border border-slate-200/90 rounded-lg px-2.5 shadow-2xs">
+              <span className="text-[10px] font-bold text-slate-400 pr-1.5 uppercase tracking-wider">Desde</span>
               <input 
                 type="date" 
                 value={paymentStartDate}
                 onChange={(e) => setPaymentStartDate(e.target.value)}
-                className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-blue transition-colors"
+                className="h-7 px-1 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
               />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Hasta:</span>
+              <span className="text-slate-300 px-1.5">—</span>
+              <span className="text-[10px] font-bold text-slate-400 pr-1.5 uppercase tracking-wider">Hasta</span>
               <input 
                 type="date" 
                 value={paymentEndDate}
                 onChange={(e) => setPaymentEndDate(e.target.value)}
-                className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-blue transition-colors"
+                className="h-7 px-1 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
               />
             </div>
-            {(paymentStartDate || paymentEndDate) && (
+
+            {(paymentStartDate || paymentEndDate || searchTerm) && (
               <button 
-                onClick={() => { setPaymentStartDate(''); setPaymentEndDate(''); }}
-                className="h-9 px-3 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/60 font-semibold rounded-lg transition-colors cursor-pointer"
+                onClick={() => { setPaymentStartDate(''); setPaymentEndDate(''); setSearchTerm(''); }}
+                className="h-9 px-2.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200/60 font-semibold rounded-lg transition-colors cursor-pointer"
               >
-                Limpiar Fechas
+                Limpiar
               </button>
             )}
 
-            <span className="h-9 px-3 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center tabular-nums">
+            <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
               {filteredPayments.length} {filteredPayments.length === 1 ? 'pago' : 'pagos'}
             </span>
           </div>

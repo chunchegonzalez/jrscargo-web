@@ -173,7 +173,6 @@ export default function BodegaInventario() {
   };
 
   const secondaryFilterCount =
-    (filterInvoice !== 'Todas' ? 1 : 0) +
     (filterWeight !== 'Todos' ? 1 : 0) +
     (colTracking.trim() !== '' ? 1 : 0) +
     (colClient.trim() !== '' ? 1 : 0) +
@@ -601,24 +600,24 @@ export default function BodegaInventario() {
 
       {/* Contenedor Principal: Barra de filtros + Tabla de inventario */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        {/* 3. Barra de filtros compacta */}
-        <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 space-y-2.5">
-          <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
+        {/* 3. Barra de filtros unificada, limpia y ordenada */}
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 space-y-2.5">
+          <div className="flex flex-col xl:flex-row gap-2.5 items-stretch xl:items-center justify-between">
             {/* Búsqueda principal amplia */}
-            <div className="relative flex-1 min-w-0 lg:max-w-md">
+            <div className="relative flex-1 min-w-0 xl:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
               <input
                 type="text"
                 placeholder="Buscar por tracking, cliente o factura..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 transition-all"
+                className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 shadow-2xs focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   title="Limpiar búsqueda"
                 >
                   <X size={14} />
@@ -626,305 +625,355 @@ export default function BodegaInventario() {
               )}
             </div>
 
-            {/* Filtros rápidos: Empresa, Estado, Fecha + Más filtros + Columnas */}
+            {/* Controles de filtrado agrupados y alineados */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Filtro Rápido: Empresa */}
-              <select
-                value={filterCompany}
-                onChange={e => setFilterCompany(e.target.value)}
-                className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-slate-700 font-medium text-xs hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-                title="Filtrar por empresa"
-              >
-                <option value="Todas">Empresa: Todas</option>
-                <option value="JRS CARGO">JRS CARGO</option>
-                <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
-                <option value="JR LOGISTICS">JR LOGISTICS</option>
-                <option value="TRINITY BOX">TRINITY BOX</option>
-              </select>
-
-              {/* Filtro Rápido: Estado */}
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-slate-700 font-medium text-xs hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-                title="Filtrar por estado"
-              >
-                <option value="Todos">Estado: Todos</option>
-                <option value="En Bodega">En Bodega</option>
-                <option value="Entregado">Entregados</option>
-              </select>
-
-              {/* Filtro Rápido: Fecha */}
-              <input
-                type="date"
-                value={filterDate}
-                onChange={e => setFilterDate(e.target.value)}
-                className="h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-slate-700 font-medium text-xs hover:border-slate-300 focus:outline-none focus:border-brand-blue transition-colors"
-                title="Filtrar por fecha de ingreso"
-              />
-
-              {/* Botón: Más filtros */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMoreFilters(prev => !prev);
-                  setShowColumnsMenu(false);
-                }}
-                className={`h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
-                  showMoreFilters || secondaryFilterCount > 0
-                    ? 'bg-brand-blue/10 border-brand-blue/30 text-brand-blue'
-                    : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <SlidersHorizontal size={13} />
-                <span>Más filtros</span>
-                {secondaryFilterCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-brand-blue text-white text-[10px] font-bold">
-                    {secondaryFilterCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Selector de Columnas Visibles */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowColumnsMenu(prev => !prev);
-                    setShowMoreFilters(false);
-                  }}
-                  className="h-9 px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer"
-                  title="Personalizar columnas visibles"
+              {/* Grupo 1: Selectores rápidos principales */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <select
+                  value={filterCompany}
+                  onChange={e => setFilterCompany(e.target.value)}
+                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    filterCompany !== 'Todas'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                  title="Filtrar por empresa"
                 >
-                  <Columns size={13} className="text-slate-500" />
-                  <span className="hidden sm:inline">Columnas</span>
-                </button>
+                  <option value="Todas">Empresa: Todas</option>
+                  <option value="JRS CARGO">JRS CARGO</option>
+                  <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+                  <option value="JR LOGISTICS">JR LOGISTICS</option>
+                  <option value="TRINITY BOX">TRINITY BOX</option>
+                </select>
 
-                {showColumnsMenu && (
-                  <div
-                    className="absolute right-0 mt-1.5 w-48 bg-white rounded-xl border border-slate-200 shadow-lg p-2 z-30 space-y-1"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Columnas visibles
-                    </div>
-                    {(
-                      [
-                        { key: 'client', label: 'Cliente' },
-                        { key: 'company', label: 'Empresa' },
-                        { key: 'weight', label: 'Peso' },
-                        { key: 'invoice', label: 'Factura' },
-                        { key: 'date', label: 'Fecha de Ingreso' },
-                        { key: 'status', label: 'Estado Interno' }
-                      ] as { key: ColumnKey; label: string }[]
-                    ).map(col => (
-                      <label
-                        key={col.key}
-                        className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 text-xs text-slate-700 font-medium cursor-pointer"
-                      >
-                        <span>{col.label}</span>
-                        <input
-                          type="checkbox"
-                          checked={visibleColumns[col.key]}
-                          onChange={() => toggleColumn(col.key)}
-                          className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    filterStatus !== 'Todos'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                  title="Filtrar por estado interno"
+                >
+                  <option value="Todos">Estado: Todos</option>
+                  <option value="En Bodega">En Bodega</option>
+                  <option value="Entregado">Entregados</option>
+                </select>
 
-              {/* Contador compacto */}
-              <span className="h-9 px-3 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg inline-flex items-center tabular-nums">
-                {filteredInventory.length} {filteredInventory.length === 1 ? 'registro' : 'registros'}
-              </span>
-            </div>
-          </div>
-
-          {/* Panel expandible: Más filtros (secundarios) */}
-          {showMoreFilters && (
-            <div className="pt-2.5 border-t border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 animate-fade-in">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Estado de Facturación
-                </label>
                 <select
                   value={filterInvoice}
                   onChange={e => setFilterInvoice(e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-blue"
+                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    filterInvoice !== 'Todas'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                  title="Filtrar por estado de facturación"
                 >
-                  <option value="Todas">Todas las Facturas</option>
-                  <option value="Facturado">Con Factura (Facturados)</option>
-                  <option value="Sin Factura">Sin Factura (Pendientes)</option>
+                  <option value="Todas">Factura: Todas</option>
+                  <option value="Facturado">Con Factura</option>
+                  <option value="Sin Factura">Sin Factura</option>
                 </select>
-              </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Rango de Peso
-                </label>
-                <select
-                  value={filterWeight}
-                  onChange={e => setFilterWeight(e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-blue"
-                >
-                  <option value="Todos">Todos los Pesos</option>
-                  <option value="light">Hasta 5 lbs</option>
-                  <option value="medium">5 a 15 lbs</option>
-                  <option value="heavy">Más de 15 lbs</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Tracking específico
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. 1Z999..."
-                  value={colTracking}
-                  onChange={e => setColTracking(e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-brand-blue"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Cliente específico
-                </label>
-                <input
-                  type="text"
-                  placeholder="Nombre del cliente..."
-                  value={colClient}
-                  onChange={e => setColClient(e.target.value)}
-                  className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-brand-blue"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Nº de Factura
-                </label>
-                <div className="flex items-center gap-1.5">
+                <div className="relative inline-flex items-center">
                   <input
-                    type="text"
-                    placeholder="Ej. F-0341"
-                    value={colInvoiceSearch}
-                    onChange={e => setColInvoiceSearch(e.target.value)}
-                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-brand-blue"
+                    type="date"
+                    value={filterDate}
+                    onChange={e => setFilterDate(e.target.value)}
+                    className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                      filterDate
+                        ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold pr-7'
+                        : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                    }`}
+                    title="Filtrar por fecha de ingreso"
                   />
+                  {filterDate && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterDate('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title="Quitar fecha"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="h-5 w-px bg-slate-200/90 hidden sm:block mx-0.5" />
+
+              {/* Grupo 2: Herramientas de vista y filtros avanzados */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMoreFilters(prev => !prev);
+                    setShowColumnsMenu(false);
+                  }}
+                  className={`h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
+                    showMoreFilters || secondaryFilterCount > 0
+                      ? 'bg-brand-blue text-white border-brand-blue'
+                      : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <SlidersHorizontal size={13} />
+                  <span>Avanzado</span>
+                  {secondaryFilterCount > 0 && (
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                        showMoreFilters || secondaryFilterCount > 0
+                          ? 'bg-white/20 text-white'
+                          : 'bg-brand-blue text-white'
+                      }`}
+                    >
+                      {secondaryFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Selector de Columnas Visibles */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowColumnsMenu(prev => !prev);
+                      setShowMoreFilters(false);
+                    }}
+                    className={`h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
+                      showColumnsMenu
+                        ? 'bg-slate-100 border-slate-300 text-slate-900'
+                        : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
+                    }`}
+                    title="Personalizar columnas visibles"
+                  >
+                    <Columns size={13} className="text-slate-500" />
+                    <span className="hidden sm:inline">Columnas</span>
+                  </button>
+
+                  {showColumnsMenu && (
+                    <div
+                      className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl border border-slate-200 shadow-lg p-2.5 z-30 space-y-1"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Columnas de la tabla
+                      </div>
+                      {(
+                        [
+                          { key: 'client', label: 'Cliente' },
+                          { key: 'company', label: 'Empresa' },
+                          { key: 'weight', label: 'Peso' },
+                          { key: 'invoice', label: 'Factura' },
+                          { key: 'date', label: 'Fecha de Ingreso' },
+                          { key: 'status', label: 'Estado Interno' }
+                        ] as { key: ColumnKey; label: string }[]
+                      ).map(col => (
+                        <label
+                          key={col.key}
+                          className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 text-xs text-slate-700 font-medium cursor-pointer"
+                        >
+                          <span>{col.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={visibleColumns[col.key]}
+                            onChange={() => toggleColumn(col.key)}
+                            className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="h-9 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Restablecer todos los filtros"
+                  >
+                    <X size={13} />
+                    <span>Limpiar</span>
+                  </button>
+                )}
+
+                {/* Contador compacto */}
+                <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
+                  {filteredInventory.length} {filteredInventory.length === 1 ? 'registro' : 'registros'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Panel expandible limpio: Filtros avanzados por campo */}
+          {showMoreFilters && (
+            <div className="bg-white rounded-xl border border-slate-200/80 p-3 shadow-2xs space-y-2.5 animate-fade-in">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Filter size={12} className="text-brand-blue" />
+                  Búsqueda avanzada por columna
+                </span>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowColumnFiltersRow(prev => !prev)}
-                    className={`h-8 px-2.5 rounded-lg border text-[11px] font-semibold shrink-0 transition-colors cursor-pointer ${
+                    className={`h-7 px-2.5 rounded-md border text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                       showColumnFiltersRow
-                        ? 'bg-brand-blue text-white border-brand-blue'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/30'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
-                    title="Mostrar/ocultar filtros rápidos en encabezados de columna"
                   >
-                    Fila filtros
+                    <span>Filtros rápidos en cabeceras</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${showColumnFiltersRow ? 'bg-brand-blue' : 'bg-slate-300'}`} />
                   </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Rango de Peso
+                  </label>
+                  <select
+                    value={filterWeight}
+                    onChange={e => setFilterWeight(e.target.value)}
+                    className="w-full h-8 px-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-blue transition-colors"
+                  >
+                    <option value="Todos">Todos los Pesos</option>
+                    <option value="light">Liviano (Hasta 5 lbs)</option>
+                    <option value="medium">Mediano (5 a 15 lbs)</option>
+                    <option value="heavy">Pesado (Más de 15 lbs)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Tracking Exacto
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 1Z999..."
+                    value={colTracking}
+                    onChange={e => setColTracking(e.target.value)}
+                    className="w-full h-8 px-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-brand-blue transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Nombre del Cliente
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Filtrar cliente..."
+                    value={colClient}
+                    onChange={e => setColClient(e.target.value)}
+                    className="w-full h-8 px-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-brand-blue transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    N.º de Factura
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. F-0372"
+                    value={colInvoiceSearch}
+                    onChange={e => setColInvoiceSearch(e.target.value)}
+                    className="w-full h-8 px-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-brand-blue transition-colors"
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* Chips de filtros activos + Limpiar filtros */}
+          {/* Chips de filtros activos */}
           {hasActiveFilters && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[11px] font-medium text-slate-400 mr-1">Filtros activos:</span>
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] font-semibold text-slate-400 mr-1">Activos:</span>
 
               {searchQuery.trim() !== '' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Búsqueda: &ldquo;{searchQuery}&rdquo;
-                  <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {filterCompany !== 'Todas' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Empresa: {filterCompany}
-                  <button type="button" onClick={() => setFilterCompany('Todas')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setFilterCompany('Todas')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {filterStatus !== 'Todos' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Estado: {filterStatus}
-                  <button type="button" onClick={() => setFilterStatus('Todos')} className="text-slate-400 hover:text-slate-700">
-                    <X size={12} />
-                  </button>
-                </span>
-              )}
-
-              {filterDate !== '' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
-                  Fecha: {filterDate}
-                  <button type="button" onClick={() => setFilterDate('')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setFilterStatus('Todos')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {filterInvoice !== 'Todas' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Facturación: {filterInvoice}
-                  <button type="button" onClick={() => setFilterInvoice('Todas')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setFilterInvoice('Todas')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {filterDate !== '' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
+                  Fecha: {filterDate}
+                  <button type="button" onClick={() => setFilterDate('')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {filterWeight !== 'Todos' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Peso: {weightFilterLabel[filterWeight] || filterWeight}
-                  <button type="button" onClick={() => setFilterWeight('Todos')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setFilterWeight('Todos')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {colTracking.trim() !== '' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Tracking: {colTracking}
-                  <button type="button" onClick={() => setColTracking('')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setColTracking('')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {colClient.trim() !== '' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Cliente: {colClient}
-                  <button type="button" onClick={() => setColClient('')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setColClient('')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
 
               {colInvoiceSearch.trim() !== '' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Factura: {colInvoiceSearch}
-                  <button type="button" onClick={() => setColInvoiceSearch('')} className="text-slate-400 hover:text-slate-700">
+                  <button type="button" onClick={() => setColInvoiceSearch('')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
               )}
-
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                className="ml-1 px-2 py-0.5 rounded-md text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors inline-flex items-center gap-1 cursor-pointer"
-              >
-                <X size={12} />
-                Limpiar filtros
-              </button>
             </div>
           )}
         </div>
