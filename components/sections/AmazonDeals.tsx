@@ -1,201 +1,261 @@
 'use client';
 
-import { ArrowRight, Laptop, Smartphone, Shirt, ShieldCheck, Zap, Sparkles } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ArrowRight, Laptop, Smartphone, Shirt, ShieldCheck, Zap, Tag } from 'lucide-react';
 import { FaAmazon } from 'react-icons/fa';
-import { motion, Variants } from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useLanguage } from '@/context/LanguageContext';
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15 }
-  }
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
-};
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export default function AmazonDeals() {
   const { language } = useLanguage();
   const isEn = language === 'en';
 
+  const sectionRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const cardsGridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      if (headerRef.current) {
+        gsap.fromTo(
+          headerRef.current,
+          { y: 16, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.55,
+            ease: 'power2.out',
+            clearProps: 'transform',
+            scrollTrigger: {
+              trigger: headerRef.current,
+              start: 'top 88%',
+              toggleActions: 'play none none none',
+            },
+          }
+        );
+      }
+
+      if (cardsGridRef.current) {
+        const cards = cardsGridRef.current.querySelectorAll<HTMLElement>('[data-amazon-card]');
+        if (cards.length) {
+          gsap.fromTo(
+            cards,
+            { y: 18, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.5,
+              stagger: 0.08,
+              ease: 'power2.out',
+              clearProps: 'transform',
+              scrollTrigger: {
+                trigger: cardsGridRef.current,
+                start: 'top 88%',
+                toggleActions: 'play none none none',
+              },
+            }
+          );
+        }
+      }
+    });
+
+    mm.add('(prefers-reduced-motion: reduce)', () => {
+      if (headerRef.current) {
+        gsap.set(headerRef.current, { clearProps: 'all', opacity: 1, y: 0 });
+      }
+      if (cardsGridRef.current) {
+        const cards = cardsGridRef.current.querySelectorAll<HTMLElement>('[data-amazon-card]');
+        gsap.set(cards, { clearProps: 'all', opacity: 1, y: 0 });
+      }
+    });
+
+    return () => {
+      mm.revert();
+    };
+  }, []);
+
   const deals = [
     {
-      title: isEn ? 'Deals of the Day' : 'Ofertas del Día',
+      title: isEn ? 'Deals of the Day' : 'Ofertas del día',
       discount: isEn ? 'Up to 50% discount' : 'Hasta 50% de descuento',
       icon: Zap,
-      color: 'from-brand-red to-rose-500',
       link: 'https://www.amazon.com/deals',
     },
     {
       title: isEn ? 'Electronics' : 'Electrónica',
       discount: isEn ? 'Top trending tech' : 'Lo más buscado',
       icon: Laptop,
-      color: 'from-brand-yellow to-amber-400',
       link: 'https://www.amazon.com/b?node=16225009011',
     },
     {
       title: isEn ? 'Smartphones' : 'Celulares',
       discount: isEn ? 'Accessories & gadgets' : 'Accesorios y más',
       icon: Smartphone,
-      color: 'from-brand-blue-light to-blue-400',
       link: 'https://www.amazon.com/b?node=2335752011',
     },
     {
-      title: isEn ? 'Fashion & Apparel' : 'Moda y Ropa',
+      title: isEn ? 'Fashion & Apparel' : 'Moda y ropa',
       discount: isEn ? 'Seasonal collections' : 'Tendencias actuales',
       icon: Shirt,
-      color: 'from-brand-red to-orange-500',
       link: 'https://www.amazon.com/b?node=7141123011',
     },
   ];
 
   const tickerItems = [
-    { icon: FaAmazon, text: isEn ? 'AMAZON BUSINESS PARTNER' : 'AMAZON BUSINESS PARTNER', highlight: true },
-    { icon: ShieldCheck, text: isEn ? 'PRIORITY DISPATCH IN MIAMI' : 'DESPACHOS PRIORITARIOS EN MIAMI', highlight: false },
-    { icon: Sparkles, text: isEn ? 'EXCLUSIVE IMPORT RATES' : 'TARIFAS EXCLUSIVAS DE IMPORTACIÓN', highlight: false },
-    { icon: Zap, text: isEn ? 'DIRECT CONNECTION TO COSTA RICA' : 'CONEXIÓN DIRECTA A COSTA RICA', highlight: false },
-    { icon: ShieldCheck, text: isEn ? '100% GUARANTEED SHIPMENTS' : 'ENVÍOS 100% GARANTIZADOS', highlight: false },
+    {
+      icon: ShieldCheck,
+      text: isEn ? '100% GUARANTEED SHIPMENTS' : 'ENVÍOS 100% GARANTIZADOS',
+      highlight: false,
+    },
+    {
+      icon: FaAmazon,
+      text: 'AMAZON BUSINESS PARTNER',
+      highlight: true,
+    },
+    {
+      icon: ShieldCheck,
+      text: isEn ? 'PRIORITY DISPATCH IN MIAMI' : 'DESPACHOS PRIORITARIOS EN MIAMI',
+      highlight: false,
+    },
+    {
+      icon: Tag,
+      text: isEn ? 'EXCLUSIVE IMPORT RATES' : 'TARIFAS EXCLUSIVAS',
+      highlight: false,
+    },
+    {
+      icon: Zap,
+      text: isEn ? 'DIRECT CONNECTION TO COSTA RICA' : 'CONEXIÓN DIRECTA A COSTA RICA',
+      highlight: false,
+    },
   ];
 
   return (
-    <section className="py-20 bg-[#0B1D2B] relative overflow-hidden">
-      {/* Ambient background glows (GPU-friendly radial gradients) */}
-      <div
-        data-parallax-bg="45"
-        className="absolute top-0 left-1/4 w-[650px] h-[400px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%)',
-        }}
-      />
-      <div
-        data-parallax-bg="-35"
-        className="absolute bottom-0 right-1/4 w-[550px] h-[350px] rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(239, 68, 68, 0.12) 0%, transparent 70%)',
-        }}
-      />
-
-      {/* Ultra-Pro Premium Partner Ticker Banner */}
-      <div className="relative w-full border-y border-white/10 bg-[#07131D]/90 shadow-2xl py-3.5 mb-14 overflow-hidden z-20">
-        {/* Left & Right Smooth Edge Masks */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-r from-[#07131D] to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-24 sm:w-40 bg-gradient-to-l from-[#07131D] to-transparent z-10" />
+    <section
+      ref={sectionRef}
+      className="pb-14 sm:pb-16 bg-[#071724] relative overflow-hidden"
+    >
+      {/* Franja superior delgada con movimiento dinámico estilo banner */}
+      <div className="relative w-full border-y border-white/10 bg-[#05111B] py-2.5 mb-10 sm:mb-12 overflow-hidden z-20">
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-[#05111B] to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-[#05111B] to-transparent z-10" />
 
         <div className="flex select-none">
           <div className="flex items-center whitespace-nowrap shrink-0 animate-gpu-ticker">
-            {[...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems].map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <div key={idx} className="flex items-center mx-6 gap-2.5">
-                  <div className={`flex items-center justify-center w-7 h-7 rounded-lg ${
-                    item.highlight 
-                      ? 'bg-gradient-to-tr from-[#FF9900] to-amber-300 text-[#0B1D2B] shadow-md shadow-[#FF9900]/30' 
-                      : 'bg-white/10 text-brand-yellow'
-                  }`}>
-                    <Icon size={item.highlight ? 15 : 14} />
+            {[...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems].map(
+              (item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <div key={idx} className="flex items-center">
+                    <div className="flex items-center gap-2 px-5 sm:px-7">
+                      <Icon
+                        size={item.highlight ? 15 : 14}
+                        className="text-[#F5B027] shrink-0"
+                      />
+                      <span
+                        className={`text-[11px] sm:text-xs tracking-[0.08em] uppercase ${
+                          item.highlight
+                            ? 'text-[#F5B027] font-extrabold'
+                            : 'text-slate-200 font-semibold'
+                        }`}
+                      >
+                        {item.text}
+                      </span>
+                    </div>
+                    <span className="h-3.5 w-px bg-white/15 shrink-0" aria-hidden="true" />
                   </div>
-                  <span className={`text-xs sm:text-sm font-black tracking-widest uppercase ${
-                    item.highlight 
-                      ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#FF9900] via-amber-300 to-[#FF9900] font-black' 
-                      : 'text-gray-300 font-bold'
-                  }`}>
-                    {item.text}
-                  </span>
-                  <span className="text-white/20 text-xs ml-4">✦</span>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
         </div>
       </div>
 
-      <div className="container-max relative z-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div className="flex items-start gap-4">
-            <motion.div 
-              initial={{ rotate: -180, scale: 0 }}
-              whileInView={{ rotate: 0, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ type: "spring", duration: 1 }}
-              className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-[#0B1D2B] shadow-xl shadow-black/30 shrink-0"
-            >
-              <FaAmazon size={36} className="text-[#FF9900]" />
-            </motion.div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Encabezado limpio: distintivo discreto arriba + título/texto y botón en la misma fila */}
+        <div ref={headerRef} className="mb-8 sm:mb-10">
+          {/* Distintivo discreto de Socio Oficial Amazon Business Partner */}
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+              <FaAmazon size={24} className="text-[#0B1D2B]" />
+            </div>
+            <span className="h-5 w-px bg-white/20" aria-hidden="true" />
+            <span className="text-xs sm:text-sm font-bold text-[#F5B027] tracking-wide">
+              {isEn
+                ? 'Official Amazon Business Partner'
+                : 'Socio Oficial Amazon Business Partner'}
+            </span>
+          </div>
+
+          {/* Fila con título y descripción a la izquierda, y botón principal dorado a la derecha */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FF9900]/15 border border-[#FF9900]/30 text-amber-300 text-xs font-bold mb-3 shadow-sm"
-              >
-                <ShieldCheck size={14} className="text-[#FF9900]" /> {isEn ? 'Official Amazon Business Partner' : 'Socio Oficial Amazon Business Partner'}
-              </motion.div>
-              <h2 className="text-3xl md:text-5xl font-black text-white mb-3 tracking-tight">
-                {isEn ? 'Exclusive' : 'Promociones'} <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF9900] via-amber-300 to-brand-red">{isEn ? 'Offers & Deals' : 'Exclusivas'}</span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight mb-2">
+                {isEn ? 'Exclusive promotions' : 'Promociones exclusivas'}
               </h2>
-              <p className="text-gray-300 text-sm md:text-base max-w-md text-balance font-medium">
-                {isEn 
+              <p className="text-slate-300 text-sm sm:text-[15px] max-w-xl leading-relaxed">
+                {isEn
                   ? 'Take advantage of daily Amazon savings and ship your purchases directly to Costa Rica quickly and securely with JRS Cargo.'
                   : 'Aprovecha los mejores descuentos de Amazon y trae tus compras a Costa Rica de forma rápida y segura con JRS Cargo.'}
               </p>
             </div>
+
+            <a
+              href="https://www.amazon.com/deals"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center justify-center gap-2 bg-[#F5B027] hover:bg-[#FF9900] text-[#071724] px-5 py-3 rounded-xl font-extrabold text-sm transition-all duration-200 shadow-sm hover:-translate-y-0.5 shrink-0 self-start md:self-center"
+            >
+              <span>{isEn ? 'View all deals' : 'Ver todas las ofertas'}</span>
+              <ArrowRight
+                size={16}
+                strokeWidth={2.4}
+                className="group-hover:translate-x-0.5 transition-transform"
+              />
+            </a>
           </div>
-          
-          <motion.a 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            href="https://www.amazon.com/deals" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2.5 bg-gradient-to-r from-[#FF9900] to-amber-500 hover:from-amber-400 hover:to-[#FF9900] text-[#0B1D2B] px-6 py-3.5 rounded-xl font-black transition-all duration-300 shadow-lg shadow-[#FF9900]/25 hover:shadow-[#FF9900]/40 hover:scale-[1.02]"
-          >
-            {isEn ? 'View all deals' : 'Ver todas las ofertas'} <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </motion.a>
         </div>
 
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+        {/* Cuatro tarjetas del mismo tamaño con fondos azul marino sutiles, bordes finos e iconos coral pequeños */}
+        <div
+          ref={cardsGridRef}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {deals.map((deal, index) => {
             const Icon = deal.icon;
             return (
-              <motion.a 
-                variants={itemVariants}
+              <a
                 key={index}
+                data-amazon-card
                 href={deal.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative bg-white/[0.04] backdrop-blur-md p-6 rounded-3xl border border-white/10 hover:border-[#FF9900]/50 hover:bg-white/[0.08] overflow-hidden flex flex-col shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="group bg-[#0D2132]/90 hover:bg-[#122B40] p-5 sm:p-6 rounded-2xl border border-slate-700/75 hover:border-[#F5B027]/50 flex flex-col justify-between min-h-[140px] transition-all duration-200 hover:-translate-y-0.5"
               >
-                {/* Hover gradient glow */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#FF9900]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                <div className={`w-14 h-14 bg-gradient-to-br ${deal.color} rounded-2xl flex items-center justify-center text-white shadow-lg mb-6 group-hover:scale-110 transition-transform duration-500 relative z-10`}>
-                  <Icon size={24} />
-                </div>
-                
-                <div className="relative z-10 mt-auto">
-                  <h3 className="font-bold text-xl text-white mb-1 group-hover:text-amber-300 transition-colors">{deal.title}</h3>
-                  <p className="text-sm font-medium text-gray-300">{deal.discount}</p>
+                <div className="mb-4 text-[#EF4444] group-hover:scale-105 transition-transform duration-200 origin-left">
+                  <Icon size={24} strokeWidth={1.85} />
                 </div>
 
-                {/* Giant watermark icon */}
-                <div className="absolute -right-6 -bottom-6 text-white/[0.03] group-hover:text-[#FF9900]/10 transition-colors duration-500 transform group-hover:rotate-[-10deg] group-hover:scale-110 pointer-events-none">
-                  <FaAmazon size={120} />
+                <div>
+                  <h3 className="font-extrabold text-base sm:text-lg text-white mb-0.5 group-hover:text-[#F5B027] transition-colors">
+                    {deal.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300/90 font-medium">
+                    {deal.discount}
+                  </p>
                 </div>
-              </motion.a>
+              </a>
             );
           })}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
