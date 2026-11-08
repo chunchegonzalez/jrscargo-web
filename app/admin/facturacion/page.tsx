@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, AlertCircle, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck, Download, Calendar, Printer, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, FileText, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck, Download, Printer, FileSpreadsheet, Trash2, Hourglass } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
 import { generateIncomeReportXlsx } from '@/lib/excel-export';
 import { useModal } from '@/app/components/ModalProvider';
@@ -62,6 +62,13 @@ export default function FacturacionDashboard() {
   const [dateRangePreset, setDateRangePreset] = useState<string>('todos');
   const [filterEmail, setFilterEmail] = useState<string>('Todos');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Secondary Filter States ("Más filtros")
+  const [showMoreFilters, setShowMoreFilters] = useState<boolean>(false);
+  const [filterClient, setFilterClient] = useState<string>('');
+  const [filterInvoiceNumber, setFilterInvoiceNumber] = useState<string>('');
+  const [filterMinAmount, setFilterMinAmount] = useState<string>('');
+  const [filterMaxAmount, setFilterMaxAmount] = useState<string>('');
 
   // Income Statement Extraction Modal State
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -421,31 +428,96 @@ export default function FacturacionDashboard() {
     printWindow.document.close();
   }, []);
 
-  // Filtered invoices (Dynamic calculation)
-  const filteredInvoices = useMemo(() => {
+  // Unique client names for secondary filter autocomplete
+  const uniqueClientNames = useMemo(() => {
+    const names = new Set<string>();
+    invoices.forEach(inv => {
+      if (inv.clients?.name) names.add(inv.clients.name.trim());
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [invoices]);
+
+  // Base filtered invoices (all filters except status, used to compute accurate counts per status tab)
+  const baseFilteredInvoices = useMemo(() => {
+    const minVal = filterMinAmount.trim() !== '' ? Number(filterMinAmount) : null;
+    const maxVal = filterMaxAmount.trim() !== '' ? Number(filterMaxAmount) : null;
+    const clientQuery = filterClient.toLowerCase().trim();
+    const invNumQuery = filterInvoiceNumber.toLowerCase().trim();
+    const searchLower = searchTerm.toLowerCase().trim();
+
     return invoices.filter(inv => {
-      const stats = getInvoiceStats(inv);
-      const effectiveStatus = stats.displayStatus;
-      const matchStatus = filterStatus === 'Todas' || effectiveStatus === filterStatus;
-      
       const invDate = inv.issue_date ? inv.issue_date.split('T')[0] : '';
       const matchStartDate = !filterStartDate || invDate >= filterStartDate;
       const matchEndDate = !filterEndDate || invDate <= filterEndDate;
-      const matchDate = matchStartDate && matchEndDate;
-      
-      const matchEmail = filterEmail === 'Todos' ||
+      if (!matchStartDate || !matchEndDate) return false;
+
+      const matchEmail =
+        filterEmail === 'Todos' ||
         (filterEmail === 'Enviado' && !!inv.email_sent_at) ||
         (filterEmail === 'No enviado' && !inv.email_sent_at);
-        
-      const searchLower = searchTerm.toLowerCase().trim();
-      const matchSearch = !searchLower || 
-        (inv.clients?.name || '').toLowerCase().includes(searchLower) || 
-        (inv.clients?.email || '').toLowerCase().includes(searchLower) || 
-        (inv.invoice_number || '').toLowerCase().includes(searchLower);
+      if (!matchEmail) return false;
 
-      return matchStatus && matchDate && matchEmail && matchSearch;
+      if (searchLower) {
+        const matchSearch =
+          (inv.clients?.name || '').toLowerCase().includes(searchLower) ||
+          (inv.clients?.email || '').toLowerCase().includes(searchLower) ||
+          (inv.invoice_number || '').toLowerCase().includes(searchLower);
+        if (!matchSearch) return false;
+      }
+
+      if (clientQuery) {
+        const matchClient =
+          (inv.clients?.name || '').toLowerCase().includes(clientQuery) ||
+          (inv.clients?.email || '').toLowerCase().includes(clientQuery);
+        if (!matchClient) return false;
+      }
+
+      if (invNumQuery) {
+        if (!(inv.invoice_number || '').toLowerCase().includes(invNumQuery)) return false;
+      }
+
+      const amount = Number(inv.total) || 0;
+      if (minVal !== null && !Number.isNaN(minVal) && amount < minVal) return false;
+      if (maxVal !== null && !Number.isNaN(maxVal) && amount > maxVal) return false;
+
+      return true;
     });
-  }, [invoices, filterStatus, filterStartDate, filterEndDate, filterEmail, searchTerm]);
+  }, [
+    invoices,
+    filterStartDate,
+    filterEndDate,
+    filterEmail,
+    searchTerm,
+    filterClient,
+    filterInvoiceNumber,
+    filterMinAmount,
+    filterMaxAmount
+  ]);
+
+  // Real-time counts for quick status tabs (Todas, Pendientes, Pagadas, Vencidas)
+  const statusCounts = useMemo(() => {
+    let pendientes = 0;
+    let pagadas = 0;
+    let vencidas = 0;
+    baseFilteredInvoices.forEach(inv => {
+      const st = getInvoiceStats(inv).displayStatus;
+      if (st === 'Pendiente') pendientes++;
+      else if (st === 'Pagada') pagadas++;
+      else if (st === 'Vencida') vencidas++;
+    });
+    return {
+      todas: baseFilteredInvoices.length,
+      pendientes,
+      pagadas,
+      vencidas
+    };
+  }, [baseFilteredInvoices]);
+
+  // Filtered invoices (Dynamic calculation including status filter)
+  const filteredInvoices = useMemo(() => {
+    if (filterStatus === 'Todas') return baseFilteredInvoices;
+    return baseFilteredInvoices.filter(inv => getInvoiceStats(inv).displayStatus === filterStatus);
+  }, [baseFilteredInvoices, filterStatus]);
 
   // Modal filtered invoices
   const modalFilteredInvoices = useMemo(() => {
@@ -531,7 +603,24 @@ export default function FacturacionDashboard() {
     }
   };
 
-  const hasActiveFilters = filterStatus !== 'Todas' || filterStartDate !== '' || filterEndDate !== '' || filterEmail !== 'Todos' || searchTerm !== '';
+  const secondaryFilterCount = [
+    filterClient.trim() !== '',
+    filterInvoiceNumber.trim() !== '',
+    filterMinAmount.trim() !== '',
+    filterMaxAmount.trim() !== '',
+    dateRangePreset !== 'todos' && dateRangePreset !== 'personalizado'
+  ].filter(Boolean).length;
+
+  const hasActiveFilters =
+    filterStatus !== 'Todas' ||
+    filterStartDate !== '' ||
+    filterEndDate !== '' ||
+    filterEmail !== 'Todos' ||
+    searchTerm.trim() !== '' ||
+    filterClient.trim() !== '' ||
+    filterInvoiceNumber.trim() !== '' ||
+    filterMinAmount.trim() !== '' ||
+    filterMaxAmount.trim() !== '';
 
   const clearAllFilters = () => {
     setFilterStatus('Todas');
@@ -540,6 +629,10 @@ export default function FacturacionDashboard() {
     setDateRangePreset('todos');
     setFilterEmail('Todos');
     setSearchTerm('');
+    setFilterClient('');
+    setFilterInvoiceNumber('');
+    setFilterMinAmount('');
+    setFilterMaxAmount('');
   };
 
   const formatEmailDate = (dateStr: string) => {
@@ -600,239 +693,553 @@ export default function FacturacionDashboard() {
       </div>
 
       {/* Tarjetas de Resumen Dinámicas (se recalculan con cualquier filtro) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           type="button"
           onClick={() => setFilterStatus('Todas')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all cursor-pointer flex items-center justify-between group ${
+          className={`text-left bg-white rounded-xl p-4 sm:p-5 border transition-all cursor-pointer flex items-center gap-4 group ${
             filterStatus === 'Todas'
               ? 'border-brand-blue/40 ring-2 ring-brand-blue/10 shadow-xs'
-              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.03)]'
           }`}
         >
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">Total Facturado</p>
-              <span className="px-1.5 py-0.5 bg-brand-blue/10 text-brand-blue text-[10px] font-bold rounded-md shrink-0 tabular-nums">
-                {filteredInvoices.length} fact.
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 tabular-nums mt-1 truncate">
+          <div className="w-12 h-12 rounded-xl bg-slate-100/90 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
+            <DollarSign size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Total Facturado</p>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 tabular-nums mt-0.5 truncate">
               {formatCurrency(totalFacturadoUSD, 'USD')}
             </h2>
-            <p className="text-[11px] text-slate-400 mt-1 truncate">
-              {activePeriodLabel ? `Período: ${activePeriodLabel}` : 'Volumen en vista actual'}
+            <p className="text-xs text-slate-500 mt-1 truncate">
+              <span className="font-semibold text-slate-600 tabular-nums">{filteredInvoices.length} fact.</span> •{' '}
+              {activePeriodLabel ? activePeriodLabel : 'Volumen en vista actual'}
             </p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-slate-100 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
-            <DollarSign size={19} />
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setFilterStatus(filterStatus === 'Pendiente' ? 'Todas' : 'Pendiente')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all cursor-pointer flex items-center justify-between group ${
+          className={`text-left bg-white rounded-xl p-4 sm:p-5 border transition-all cursor-pointer flex items-center gap-4 group ${
             filterStatus === 'Pendiente'
               ? 'border-amber-500/50 ring-2 ring-amber-500/15 shadow-xs'
-              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.03)]'
           }`}
         >
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">Total Pendiente</p>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 tabular-nums mt-1 truncate">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+            <Hourglass size={21} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Total Pendiente</p>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-amber-600 tabular-nums mt-0.5 truncate">
               {formatCurrency(totalPendingUSD, 'USD')}
             </h2>
-            <p className="text-[11px] text-slate-400 mt-1 truncate">
+            <p className="text-xs text-slate-500 mt-1 truncate">
               {activePeriodLabel ? `Pendiente: ${activePeriodLabel}` : 'Saldo por cobrar'}
             </p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-            <AlertCircle size={19} />
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setFilterStatus(filterStatus === 'Pagada' ? 'Todas' : 'Pagada')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all cursor-pointer flex items-center justify-between group ${
+          className={`text-left bg-white rounded-xl p-4 sm:p-5 border transition-all cursor-pointer flex items-center gap-4 group ${
             filterStatus === 'Pagada'
               ? 'border-emerald-600/50 ring-2 ring-emerald-500/15 shadow-xs'
-              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.03)]'
           }`}
         >
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">Total Pagado</p>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-700 tabular-nums mt-1 truncate">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Total Pagado</p>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-700 tabular-nums mt-0.5 truncate">
               {formatCurrency(totalPaidUSD, 'USD')}
             </h2>
-            <p className="text-[11px] text-slate-400 mt-1 truncate">
+            <p className="text-xs text-slate-500 mt-1 truncate">
               {activePeriodLabel ? `Ingresos: ${activePeriodLabel}` : 'Cobros conciliados'}
             </p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-            <CheckCircle2 size={19} />
           </div>
         </button>
       </div>
 
-      {/* Lista de Facturas */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 space-y-2.5">
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
-            {/* Búsqueda principal */}
-            <div className="relative flex-1 min-w-0 xl:max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
-              <input 
-                type="text" 
-                placeholder="Buscar cliente, correo o n.º de factura..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all" 
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            
-            {/* Controles de filtrado agrupados */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <select 
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className={`h-9 px-2.5 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    filterStatus !== 'Todas'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <option value="Todas">Estado: Todos</option>
-                  <option value="Pendiente">Pendientes</option>
-                  <option value="Pagada">Pagadas</option>
-                  <option value="Vencida">Vencidas</option>
-                </select>
+      {/* Sección de Filtros Organizada */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 sm:p-5 space-y-4">
+        {/* Fila 1: Buscador principal + Pestañas rápidas de estado */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="relative flex-1 min-w-0 lg:max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar cliente, factura o correo"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Buscar cliente, factura o correo"
+              className="w-full h-10 pl-10 pr-8 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/15 transition-all"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
-                <select 
-                  value={filterEmail}
-                  onChange={(e) => setFilterEmail(e.target.value)}
-                  className={`h-9 px-2.5 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    filterEmail !== 'Todos'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <option value="Todos">Correo: Todos</option>
-                  <option value="Enviado">Correo Enviado</option>
-                  <option value="No enviado">Correo No Enviado</option>
-                </select>
+          {/* Opciones rápidas: Todas, Pendientes, Pagadas y Vencidas */}
+          <div className="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200/80 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setFilterStatus('Todas')}
+              className={`h-8 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                filterStatus === 'Todas'
+                  ? 'bg-[#0B2737] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span>Todas</span>
+              <span className={filterStatus === 'Todas' ? 'text-slate-200 font-bold tabular-nums' : 'text-slate-500 tabular-nums'}>
+                ({statusCounts.todas})
+              </span>
+            </button>
 
-                {/* Presets rápidos de rango */}
-                <select
-                  value={dateRangePreset}
-                  onChange={(e) => applyDatePreset(e.target.value)}
-                  className={`h-9 px-2.5 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    dateRangePreset !== 'todos'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                  title="Seleccionar período predeterminado"
-                >
-                  <option value="todos">Período: Todo</option>
-                  <option value="hoy">Hoy</option>
-                  <option value="ayer">Ayer</option>
-                  <option value="7dias">Últimos 7 días</option>
-                  <option value="este-mes">Este Mes</option>
-                  <option value="mes-anterior">Mes Anterior</option>
-                  <option value="ano">Año Actual</option>
-                  <option value="personalizado">Rango personalizado</option>
-                </select>
-                
-                {/* Selector compacto de Rango de Fechas: Desde X hasta Z */}
-                <div className="inline-flex items-center h-9 bg-white border border-slate-200/90 rounded-lg px-2 shadow-2xs">
-                  <span className="text-[10px] font-bold text-slate-400 pr-1 uppercase tracking-wider">Desde</span>
-                  <input 
-                    type="date" 
-                    value={filterStartDate}
-                    onChange={(e) => {
-                      setFilterStartDate(e.target.value);
-                      setDateRangePreset('personalizado');
-                    }}
-                    className="h-7 px-1 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
-                    title="Fecha inicio (Desde)"
-                  />
-                  <span className="text-slate-300 px-1">—</span>
-                  <span className="text-[10px] font-bold text-slate-400 pr-1 uppercase tracking-wider">Hasta</span>
-                  <input 
-                    type="date" 
-                    value={filterEndDate}
-                    onChange={(e) => {
-                      setFilterEndDate(e.target.value);
-                      setDateRangePreset('personalizado');
-                    }}
-                    className="h-7 px-1 bg-transparent text-xs font-medium text-slate-800 focus:outline-none cursor-pointer"
-                    title="Fecha fin (Hasta)"
-                  />
-                  {(filterStartDate || filterEndDate) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilterStartDate('');
-                        setFilterEndDate('');
-                        setDateRangePreset('todos');
-                      }}
-                      className="pl-1.5 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                      title="Limpiar fechas"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
+            <div className="h-4 w-px bg-slate-200/90 mx-0.5 shrink-0" />
 
-              <div className="h-5 w-px bg-slate-200/90 hidden sm:block mx-0.5" />
+            <button
+              type="button"
+              onClick={() => setFilterStatus('Pendiente')}
+              className={`h-8 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                filterStatus === 'Pendiente'
+                  ? 'bg-[#0B2737] text-white shadow-xs'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span>Pendientes</span>
+              <span className={filterStatus === 'Pendiente' ? 'text-slate-200 font-bold tabular-nums' : 'text-slate-500 tabular-nums'}>
+                ({statusCounts.pendientes})
+              </span>
+            </button>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleExportIncomeExcel(filteredInvoices, filterStartDate, filterEndDate)}
-                  className="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98] cursor-pointer"
-                  title="Descargar estado de ingresos filtrado en Microsoft Excel (.xlsx)"
-                >
-                  <FileSpreadsheet size={14} className="text-emerald-600" />
-                  <span className="hidden sm:inline">Exportar Excel</span>
-                </button>
+            <div className="h-4 w-px bg-slate-200/90 mx-0.5 shrink-0" />
 
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="h-9 px-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 rounded-lg text-xs font-semibold transition-colors inline-flex items-center justify-center gap-1 shrink-0 cursor-pointer"
-                    title="Restablecer todos los filtros"
-                  >
-                    <X size={13} /> Limpiar
-                  </button>
-                )}
+            <button
+              type="button"
+              onClick={() => setFilterStatus('Pagada')}
+              className={`h-8 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                filterStatus === 'Pagada'
+                  ? 'bg-[#0B2737] text-white shadow-xs'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span>Pagadas</span>
+              <span className={filterStatus === 'Pagada' ? 'text-slate-200 font-bold tabular-nums' : 'text-slate-500 tabular-nums'}>
+                ({statusCounts.pagadas})
+              </span>
+            </button>
 
-                <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
-                  {filteredInvoices.length} de {invoices.length}
-                </span>
-              </div>
-            </div>
+            <div className="h-4 w-px bg-slate-200/90 mx-0.5 shrink-0" />
+
+            <button
+              type="button"
+              onClick={() => setFilterStatus('Vencida')}
+              className={`h-8 px-3.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                filterStatus === 'Vencida'
+                  ? 'bg-[#0B2737] text-white shadow-xs'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+              <span>Vencidas</span>
+              <span className={filterStatus === 'Vencida' ? 'text-slate-200 font-bold tabular-nums' : 'text-slate-500 tabular-nums'}>
+                ({statusCounts.vencidas})
+              </span>
+            </button>
           </div>
         </div>
 
+        {/* Fila 2: Estado, Estado del correo, Fecha desde, Fecha hasta y botón "Más filtros" */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end pt-1">
+          <div className="lg:col-span-3">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              aria-label="Filtrar por estado de factura"
+              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 cursor-pointer transition-colors"
+            >
+              <option value="Todas">Todos</option>
+              <option value="Pendiente">Pendientes</option>
+              <option value="Pagada">Pagadas</option>
+              <option value="Vencida">Vencidas</option>
+              <option value="Anulada">Anuladas</option>
+            </select>
+          </div>
+
+          <div className="lg:col-span-3">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Correo</label>
+            <select
+              value={filterEmail}
+              onChange={(e) => setFilterEmail(e.target.value)}
+              aria-label="Filtrar por estado del correo"
+              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 cursor-pointer transition-colors"
+            >
+              <option value="Todos">Todos</option>
+              <option value="Enviado">Enviado</option>
+              <option value="No enviado">No enviado</option>
+            </select>
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha desde</label>
+            <input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => {
+                setFilterStartDate(e.target.value);
+                setDateRangePreset('personalizado');
+              }}
+              aria-label="Fecha desde"
+              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 cursor-pointer"
+            />
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha hasta</label>
+            <input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => {
+                setFilterEndDate(e.target.value);
+                setDateRangePreset('personalizado');
+              }}
+              aria-label="Fecha hasta"
+              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 cursor-pointer"
+            />
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMoreFilters(prev => !prev)}
+              aria-expanded={showMoreFilters}
+              className={`w-full h-9 px-3 rounded-lg border text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                showMoreFilters || secondaryFilterCount > 0
+                  ? 'bg-brand-blue/[0.06] border-brand-blue/30 text-brand-blue'
+                  : 'bg-white hover:bg-slate-50 border-slate-200/90 text-slate-700'
+              }`}
+            >
+              <Filter size={14} />
+              <span>Más filtros</span>
+              {secondaryFilterCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-brand-blue text-white text-[10px] font-bold tabular-nums">
+                  {secondaryFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Panel desplegable de "Más filtros" (Cliente, N.º de factura, Importe mín/máx, Período rápido y Excel) */}
+        {showMoreFilters && (
+          <div className="pt-3 border-t border-slate-200/70 bg-slate-50/60 -mx-4 sm:-mx-5 px-4 sm:px-5 pb-1 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                  Cliente específico
+                </label>
+                <input
+                  type="text"
+                  list="facturacion-clients-list"
+                  placeholder="Nombre o correo del cliente..."
+                  value={filterClient}
+                  onChange={(e) => setFilterClient(e.target.value)}
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue"
+                />
+                <datalist id="facturacion-clients-list">
+                  {uniqueClientNames.map(name => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                  N.º de factura
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. F-0377"
+                  value={filterInvoiceNumber}
+                  onChange={(e) => setFilterInvoiceNumber(e.target.value)}
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                  Importe mínimo (USD)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={filterMinAmount}
+                  onChange={(e) => setFilterMinAmount(e.target.value)}
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue tabular-nums"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                  Importe máximo (USD)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Sin límite"
+                  value={filterMaxAmount}
+                  onChange={(e) => setFilterMaxAmount(e.target.value)}
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue tabular-nums"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                    Período rápido
+                  </label>
+                  <select
+                    value={dateRangePreset}
+                    onChange={(e) => applyDatePreset(e.target.value)}
+                    className="w-full h-9 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-brand-blue cursor-pointer"
+                  >
+                    <option value="todos">Todo el historial</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="ayer">Ayer</option>
+                    <option value="7dias">Últimos 7 días</option>
+                    <option value="este-mes">Este Mes</option>
+                    <option value="mes-anterior">Mes Anterior</option>
+                    <option value="ano">Año Actual</option>
+                    <option value="personalizado">Rango personalizado</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportIncomeExcel(filteredInvoices, filterStartDate, filterEndDate)}
+                  className="h-9 px-3 mt-5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-slate-900 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+                  title="Descargar vista filtrada en Microsoft Excel (.xlsx)"
+                >
+                  <FileSpreadsheet size={14} className="text-emerald-600" />
+                  <span>Excel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fila 3: Etiquetas de filtros aplicados + "Limpiar filtros" + "Total de resultados" */}
+        <div className="pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-slate-700">Filtros activos:</span>
+
+            {!hasActiveFilters && (
+              <span className="text-slate-400">Ninguno (mostrando todas las facturas)</span>
+            )}
+
+            {filterStatus !== 'Todas' && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold border ${
+                  filterStatus === 'Pendiente'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200/80'
+                    : filterStatus === 'Pagada'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80'
+                    : filterStatus === 'Vencida'
+                    ? 'bg-red-50 text-red-800 border-red-200/80'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}
+              >
+                <span>
+                  Estado: {filterStatus === 'Pendiente' ? 'Pendientes' : filterStatus === 'Pagada' ? 'Pagadas' : filterStatus === 'Vencida' ? 'Vencidas' : filterStatus}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus('Todas')}
+                  aria-label="Quitar filtro de estado"
+                  className="hover:opacity-75 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterEmail !== 'Todos' && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold border ${
+                  filterEmail === 'Enviado'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}
+              >
+                <span>Correo: {filterEmail}</span>
+                <button
+                  type="button"
+                  onClick={() => setFilterEmail('Todos')}
+                  aria-label="Quitar filtro de correo"
+                  className="hover:opacity-75 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterStartDate && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80 tabular-nums">
+                <span>
+                  Desde: <strong className="font-semibold text-slate-900">{formatDisplayDate(filterStartDate)}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterStartDate('');
+                    setDateRangePreset('personalizado');
+                  }}
+                  aria-label="Quitar fecha desde"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterEndDate && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80 tabular-nums">
+                <span>
+                  Hasta: <strong className="font-semibold text-slate-900">{formatDisplayDate(filterEndDate)}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterEndDate('');
+                    setDateRangePreset('personalizado');
+                  }}
+                  aria-label="Quitar fecha hasta"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {searchTerm.trim() !== '' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80">
+                <span>
+                  Búsqueda: <strong className="font-semibold text-slate-900">&ldquo;{searchTerm.trim()}&rdquo;</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Quitar búsqueda"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterClient.trim() !== '' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80">
+                <span>
+                  Cliente: <strong className="font-semibold text-slate-900">{filterClient.trim()}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterClient('')}
+                  aria-label="Quitar filtro de cliente"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterInvoiceNumber.trim() !== '' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80 font-mono">
+                <span>
+                  Factura: <strong className="font-semibold text-slate-900">{filterInvoiceNumber.trim()}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterInvoiceNumber('')}
+                  aria-label="Quitar filtro de factura"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterMinAmount.trim() !== '' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80 tabular-nums">
+                <span>
+                  Mín: <strong className="font-semibold text-slate-900">${filterMinAmount.trim()}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterMinAmount('')}
+                  aria-label="Quitar importe mínimo"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {filterMaxAmount.trim() !== '' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-700 border border-slate-200/80 tabular-nums">
+                <span>
+                  Máx: <strong className="font-semibold text-slate-900">${filterMaxAmount.trim()}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilterMaxAmount('')}
+                  aria-label="Quitar importe máximo"
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-blue hover:text-[#0B2737] hover:underline ml-1 cursor-pointer"
+              >
+                <Trash2 size={13} />
+                <span>Limpiar filtros</span>
+              </button>
+            )}
+          </div>
+
+          <div className="text-xs text-slate-600 shrink-0 tabular-nums">
+            Total de resultados: <strong className="font-bold text-slate-900 text-sm">{filteredInvoices.length}</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla de Facturas */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
         {/* Vista Móvil: Tarjetas individuales táctiles (sin scroll horizontal) */}
         <div className="md:hidden divide-y divide-slate-100">
           {loading ? (
@@ -845,18 +1252,21 @@ export default function FacturacionDashboard() {
               const displayStatus = stats.displayStatus;
 
               return (
-                <div key={inv.id} className="p-3.5 space-y-2.5 bg-white hover:bg-slate-50/90 transition-colors">
+                <div key={inv.id} className="p-4 space-y-3 bg-white hover:bg-slate-50/90 transition-colors">
                   {/* Fila 1: N.° Factura, Fecha, Estado */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80">
+                      <Link
+                        href={'/admin/facturacion/' + inv.id}
+                        className="font-bold text-slate-900 text-sm hover:text-brand-blue transition-colors"
+                      >
                         {inv.invoice_number}
-                      </span>
-                      <span className="text-xs text-slate-400 tabular-nums">
+                      </Link>
+                      <span className="text-xs text-slate-500 tabular-nums">
                         {formatDisplayDate(inv.issue_date)}
                       </span>
                     </div>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                       displayStatus === 'Pagada' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' :
                       displayStatus === 'Vencida' ? 'bg-red-50 text-red-700 border-red-200/80' :
                       displayStatus === 'Anulada' ? 'bg-slate-100 text-slate-600 border-slate-200' :
@@ -875,11 +1285,11 @@ export default function FacturacionDashboard() {
                   {/* Fila 2: Cliente e Importe */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 text-sm truncate">
+                      <p className="font-bold text-slate-900 text-sm truncate">
                         {inv.clients?.name || 'Cliente sin nombre'}
                       </p>
                       {inv.clients?.email && (
-                        <p className="text-xs text-slate-400 truncate">
+                        <p className="text-xs text-slate-500 truncate mt-0.5">
                           {inv.clients.email}
                         </p>
                       )}
@@ -889,7 +1299,7 @@ export default function FacturacionDashboard() {
                         {formatCurrency(Number(inv.total), stats.currency)}
                       </p>
                       {stats.paid > 0 && stats.pending > 0 && (
-                        <p className="text-[11px] text-amber-600 font-semibold">
+                        <p className="text-[11px] text-amber-700 font-semibold">
                           Pend: {formatCurrency(stats.pending, stats.currency)}
                         </p>
                       )}
@@ -897,16 +1307,20 @@ export default function FacturacionDashboard() {
                   </div>
 
                   {/* Fila 3: Estado de Correo y Acciones */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                  <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
                     <div>
                       {inv.email_sent_at ? (
-                        <div className="flex items-center gap-1.5 text-emerald-600">
-                          <MailCheck size={13} />
-                          <span className="text-[11px] font-semibold">Enviado</span>
-                          <button 
-                            onClick={() => openEmailModal(inv)} 
-                            className="text-[11px] text-brand-blue hover:underline font-semibold ml-1"
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md text-[11px] font-semibold">
+                            <MailCheck size={12} />
+                            Enviado
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => openEmailModal(inv)}
+                            className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline font-semibold ml-1 cursor-pointer"
                           >
+                            <RefreshCw size={11} />
                             Reenviar
                           </button>
                         </div>
@@ -921,12 +1335,13 @@ export default function FacturacionDashboard() {
                           <span className="text-[11px]">Correo pendiente</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-slate-400">
+                        <div className="flex items-center gap-1.5 text-slate-500">
                           <Mail size={13} />
                           <span className="text-[11px]">No enviado</span>
-                          <button 
-                            onClick={() => openEmailModal(inv)} 
-                            className="text-[11px] text-brand-blue hover:underline font-semibold ml-1"
+                          <button
+                            type="button"
+                            onClick={() => openEmailModal(inv)}
+                            className="text-xs text-brand-blue hover:underline font-semibold ml-1 cursor-pointer"
                           >
                             Enviar
                           </button>
@@ -934,17 +1349,17 @@ export default function FacturacionDashboard() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Link
                         href={'/admin/facturacion/' + inv.id}
-                        className="h-7 px-2.5 inline-flex items-center text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+                        className="h-8 px-3 inline-flex items-center text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors"
                       >
                         Ver detalle
                       </Link>
                       {displayStatus !== 'Pagada' && displayStatus !== 'Anulada' && (inv.clients?.id || inv.client_id) && (
                         <Link
                           href={'/admin/cuentas-por-cobrar/recibir/' + (inv.clients?.id || inv.client_id) + '?invoice_id=' + inv.id}
-                          className="h-7 px-2.5 inline-flex items-center text-xs font-semibold text-white bg-brand-blue hover:bg-[#0e354b] rounded-md shadow-2xs transition-colors"
+                          className="h-8 px-3 inline-flex items-center text-xs font-semibold text-white bg-[#0B2737] hover:bg-brand-blue rounded-lg shadow-2xs transition-colors"
                         >
                           Cobrar
                         </Link>
@@ -957,13 +1372,13 @@ export default function FacturacionDashboard() {
           )}
         </div>
 
-        {/* Vista Escritorio: Tabla completa con ordenamiento */}
+        {/* Vista Escritorio: Tabla completa con ordenamiento y legibilidad mejorada */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/95 border-b border-slate-200/90">
-              <tr className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold select-none">
-                <th 
-                  className="py-2.5 px-3.5 pl-5 cursor-pointer hover:bg-slate-100/80 transition-colors"
+            <thead className="bg-slate-50/90 border-b border-slate-200/90">
+              <tr className="text-xs text-slate-600 font-bold select-none">
+                <th
+                  className="py-3.5 px-4 pl-6 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap"
                   onClick={() => handleSort('date')}
                   title="Ordenar por fecha"
                 >
@@ -972,26 +1387,26 @@ export default function FacturacionDashboard() {
                     {sortField === 'date' ? (
                       sortOrder === 'asc' ? <ArrowUp size={13} className="text-brand-blue" /> : <ArrowDown size={13} className="text-brand-blue" />
                     ) : (
-                      <ArrowUpDown size={13} className="text-slate-300" />
+                      <ArrowUpDown size={13} className="text-slate-400" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="py-2.5 px-3.5 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                <th
+                  className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap"
                   onClick={() => handleSort('number')}
                   title="Ordenar por número de factura"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>N.º Factura</span>
+                    <span>N.º factura</span>
                     {sortField === 'number' ? (
                       sortOrder === 'asc' ? <ArrowUp size={13} className="text-brand-blue" /> : <ArrowDown size={13} className="text-brand-blue" />
                     ) : (
-                      <ArrowUpDown size={13} className="text-slate-300" />
+                      <ArrowUpDown size={13} className="text-slate-400" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="py-2.5 px-3.5 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                <th
+                  className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/80 transition-colors"
                   onClick={() => handleSort('client')}
                   title="Ordenar por nombre de cliente"
                 >
@@ -1000,12 +1415,12 @@ export default function FacturacionDashboard() {
                     {sortField === 'client' ? (
                       sortOrder === 'asc' ? <ArrowUp size={13} className="text-brand-blue" /> : <ArrowDown size={13} className="text-brand-blue" />
                     ) : (
-                      <ArrowUpDown size={13} className="text-slate-300" />
+                      <ArrowUpDown size={13} className="text-slate-400" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="py-2.5 px-3.5 text-right cursor-pointer hover:bg-slate-100/80 transition-colors"
+                <th
+                  className="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap"
                   onClick={() => handleSort('amount')}
                   title="Ordenar por importe"
                 >
@@ -1014,12 +1429,12 @@ export default function FacturacionDashboard() {
                     {sortField === 'amount' ? (
                       sortOrder === 'asc' ? <ArrowUp size={13} className="text-brand-blue" /> : <ArrowDown size={13} className="text-brand-blue" />
                     ) : (
-                      <ArrowUpDown size={13} className="text-slate-300" />
+                      <ArrowUpDown size={13} className="text-slate-400" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="py-2.5 px-3.5 cursor-pointer hover:bg-slate-100/80 transition-colors"
+                <th
+                  className="py-3.5 px-4 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap"
                   onClick={() => handleSort('status')}
                   title="Ordenar por estado"
                 >
@@ -1028,12 +1443,12 @@ export default function FacturacionDashboard() {
                     {sortField === 'status' ? (
                       sortOrder === 'asc' ? <ArrowUp size={13} className="text-brand-blue" /> : <ArrowDown size={13} className="text-brand-blue" />
                     ) : (
-                      <ArrowUpDown size={13} className="text-slate-300" />
+                      <ArrowUpDown size={13} className="text-slate-400" />
                     )}
                   </div>
                 </th>
-                <th 
-                  className="py-2.5 px-3.5 text-center cursor-pointer hover:bg-slate-100/80 transition-colors"
+                <th
+                  className="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap"
                   onClick={() => handleSort('email')}
                   title="Ordenar por estado de envío de correo"
                 >
@@ -1042,14 +1457,14 @@ export default function FacturacionDashboard() {
                     {sortField === 'email' ? (
                       sortOrder === 'asc' ? <ArrowUp size={13} className="text-brand-blue" /> : <ArrowDown size={13} className="text-brand-blue" />
                     ) : (
-                      <ArrowUpDown size={13} className="text-slate-300" />
+                      <ArrowUpDown size={13} className="text-slate-400" />
                     )}
                   </div>
                 </th>
-                <th className="py-2.5 px-3.5 pr-5 text-right">Acción</th>
+                <th className="py-3.5 px-4 pr-6 text-right whitespace-nowrap">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-[13px]">
+            <tbody className="divide-y divide-slate-100 text-sm">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 px-6 text-center text-slate-400">Cargando facturas...</td>
@@ -1069,32 +1484,32 @@ export default function FacturacionDashboard() {
                   const displayStatus = stats.displayStatus;
 
                   return (
-                    <tr key={inv.id} className="hover:bg-slate-50/90 transition-colors group">
-                      <td className="py-2.5 px-3.5 pl-5 text-slate-500 whitespace-nowrap tabular-nums text-xs">
+                    <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors group">
+                      <td className="py-3.5 px-4 pl-6 text-slate-600 whitespace-nowrap tabular-nums text-[13px]">
                         {formatDisplayDate(inv.issue_date)}
                       </td>
-                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <Link
                           href={'/admin/facturacion/' + inv.id}
-                          className="inline-flex items-center gap-1 font-mono font-bold text-slate-900 group-hover:text-brand-blue transition-colors"
+                          className="inline-flex items-center gap-1 font-bold text-slate-900 group-hover:text-brand-blue transition-colors text-[13px]"
                         >
                           {inv.invoice_number}
                         </Link>
                       </td>
-                      <td className="py-2.5 px-3.5">
-                        <div className="font-medium text-slate-800">{inv.clients?.name}</div>
-                        <span className="block text-xs text-slate-400 font-normal">{inv.clients?.email}</span>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900 text-[13px] leading-snug">{inv.clients?.name}</div>
+                        <span className="block text-xs text-slate-500 font-normal mt-0.5">{inv.clients?.email}</span>
                       </td>
-                      <td className="py-2.5 px-3.5 font-bold text-slate-900 text-right tabular-nums whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-bold text-slate-900 text-right tabular-nums whitespace-nowrap text-[13px]">
                         {formatCurrency(Number(inv.total), stats.currency)}
                       </td>
-                      <td className="py-2.5 px-3.5">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex flex-col items-start gap-1">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
                             displayStatus === 'Pagada' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' :
                             displayStatus === 'Vencida' ? 'bg-red-50 text-red-700 border-red-200/80' :
                             displayStatus === 'Anulada' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                            'bg-amber-50 text-amber-700 border-amber-200/80'
+                            'bg-amber-50 text-amber-800 border-amber-200/80'
                           }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
                               displayStatus === 'Pagada' ? 'bg-emerald-500' :
@@ -1112,62 +1527,64 @@ export default function FacturacionDashboard() {
                         </div>
                       </td>
                       {/* Email status column */}
-                      <td className="py-2.5 px-3.5 text-center">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {inv.email_sent_at ? (
                           <div className="flex flex-col items-center gap-0.5">
-                            <div className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md">
+                            <div className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
                               <MailCheck size={12} />
-                              <span className="text-[10px] font-semibold">Enviado</span>
+                              <span className="text-[11px] font-semibold">Enviado</span>
                             </div>
-                            <span className="text-[10px] text-slate-400 tabular-nums">{formatEmailDate(inv.email_sent_at)}</span>
-                            <button 
-                              onClick={() => openEmailModal(inv)} 
-                              className="inline-flex items-center gap-1 text-[11px] text-brand-blue hover:underline font-semibold cursor-pointer"
+                            <span className="text-[11px] text-slate-400 tabular-nums mt-0.5">{formatEmailDate(inv.email_sent_at)}</span>
+                            <button
+                              type="button"
+                              onClick={() => openEmailModal(inv)}
+                              className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline font-semibold cursor-pointer mt-0.5"
                             >
-                              <RefreshCw size={10} />
+                              <RefreshCw size={11} />
                               Reenviar
                             </button>
                           </div>
                         ) : autoSendingIds[inv.id] ? (
                           <div className="flex flex-col items-center gap-1 text-brand-blue">
                             <RefreshCw size={14} className="animate-spin" />
-                            <span className="text-[10px] font-semibold">Enviando auto...</span>
+                            <span className="text-[11px] font-semibold">Enviando auto...</span>
                           </div>
                         ) : isPendingClientEmail(inv.clients?.email) ? (
                           <div className="flex flex-col items-center gap-0.5 text-slate-400" title="Cliente con correo pendiente@pendiente — no se envía automáticamente">
                             <div className="flex items-center gap-1">
                               <Mail size={13} />
-                              <span className="text-[11px] font-medium">No enviado</span>
+                              <span className="text-xs font-medium">No enviado</span>
                             </div>
-                            <span className="text-[10px] text-slate-400 italic">Correo pendiente</span>
+                            <span className="text-[11px] text-slate-400 italic">Correo pendiente</span>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-0.5">
-                            <div className="flex items-center gap-1 text-slate-400">
+                            <div className="flex items-center gap-1.5 text-slate-500">
                               <Mail size={13} />
-                              <span className="text-[11px] font-medium">No enviado</span>
+                              <span className="text-xs font-medium">No enviado</span>
                             </div>
-                            <button 
-                              onClick={() => openEmailModal(inv)} 
-                              className="inline-flex items-center gap-1 text-[11px] text-brand-blue hover:underline font-semibold cursor-pointer"
+                            <button
+                              type="button"
+                              onClick={() => openEmailModal(inv)}
+                              className="inline-flex items-center gap-1 text-xs text-brand-blue hover:underline font-semibold cursor-pointer mt-0.5"
                             >
                               Enviar
                             </button>
                           </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-3.5 pr-5 text-right whitespace-nowrap">
+                      <td className="py-3.5 px-4 pr-6 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-2">
                           <Link
                             href={'/admin/facturacion/' + inv.id}
-                            className="h-7 px-2.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center transition-colors"
+                            className="h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center transition-colors shadow-2xs"
                           >
                             Ver detalle
                           </Link>
                           {displayStatus !== 'Pagada' && displayStatus !== 'Anulada' && (inv.clients?.id || inv.client_id) && (
-                            <Link 
-                              href={'/admin/cuentas-por-cobrar/recibir/' + (inv.clients?.id || inv.client_id) + '?invoice_id=' + inv.id} 
-                              className="h-7 px-2.5 rounded-md text-xs font-semibold text-white bg-brand-blue hover:bg-[#0e354b] inline-flex items-center transition-colors shadow-2xs"
+                            <Link
+                              href={'/admin/cuentas-por-cobrar/recibir/' + (inv.clients?.id || inv.client_id) + '?invoice_id=' + inv.id}
+                              className="h-8 px-3.5 rounded-lg text-xs font-semibold text-white bg-[#0B2737] hover:bg-brand-blue inline-flex items-center transition-colors shadow-2xs"
                             >
                               Cobrar
                             </Link>
@@ -1183,11 +1600,19 @@ export default function FacturacionDashboard() {
         </div>
 
         {/* Footer Tabla */}
-        <div className="px-5 py-3 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+        <div className="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
           <span>
             Mostrando <strong className="font-semibold text-slate-700">{filteredInvoices.length}</strong> de{' '}
             <strong className="font-semibold text-slate-700">{invoices.length}</strong> facturas registradas
           </span>
+          <button
+            type="button"
+            onClick={() => handleExportIncomeExcel(filteredInvoices, filterStartDate, filterEndDate)}
+            className="inline-flex items-center gap-1.5 font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+          >
+            <FileSpreadsheet size={14} className="text-emerald-600" />
+            <span>Exportar resultados (.xlsx)</span>
+          </button>
         </div>
       </div>
 
