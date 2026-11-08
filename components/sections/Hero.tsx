@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { ArrowRight, Calculator, Plane, Container, Ship, Package } from 'lucide-react';
+import { ArrowRight, Calculator, Plane, Container, Ship } from 'lucide-react';
 import { FaStar, FaWhatsapp } from 'react-icons/fa';
 import Image from 'next/image';
 import gsap from 'gsap';
@@ -67,9 +67,8 @@ function SpookyAnimatedWords({
 }
 
 export default function Hero() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { isHalloween } = useHalloween();
-  const isEn = language === 'en';
 
   const heroRef = useRef<HTMLElement>(null);
   const bgGlowRef = useRef<HTMLDivElement>(null);
@@ -589,21 +588,6 @@ export default function Hero() {
                       height={110}
                       className="w-[85%] h-auto object-contain transition-transform duration-700 hover:scale-110"
                     />
-                  </div>
-                </div>
-
-                {/* Insignia de Paquete en Primer Plano (Debajo del Hub Central) */}
-                <div className="absolute bottom-[5.5%] left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-md border border-slate-200/80 z-30 flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-brand-red/10 text-brand-red flex items-center justify-center shrink-0">
-                    <Package size={15} strokeWidth={2.3} />
-                  </div>
-                  <div className="leading-tight">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {isEn ? 'Direct Dispatch' : 'Despacho directo'}
-                    </p>
-                    <p className="text-xs font-extrabold text-[#0B2737]">
-                      {isEn ? 'Costa Rica Delivery' : 'Entrega en Costa Rica'}
-                    </p>
                   </div>
                 </div>
 
