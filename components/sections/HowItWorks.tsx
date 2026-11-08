@@ -43,7 +43,7 @@ export default function HowItWorks() {
       preview: {
         label: isEn ? 'Assigned Locker' : 'Casillero asignado',
         value: 'JRS-XXXXX • Miami, FL',
-        subtext: '8205 NW 68th St, Miami'
+        subtext: '8028 NW 14TH ST DORAL MIAMI, FL 33126-1612'
       }
     },
     {
@@ -265,7 +265,7 @@ export default function HowItWorks() {
                             <p className="font-mono font-bold text-slate-900 text-xs truncate">
                               {step.preview.value}
                             </p>
-                            <p className="text-[11px] text-slate-500 truncate">
+                            <p className="text-[11px] text-slate-500 leading-snug">
                               {step.preview.subtext}
                             </p>
                           </div>
