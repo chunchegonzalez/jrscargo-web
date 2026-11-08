@@ -113,28 +113,19 @@ export default function AmazonDeals() {
   const tickerItems = [
     {
       icon: ShieldCheck,
-      text: isEn ? '100% GUARANTEED SHIPMENTS' : 'ENVÍOS 100% GARANTIZADOS',
-      highlight: false,
-    },
-    {
-      icon: FaAmazon,
-      text: 'AMAZON BUSINESS PARTNER',
-      highlight: true,
+      text: isEn ? '100% guaranteed shipments' : 'Envíos 100% garantizados',
     },
     {
       icon: ShieldCheck,
-      text: isEn ? 'PRIORITY DISPATCH IN MIAMI' : 'DESPACHOS PRIORITARIOS EN MIAMI',
-      highlight: false,
+      text: isEn ? 'Priority dispatch in Miami' : 'Despachos prioritarios en Miami',
     },
     {
       icon: Tag,
-      text: isEn ? 'EXCLUSIVE IMPORT RATES' : 'TARIFAS EXCLUSIVAS',
-      highlight: false,
+      text: isEn ? 'Exclusive import rates' : 'Tarifas exclusivas de importación',
     },
     {
       icon: Zap,
-      text: isEn ? 'DIRECT CONNECTION TO COSTA RICA' : 'CONEXIÓN DIRECTA A COSTA RICA',
-      highlight: false,
+      text: isEn ? 'Direct connection to Costa Rica' : 'Conexión directa a Costa Rica',
     },
   ];
 
@@ -143,39 +134,28 @@ export default function AmazonDeals() {
       ref={sectionRef}
       className="pb-14 sm:pb-16 bg-[#071724] relative overflow-hidden"
     >
-      {/* Franja superior delgada con movimiento dinámico estilo banner */}
-      <div className="relative w-full border-y border-white/10 bg-[#05111B] py-2.5 mb-10 sm:mb-12 overflow-hidden z-20">
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-[#05111B] to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-[#05111B] to-transparent z-10" />
-
-        <div className="flex select-none">
-          <div className="flex items-center whitespace-nowrap shrink-0 animate-gpu-ticker">
-            {[...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems].map(
-              (item, idx) => {
-                const Icon = item.icon;
-                return (
-                  <div key={idx} className="flex items-center">
-                    <div className="flex items-center gap-2 px-5 sm:px-7">
-                      <Icon
-                        size={item.highlight ? 15 : 14}
-                        className="text-[#F5B027] shrink-0"
-                      />
-                      <span
-                        className={`text-[11px] sm:text-xs tracking-[0.08em] uppercase ${
-                          item.highlight
-                            ? 'text-[#F5B027] font-extrabold'
-                            : 'text-slate-200 font-semibold'
-                        }`}
-                      >
-                        {item.text}
-                      </span>
-                    </div>
-                    <span className="h-3.5 w-px bg-white/15 shrink-0" aria-hidden="true" />
-                  </div>
-                );
-              }
-            )}
-          </div>
+      {/* Franja superior delgada sin repetir mensajes */}
+      <div className="relative w-full border-y border-white/10 bg-[#05111B] py-2.5 mb-10 sm:mb-12 overflow-x-auto no-scrollbar z-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4 whitespace-nowrap select-none">
+          {tickerItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div key={idx} className="flex items-center gap-4 sm:gap-6">
+                <div className="flex items-center gap-2">
+                  <Icon size={14} className="text-[#F5B027] shrink-0" />
+                  <span className="text-[11px] sm:text-xs tracking-[0.06em] uppercase text-slate-200 font-semibold">
+                    {item.text}
+                  </span>
+                </div>
+                {idx < tickerItems.length - 1 && (
+                  <span
+                    className="hidden md:inline-block h-3.5 w-px bg-white/15 shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

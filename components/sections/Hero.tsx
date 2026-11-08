@@ -331,8 +331,8 @@ export default function Hero() {
 
             {/* Brands */}
             <div className="flex flex-wrap items-center gap-6 sm:gap-10 mb-10 opacity-60 grayscale hover:grayscale-0 transition-all duration-300">
-              <span className="font-bold text-2xl tracking-tighter">amazon</span>
-              <span className="font-bold text-2xl tracking-tight">ebay</span>
+              <span className="font-bold text-2xl tracking-tight">Amazon</span>
+              <span className="font-bold text-2xl tracking-tight">eBay</span>
               <span className="font-bold text-xl">AliExpress</span>
               <span className="font-black text-2xl tracking-widest uppercase">SHEIN</span>
             </div>

@@ -150,11 +150,11 @@ export default function Rates() {
           })}
         </div>
         
-        <div className="mt-12 text-center">
+        <div className="mt-12 text-center space-y-2">
           <p className="text-sm text-brand-text-light bg-brand-bg-light inline-block px-6 py-3 rounded-xl">
             {language === 'en' 
-              ? 'Quotes displayed are estimates based on published rates. For special cargo or specific terms, please consult with an advisor.'
-              : 'Las cotizaciones mostradas son estimaciones basadas en las tarifas publicadas. Para mercancía especial o condiciones particulares, consulta con un asesor.'}
+              ? 'Quotes displayed are estimates based on published rates. Branch pickup or home delivery available (home delivery has an additional cost). For special cargo or specific terms, please consult with an advisor.'
+              : 'Las cotizaciones mostradas son estimaciones basadas en las tarifas publicadas. Contamos con retiro en sucursal o entrega a domicilio (la entrega a domicilio tiene un costo adicional). Para mercancía especial o condiciones particulares, consulta con un asesor.'}
           </p>
         </div>
       </div>

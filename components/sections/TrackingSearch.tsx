@@ -155,7 +155,7 @@ export default function TrackingSearch() {
       <div className="container-max max-w-5xl mx-auto relative z-10">
         <div data-parallax-header className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-brand-blue font-bold text-sm mb-6">
-            <Package size={16} className="text-brand-red" /> {t.tracking.searchBtn}
+            <Package size={16} className="text-brand-red" /> {t.nav.tracking}
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-brand-blue mb-4 tracking-tight">
             {language === 'en' ? (

@@ -78,7 +78,7 @@ const POPULAR_BRANDS: BrandStore[] = [
     renderLogo: () => <FaEbay className="w-4 h-3.5 text-[#E53238] shrink-0" />
   },
   {
-    name: 'Shein',
+    name: 'SHEIN',
     renderLogo: () => (
       <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] bg-slate-800 text-white font-sans font-black text-[9px] leading-none shrink-0">
         S
