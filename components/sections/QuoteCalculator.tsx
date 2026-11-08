@@ -119,15 +119,18 @@ export default function QuoteCalculator() {
 
   return (
     <section id="cotizador" className="section-padding bg-brand-bg-section relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-full h-full bg-hero-gradient opacity-[0.02] pointer-events-none mix-blend-multiply" />
+      <div
+        data-parallax-bg="40"
+        className="absolute top-0 right-0 w-full h-full bg-hero-gradient opacity-[0.02] pointer-events-none mix-blend-multiply"
+      />
       
       <div className="container-max relative z-10">
-        <div className="text-center mb-12">
+        <div data-parallax-header className="text-center mb-12">
           <h2 className="section-title">{t.calculator.title}</h2>
           <p className="section-subtitle">{t.calculator.subtitle}</p>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-8 max-w-5xl mx-auto">
+        <div data-parallax-content className="grid lg:grid-cols-12 gap-8 max-w-5xl mx-auto">
           {/* Form */}
           <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl shadow-soft">
             {/* Paso 1 */}

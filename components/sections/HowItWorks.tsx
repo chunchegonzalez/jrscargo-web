@@ -190,6 +190,7 @@ export default function HowItWorks() {
       {/* Elementos decorativos de fondo suaves (misma paleta) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
+          data-parallax-bg="38"
           className="absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[260px] rounded-full blur-3xl opacity-30"
           style={{
             background:
@@ -197,6 +198,7 @@ export default function HowItWorks() {
           }}
         />
         <div
+          data-parallax-bg="-30"
           className="absolute bottom-0 right-[-10%] w-[400px] h-[400px] rounded-full blur-3xl opacity-20"
           style={{ background: 'radial-gradient(circle, rgba(226, 45, 75, 0.06) 0%, transparent 70%)' }}
         />

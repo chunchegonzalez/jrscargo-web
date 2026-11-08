@@ -9,9 +9,9 @@ export default function LocationMap() {
   const mapUrl = "https://maps.google.com/maps?q=2W23%2B2P4%2C+Heredia%2C+San+Pablo&t=&z=16&ie=UTF8&iwloc=&output=embed";
 
   return (
-    <section className="py-12 bg-white relative">
-      <div className="container-max">
-        <div className="text-center mb-8">
+    <section className="py-12 bg-white relative overflow-hidden">
+      <div className="container-max relative z-10">
+        <div data-parallax-header className="text-center mb-8">
           <h2 className="section-title">{isEn ? 'Find Us' : 'Encuéntranos'}</h2>
           <p className="section-subtitle">
             {isEn 
@@ -20,7 +20,10 @@ export default function LocationMap() {
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-card border border-gray-100 max-w-4xl mx-auto flex flex-col lg:flex-row gap-6 items-center">
+        <div
+          data-parallax-content
+          className="bg-white rounded-3xl p-4 sm:p-6 shadow-card border border-gray-100 max-w-4xl mx-auto flex flex-col lg:flex-row gap-6 items-center"
+        >
           
           <div className="w-full lg:w-1/3 flex flex-col justify-center items-center lg:items-start text-center lg:text-left p-2 sm:p-4">
             <div className="w-14 h-14 bg-brand-bg-light rounded-full flex items-center justify-center text-brand-blue mb-4">

@@ -7,10 +7,12 @@ import HowItWorks from '@/components/sections/HowItWorks';
 import CorporateClients from '@/components/sections/CorporateClients';
 import ContactSection from '@/components/sections/ContactSection';
 import LocationMap from '@/components/sections/LocationMap';
+import ParallaxController from '@/components/ui/ParallaxController';
 
 export default function Home() {
   return (
     <>
+      <ParallaxController />
       <Hero />
       <AmazonDeals />
       <TrackingSearch />

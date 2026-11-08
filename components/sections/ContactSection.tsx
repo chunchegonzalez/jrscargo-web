@@ -57,8 +57,14 @@ export default function ContactSection() {
       className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-b from-[#F4F7FA] to-[#EEF3F8]"
     >
       {/* Formas decorativas suaves de fondo */}
-      <div className="absolute -top-24 -left-24 w-80 h-80 bg-white/70 rounded-full blur-2xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-brand-blue/[0.05] rounded-full blur-3xl pointer-events-none" />
+      <div
+        data-parallax-bg="36"
+        className="absolute -top-24 -left-24 w-80 h-80 bg-white/70 rounded-full blur-2xl pointer-events-none"
+      />
+      <div
+        data-parallax-bg="-32"
+        className="absolute -bottom-24 -right-24 w-96 h-96 bg-brand-blue/[0.05] rounded-full blur-3xl pointer-events-none"
+      />
 
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Encabezado proporcionado con icono dinámico */}

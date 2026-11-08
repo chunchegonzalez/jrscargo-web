@@ -67,12 +67,12 @@ export default function CorporateClients() {
   return (
     <section
       id="mayoristas"
-      className="py-14 lg:py-20 bg-[#F8FAFC] border-y border-slate-200/70"
+      className="py-14 lg:py-20 bg-[#F8FAFC] border-y border-slate-200/70 relative overflow-hidden"
     >
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Columna izquierda: Información corporativa y beneficios */}
-          <div className="lg:col-span-6">
+          <div data-parallax-header className="lg:col-span-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 mb-2.5">
               {isEn ? 'CORPORATE CLIENTS' : 'CLIENTES EMPRESARIALES'}
             </p>
@@ -116,7 +116,7 @@ export default function CorporateClients() {
           </div>
 
           {/* Columna derecha: Formulario en tarjeta blanca con borde gris sutil */}
-          <div className="lg:col-span-6">
+          <div data-parallax-content className="lg:col-span-6">
             <div className="bg-white rounded-xl border border-slate-200/90 p-5 sm:p-7 shadow-[0_1px_3px_rgba(15,23,42,0.03)]">
               <div className="mb-5">
                 <h3 className="text-lg sm:text-xl font-bold text-[#0B2737] tracking-tight">

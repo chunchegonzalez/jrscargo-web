@@ -65,12 +65,14 @@ export default function AmazonDeals() {
     <section className="py-20 bg-[#0B1D2B] relative overflow-hidden">
       {/* Ambient background glows (GPU-friendly radial gradients) */}
       <div
+        data-parallax-bg="45"
         className="absolute top-0 left-1/4 w-[650px] h-[400px] rounded-full pointer-events-none"
         style={{
           background: 'radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%)',
         }}
       />
       <div
+        data-parallax-bg="-35"
         className="absolute bottom-0 right-1/4 w-[550px] h-[350px] rounded-full pointer-events-none"
         style={{
           background: 'radial-gradient(circle, rgba(239, 68, 68, 0.12) 0%, transparent 70%)',

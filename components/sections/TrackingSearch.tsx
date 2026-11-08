@@ -125,7 +125,10 @@ export default function TrackingSearch() {
   return (
     <section id="tracking" className="section-padding bg-gray-50 relative overflow-hidden">
       {/* Dynamic Background Elements (GPU-friendly radial gradients) */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full pointer-events-none">
+      <div
+        data-parallax-bg="42"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full pointer-events-none"
+      >
         <div
           className="absolute top-20 left-0 w-72 h-72 rounded-full animate-blob"
           style={{
@@ -150,7 +153,7 @@ export default function TrackingSearch() {
       </div>
 
       <div className="container-max max-w-5xl mx-auto relative z-10">
-        <div className="text-center mb-12">
+        <div data-parallax-header className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-brand-blue font-bold text-sm mb-6">
             <Package size={16} className="text-brand-red" /> {t.tracking.searchBtn}
           </div>
@@ -167,7 +170,7 @@ export default function TrackingSearch() {
         </div>
 
         {/* Premium Search Form */}
-        <div className="relative max-w-3xl mx-auto mb-16 group">
+        <div data-parallax-content className="relative max-w-3xl mx-auto mb-16 group">
           {/* Glow Effect */}
           <div className="absolute -inset-1 bg-gradient-to-r from-brand-blue via-brand-red to-brand-yellow rounded-[2.5rem] blur-lg opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
           

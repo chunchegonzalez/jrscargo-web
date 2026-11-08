@@ -63,21 +63,31 @@ export default function Rates() {
   ];
 
   return (
-    <section id="tarifas" className="section-padding bg-white relative">
-      <div className="container-max text-center mb-16">
+    <section id="tarifas" className="section-padding bg-white relative overflow-hidden">
+      {/* Capa decorativa de fondo con parallax sutil */}
+      <div
+        data-parallax-bg="36"
+        className="absolute -top-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(18, 67, 94, 0.04) 0%, transparent 70%)',
+        }}
+      />
+
+      <div data-parallax-header className="container-max text-center mb-16 relative z-10">
         <h2 className="section-title">{t.rates.title}</h2>
         <p className="section-subtitle max-w-2xl mx-auto">
           {t.rates.subtitle}
         </p>
       </div>
 
-      <div className="container-max">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="container-max relative z-10">
+        <div data-parallax-stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {ratesData.map((rate) => {
             const Icon = rate.icon;
             return (
               <div 
                 key={rate.id} 
+                data-parallax-item
                 className="bg-white rounded-2xl shadow-card hover:shadow-lg border border-gray-50 border-b-4 border-b-brand-blue p-6 flex flex-col group cursor-pointer transition-all hover:-translate-y-1"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('setQuoteCalculator', {
