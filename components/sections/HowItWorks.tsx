@@ -15,8 +15,77 @@ import {
   Clock,
   ShieldCheck
 } from 'lucide-react';
+import { FaAmazon, FaApple, FaEbay } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
+
+type BrandStore = {
+  name: string;
+  renderLogo: () => React.ReactNode;
+};
+
+const POPULAR_BRANDS: BrandStore[] = [
+  {
+    name: 'Amazon',
+    renderLogo: () => <FaAmazon className="w-3.5 h-3.5 text-[#FF9900] shrink-0" />
+  },
+  {
+    name: 'Apple',
+    renderLogo: () => <FaApple className="w-3.5 h-3.5 text-slate-900 shrink-0" />
+  },
+  {
+    name: 'Gymshark',
+    renderLogo: () => (
+      <svg className="w-3.5 h-3.5 text-slate-900 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M21.5 4.5c-4.2.4-8.4 2.6-11.6 6L6 8.8 2.5 13l4.6 1.1-2.6 5.4 6.2-3.4 1.7 2.4c3.8-4 7.3-8.7 9.1-14z" />
+      </svg>
+    )
+  },
+  {
+    name: 'YoungLA',
+    renderLogo: () => (
+      <span className="inline-flex items-center justify-center w-4 h-3.5 rounded-[3px] bg-slate-900 text-white font-serif font-black text-[8px] tracking-tighter leading-none shrink-0">
+        YLA
+      </span>
+    )
+  },
+  {
+    name: 'Nike',
+    renderLogo: () => (
+      <svg className="w-4 h-3.5 text-slate-900 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M21 8.25c-4.5 1.9-9.8 4.2-12.5 5.1-2.1.7-3.8.2-4.4-.9-.6-1.1-.1-2.9 1.2-4.7-1.9 2.4-2.9 5.2-2.1 7 .8 1.8 3.2 2.2 6.5 1 3.3-1.2 11.3-7.5 11.3-7.5z" />
+      </svg>
+    )
+  },
+  {
+    name: 'Sephora',
+    renderLogo: () => (
+      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] bg-slate-900 text-white font-bold text-[9px] leading-none shrink-0">
+        S
+      </span>
+    )
+  },
+  {
+    name: 'Zara',
+    renderLogo: () => (
+      <span className="font-serif font-black text-[9px] tracking-tighter text-slate-900 uppercase leading-none shrink-0">
+        Z
+      </span>
+    )
+  },
+  {
+    name: 'eBay',
+    renderLogo: () => <FaEbay className="w-4 h-3.5 text-[#E53238] shrink-0" />
+  },
+  {
+    name: 'Shein',
+    renderLogo: () => (
+      <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-[3px] bg-slate-800 text-white font-sans font-black text-[9px] leading-none shrink-0">
+        S
+      </span>
+    )
+  }
+];
 
 export default function HowItWorks() {
   const { t, language } = useLanguage();
@@ -40,6 +109,7 @@ export default function HowItWorks() {
         isEn ? 'Zero setup fees or maintenance' : 'Sin anualidad ni mensualidad',
         isEn ? 'Immediate activation' : 'Activación al instante'
       ],
+      footnote: null,
       preview: {
         label: isEn ? 'Assigned Locker' : 'Casillero asignado',
         value: 'JRS-XXXXX • Miami, FL',
@@ -53,7 +123,7 @@ export default function HowItWorks() {
       title: t.howItWorks.step2Title,
       subtitle: isEn ? 'Shop in your favorite stores.' : 'Compra en tus tiendas favoritas.',
       description: t.howItWorks.step2Desc,
-      tag: isEn ? 'Amazon, eBay, Shein & more' : 'Amazon, eBay, Shein y más',
+      tag: isEn ? 'Top global brands' : 'Marcas exclusivas y más',
       tagColor: 'bg-rose-50 text-rose-800 border-rose-200',
       badgeColor: 'bg-brand-red text-white',
       features: [
@@ -61,7 +131,8 @@ export default function HowItWorks() {
         isEn ? 'Put your JRS locker as destination.' : 'Coloca tu casillero como destino.',
         isEn ? 'Access US, Europe & China prices.' : 'Aprovecha ofertas y precios de EE.UU.'
       ],
-      stores: ['Amazon', 'eBay', 'Shein', 'Apple', 'AliExpress', 'Walmart']
+      footnote: null,
+      hasBrands: true
     },
     {
       stepNum: '3',
@@ -78,6 +149,7 @@ export default function HowItWorks() {
         isEn ? 'Accurate weight and guide check.' : 'Verificación de peso y guía.',
         isEn ? 'Instant notice to your email and account.' : 'Aviso inmediato a tu correo y cuenta.'
       ],
+      footnote: null,
       preview: {
         label: isEn ? 'Warehouse status' : 'Estado en bodega',
         value: isEn ? 'Package verified and ready' : 'Paquete verificado y listo',
@@ -89,16 +161,19 @@ export default function HowItWorks() {
       number: '04',
       icon: Truck,
       title: t.howItWorks.step4Title,
-      subtitle: isEn ? 'Direct delivery to your door.' : 'Entrega directa en tu puerta.',
+      subtitle: isEn ? 'Pickup in branch or home delivery.' : 'Retiro en sucursal o entrega a domicilio.',
       description: t.howItWorks.step4Desc,
       tag: isEn ? 'GAM & Countrywide' : 'GAM y todo Costa Rica',
       tagColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       badgeColor: 'bg-emerald-600 text-white',
       features: [
         isEn ? 'We bring your package to Costa Rica.' : 'Traemos tu paquete a Costa Rica.',
-        isEn ? 'Home delivery or branch pickup.' : 'Entrega a domicilio o retiro en sucursal.',
+        isEn ? 'Branch pickup or home delivery*.' : 'Entrega a domicilio* o retiro en sucursal.',
         isEn ? 'Clear statement with official rate.' : 'Estado de cuenta claro con tarifa oficial.'
       ],
+      footnote: isEn
+        ? '*Home deliveries have an additional cost.'
+        : '*Las entregas a domicilio tienen costo adicional.',
       preview: {
         label: isEn ? 'Final destination' : 'Destino final',
         value: isEn ? 'Delivered in your hands' : 'Entregado en tus manos',
@@ -272,16 +347,17 @@ export default function HowItWorks() {
                         </div>
                       )}
 
-                      {/* Paso 2: Tiendas populares */}
-                      {idx === 1 && step.stores && (
+                      {/* Paso 2: Logos y nombres de marcas reconocidas y de alto valor */}
+                      {idx === 1 && step.hasBrands && (
                         <div className="bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/80">
                           <div className="flex flex-wrap gap-1.5">
-                            {step.stores.map((s) => (
+                            {POPULAR_BRANDS.map((brand) => (
                               <span
-                                key={s}
-                                className="text-[11px] font-semibold px-2 py-0.5 bg-white border border-slate-200/80 text-slate-700 rounded-md"
+                                key={brand.name}
+                                className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 bg-white border border-slate-200/90 text-slate-800 rounded-md shadow-2xs hover:border-slate-300 transition-colors"
                               >
-                                {s}
+                                {brand.renderLogo()}
+                                <span>{brand.name}</span>
                               </span>
                             ))}
                           </div>
@@ -320,15 +396,22 @@ export default function HowItWorks() {
                     </div>
                   </div>
 
-                  {/* Lista de 3 beneficios del paso */}
-                  <ul className="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-                    {step.features.map((feat, fIdx) => (
-                      <li key={fIdx} className="flex items-start gap-1.5 leading-snug">
-                        <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Lista de 3 beneficios del paso + nota en letra pequeña si aplica */}
+                  <div className="mt-4 pt-3 border-t border-slate-100">
+                    <ul className="space-y-1.5 text-xs text-slate-600">
+                      {step.features.map((feat, fIdx) => (
+                        <li key={fIdx} className="flex items-start gap-1.5 leading-snug">
+                          <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" />
+                          <span>{feat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {step.footnote && (
+                      <p className="text-[10px] text-slate-400 italic mt-2 leading-tight">
+                        {step.footnote}
+                      </p>
+                    )}
+                  </div>
                 </motion.div>
               );
             })}
@@ -400,7 +483,12 @@ export default function HowItWorks() {
               </div>
               <div className="flex items-center justify-center gap-1.5">
                 <Truck size={13} className="text-[#FFC44D] shrink-0" />
-                <span>{isEn ? 'Door to door delivery' : 'Entrega a domicilio'}</span>
+                <span>
+                  {isEn ? 'Home delivery*' : 'Entrega a domicilio*'}{' '}
+                  <span className="text-[10px] text-white/60 font-normal">
+                    ({isEn ? 'extra fee' : 'costo adicional'})
+                  </span>
+                </span>
               </div>
               <div className="flex items-center justify-center gap-1.5">
                 <CheckCircle2 size={13} className="text-[#FFC44D] shrink-0" />
