@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail } from 'lucide-react';
+import { Mail, MessageCircle } from 'lucide-react';
 import { FaWhatsapp, FaInstagram } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
@@ -63,55 +63,21 @@ export default function ContactSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45 }}
-          className="text-center mb-8 sm:mb-10"
+          className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto"
         >
-          {/* Icono superior de paquete en movimiento */}
-          <div className="inline-flex items-center justify-center mb-3">
-            <motion.div
-              animate={{ y: [0, -3, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="flex items-center gap-1.5"
-            >
-              <div className="flex flex-col items-end gap-1 mr-0.5">
-                <motion.span
-                  animate={{ scaleX: [0.7, 1, 0.7], opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                  className="h-0.5 w-3.5 rounded-full bg-[#16A34A] origin-right block"
-                />
-                <motion.span
-                  animate={{ scaleX: [1, 0.65, 1], opacity: [1, 0.65, 1] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.25 }}
-                  className="h-0.5 w-5 rounded-full bg-[#16A34A] origin-right block"
-                />
-                <motion.span
-                  animate={{ scaleX: [0.8, 1, 0.8], opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                  className="h-0.5 w-3.5 rounded-full bg-[#16A34A] origin-right block"
-                />
-              </div>
-              <svg
-                width="38"
-                height="38"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0B2737"
-                strokeWidth="1.85"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                <path d="m3.3 7 8.7 5 8.7-5" />
-                <path d="M12 22V12" />
-                <path d="m7.5 4.27 9 5.15" />
-              </svg>
-            </motion.div>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+            <MessageCircle size={15} className="text-[#f59e0b]" />
+            <span>{isEn ? 'Customer Support' : 'Atención al cliente'}</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#0B2737] tracking-tight">
-            {isEn ? 'Need help with your shipment?' : '¿Necesitas ayuda con tu envío?'}
+          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
+            {isEn ? (
+              <>Need help with <span className="text-[#f59e0b]">your shipment?</span></>
+            ) : (
+              <>¿Necesitas ayuda con <span className="text-[#f59e0b]">tu envío?</span></>
+            )}
           </h2>
-          <p className="text-sm sm:text-base text-slate-600 mt-1.5 max-w-xl mx-auto">
+          <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
             {isEn
               ? 'We are here to help you through the channel you prefer.'
               : 'Estamos aquí para ayudarte por el canal que prefieras.'}

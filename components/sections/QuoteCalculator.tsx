@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { MessageCircle, Box, Scale } from 'lucide-react';
+import { MessageCircle, Box, Scale, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -120,9 +120,21 @@ export default function QuoteCalculator() {
   return (
     <section id="cotizador" className="section-padding bg-white relative overflow-hidden">
       <div className="container-max relative z-10">
-        <div data-parallax-header className="text-center mb-12">
-          <h2 className="section-title">{t.calculator.title}</h2>
-          <p className="section-subtitle">{t.calculator.subtitle}</p>
+        <div data-parallax-header className="text-center mb-10 sm:mb-12 max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+            <Calculator size={15} className="text-brand-red" />
+            <span>{language === 'en' ? 'Calculator' : 'Cotizador'}</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
+            {language === 'en' ? (
+              <>Estimate your <span className="text-brand-red">shipping cost</span></>
+            ) : (
+              <>Calcula el costo de tu <span className="text-brand-red">envío</span></>
+            )}
+          </h2>
+          <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
+            {t.calculator.subtitle}
+          </p>
         </div>
 
         <div data-parallax-content className="grid lg:grid-cols-12 gap-8 max-w-5xl mx-auto">

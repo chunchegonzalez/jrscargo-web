@@ -196,16 +196,20 @@ export default function HowItWorks() {
           transition={{ duration: 0.4 }}
           className="text-center max-w-2xl mx-auto mb-8 lg:mb-10"
         >
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-blue/10 border border-brand-blue/15 text-brand-blue text-[11px] font-bold uppercase tracking-wider mb-2.5">
-            <Sparkles size={12} className="text-[#FFC44D]" />
-            <span>{isEn ? 'How it works' : 'Cómo funciona'}</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+            <Sparkles size={15} className="text-[#f59e0b]" />
+            <span>{isEn ? 'How It Works' : 'Cómo funciona'}</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-slate-900 tracking-tight leading-tight">
-            {t.howItWorks.title}
+          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
+            {isEn ? (
+              <>Get your purchases in <span className="text-[#f59e0b]">4 simple steps</span></>
+            ) : (
+              <>Trae tus compras en <span className="text-[#f59e0b]">4 simples pasos</span></>
+            )}
           </h2>
 
-          <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
             {t.howItWorks.subtitle}
           </p>
         </motion.div>

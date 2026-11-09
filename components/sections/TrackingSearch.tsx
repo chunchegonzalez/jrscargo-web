@@ -125,18 +125,19 @@ export default function TrackingSearch() {
   return (
     <section id="tracking" className="section-padding bg-white relative overflow-hidden">
       <div className="container-max max-w-5xl mx-auto relative z-10">
-        <div data-parallax-header className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-sm mb-6">
-            <Package size={16} className="text-brand-red" /> {t.nav.tracking}
+        <div data-parallax-header className="text-center mb-10 sm:mb-12 max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+            <Package size={15} className="text-brand-red" />
+            <span>{t.nav.tracking}</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-black text-brand-blue mb-4 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
             {language === 'en' ? (
               <>Where is my <span className="text-brand-red">package?</span></>
             ) : (
               <>¿Dónde está mi <span className="text-brand-red">paquete?</span></>
             )}
           </h2>
-          <p className="text-brand-text-gray text-lg max-w-2xl mx-auto text-balance">
+          <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed text-balance">
             {t.tracking.subtitle}
           </p>
         </div>

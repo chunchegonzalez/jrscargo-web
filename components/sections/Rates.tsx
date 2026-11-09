@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { rates } from '@/data/rates';
-import { Plane, Ship, Calculator, ArrowRight, Info, ChevronRight } from 'lucide-react';
+import { Plane, Ship, Calculator, ArrowRight, Info, ChevronRight, Tag } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -147,10 +147,18 @@ export default function Rates() {
       <div className="container-max px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado */}
         <div data-parallax-header className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-extrabold text-[#0B2737] tracking-tight">
-            {t.rates.title}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+            <Tag size={15} className="text-[#f59e0b]" />
+            <span>{language === 'en' ? 'Rates' : 'Tarifas'}</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
+            {language === 'en' ? (
+              <>Simple and <span className="text-[#f59e0b]">transparent rates</span></>
+            ) : (
+              <>Tarifas simples y <span className="text-[#f59e0b]">transparentes</span></>
+            )}
           </h2>
-          <p className="text-sm sm:text-[15px] text-slate-600 mt-2 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
             {t.rates.subtitle}
           </p>
         </div>

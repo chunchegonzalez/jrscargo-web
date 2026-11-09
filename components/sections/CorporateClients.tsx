@@ -73,20 +73,19 @@ export default function CorporateClients() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Columna izquierda: Información corporativa y beneficios */}
           <div data-parallax-header className="lg:col-span-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 mb-2.5">
-              {isEn ? 'CORPORATE CLIENTS' : 'CLIENTES EMPRESARIALES'}
-            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+              <Building2 size={15} className="text-brand-red" />
+              <span>{isEn ? 'Corporate Clients' : 'Clientes empresariales'}</span>
+            </div>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-[34px] font-extrabold text-[#0B2737] leading-[1.2] tracking-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-[#0B2737] leading-[1.2] tracking-tight">
               {isEn ? (
                 <>
-                  Logistics solutions <br className="hidden sm:inline" />
-                  for your company
+                  Logistics solutions for <span className="text-brand-red">your company</span>
                 </>
               ) : (
                 <>
-                  Soluciones logísticas <br className="hidden sm:inline" />
-                  para tu empresa
+                  Soluciones logísticas para <span className="text-brand-red">tu empresa</span>
                 </>
               )}
             </h2>

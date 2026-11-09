@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, MapPin } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function LocationMap() {
@@ -19,11 +19,19 @@ export default function LocationMap() {
     <section className="py-12 lg:py-16 bg-white relative overflow-hidden">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado compacto */}
-        <div data-parallax-header className="text-center mb-7 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0B2737] tracking-tight">
-            {isEn ? 'Find Us in Heredia' : 'Encuéntranos en Heredia'}
+        <div data-parallax-header className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
+            <MapPin size={15} className="text-brand-red" />
+            <span>{isEn ? 'Location' : 'Ubicación'}</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
+            {isEn ? (
+              <>Find Us in <span className="text-brand-red">Heredia</span></>
+            ) : (
+              <>Encuéntranos en <span className="text-brand-red">Heredia</span></>
+            )}
           </h2>
-          <p className="text-sm sm:text-[15px] text-slate-600 mt-1.5 max-w-xl mx-auto">
+          <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
             {isEn
               ? 'Strategically located to expedite your parcel processing and dispatch.'
               : 'Ubicados estratégicamente para facilitar el procesamiento de tus envíos.'}
