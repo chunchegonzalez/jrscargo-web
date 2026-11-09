@@ -144,15 +144,6 @@ export default function Rates() {
 
   return (
     <section id="tarifas" className="py-14 lg:py-20 bg-white relative overflow-hidden">
-      {/* Capa decorativa de fondo con parallax sutil */}
-      <div
-        data-parallax-bg="36"
-        className="absolute -top-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(18, 67, 94, 0.03) 0%, transparent 70%)',
-        }}
-      />
-
       <div className="container-max px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado */}
         <div data-parallax-header className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto">

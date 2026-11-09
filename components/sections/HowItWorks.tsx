@@ -187,23 +187,6 @@ export default function HowItWorks() {
       id="como-funciona"
       className="py-12 lg:py-16 bg-white relative overflow-hidden"
     >
-      {/* Elementos decorativos de fondo suaves (misma paleta) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          data-parallax-bg="38"
-          className="absolute -top-24 left-1/2 -translate-x-1/2 w-[700px] h-[260px] rounded-full blur-3xl opacity-30"
-          style={{
-            background:
-              'radial-gradient(circle, rgba(20, 68, 93, 0.10) 0%, rgba(255, 196, 77, 0.06) 50%, transparent 75%)'
-          }}
-        />
-        <div
-          data-parallax-bg="-30"
-          className="absolute bottom-0 right-[-10%] w-[400px] h-[400px] rounded-full blur-3xl opacity-20"
-          style={{ background: 'radial-gradient(circle, rgba(226, 45, 75, 0.06) 0%, transparent 70%)' }}
-        />
-      </div>
-
       <div className="max-w-6xl mx-auto relative z-10 px-4 sm:px-6 lg:px-8">
         {/* Cabecera compacta y proporcionada */}
         <motion.div

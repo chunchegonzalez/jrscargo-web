@@ -124,44 +124,16 @@ export default function TrackingSearch() {
 
   return (
     <section id="tracking" className="section-padding bg-white relative overflow-hidden">
-      {/* Dynamic Background Elements (GPU-friendly radial gradients) */}
-      <div
-        data-parallax-bg="42"
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full pointer-events-none"
-      >
-        <div
-          className="absolute top-20 left-0 w-72 h-72 rounded-full animate-blob"
-          style={{
-            background: 'radial-gradient(circle, rgba(18, 67, 94, 0.06) 0%, transparent 70%)',
-            willChange: 'transform',
-          }}
-        />
-        <div
-          className="absolute top-20 right-0 w-72 h-72 rounded-full animate-blob animation-delay-2000"
-          style={{
-            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.06) 0%, transparent 70%)',
-            willChange: 'transform',
-          }}
-        />
-        <div
-          className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full animate-blob animation-delay-4000"
-          style={{
-            background: 'radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 70%)',
-            willChange: 'transform',
-          }}
-        />
-      </div>
-
       <div className="container-max max-w-5xl mx-auto relative z-10">
         <div data-parallax-header className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100 text-brand-blue font-bold text-sm mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-sm mb-6">
             <Package size={16} className="text-brand-red" /> {t.nav.tracking}
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-brand-blue mb-4 tracking-tight">
             {language === 'en' ? (
-              <>Where is my <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red to-brand-yellow">package?</span></>
+              <>Where is my <span className="text-brand-red">package?</span></>
             ) : (
-              <>¿Dónde está mi <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red to-brand-yellow">paquete?</span></>
+              <>¿Dónde está mi <span className="text-brand-red">paquete?</span></>
             )}
           </h2>
           <p className="text-brand-text-gray text-lg max-w-2xl mx-auto text-balance">
@@ -169,12 +141,9 @@ export default function TrackingSearch() {
           </p>
         </div>
 
-        {/* Premium Search Form */}
-        <div data-parallax-content className="relative max-w-3xl mx-auto mb-16 group">
-          {/* Glow Effect */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-brand-blue via-brand-red to-brand-yellow rounded-[2.5rem] blur-lg opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-          
-          <form onSubmit={handleSearch} className="relative bg-white/90 backdrop-blur-xl flex flex-col sm:flex-row gap-3 p-3 rounded-[2rem] shadow-xl items-center border border-white">
+        {/* Clean Search Form */}
+        <div data-parallax-content className="relative max-w-3xl mx-auto mb-16">
+          <form onSubmit={handleSearch} className="relative bg-white flex flex-col sm:flex-row gap-3 p-3 rounded-[2rem] shadow-[0_4px_24px_rgba(18,67,94,0.08)] items-center border border-slate-200/90">
             <div className="relative flex-1 w-full">
               <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
                 <Search size={24} className="text-brand-text-light group-focus-within:text-brand-blue transition-colors" />

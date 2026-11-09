@@ -119,11 +119,6 @@ export default function QuoteCalculator() {
 
   return (
     <section id="cotizador" className="section-padding bg-white relative overflow-hidden">
-      <div
-        data-parallax-bg="40"
-        className="absolute top-0 right-0 w-full h-full bg-hero-gradient opacity-[0.02] pointer-events-none mix-blend-multiply"
-      />
-      
       <div className="container-max relative z-10">
         <div data-parallax-header className="text-center mb-12">
           <h2 className="section-title">{t.calculator.title}</h2>

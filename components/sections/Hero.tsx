@@ -169,27 +169,10 @@ export default function Hero() {
   return (
     <section
       ref={heroRef}
-      className={`relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden ${
-        isHalloween
-          ? 'bg-gradient-to-b from-[#FAF7FF] via-[#FFF9F5] to-[#F8F5FF]'
-          : 'bg-white'
-      }`}
+      className="relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden bg-white"
     >
       {/* Halloween Dynamic Background Layer */}
       <HalloweenHeroBackground />
-
-      {/* Abstract Background Elements */}
-      <div ref={bgGlowRef} className="absolute inset-0 pointer-events-none">
-        {!isHalloween && (
-          <div
-            className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full opacity-60"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(18, 67, 94, 0.06) 0%, transparent 70%)',
-            }}
-          />
-        )}
-      </div>
 
       <div className="container-max relative z-10 px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
@@ -356,7 +339,7 @@ export default function Hero() {
 
           {/* Visual/Image (3-Layer GSAP ScrollTrigger Parallax + GPU-Composited Animations) */}
           <div className="relative lg:h-[600px] hidden lg:block">
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue/5 via-white/55 to-brand-red/5 rounded-[3rem] border border-white/80 shadow-[0_20px_40px_rgb(0,0,0,0.05)] overflow-hidden flex items-center justify-center">
+            <div className="absolute inset-0 bg-slate-50/60 rounded-[3rem] border border-slate-200/80 shadow-[0_10px_30px_rgb(0,0,0,0.03)] overflow-hidden flex items-center justify-center">
               {/* CAPA 1 (Fondo): Mapa logístico sutil y Anillos Radar */}
               <div
                 ref={bgLayerRef}
