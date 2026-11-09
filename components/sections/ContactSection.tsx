@@ -54,7 +54,7 @@ export default function ContactSection() {
   return (
     <section
       id="contacto"
-      className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-[#F8FAFC]"
+      className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-white"
     >
       {/* Formas decorativas suaves de fondo */}
       <div

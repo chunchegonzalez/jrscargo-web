@@ -16,7 +16,7 @@ export default function LocationMap() {
     'https://www.google.com/maps/place/JRS+CARGO+CR/@9.9999918,-84.0962979,253m/data=!3m2!1e3!4b1!4m6!3m5!1s0x8fa0e50070b2b9c3:0x57e9993aae41eab2!8m2!3d9.9999905!4d-84.0956542!16s%2Fg%2F11zd7mddck?entry=ttu&g_ep=EgoyMDI2MDgwNS4xIKXMDSoASAFQAw%3D%3D';
 
   return (
-    <section className="py-12 lg:py-16 bg-[#F8FAFC] relative overflow-hidden">
+    <section className="py-12 lg:py-16 bg-white relative overflow-hidden">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado compacto */}
         <div data-parallax-header className="text-center mb-7 sm:mb-8">

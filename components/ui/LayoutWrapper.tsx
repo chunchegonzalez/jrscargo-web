@@ -34,7 +34,7 @@ export function MainWrapper({ children }: { children: React.ReactNode }) {
   const isExcluded = pathname?.startsWith('/admin') || pathname?.startsWith('/estado-cuenta') || pathname?.startsWith('/mobile');
   
   return (
-    <main className={`flex-1 relative z-10 ${isExcluded ? '' : 'pt-[72px] sm:pt-[88px]'}`}>
+    <main className={`flex-1 relative z-10 bg-white ${isExcluded ? '' : 'pt-[72px] sm:pt-[88px]'}`}>
       {children}
     </main>
   );

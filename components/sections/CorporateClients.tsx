@@ -67,7 +67,7 @@ export default function CorporateClients() {
   return (
     <section
       id="mayoristas"
-      className="py-14 lg:py-20 bg-[#F8FAFC] relative overflow-hidden"
+      className="py-14 lg:py-20 bg-white relative overflow-hidden"
     >
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
@@ -162,7 +162,7 @@ export default function CorporateClients() {
                           type="text"
                           name="companyName"
                           placeholder={t.corporate.formCompanyPlaceholder}
-                          className="w-full h-10 pl-9 pr-3 bg-[#F8FAFC] border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
+                          className="w-full h-10 pl-9 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
                         />
                       </div>
                     </div>
@@ -180,7 +180,7 @@ export default function CorporateClients() {
                           type="text"
                           name="contactName"
                           placeholder={t.corporate.formContactPlaceholder}
-                          className="w-full h-10 pl-9 pr-3 bg-[#F8FAFC] border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
+                          className="w-full h-10 pl-9 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
                         />
                       </div>
                     </div>
@@ -200,7 +200,7 @@ export default function CorporateClients() {
                           type="email"
                           name="email"
                           placeholder={t.corporate.formEmailPlaceholder}
-                          className="w-full h-10 pl-9 pr-3 bg-[#F8FAFC] border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
+                          className="w-full h-10 pl-9 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
                         />
                       </div>
                     </div>
@@ -218,7 +218,7 @@ export default function CorporateClients() {
                           type="tel"
                           name="phone"
                           placeholder={t.corporate.formPhonePlaceholder}
-                          className="w-full h-10 pl-9 pr-3 bg-[#F8FAFC] border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
+                          className="w-full h-10 pl-9 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
                         />
                       </div>
                     </div>
@@ -235,7 +235,7 @@ export default function CorporateClients() {
                       <select
                         required
                         name="volume"
-                        className="w-full h-10 pl-9 pr-8 bg-[#F8FAFC] border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none appearance-none cursor-pointer"
+                        className="w-full h-10 pl-9 pr-8 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none appearance-none cursor-pointer"
                       >
                         <option value="">{t.corporate.formVolumePlaceholder}</option>
                         <option value="10-50">10 - 50 lbs / 5 - 20 kg</option>
@@ -262,7 +262,7 @@ export default function CorporateClients() {
                         name="message"
                         rows={3}
                         placeholder={t.corporate.formMessagePlaceholder}
-                        className="w-full pl-9 pr-3 py-2.5 bg-[#F8FAFC] border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none resize-none"
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none resize-none"
                       />
                     </div>
                   </div>

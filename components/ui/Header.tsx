@@ -187,7 +187,7 @@ export default function Header() {
         className={`fixed left-0 right-0 z-50 transition-all duration-300 ease-out ${
           isScrolled && !isMobileMenuOpen
             ? 'top-2 sm:top-4 px-3 sm:px-6 pointer-events-none'
-            : 'top-0 px-0 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs pointer-events-auto'
+            : 'top-0 px-0 bg-white/95 backdrop-blur-md border-b border-slate-100/60 shadow-2xs pointer-events-auto'
         }`}
       >
         <div

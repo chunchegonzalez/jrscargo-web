@@ -123,7 +123,7 @@ export default function TrackingSearch() {
   };
 
   return (
-    <section id="tracking" className="section-padding bg-[#F8FAFC] relative overflow-hidden">
+    <section id="tracking" className="section-padding bg-white relative overflow-hidden">
       {/* Dynamic Background Elements (GPU-friendly radial gradients) */}
       <div
         data-parallax-bg="42"

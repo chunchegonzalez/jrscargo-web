@@ -63,7 +63,7 @@ export default function Rates() {
   ];
 
   return (
-    <section id="tarifas" className="section-padding bg-[#F8FAFC] relative overflow-hidden">
+    <section id="tarifas" className="section-padding bg-white relative overflow-hidden">
       {/* Capa decorativa de fondo con parallax sutil */}
       <div
         data-parallax-bg="36"

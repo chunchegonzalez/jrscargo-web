@@ -15,8 +15,8 @@ const config: Config = {
           red: '#fd4e64',       // Rojo/coral
           yellow: '#fdc151',    // Amarillo
           white: '#FFFFFF',
-          'bg-light': '#F8FAFC', // Fondo claro uniforme
-          'bg-section': '#F8FAFC',
+          'bg-light': '#FFFFFF', // Fondo blanco puro uniforme
+          'bg-section': '#FFFFFF',
           'text-dark': '#0f172a',
           'text-gray': '#475569',
           'text-light': '#64748b',

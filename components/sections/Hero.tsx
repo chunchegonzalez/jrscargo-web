@@ -172,7 +172,7 @@ export default function Hero() {
       className={`relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden ${
         isHalloween
           ? 'bg-gradient-to-b from-[#FAF7FF] via-[#FFF9F5] to-[#F8F5FF]'
-          : 'bg-[#F8FAFC]'
+          : 'bg-white'
       }`}
     >
       {/* Halloween Dynamic Background Layer */}

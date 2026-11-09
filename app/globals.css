@@ -10,8 +10,8 @@
     --brand-red: #EF4444;
     --brand-yellow: #F59E0B;
     --foreground-rgb: 9, 9, 11;
-    --background-start-rgb: 248, 250, 252;
-    --background-end-rgb: 248, 250, 252;
+    --background-start-rgb: 255, 255, 255;
+    --background-end-rgb: 255, 255, 255;
   }
 
   html {
@@ -22,7 +22,7 @@
   body {
     font-family: 'Inter', system-ui, sans-serif;
     color: #09090B;
-    background: #F8FAFC;
+    background: #FFFFFF;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
