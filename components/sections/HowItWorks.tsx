@@ -185,7 +185,7 @@ export default function HowItWorks() {
   return (
     <section
       id="como-funciona"
-      className="py-12 lg:py-16 bg-gradient-to-b from-[#F8FAFC] via-white to-[#F8FAFC] relative overflow-hidden"
+      className="py-12 lg:py-16 bg-[#F8FAFC] relative overflow-hidden"
     >
       {/* Elementos decorativos de fondo suaves (misma paleta) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

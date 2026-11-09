@@ -63,7 +63,7 @@ export default function Rates() {
   ];
 
   return (
-    <section id="tarifas" className="section-padding bg-white relative overflow-hidden">
+    <section id="tarifas" className="section-padding bg-[#F8FAFC] relative overflow-hidden">
       {/* Capa decorativa de fondo con parallax sutil */}
       <div
         data-parallax-bg="36"
@@ -151,7 +151,7 @@ export default function Rates() {
         </div>
         
         <div className="mt-12 text-center space-y-2">
-          <p className="text-sm text-brand-text-light bg-brand-bg-light inline-block px-6 py-3 rounded-xl">
+          <p className="text-sm text-brand-text-light bg-white border border-slate-200/90 shadow-2xs inline-block px-6 py-3 rounded-xl max-w-4xl">
             {language === 'en' 
               ? 'Quotes displayed are estimates based on published rates. Branch pickup or home delivery available (home delivery has an additional cost). For special cargo or specific terms, please consult with an advisor.'
               : 'Las cotizaciones mostradas son estimaciones basadas en las tarifas publicadas. Contamos con retiro en sucursal o entrega a domicilio (la entrega a domicilio tiene un costo adicional). Para mercancía especial o condiciones particulares, consulta con un asesor.'}

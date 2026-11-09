@@ -67,7 +67,7 @@ export default function CorporateClients() {
   return (
     <section
       id="mayoristas"
-      className="py-14 lg:py-20 bg-[#F8FAFC] border-y border-slate-200/70 relative overflow-hidden"
+      className="py-14 lg:py-20 bg-[#F8FAFC] relative overflow-hidden"
     >
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">

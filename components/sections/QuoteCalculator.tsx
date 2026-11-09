@@ -118,7 +118,7 @@ export default function QuoteCalculator() {
   const waUrl = `https://wa.me/50672601238?text=${encodeURIComponent(waMessage)}`;
 
   return (
-    <section id="cotizador" className="section-padding bg-brand-bg-section relative overflow-hidden">
+    <section id="cotizador" className="section-padding bg-[#F8FAFC] relative overflow-hidden">
       <div
         data-parallax-bg="40"
         className="absolute top-0 right-0 w-full h-full bg-hero-gradient opacity-[0.02] pointer-events-none mix-blend-multiply"
@@ -132,7 +132,7 @@ export default function QuoteCalculator() {
 
         <div data-parallax-content className="grid lg:grid-cols-12 gap-8 max-w-5xl mx-auto">
           {/* Form */}
-          <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl shadow-soft">
+          <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl shadow-soft border border-slate-200/90">
             {/* Paso 1 */}
             <div className="mb-8 relative z-20">
               <h3 className="text-lg font-bold text-brand-blue mb-4 flex items-center gap-2">
