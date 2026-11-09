@@ -10,6 +10,9 @@ type WorldboxPackageListItem = {
   clientName?: string;
   clientCode?: string;
   consignatario?: string;
+  originWarehouse?: string;
+  originCountry?: string;
+  origin?: string;
 };
 
 let cachedPackages: WorldboxPackageListItem[] = [];
@@ -58,13 +61,80 @@ interface NormalizedTimelineEvent {
   stageKey: string;
 }
 
+function getOriginWarehouseInfo(
+  originHint?: string,
+  rawTimeline?: RawTimelineEvent[],
+  weightUnitHint?: string
+): {
+  status: string;
+  description: string;
+  statusLabel: string;
+  stageKey: string;
+} {
+  const timelineText = Array.isArray(rawTimeline)
+    ? rawTimeline.map(e => `${e.status || ''} ${e.description || ''}`).join(' ')
+    : '';
+  const combinedOrigin = `${originHint || ''} ${timelineText}`.toLowerCase();
+
+  if (
+    combinedOrigin.includes('madrid') ||
+    combinedOrigin.includes('españa') ||
+    combinedOrigin.includes('espana') ||
+    combinedOrigin.includes('spain')
+  ) {
+    return {
+      status: 'Paquete recibido y procesado en Bodega Madrid',
+      description: 'Recibido, pesado y procesado en nuestro centro de distribución en Madrid.',
+      statusLabel: 'En Bodega Madrid',
+      stageKey: 'STAGE_ORIGIN_MAD'
+    };
+  }
+
+  if (
+    combinedOrigin.includes('china') ||
+    combinedOrigin.includes('shenzhen') ||
+    combinedOrigin.includes('guangzhou') ||
+    combinedOrigin.includes('hong kong') ||
+    combinedOrigin.includes('yiwu') ||
+    combinedOrigin.includes('beijing') ||
+    combinedOrigin.includes('shanghai')
+  ) {
+    return {
+      status: 'Paquete recibido y procesado en Bodega de China',
+      description: 'Recibido, pesado y procesado en nuestro centro de distribución en China.',
+      statusLabel: 'En Bodega de China',
+      stageKey: 'STAGE_ORIGIN_CHN'
+    };
+  }
+
+  // Fallback if originHint was empty and package weight unit is kg (used by Madrid warehouse in Worldbox)
+  if (!originHint && String(weightUnitHint || '').toLowerCase() === 'kg') {
+    return {
+      status: 'Paquete recibido y procesado en Bodega Madrid',
+      description: 'Recibido, pesado y procesado en nuestro centro de distribución en Madrid.',
+      statusLabel: 'En Bodega Madrid',
+      stageKey: 'STAGE_ORIGIN_MAD'
+    };
+  }
+
+  return {
+    status: 'Paquete recibido y procesado en Bodega Miami',
+    description: 'Recibido, pesado y procesado en nuestro centro de distribución en Miami.',
+    statusLabel: 'En Bodega Miami',
+    stageKey: 'STAGE_ORIGIN_MIA'
+  };
+}
+
 function normalizeAndDeduplicateTimeline(
   rawTimeline: RawTimelineEvent[],
   isRegisteredInCR: boolean,
   isDeliveredInCR: boolean,
-  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null
+  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null,
+  originHint?: string,
+  weightUnitHint?: string
 ): { timeline: Array<{ date: string; status: string; description: string; icon: string }>; stageKeys: Set<string> } {
   const normalizedList: NormalizedTimelineEvent[] = [];
+  const originInfo = getOriginWarehouseInfo(originHint, rawTimeline, weightUnitHint);
 
   for (const evt of rawTimeline) {
     const rawStatus = (evt.status || evt.description || '').trim();
@@ -138,17 +208,22 @@ function normalizeAndDeduplicateTimeline(
     // 4. Received at origin warehouse (Miami / Spain / China)
     if (
       combined.includes('miami') ||
+      combined.includes('madrid') ||
+      combined.includes('españa') ||
+      combined.includes('espana') ||
+      combined.includes('china') ||
       combined.includes('bodega origen') ||
       combined.includes('recibido en bodega') ||
       combined.includes('recibido y procesado') ||
       combined.includes('warehouse')
     ) {
+      const evtOrigin = getOriginWarehouseInfo(originHint || combined, rawTimeline, weightUnitHint);
       normalizedList.push({
         date,
-        status: 'Paquete recibido y procesado en Bodega Miami',
-        description: 'Recibido, pesado y procesado en nuestro centro de distribución en Miami.',
+        status: evtOrigin.status,
+        description: evtOrigin.description,
         icon: 'warehouse',
-        stageKey: 'STAGE_ORIGIN_MIA'
+        stageKey: originInfo.stageKey
       });
       continue;
     }
@@ -353,6 +428,12 @@ export async function GET(request: Request) {
         data.package.tenantName = matched.tenantName;
         data.package.clientName = matched.clientName;
         data.package.clientCode = matched.clientCode;
+        if (matched.originWarehouse) {
+          data.package.originWarehouse = matched.originWarehouse;
+          data.package.origin = matched.originWarehouse;
+        } else if (matched.origin) {
+          data.package.origin = matched.origin;
+        }
         
         const upperTenant = (matched.tenantName || '').toUpperCase();
         const upperCode = (matched.clientCode || '').toUpperCase();
@@ -400,11 +481,19 @@ export async function GET(request: Request) {
     }
 
     const rawTimeline: RawTimelineEvent[] = Array.isArray(data.timeline) ? data.timeline : [];
+    const originHint = String(
+      data.package.originWarehouse || data.package.origin || data.package.warehouse || ''
+    ).trim();
+    const weightUnitHint = String(data.package.weightUnit || '').trim();
+    const originInfo = getOriginWarehouseInfo(originHint, rawTimeline, weightUnitHint);
+
     const { timeline: cleanTimeline, stageKeys } = normalizeAndDeduplicateTimeline(
       rawTimeline,
       isRegisteredInCR,
       isDeliveredInCR,
-      localItem
+      localItem,
+      originHint,
+      weightUnitHint
     );
 
     data.timeline = cleanTimeline;
@@ -430,8 +519,12 @@ export async function GET(request: Request) {
           rawStatusLabel.includes('aduana')
         ) {
           data.package.statusLabel = 'En Tránsito a Bodega CR';
-        } else if (!data.package.statusLabel) {
-          data.package.statusLabel = 'En Bodega Miami';
+        } else if (
+          !data.package.statusLabel ||
+          rawStatusLabel.includes('recibido en bodega') ||
+          rawStatusLabel.includes('bodega miami')
+        ) {
+          data.package.statusLabel = originInfo.statusLabel;
         }
       }
     }

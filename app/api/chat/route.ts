@@ -23,6 +23,105 @@ interface NormalizedTimelineEvent {
   stageKey: string;
 }
 
+type WorldboxPackageListItem = {
+  trackingNumber?: string;
+  originWarehouse?: string;
+  origin?: string;
+};
+
+let cachedPackages: WorldboxPackageListItem[] = [];
+let lastCacheTime = 0;
+
+async function getWorldboxPackages(): Promise<WorldboxPackageListItem[]> {
+  const now = Date.now();
+  if (cachedPackages.length > 0 && now - lastCacheTime < 60000) {
+    return cachedPackages;
+  }
+  try {
+    const res = await fetch('https://worldboxcr.com/api/jrscargo/packages', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${TRACKING_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      next: { revalidate: 60 }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        cachedPackages = data;
+        lastCacheTime = Date.now();
+      }
+    }
+  } catch {
+    // Ignore cache fetch errors
+  }
+  return cachedPackages;
+}
+
+function getOriginWarehouseInfo(
+  originHint?: string,
+  rawTimeline?: RawTimelineEvent[],
+  weightUnitHint?: string
+): {
+  status: string;
+  description: string;
+  statusLabel: string;
+  stageKey: string;
+} {
+  const timelineText = Array.isArray(rawTimeline)
+    ? rawTimeline.map(e => `${e.status || ''} ${e.description || ''}`).join(' ')
+    : '';
+  const combinedOrigin = `${originHint || ''} ${timelineText}`.toLowerCase();
+
+  if (
+    combinedOrigin.includes('madrid') ||
+    combinedOrigin.includes('españa') ||
+    combinedOrigin.includes('espana') ||
+    combinedOrigin.includes('spain')
+  ) {
+    return {
+      status: 'Paquete recibido y procesado en Bodega Madrid',
+      description: 'Recibido, pesado y procesado en nuestro centro de distribución en Madrid.',
+      statusLabel: 'En Bodega Madrid',
+      stageKey: 'STAGE_ORIGIN_MAD'
+    };
+  }
+
+  if (
+    combinedOrigin.includes('china') ||
+    combinedOrigin.includes('shenzhen') ||
+    combinedOrigin.includes('guangzhou') ||
+    combinedOrigin.includes('hong kong') ||
+    combinedOrigin.includes('yiwu') ||
+    combinedOrigin.includes('beijing') ||
+    combinedOrigin.includes('shanghai')
+  ) {
+    return {
+      status: 'Paquete recibido y procesado en Bodega de China',
+      description: 'Recibido, pesado y procesado en nuestro centro de distribución en China.',
+      statusLabel: 'En Bodega de China',
+      stageKey: 'STAGE_ORIGIN_CHN'
+    };
+  }
+
+  if (!originHint && String(weightUnitHint || '').toLowerCase() === 'kg') {
+    return {
+      status: 'Paquete recibido y procesado en Bodega Madrid',
+      description: 'Recibido, pesado y procesado en nuestro centro de distribución en Madrid.',
+      statusLabel: 'En Bodega Madrid',
+      stageKey: 'STAGE_ORIGIN_MAD'
+    };
+  }
+
+  return {
+    status: 'Paquete recibido y procesado en Bodega Miami',
+    description: 'Recibido, pesado y procesado en nuestro centro de distribución en Miami.',
+    statusLabel: 'En Bodega Miami',
+    stageKey: 'STAGE_ORIGIN_MIA'
+  };
+}
+
 /**
  * Exact same timeline normalization & deduplication used in /api/tracking ("¿Dónde está mi paquete?")
  */
@@ -30,9 +129,12 @@ function normalizeAndDeduplicateTimeline(
   rawTimeline: RawTimelineEvent[],
   isRegisteredInCR: boolean,
   isDeliveredInCR: boolean,
-  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null
+  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null,
+  originHint?: string,
+  weightUnitHint?: string
 ): { timeline: Array<{ date: string; status: string; description: string; icon: string }>; stageKeys: Set<string> } {
   const normalizedList: NormalizedTimelineEvent[] = [];
+  const originInfo = getOriginWarehouseInfo(originHint, rawTimeline, weightUnitHint);
 
   for (const evt of rawTimeline) {
     const rawStatus = (evt.status || evt.description || '').trim();
@@ -106,17 +208,22 @@ function normalizeAndDeduplicateTimeline(
     // 4. Received at origin warehouse (Miami / Spain / China)
     if (
       combined.includes('miami') ||
+      combined.includes('madrid') ||
+      combined.includes('españa') ||
+      combined.includes('espana') ||
+      combined.includes('china') ||
       combined.includes('bodega origen') ||
       combined.includes('recibido en bodega') ||
       combined.includes('recibido y procesado') ||
       combined.includes('warehouse')
     ) {
+      const evtOrigin = getOriginWarehouseInfo(originHint || combined, rawTimeline, weightUnitHint);
       normalizedList.push({
         date,
-        status: 'Paquete recibido y procesado en Bodega Miami',
-        description: 'Recibido, pesado y procesado en nuestro centro de distribución en Miami.',
+        status: evtOrigin.status,
+        description: evtOrigin.description,
         icon: 'warehouse',
-        stageKey: 'STAGE_ORIGIN_MIA'
+        stageKey: originInfo.stageKey
       });
       continue;
     }
@@ -185,14 +292,17 @@ function normalizeAndDeduplicateTimeline(
 async function fetchTrackingData(trackingNumber: string) {
   try {
     const cleanTracking = trackingNumber.replace(/[\x00-\x1F\x7F\s]+/g, '').trim();
-    const res = await fetch(`https://worldboxcr.com/api/jrscargo/tracking/${encodeURIComponent(cleanTracking)}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${TRACKING_API_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      cache: 'no-store'
-    });
+    const [res, packagesList] = await Promise.all([
+      fetch(`https://worldboxcr.com/api/jrscargo/tracking/${encodeURIComponent(cleanTracking)}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${TRACKING_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store'
+      }),
+      getWorldboxPackages()
+    ]);
 
     let data: Record<string, unknown> = {};
     if (res.ok) {
@@ -226,15 +336,32 @@ async function fetchTrackingData(trackingNumber: string) {
 
     if (data.package) {
       const pkg = data.package as Record<string, unknown>;
+      if (packagesList && packagesList.length > 0) {
+        const cleanSearch = cleanTracking.toUpperCase();
+        const matched = packagesList.find(p => {
+          const pt = (p.trackingNumber || '').trim().toUpperCase();
+          return pt === cleanSearch || pt.endsWith(cleanSearch) || cleanSearch.endsWith(pt);
+        });
+        if (matched?.originWarehouse) {
+          pkg.originWarehouse = matched.originWarehouse;
+          pkg.origin = matched.originWarehouse;
+        }
+      }
+
       const rawTimeline: RawTimelineEvent[] = Array.isArray(data.timeline)
         ? (data.timeline as RawTimelineEvent[])
         : [];
+      const originHint = String(pkg.originWarehouse || pkg.origin || pkg.warehouse || '').trim();
+      const weightUnitHint = String(pkg.weightUnit || '').trim();
+      const originInfo = getOriginWarehouseInfo(originHint, rawTimeline, weightUnitHint);
 
       const { timeline: cleanTimeline, stageKeys } = normalizeAndDeduplicateTimeline(
         rawTimeline,
         isRegisteredInCR,
         isDeliveredInCR,
-        localItem
+        localItem,
+        originHint,
+        weightUnitHint
       );
 
       data.timeline = cleanTimeline;
@@ -262,8 +389,12 @@ async function fetchTrackingData(trackingNumber: string) {
             rawLabel.includes('aduana')
           ) {
             pkg.statusLabel = 'En Tránsito a Bodega CR';
-          } else if (!pkg.statusLabel) {
-            pkg.statusLabel = 'En Bodega Miami';
+          } else if (
+            !pkg.statusLabel ||
+            rawLabel.includes('recibido en bodega') ||
+            rawLabel.includes('bodega miami')
+          ) {
+            pkg.statusLabel = originInfo.statusLabel;
           }
         }
       }

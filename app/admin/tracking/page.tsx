@@ -154,7 +154,15 @@ function getStatusStyle(status: string): { bg: string; text: string; border: str
       isDelivered: false
     };
   }
-  if (s.includes('bodega') || s.includes('warehouse') || s.includes('miami') || s.includes('mia')) {
+  if (
+    s.includes('bodega') ||
+    s.includes('warehouse') ||
+    s.includes('miami') ||
+    s.includes('mia') ||
+    s.includes('madrid') ||
+    s.includes('españa') ||
+    s.includes('china')
+  ) {
     return {
       bg: 'bg-blue-50',
       text: 'text-blue-700',
@@ -342,7 +350,16 @@ export default function TrackingPage() {
     // Find timestamps from real events
     const receivedEvent = [...timeline].reverse().find(ev => {
       const t = `${ev.status} ${ev.description}`.toLowerCase();
-      return t.includes('miami') || t.includes('recibido') || t.includes('bodega origen') || t.includes('registrado') || t.includes('warehouse');
+      return (
+        t.includes('miami') ||
+        t.includes('madrid') ||
+        t.includes('españa') ||
+        t.includes('china') ||
+        t.includes('recibido') ||
+        t.includes('bodega origen') ||
+        t.includes('registrado') ||
+        t.includes('warehouse')
+      );
     }) || timeline[timeline.length - 1];
 
     const transitEvent = [...timeline].reverse().find(ev => {
