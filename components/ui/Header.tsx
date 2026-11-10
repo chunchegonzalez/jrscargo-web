@@ -83,7 +83,8 @@ export default function Header() {
 
     const updateScrollState = () => {
       const scrollY = window.scrollY;
-      setIsScrolled(scrollY > 20);
+      // Histéresis: activa a >60px, desactiva a <10px para evitar parpadeo
+      setIsScrolled((prev) => (prev ? scrollY > 10 : scrollY > 60));
 
       if (isNavScrollingRef.current) {
         ticking = false;
@@ -184,17 +185,22 @@ export default function Header() {
   return (
     <>
       <header
-        className={`fixed left-0 right-0 z-50 transition-all duration-300 ease-out ${
-          isScrolled && !isMobileMenuOpen
-            ? 'top-2 sm:top-4 px-3 sm:px-6 pointer-events-none'
-            : 'top-0 px-0 bg-white/95 backdrop-blur-md border-b border-slate-100/60 shadow-2xs pointer-events-auto'
+        className={`fixed top-0 left-0 right-0 z-50 pointer-events-none transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isScrolled && !isMobileMenuOpen ? 'pt-2 sm:pt-3 px-3 sm:px-6' : 'pt-0 px-0'
         }`}
       >
+        {/* Barra completa (estado superior): se desvanece suavemente al hacer scroll */}
         <div
-          className={`mx-auto transition-all duration-300 ease-out flex items-center justify-between gap-4 pointer-events-auto ${
+          aria-hidden="true"
+          className={`absolute inset-0 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-opacity duration-500 ease-out ${
+            isScrolled && !isMobileMenuOpen ? 'opacity-0' : 'opacity-100 pointer-events-auto'
+          }`}
+        />
+        <div
+          className={`relative mx-auto w-full max-w-7xl flex items-center justify-between gap-4 pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] rounded-full border ${
             isScrolled && !isMobileMenuOpen
-              ? 'w-full max-w-7xl bg-white/95 backdrop-blur-xl shadow-[0_12px_40px_rgba(18,67,94,0.12)] rounded-full py-2 px-5 sm:px-7 border border-slate-200/90'
-              : 'w-full max-w-7xl py-3 px-4 sm:px-6 lg:px-8'
+              ? 'bg-white/90 backdrop-blur-lg shadow-[0_4px_20px_rgba(18,67,94,0.10)] border-slate-200/80 py-2 px-5 sm:px-7'
+              : 'bg-transparent border-transparent shadow-none py-3 px-4 sm:px-6 lg:px-8'
           }`}
         >
           {/* Logo Normal (sin efectos ni distorsiones) */}
@@ -209,7 +215,7 @@ export default function Header() {
               alt="JRS CARGO"
               width={819}
               height={1024}
-              className={`w-auto object-contain transition-all duration-300 ${
+              className={`w-auto object-contain transition-all duration-500 ease-out ${
                 isScrolled && !isMobileMenuOpen
                   ? 'h-11 sm:h-12 lg:h-[50px]'
                   : 'h-14 sm:h-16 lg:h-[64px]'
