@@ -10,8 +10,7 @@ import {
   MessageSquare,
   Check,
   CheckCircle2,
-  AlertCircle,
-  ChevronDown
+  AlertCircle
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -231,20 +230,14 @@ export default function CorporateClients() {
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                         <PackageSearch size={15} />
                       </div>
-                      <select
+                      <input
                         required
+                        type="text"
                         name="volume"
-                        className="w-full h-10 pl-9 pr-8 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none appearance-none cursor-pointer"
-                      >
-                        <option value="">{t.corporate.formVolumePlaceholder}</option>
-                        <option value="10-50">10 - 50 lbs / 5 - 20 kg</option>
-                        <option value="51-200">51 - 200 lbs / 20 - 90 kg</option>
-                        <option value="201-500">201 - 500 lbs / 90 - 220 kg</option>
-                        <option value="500+">500+ lbs / 220+ kg / 20+ ft³</option>
-                      </select>
-                      <ChevronDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                        maxLength={50}
+                        autoComplete="off"
+                        placeholder={t.corporate.formVolumePlaceholder}
+                        className="w-full h-10 pl-9 pr-3 bg-slate-50/70 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-[#12435e] focus:ring-2 focus:ring-[#12435e]/10 transition-colors outline-none"
                       />
                     </div>
                   </div>
