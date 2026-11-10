@@ -592,3 +592,15 @@
   border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 8px 28px rgba(18, 67, 94, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
+
+/* Entrada rápida de tarjetas de tarifas al cambiar de filtro */
+@keyframes rate-card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rate-card-enter {
+  animation: rate-card-enter 0.18s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rate-card-enter { animation: none; }
+}
