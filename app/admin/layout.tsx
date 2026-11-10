@@ -12,6 +12,7 @@ import { isMobileAllowed } from '@/lib/mobile-access';
 function getAdminPageTitle(pathname: string): string {
   if (!pathname) return 'Panel de JRS';
   if (pathname === '/admin') return 'Vista General | Panel de JRS';
+  if (pathname.startsWith('/admin/bodega/comparar-cargos')) return 'Comparación de Cargos | Panel de JRS';
   if (pathname.startsWith('/admin/bodega/masivo')) return 'Acción Masiva | Panel de JRS';
   if (pathname.startsWith('/admin/bodega')) return 'Escanear Individual | Panel de JRS';
   if (pathname.startsWith('/admin/inventario')) return 'Inventario CR | Panel de JRS';
@@ -269,13 +270,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {openSections.operaciones ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
           </button>
           
-          <div className={`overflow-hidden transition-all duration-200 ${openSections.operaciones ? 'max-h-56 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+          <div className={`overflow-hidden transition-all duration-200 ${openSections.operaciones ? 'max-h-72 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
             <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
               {[
                 { href: '/admin/bodega', label: 'Escanear Individual', exact: true },
                 { href: '/admin/bodega/masivo', label: 'Acción Masiva' },
                 { href: '/admin/inventario', label: 'Inventario CR' },
                 { href: '/admin/tracking', label: 'Tracking de Paquetes' },
+                { href: '/admin/bodega/comparar-cargos', label: 'Comparar Cargos' },
                 { href: '/mobile', label: 'JRS Cargo Mobile (QR)', mobileDemo: true },
               ].filter(link => !(link as { mobileDemo?: boolean }).mobileDemo || isMobileAllowed(currentUser?.username)).map(link => {
                 const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
