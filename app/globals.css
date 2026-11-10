@@ -437,6 +437,10 @@
   }
 }
 
+.hero-radar-container {
+  container-type: size;
+}
+
 @keyframes gpu-plane-miami {
   0% {
     transform: translate3d(0px, 0px, 0);
@@ -449,7 +453,8 @@
     opacity: 0.85;
   }
   100% {
-    transform: translate3d(-190px, 190px, 0);
+    transform: translate3d(-202px, 192px, 0);
+    transform: translate3d(-35cqw, 32cqh, 0);
     opacity: 0;
   }
 }
@@ -466,7 +471,8 @@
     opacity: 0.85;
   }
   100% {
-    transform: translate3d(190px, 168px, 0);
+    transform: translate3d(202px, 168px, 0);
+    transform: translate3d(35cqw, 28cqh, 0);
     opacity: 0;
   }
 }
@@ -483,7 +489,8 @@
     opacity: 0.85;
   }
   100% {
-    transform: translate3d(190px, -168px, 0);
+    transform: translate3d(202px, -168px, 0);
+    transform: translate3d(35cqw, -28cqh, 0);
     opacity: 0;
   }
 }
@@ -500,7 +507,8 @@
     opacity: 0.85;
   }
   100% {
-    transform: translate3d(-190px, -190px, 0);
+    transform: translate3d(-202px, -192px, 0);
+    transform: translate3d(-35cqw, -32cqh, 0);
     opacity: 0;
   }
 }

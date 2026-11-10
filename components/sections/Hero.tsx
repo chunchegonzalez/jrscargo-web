@@ -329,7 +329,10 @@ export default function Hero() {
 
           {/* Visual/Image (3-Layer GSAP ScrollTrigger Parallax + GPU-Composited Animations) */}
           <div className="relative lg:h-[600px] hidden lg:block">
-            <div className="absolute inset-0 bg-slate-50/60 rounded-[3rem] border border-slate-200/80 shadow-[0_10px_30px_rgb(0,0,0,0.03)] overflow-hidden flex items-center justify-center">
+            <div 
+              className="hero-radar-container absolute inset-0 bg-slate-50/60 rounded-[3rem] border border-slate-200/80 shadow-[0_10px_30px_rgb(0,0,0,0.03)] overflow-hidden flex items-center justify-center [container-type:size]"
+              style={{ containerType: 'size' }}
+            >
               {/* CAPA 1 (Fondo): Mapa logístico sutil y Anillos Radar */}
               <div
                 ref={bgLayerRef}
@@ -457,7 +460,7 @@ export default function Hero() {
                     animation: 'gpu-plane-miami 4s linear infinite',
                   }}
                 >
-                  <div className="rotate-[180deg] -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-6 h-6 flex items-center justify-center rotate-[181deg] -translate-x-1/2 -translate-y-1/2 origin-center">
                     <Plane size={24} className="fill-current opacity-80" />
                   </div>
                 </div>
@@ -470,7 +473,7 @@ export default function Hero() {
                     animation: 'gpu-plane-spain 4.5s linear 0.8s infinite',
                   }}
                 >
-                  <div className="rotate-[90deg] -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-6 h-6 flex items-center justify-center rotate-[85deg] -translate-x-1/2 -translate-y-1/2 origin-center">
                     <Plane size={24} className="fill-current opacity-80" />
                   </div>
                 </div>
@@ -483,7 +486,7 @@ export default function Hero() {
                     animation: 'gpu-plane-china 5s linear 1.5s infinite',
                   }}
                 >
-                  <div className="rotate-[0deg] -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-6 h-6 flex items-center justify-center rotate-[5deg] -translate-x-1/2 -translate-y-1/2 origin-center">
                     <Plane size={24} className="fill-current opacity-80" />
                   </div>
                 </div>
@@ -496,7 +499,7 @@ export default function Hero() {
                     animation: 'gpu-ship-miami 6s linear 2.2s infinite',
                   }}
                 >
-                  <div className="-translate-x-1/2 -translate-y-1/2">
+                  <div className="w-7 h-7 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 origin-center">
                     <Container size={26} strokeWidth={2.5} className="opacity-80" />
                   </div>
                 </div>
