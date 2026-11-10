@@ -16,6 +16,7 @@ type FilterType = 'all' | 'air' | 'sea';
 export default function Rates() {
   const { t, language } = useLanguage();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [selectedRateId, setSelectedRateId] = useState<string>('usa-air');
   const cardsContainerRef = useRef<HTMLDivElement>(null);
 
   const ratesData = [
@@ -255,9 +256,13 @@ export default function Rates() {
                 <div
                   key={rate.id}
                   data-rate-card
-                  onClick={() => handleSelectRate(rate.calcOrigin, rate.calcService)}
+                  onClick={() => {
+                    setSelectedRateId(rate.id);
+                    handleSelectRate(rate.calcOrigin, rate.calcService);
+                  }}
+                  aria-pressed={selectedRateId === rate.id}
                   className={`bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col justify-between relative cursor-pointer transition-all duration-200 group shadow-xs hover:shadow-lg hover:-translate-y-1 ${
-                    rate.isHighlighted
+                    selectedRateId === rate.id
                       ? 'border-2 border-brand-red shadow-[0_4px_16px_rgba(253,78,100,0.1)]'
                       : 'border border-slate-200/90 hover:border-brand-red/60'
                   }`}
