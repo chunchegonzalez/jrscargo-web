@@ -172,6 +172,13 @@ export default function AdminLogin() {
       document.title = 'Panel de JRS';
     }
 
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('expired') === '1') {
+        setError('Tu sesión ha expirado por seguridad (límite de 24 horas). Por favor, ingresa de nuevo.');
+      }
+    }
+
     // Load saved quick-access profile or saved username
     try {
       const rawProfile = localStorage.getItem('jrs_device_quick_access');

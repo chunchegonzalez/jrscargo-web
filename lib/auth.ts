@@ -2,8 +2,7 @@
 // Compatible with Node.js and Next.js Edge Runtime (Web Crypto API)
 
 const AUTH_COOKIE_NAME = 'jrs_admin_auth';
-const COOKIE_MAX_AGE = 8 * 60 * 60; // 8 hours in seconds
-const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
+const SESSION_MAX_AGE = 24 * 60 * 60; // 24 hours in seconds (86,400s)
 
 function getSecret(): string {
   return process.env.AUTH_SECRET || 'jrs-cargo-auth-secure-hmac-key-2026-production';
@@ -52,16 +51,18 @@ async function hmacVerify(data: string, signature: string): Promise<boolean> {
 export interface AuthUser {
   username: string;
   role: string;
+  iat?: number;
   exp?: number;
 }
 
-// Create a cryptographically signed cookie value with expiration
-export async function createSignedCookie(user: AuthUser, remember = true): Promise<{ name: string; value: string; options: Record<string, unknown> }> {
+// Create a cryptographically signed cookie value with strict 24-hour expiration
+export async function createSignedCookie(user: AuthUser, _remember = true): Promise<{ name: string; value: string; options: Record<string, unknown> }> {
   const now = Math.floor(Date.now() / 1000);
-  const maxAge = remember ? REMEMBER_MAX_AGE : COOKIE_MAX_AGE;
+  const maxAge = SESSION_MAX_AGE; // Strict 24 hours (86,400s)
   const payloadData: AuthUser = {
     username: user.username,
     role: user.role,
+    iat: now,
     exp: now + maxAge,
   };
 
@@ -105,11 +106,23 @@ export async function verifySignedCookie(cookieValue: string | undefined | null)
 
     if (!user.username || !user.role) return null;
 
-    // Check expiration timestamp
+    const now = Math.floor(Date.now() / 1000);
+
+    // 1. Strict 24-hour check from token issuance (iat)
+    if (user.iat && typeof user.iat === 'number') {
+      if (now - user.iat >= SESSION_MAX_AGE) {
+        return null; // Expired session: 24 hours reached
+      }
+    }
+
+    // 2. Check expiration timestamp
     if (user.exp && typeof user.exp === 'number') {
-      const now = Math.floor(Date.now() / 1000);
-      if (now > user.exp) {
+      if (now >= user.exp) {
         return null; // Expired session
+      }
+      // 3. Immediately invalidate legacy cookies issued with old 30-day policy
+      if (user.exp - now > SESSION_MAX_AGE) {
+        return null;
       }
     }
 
@@ -127,4 +140,4 @@ export async function getAuthUserFromRequest(request: Request): Promise<AuthUser
   return await verifySignedCookie(decodeURIComponent(match[1]));
 }
 
-export { AUTH_COOKIE_NAME };
+export { AUTH_COOKIE_NAME, SESSION_MAX_AGE };

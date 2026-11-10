@@ -111,14 +111,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isLoginPage) {
-      fetch('/api/auth/me')
-        .then(res => res.json())
-        .then(data => {
-          if (data.authenticated) {
-            setCurrentUser(data.user);
+      const checkSession = async () => {
+        try {
+          const res = await fetch('/api/auth/me', { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated) {
+              setCurrentUser(data.user);
+            } else {
+              // Session expired (24h limit)
+              window.location.href = '/admin/login?expired=1';
+            }
+          } else if (res.status === 401) {
+            window.location.href = '/admin/login?expired=1';
           }
-        })
-        .catch(console.error);
+        } catch {
+          // Ignore network glitch
+        }
+      };
+
+      checkSession();
+      // Periodically check session (every 2 minutes) and on window focus
+      const timer = setInterval(checkSession, 2 * 60 * 1000);
+      const onFocus = () => checkSession();
+      window.addEventListener('focus', onFocus);
+
+      return () => {
+        clearInterval(timer);
+        window.removeEventListener('focus', onFocus);
+      };
     }
   }, [isLoginPage]);
 
