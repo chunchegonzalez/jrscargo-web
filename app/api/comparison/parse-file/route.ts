@@ -153,7 +153,7 @@ function parseXlsxBuffer(buffer: Buffer): string[][] {
 }
 
 /**
- * Parsea texto delimitado (CSV, TSV, punto y coma)
+ * Parsea texto delimitado (CSV, TSV, punto y coma, o columnas separadas por múltiples espacios)
  */
 function parseDelimitedText(text: string): string[][] {
   const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
@@ -162,12 +162,26 @@ function parseDelimitedText(text: string): string[][] {
   // Detectar delimitador según la primera línea
   const first = lines[0];
   let sep = ',';
-  if (first.includes('\t')) sep = '\t';
-  else if (first.includes(';') && (first.match(/;/g) || []).length > (first.match(/,/g) || []).length) sep = ';';
-  else if (first.includes('|')) sep = '|';
+  let isSpaceDelimited = false;
+
+  if (first.includes('\t')) {
+    sep = '\t';
+  } else if (first.includes(';') && (first.match(/;/g) || []).length > (first.match(/,/g) || []).length) {
+    sep = ';';
+  } else if (first.includes('|')) {
+    sep = '|';
+  } else if (first.includes(',')) {
+    sep = ',';
+  } else if (/\s{2,}/.test(first)) {
+    isSpaceDelimited = true;
+  }
+
+  if (isSpaceDelimited) {
+    return lines.map(line => line.trim().split(/\s{2,}|\t/));
+  }
 
   return lines.map(line => {
-    // Parser simple con soporte básico de comillas
+    // Parser con soporte básico de comillas
     const result: string[] = [];
     let cur = '';
     let inQuotes = false;
@@ -188,45 +202,73 @@ function parseDelimitedText(text: string): string[][] {
 }
 
 /**
- * Extrae filas aplicando la regla:
- * - Columna 2 (índice 1) = Tracking
- * - Última columna = Monto cobrado por el proveedor
- * - Ignora columna 1 y columnas intermedias de peso
+ * Extrae filas aplicando la estructura de la factura del proveedor:
+ * - Columna 1 (índice 0) = Tracking (ej. TBA335603828616, 9631091460203776554400384250632426*, 1Z23249F4246705718)
+ * - Columna 2 (índice 1) = Peso (ej. 0.1, 1.3, 2.05)
+ * - Columna 3 (índice 2 o última) = Cobro del proveedor (ej. 2.5, 10.4, 16.4, 90.8)
+ *
+ * (También admite archivos con columna correlativa '#' o 'N°' al inicio de forma tolerante)
  */
 function extractRowsFromMatrix(matrix: string[][]): ProviderInvoiceRow[] {
   const rows: ProviderInvoiceRow[] = [];
 
   for (let i = 0; i < matrix.length; i++) {
-    const row = matrix[i];
-    if (row.length < 2) continue;
+    const rawRow = matrix[i];
+    if (!rawRow || rawRow.length === 0) continue;
 
-    // Detectar encabezados (si la segunda celda o última celda contiene palabras clave)
-    const rawTrackCandidate = row[1] ? row[1].trim() : '';
-    const rawAmountCandidate = row[row.length - 1] ? row[row.length - 1].trim() : '';
+    // Limpiar espacios de cada celda
+    const row = rawRow.map(c => (c !== undefined && c !== null ? String(c).trim() : ''));
+    const nonEmpty = row.filter(c => c.length > 0);
+    if (nonEmpty.length < 2) continue;
 
-    if (
-      /tracking|guia|guía|paquete|código|codigo|hawb/i.test(rawTrackCandidate) ||
-      /monto|total|precio|cobro|costo|amount|fee/i.test(rawAmountCandidate)
-    ) {
-      // Es fila de encabezado, saltarla
+    // Detectar encabezados habituales en las primeras 3 filas
+    const headerKeywords = /^(#|n°|num|item|tracking|guia|guía|paquete|código|codigo|hawb|weight|peso|libras|lbs?|monto|total|precio|cobro|costo|amount|fee|subtotal)$/i;
+    const isHeaderRow = row.slice(0, 3).some(c => headerKeywords.test(c.replace(/[\s_]/g, '')));
+    if (isHeaderRow && i < 3) {
       continue;
     }
 
-    const digits = normalizeTrackingAlphanumeric(rawTrackCandidate);
-    const amount = parseCurrencyAmount(rawAmountCandidate);
+    let trackCandidate = '';
+    let weightCandidate = '';
+    let amountCandidate = '';
 
-    // Debe contener al menos letras/números o monto válido
+    // Si la columna 0 es un número de fila corto (1, 2, 3...) y la columna 1 contiene el tracking real
+    const isCol0RowIndex =
+      /^\d{1,3}$/.test(row[0]) &&
+      row.length >= 3 &&
+      (/[A-Za-z]/.test(row[1]) || row[1].replace(/\D/g, '').length >= 6);
+
+    if (isCol0RowIndex) {
+      trackCandidate = row[1];
+      weightCandidate = row.length >= 4 ? row[2] : (row.length === 3 ? '' : row[2]);
+      amountCandidate = row[row.length - 1];
+    } else {
+      // Regla principal especificada por el usuario:
+      // Col 1 (índice 0): Tracking
+      // Col 2 (índice 1): Peso
+      // Col 3 / Última: Cobro del proveedor
+      trackCandidate = row[0];
+      weightCandidate = row.length >= 3 ? row[1] : '';
+      amountCandidate = row[row.length - 1];
+    }
+
+    // Saltar fila si el candidato a tracking es un encabezado
+    if (/^(tracking|guia|guía|paquete|código|codigo|hawb|columna)$/i.test(trackCandidate)) {
+      continue;
+    }
+
+    const digits = normalizeTrackingAlphanumeric(trackCandidate);
+    const amount = parseCurrencyAmount(amountCandidate);
+
+    // Debe contener al menos un tracking con letras/números o un monto
     if (!digits && amount === 0) continue;
-
-    // Columna intermedia (ej. peso en col 2 si hay 3+ cols)
-    const weightCol = row.length >= 3 ? row[2].trim() : undefined;
 
     rows.push({
       rowNumber: rows.length + 1,
-      rawTracking: rawTrackCandidate,
+      rawTracking: trackCandidate,
       trackingDigits: digits,
       providerAmount: amount,
-      weight: weightCol
+      weight: weightCandidate || undefined
     });
   }
 
@@ -309,19 +351,27 @@ export async function POST(request: Request) {
         const base64 = buffer.toString('base64');
         let extractedJsonText = '';
 
-        const systemPrompt = `Eres un extractor de facturas de paquetería y logística.
-Analiza la tabla de paquetes de este documento del proveedor.
-Reglas estrictas de columnas:
-- La columna 2 contiene el número de tracking / guía (extrae letras y números, ignorando símbolos y guiones).
-- La última columna contiene el monto cobrado por el proveedor.
-- No uses la primera columna ni la columna intermedia de peso para el cálculo.
-Responde ÚNICAMENTE con un JSON válido con este formato:
+        const systemPrompt = `Eres un extractor experto de facturas y manifiestos de paquetería y logística.
+Analiza la tabla de paquetes de este documento del proveedor con máxima precisión visual.
+Estructura exacta de columnas del documento:
+- Columna 1 (izquierda): Número de tracking o guía (ejemplos reales: "9631091460203776554400384250632426*", "TBA335603828616", "1Z23249F4246705718", "SPXMIA012462610110004802", "LA587027144CA", "GFUS01077073671552"). Extrae el tracking tal como aparece sin omitir caracteres.
+- Columna 2 (centro): Peso (ejemplos: "0.1", "1.3", "2.05", "11.35", "0.9", "1.6").
+- Columna 3 (derecha): Monto o cobro del proveedor en USD (ejemplos: 2.5, 10.4, 16.4, 90.8, 7.2, 12.8, 11.6).
+
+Reglas estrictas:
+- Extrae todas las filas visibles de la tabla en orden de arriba a abajo.
+- Responde ÚNICAMENTE con un JSON válido con este formato:
 {
   "rows": [
     {
-      "raw_tracking": "1ZW864440339939763",
-      "provider_amount": 10.40,
-      "weight": "2.5 lbs"
+      "raw_tracking": "9631091460203776554400384250632426*",
+      "weight": "0.1",
+      "provider_amount": 2.5
+    },
+    {
+      "raw_tracking": "TBA335603828616",
+      "weight": "1.3",
+      "provider_amount": 10.4
     }
   ]
 }`;
@@ -344,7 +394,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato:
               }
             ],
             response_format: { type: 'json_object' },
-            max_tokens: 2000
+            max_tokens: 4000
           };
 
           const resAi = await fetch('https://api.openai.com/v1/chat/completions', {

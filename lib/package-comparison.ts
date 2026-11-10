@@ -50,6 +50,7 @@ export interface ComparisonResultItem {
   multipleMatches?: SystemPackageRecord[];
   notes?: string;
   currency: string;
+  weight?: string;
 }
 
 export interface ComparisonSummary {
@@ -169,6 +170,7 @@ export function compareInvoiceWithSystem(
         statusLabel: 'Sin tracking válido',
         notes: 'El tracking no contiene letras ni números para comparar.',
         currency: 'USD',
+        weight: row.weight,
       });
       unmatchedCount++;
       continue;
@@ -190,6 +192,7 @@ export function compareInvoiceWithSystem(
         statusLabel: 'Sin coincidencia',
         notes: isDuplicateInProvider ? 'Tracking repetido en la factura del proveedor.' : undefined,
         currency: 'USD',
+        weight: row.weight,
       });
       unmatchedCount++;
       continue;
@@ -210,6 +213,7 @@ export function compareInvoiceWithSystem(
         multipleMatches: matches,
         notes: `Se encontraron ${matches.length} paquetes en el sistema con el mismo tracking normalizado. Requiere verificación manual.`,
         currency: matches[0]?.currency || 'USD',
+        weight: row.weight,
       });
       ambiguousCount++;
       differencesCount++;
@@ -235,6 +239,7 @@ export function compareInvoiceWithSystem(
         systemRecord: sysMatch,
         notes: 'El paquete existe en bodega pero no tiene factura ni cobro asociado en el sistema.',
         currency: sysMatch.currency || 'USD',
+        weight: row.weight,
       });
       unmatchedCount++;
       continue;
@@ -278,6 +283,7 @@ export function compareInvoiceWithSystem(
       systemRecord: sysMatch,
       notes: isDuplicateInProvider ? 'Tracking repetido en la factura del proveedor.' : undefined,
       currency: sysMatch.currency || 'USD',
+      weight: row.weight,
     });
   }
 
@@ -307,6 +313,7 @@ export function exportComparisonToCsv(results: ComparisonResultItem[], filenameS
     'Fila',
     'Tracking (Letras y Números)',
     'Tracking Original',
+    'Peso Proveedor',
     'Cobro Proveedor (USD)',
     'Cobro JRS Cargo (USD)',
     'Diferencia (JRS - Proveedor)',
@@ -322,10 +329,12 @@ export function exportComparisonToCsv(results: ComparisonResultItem[], filenameS
     const inv = r.systemRecord?.invoiceNumber || '';
     const client = (r.systemRecord?.clientName || '').replace(/"/g, '""');
     const notes = (r.notes || '').replace(/"/g, '""');
+    const weight = (r.weight || '').replace(/"/g, '""');
     return [
       r.rowNumber,
       `="${r.trackingDigits}"`, // Preservar ceros iniciales en Excel
       `"${r.rawTracking.replace(/"/g, '""')}"`,
+      `"${weight}"`,
       r.providerAmount.toFixed(2),
       sysAmount,
       diff,

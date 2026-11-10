@@ -236,7 +236,8 @@ export default function CompararCargosPage() {
         ...r,
         rowNumber: idx + 1,
         trackingDigits: normalizeTrackingAlphanumeric(r.rawTracking || r.trackingDigits),
-        providerAmount: parseCurrencyAmount(r.providerAmount)
+        providerAmount: parseCurrencyAmount(r.providerAmount),
+        weight: r.weight ? String(r.weight).trim() : undefined
       }));
 
     setProviderRows(cleaned);
@@ -611,8 +612,15 @@ export default function CompararCargosPage() {
                       </td>
 
                       {/* Cobro proveedor */}
-                      <td className="py-3.5 px-4 font-mono text-sm text-slate-900 font-semibold">
-                        ${item.providerAmount.toFixed(2)}
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono text-sm text-slate-900 font-semibold">
+                          ${item.providerAmount.toFixed(2)}
+                        </span>
+                        {item.weight && (
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            Peso: {item.weight}
+                          </div>
+                        )}
                       </td>
 
                       {/* Cobro JRS Cargo */}
@@ -748,9 +756,10 @@ export default function CompararCargosPage() {
                 <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px]">
                   <tr>
                     <th className="p-2 w-10">#</th>
-                    <th className="p-2">Tracking extraído</th>
-                    <th className="p-2">Tracking normalizado (sin símbolos)</th>
-                    <th className="p-2 w-32">Cobro proveedor ($)</th>
+                    <th className="p-2">Tracking extraído (Col 1)</th>
+                    <th className="p-2">Tracking normalizado</th>
+                    <th className="p-2 w-28">Peso (Col 2)</th>
+                    <th className="p-2 w-32">Cobro proveedor (Col 3)</th>
                     <th className="p-2 w-10"></th>
                   </tr>
                 </thead>
@@ -777,8 +786,24 @@ export default function CompararCargosPage() {
                           className="w-full h-8 px-2 text-xs font-mono border border-slate-200 rounded-lg focus:border-brand-blue focus:outline-none"
                         />
                       </td>
-                      <td className="p-2 font-mono text-slate-700">
+                      <td className="p-2 font-mono text-slate-700 text-xs font-semibold">
                         {normalizeTrackingAlphanumeric(r.rawTracking)}
+                      </td>
+                      <td className="p-2">
+                        <input
+                          type="text"
+                          value={r.weight || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditingRows(prev => {
+                              const copy = [...prev];
+                              copy[idx] = { ...copy[idx], weight: val };
+                              return copy;
+                            });
+                          }}
+                          placeholder="ej. 1.3"
+                          className="w-full h-8 px-2 text-xs font-mono border border-slate-200 rounded-lg focus:border-brand-blue focus:outline-none"
+                        />
                       </td>
                       <td className="p-2">
                         <div className="relative">
@@ -879,13 +904,13 @@ export default function CompararCargosPage() {
             </div>
             <div className="p-5 space-y-3">
               <p className="text-xs text-slate-500 leading-relaxed">
-                Copia y pega directamente las filas desde tu hoja de cálculo. La <strong>columna 2</strong> debe contener el tracking y la <strong>última columna</strong> el monto cobrado por el proveedor.
+                Copia y pega directamente las filas desde tu hoja de cálculo o factura. La <strong>primera columna</strong> contiene el tracking, la <strong>segunda columna</strong> el peso y la <strong>tercera columna</strong> el cobro del proveedor.
               </p>
               <textarea
                 rows={8}
                 value={pasteText}
                 onChange={e => setPasteText(e.target.value)}
-                placeholder="1&#9;123456789012&#9;2.5 lbs&#9;10.40&#10;2&#9;222333444555&#9;4.1 lbs&#9;16.40"
+                placeholder="TBA335603828616&#9;1.3&#9;10.40&#10;1Z23249F4246705718&#9;11.35&#9;90.80&#10;LA587027144CA&#9;0.55&#9;4.40"
                 className="w-full p-3 font-mono text-xs border border-slate-200 rounded-xl focus:border-brand-blue focus:outline-none"
               />
             </div>
