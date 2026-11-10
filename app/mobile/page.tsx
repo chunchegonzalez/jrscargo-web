@@ -161,6 +161,7 @@ export default function JrsCargoMobilePage() {
   // Autenticación dedicada para JRS Cargo Mobile
   const [isMobileAuthenticated, setIsMobileAuthenticated] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [mobileBlocked, setMobileBlocked] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -287,6 +288,11 @@ export default function JrsCargoMobilePage() {
           sessionStorage.removeItem('jrs_mobile_session_verified');
         }
         setIsMobileAuthenticated(false);
+        return;
+      }
+      if (res.status === 403) {
+        setMobileBlocked(true);
+        setIsLoading(false);
         return;
       }
       const data = await res.json();
@@ -813,6 +819,27 @@ export default function JrsCargoMobilePage() {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-[#0B1D2B] text-white">
         <RefreshCw size={26} className="animate-spin text-brand-yellow" />
+      </div>
+    );
+  }
+
+  // MÓDULO EN DEMO: acceso restringido a usuarios autorizados
+  if (mobileBlocked) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-gradient-to-b from-[#0B1D2B] via-[#0F293D] to-[#0B1D2B] text-white p-6 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-brand-yellow/20 border border-brand-yellow/40 flex items-center justify-center text-brand-yellow font-black text-lg mb-5">
+          QR
+        </div>
+        <h1 className="text-xl font-black tracking-tight mb-2">JRS Cargo Mobile en modo demo</h1>
+        <p className="text-sm text-slate-300 max-w-xs leading-relaxed mb-6">
+          Este módulo todavía está en desarrollo y por ahora el acceso está restringido.
+        </p>
+        <a
+          href="/admin"
+          className="h-11 px-6 rounded-xl bg-brand-yellow text-[#0B1D2B] font-bold text-sm inline-flex items-center justify-center active:scale-[0.98] transition-transform"
+        >
+          Volver al panel
+        </a>
       </div>
     );
   }

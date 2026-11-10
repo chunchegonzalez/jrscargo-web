@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySignedCookie, AUTH_COOKIE_NAME } from '@/lib/auth';
+import { isMobileAllowed } from '@/lib/mobile-access';
 
 // Explicit public API endpoints that do not require admin authentication
 const PUBLIC_API_ROUTES = [
@@ -46,6 +47,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Acceso no autorizado. Sesión requerida.' },
         { status: 401 }
+      );
+    }
+  }
+
+  // 3. JRS Cargo Mobile (demo): solo usuarios autorizados
+  if (pathname.startsWith('/api/mobile')) {
+    const user = await verifySignedCookie(authCookie?.value);
+    if (user && !isMobileAllowed(user.username)) {
+      return NextResponse.json(
+        { success: false, error: 'JRS Cargo Mobile está en modo demo. Acceso restringido.' },
+        { status: 403 }
       );
     }
   }
