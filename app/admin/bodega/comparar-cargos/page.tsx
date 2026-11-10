@@ -28,7 +28,7 @@ import {
   ComparisonResultItem,
   ComparisonSummary,
   compareInvoiceWithSystem,
-  normalizeTrackingNumbersOnly,
+  normalizeTrackingAlphanumeric,
   parseCurrencyAmount,
   exportComparisonToCsv
 } from '@/lib/package-comparison';
@@ -235,7 +235,7 @@ export default function CompararCargosPage() {
       .map((r, idx) => ({
         ...r,
         rowNumber: idx + 1,
-        trackingDigits: normalizeTrackingNumbersOnly(r.rawTracking || r.trackingDigits),
+        trackingDigits: normalizeTrackingAlphanumeric(r.rawTracking || r.trackingDigits),
         providerAmount: parseCurrencyAmount(r.providerAmount)
       }));
 
@@ -371,7 +371,7 @@ export default function CompararCargosPage() {
           {/* Información a la derecha: tracking normalizado */}
           <div className="inline-flex items-center gap-1.5 text-xs text-slate-500">
             <Info size={14} className="text-slate-400 shrink-0" />
-            <span>tracking normalizado: solo números</span>
+            <span>tracking normalizado: letras y números (sin símbolos)</span>
           </div>
         </div>
 
@@ -573,7 +573,7 @@ export default function CompararCargosPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-600 font-extrabold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="py-3 px-4 sm:px-6">Tracking (solo números)</th>
+                  <th className="py-3 px-4 sm:px-6">Tracking (letras y números)</th>
                   <th className="py-3 px-4">Cobro proveedor</th>
                   <th className="py-3 px-4">Cobro JRS Cargo</th>
                   <th className="py-3 px-4">Diferencia (JRS &minus; proveedor)</th>
@@ -586,7 +586,7 @@ export default function CompararCargosPage() {
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                      {/* Tracking (solo números) */}
+                      {/* Tracking normalizado (letras y números) */}
                       <td className="py-3.5 px-4 sm:px-6">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-bold text-slate-900 text-sm select-all">
@@ -595,14 +595,14 @@ export default function CompararCargosPage() {
                           {item.trackingDigits && (
                             <button
                               onClick={() => handleCopy(item.trackingDigits)}
-                              title="Copiar dígitos"
+                              title="Copiar tracking"
                               className="text-slate-400 hover:text-slate-700 transition-colors p-1"
                             >
                               {isCopied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                             </button>
                           )}
                         </div>
-                        {/* Subtítulo con tracking original si difería de solo dígitos */}
+                        {/* Subtítulo con tracking original si difería del normalizado */}
                         {item.rawTracking && item.rawTracking !== item.trackingDigits && (
                           <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                             Original: {item.rawTracking}
@@ -749,7 +749,7 @@ export default function CompararCargosPage() {
                   <tr>
                     <th className="p-2 w-10">#</th>
                     <th className="p-2">Tracking extraído</th>
-                    <th className="p-2">Dígitos normalizados</th>
+                    <th className="p-2">Tracking normalizado (sin símbolos)</th>
                     <th className="p-2 w-32">Cobro proveedor ($)</th>
                     <th className="p-2 w-10"></th>
                   </tr>
@@ -769,7 +769,7 @@ export default function CompararCargosPage() {
                               copy[idx] = {
                                 ...copy[idx],
                                 rawTracking: val,
-                                trackingDigits: normalizeTrackingNumbersOnly(val)
+                                trackingDigits: normalizeTrackingAlphanumeric(val)
                               };
                               return copy;
                             });
@@ -778,7 +778,7 @@ export default function CompararCargosPage() {
                         />
                       </td>
                       <td className="p-2 font-mono text-slate-700">
-                        {normalizeTrackingNumbersOnly(r.rawTracking)}
+                        {normalizeTrackingAlphanumeric(r.rawTracking)}
                       </td>
                       <td className="p-2">
                         <div className="relative">

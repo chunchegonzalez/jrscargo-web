@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getHeaders } from '@/lib/supabase';
-import { normalizeTrackingNumbersOnly, SystemPackageRecord } from '@/lib/package-comparison';
+import { normalizeTrackingAlphanumeric, SystemPackageRecord } from '@/lib/package-comparison';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +97,7 @@ export async function GET() {
     for (const it of items) {
       if (!it.tracking_number) continue;
       const rawTrack = String(it.tracking_number).trim();
-      const digits = normalizeTrackingNumbersOnly(rawTrack);
+      const digits = normalizeTrackingAlphanumeric(rawTrack);
       if (!digits) continue;
 
       const inv = invoiceMap.get(it.invoice_id);
@@ -125,7 +125,7 @@ export async function GET() {
     // 3. Process local_inventory packages (to know about packages that are in bodega but not invoiced yet)
     for (const pkg of inventory) {
       const rawTrack = String(pkg.id).trim();
-      const digits = normalizeTrackingNumbersOnly(rawTrack);
+      const digits = normalizeTrackingAlphanumeric(rawTrack);
       if (!digits) continue;
 
       // If already captured with an invoice amount, don't duplicate as unbilled

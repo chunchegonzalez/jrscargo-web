@@ -6,7 +6,7 @@
 export interface ProviderInvoiceRow {
   rowNumber: number;
   rawTracking: string;
-  trackingDigits: string; // Solo dígitos, conservando ceros iniciales
+  trackingDigits: string; // Letras y números (sin símbolos), conservando ceros iniciales
   providerAmount: number;
   weight?: string;
   notes?: string;
@@ -15,7 +15,7 @@ export interface ProviderInvoiceRow {
 export interface SystemPackageRecord {
   id: string; // ID en local_inventory o tracking_number en invoice_items
   rawTracking: string;
-  trackingDigits: string;
+  trackingDigits: string; // Letras y números (sin símbolos)
   amount: number | null; // Cobro registrado por JRS Cargo
   currency: string;
   invoiceNumber?: string;
@@ -66,16 +66,21 @@ export interface ComparisonSummary {
 }
 
 /**
- * Normaliza un número de tracking conservando únicamente sus dígitos:
- * Elimina letras, símbolos, guiones y espacios, y MANTIENE los ceros iniciales.
- * Ej: "1ZW864440339939763" -> "864440339939763"
- * Ej: "00123-456 A" -> "00123456"
+ * Normaliza un número de tracking conservando únicamente letras y números (alfanumérico estricto):
+ * Elimina símbolos, espacios, guiones, puntos y caracteres especiales, manteniendo letras y dígitos (con ceros iniciales).
+ * Convierte a mayúsculas para asegurar coincidencia consistente.
+ * Ej: "1ZW-864440339939763" -> "1ZW864440339939763"
+ * Ej: "00123-456 A" -> "00123456A"
  */
-export function normalizeTrackingNumbersOnly(raw: string | number | null | undefined): string {
+export function normalizeTrackingAlphanumeric(raw: string | number | null | undefined): string {
   if (raw === null || raw === undefined) return '';
   const str = String(raw).trim();
-  return str.replace(/\D+/g, '');
+  return str.replace(/[^a-zA-Z0-9]+/g, '').toUpperCase();
 }
+
+// Alias para retrocompatibilidad
+export const normalizeTrackingNumbersOnly = normalizeTrackingAlphanumeric;
+export const normalizeTracking = normalizeTrackingAlphanumeric;
 
 /**
  * Limpia y convierte montos de cualquier formato (moneda, comas, espacios) a número flotante.
@@ -161,8 +166,8 @@ export function compareInvoiceWithSystem(
         systemAmount: null,
         difference: null,
         status: 'sin_coincidencia',
-        statusLabel: 'Sin dígitos válidos',
-        notes: 'El tracking no contiene ningún dígito para comparar.',
+        statusLabel: 'Sin tracking válido',
+        notes: 'El tracking no contiene letras ni números para comparar.',
         currency: 'USD',
       });
       unmatchedCount++;
@@ -191,7 +196,7 @@ export function compareInvoiceWithSystem(
     }
 
     if (matches.length > 1) {
-      // Coincidencia ambigua: existen múltiples registros en el sistema con exactamente estos dígitos
+      // Coincidencia ambigua: existen múltiples registros en el sistema con exactamente este tracking normalizado
       results.push({
         id: `row-${idx}-${digits}`,
         rowNumber: row.rowNumber || idx + 1,
@@ -203,7 +208,7 @@ export function compareInvoiceWithSystem(
         status: 'ambiguo',
         statusLabel: 'Revisar (Ambiguo)',
         multipleMatches: matches,
-        notes: `Se encontraron ${matches.length} paquetes en el sistema con los mismos dígitos. Requiere verificación manual.`,
+        notes: `Se encontraron ${matches.length} paquetes en el sistema con el mismo tracking normalizado. Requiere verificación manual.`,
         currency: matches[0]?.currency || 'USD',
       });
       ambiguousCount++;
@@ -300,7 +305,7 @@ export function compareInvoiceWithSystem(
 export function exportComparisonToCsv(results: ComparisonResultItem[], filenameSuffix = 'comparacion'): void {
   const headers = [
     'Fila',
-    'Tracking (Solo Numeros)',
+    'Tracking (Letras y Números)',
     'Tracking Original',
     'Cobro Proveedor (USD)',
     'Cobro JRS Cargo (USD)',

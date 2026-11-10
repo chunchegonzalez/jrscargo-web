@@ -3,7 +3,7 @@ import zlib from 'zlib';
 import { generateText } from 'ai';
 import { google } from '@ai-sdk/google';
 import {
-  normalizeTrackingNumbersOnly,
+  normalizeTrackingAlphanumeric,
   parseCurrencyAmount,
   ProviderInvoiceRow
 } from '@/lib/package-comparison';
@@ -212,10 +212,10 @@ function extractRowsFromMatrix(matrix: string[][]): ProviderInvoiceRow[] {
       continue;
     }
 
-    const digits = normalizeTrackingNumbersOnly(rawTrackCandidate);
+    const digits = normalizeTrackingAlphanumeric(rawTrackCandidate);
     const amount = parseCurrencyAmount(rawAmountCandidate);
 
-    // Debe contener al menos algún dígito o monto válido
+    // Debe contener al menos letras/números o monto válido
     if (!digits && amount === 0) continue;
 
     // Columna intermedia (ej. peso en col 2 si hay 3+ cols)
@@ -312,7 +312,7 @@ export async function POST(request: Request) {
         const systemPrompt = `Eres un extractor de facturas de paquetería y logística.
 Analiza la tabla de paquetes de este documento del proveedor.
 Reglas estrictas de columnas:
-- La columna 2 contiene el número de tracking / guía.
+- La columna 2 contiene el número de tracking / guía (extrae letras y números, ignorando símbolos y guiones).
 - La última columna contiene el monto cobrado por el proveedor.
 - No uses la primera columna ni la columna intermedia de peso para el cálculo.
 Responde ÚNICAMENTE con un JSON válido con este formato:
@@ -390,7 +390,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato:
           return {
             rowNumber: idx + 1,
             rawTracking: rawTrack,
-            trackingDigits: normalizeTrackingNumbersOnly(rawTrack),
+            trackingDigits: normalizeTrackingAlphanumeric(rawTrack),
             providerAmount: parseCurrencyAmount(r.provider_amount),
             weight: r.weight ? String(r.weight) : undefined
           };
