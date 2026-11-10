@@ -29,7 +29,11 @@ import {
   Building2,
   Scale,
   Calendar,
-  User
+  User,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { generateInventoryReportXlsx } from '@/lib/excel-export';
@@ -44,6 +48,9 @@ interface InventoryItem {
   status: string;
   date: string;
   createdAt: string;
+  invoiceNumber?: string;
+  invoiceId?: string;
+  shelfCode?: string;
 }
 
 type ColumnKey = 'client' | 'company' | 'weight' | 'invoice' | 'date' | 'status';
@@ -52,6 +59,9 @@ export default function BodegaInventario() {
   const { showAlert } = useModal();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | 'all'>(50);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [originalTracking, setOriginalTracking] = useState<string>('');
   const [trackingJustification, setTrackingJustification] = useState('');
@@ -210,20 +220,8 @@ export default function BodegaInventario() {
       if (direct) return direct;
 
       const stripped = compact.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
-      if (stripped !== compact && stripped.length >= 8) {
-        const byStripped = invoiceMap.get(stripped);
-        if (byStripped) return byStripped;
-      }
-
-      // Suffix / substring fallback for long carrier barcodes (>= 10 chars)
-      if (compact.length >= 10) {
-        let matchedVal: { number: string; id: string } | undefined;
-        invoiceMap.forEach((val, k) => {
-          if (!matchedVal && k.length >= 10 && (compact.endsWith(k) || k.endsWith(compact))) {
-            matchedVal = val;
-          }
-        });
-        if (matchedVal) return matchedVal;
+      if (stripped && stripped !== compact && stripped.length >= 8) {
+        return invoiceMap.get(stripped);
       }
       return undefined;
     },
@@ -233,11 +231,26 @@ export default function BodegaInventario() {
   const loadInventory = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      const res = await fetch('/api/inventory', { cache: 'no-store' });
+      // Fetch inventory, invoices mapping, and shelf state in a SINGLE parallel server query
+      const res = await fetch('/api/inventory?includeMeta=true', { cache: 'no-store' });
       if (res.ok) {
-        const { data } = await res.json();
-        // Transform from DB format
-        const formatted = (data || [])
+        const json = await res.json();
+        const rawItems = json.data || [];
+        const rawInvoiceMap: Record<string, { number: string; id: string }> = json.invoiceMap || {};
+        const rawShelfMap: Record<string, string> = json.shelfMap || {};
+
+        const invLookup = (trackingId: string) => {
+          if (!trackingId) return undefined;
+          const clean = trackingId.trim().toUpperCase();
+          if (rawInvoiceMap[clean]) return rawInvoiceMap[clean];
+          const compact = clean.replace(/[\s-]+/g, '');
+          if (rawInvoiceMap[compact]) return rawInvoiceMap[compact];
+          const stripped = compact.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+          if (stripped && rawInvoiceMap[stripped]) return rawInvoiceMap[stripped];
+          return undefined;
+        };
+
+        const formatted: InventoryItem[] = rawItems
           .filter((item: { status: string }) => item.status !== 'Eliminado')
           .map((item: { id: string; client: string; weight: string; status: string; company?: string; created_at: string }) => {
             let comp = item.company;
@@ -245,6 +258,10 @@ export default function BodegaInventario() {
               const extracted = extractCompanyAndClient(item.client);
               comp = extracted.company || 'JRS CARGO';
             }
+            const cleanId = (item.id || '').trim().toUpperCase();
+            const inv = invLookup(cleanId);
+            const shelf = rawShelfMap[cleanId] || rawShelfMap[cleanId.replace(/[\s-]+/g, '')] || '';
+
             return {
               id: item.id,
               client: item.client,
@@ -252,65 +269,22 @@ export default function BodegaInventario() {
               weight: item.weight,
               status: item.status,
               date: formatCostaRicaDate(item.created_at),
-              createdAt: item.created_at
+              createdAt: item.created_at,
+              invoiceNumber: inv?.number || '',
+              invoiceId: inv?.id || '',
+              shelfCode: shelf
             };
           });
+
         setInventory(formatted);
-      }
-
-      // Fetch invoices to build tracking -> invoice map
-      const invRes = await fetch('/api/invoices?includeItems=true', { cache: 'no-store' });
-      if (invRes.ok) {
-        const invData = await invRes.json();
-        const map = new Map<string, { number: string; id: string }>();
-        const registerTrackKey = (key: string, val: { number: string; id: string }) => {
-          if (!key) return;
-          if (!map.has(key)) {
-            map.set(key, val);
-          }
-        };
-
-        (invData.data || []).forEach((inv: { id: string; invoice_number: string; status?: string; invoice_items?: { tracking_number?: string }[] }) => {
-          if (inv.status === 'Anulada') return;
-          if (inv.invoice_items) {
-            const invRef = { number: inv.invoice_number, id: inv.id };
-            inv.invoice_items.forEach(item => {
-              if (item.tracking_number) {
-                const rawTrack = item.tracking_number.trim().toUpperCase();
-                registerTrackKey(rawTrack, invRef);
-
-                // Split if multiple trackings were entered separated by comma, slash, or whitespace
-                const tokens = rawTrack.split(/[,/;\s]+/).map(t => t.replace(/[\s-]+/g, '')).filter(t => t.length >= 6);
-                for (const tok of tokens) {
-                  registerTrackKey(tok, invRef);
-                  const stripped = tok.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
-                  if (stripped !== tok && stripped.length >= 8) {
-                    registerTrackKey(stripped, invRef);
-                  }
-                }
-              }
-            });
-          }
-        });
-        setInvoiceMap(map);
-      }
-
-      // Fetch active shelf assignments from JRS Cargo Mobile
-      const mobRes = await fetch('/api/mobile', { cache: 'no-store' }).catch(() => null);
-      if (mobRes && mobRes.ok) {
-        const mobData = await mobRes.json();
-        const sMap = new Map<string, string>();
-        (mobData.packages || []).forEach((p: { tracking?: string; shelfCode?: string | null }) => {
-          if (p.tracking && p.shelfCode) {
-            sMap.set(p.tracking.trim().toUpperCase(), p.shelfCode);
-          }
-        });
-        setShelfMap(sMap);
+        setInvoiceMap(new Map(Object.entries(rawInvoiceMap)));
+        setShelfMap(new Map(Object.entries(rawShelfMap)));
       }
     } catch (error) {
       console.error('Error fetching inventory', error);
     } finally {
       setIsRefreshing(false);
+      setInitialLoading(false);
     }
   }, []);
 
@@ -319,6 +293,21 @@ export default function BodegaInventario() {
     loadInventory();
   }, [loadInventory]);
 
+  // Reset to page 1 whenever any filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchQuery,
+    colTracking,
+    colClient,
+    filterCompany,
+    filterWeight,
+    filterInvoice,
+    colInvoiceSearch,
+    filterStatus,
+    filterDate
+  ]);
+
   const filteredInventory = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const qTrack = colTracking.trim().toLowerCase();
@@ -326,8 +315,8 @@ export default function BodegaInventario() {
     const qInvNum = colInvoiceSearch.trim().toLowerCase();
 
     const filtered = inventory.filter(item => {
-      const inv = getInvoiceForTracking(item.id);
-      const invNumber = (inv?.number || '').toLowerCase();
+      const invNumber = (item.invoiceNumber || '').toLowerCase();
+      const hasInvoice = !!item.invoiceNumber;
 
       const matchesSearch =
         !q ||
@@ -351,8 +340,8 @@ export default function BodegaInventario() {
       // Invoice filter
       const matchesInvoice =
         filterInvoice === 'Todas' ||
-        (filterInvoice === 'Facturado' && !!inv) ||
-        (filterInvoice === 'Sin Factura' && !inv);
+        (filterInvoice === 'Facturado' && hasInvoice) ||
+        (filterInvoice === 'Sin Factura' && !hasInvoice);
 
       const matchesColInvoiceSearch = !qInvNum || invNumber.includes(qInvNum);
 
@@ -392,8 +381,8 @@ export default function BodegaInventario() {
         const wB = parseFloat(String(b.weight || '0')) || 0;
         comparison = wA - wB;
       } else if (sortField === 'invoice') {
-        const invA = getInvoiceForTracking(a.id)?.number || '';
-        const invB = getInvoiceForTracking(b.id)?.number || '';
+        const invA = a.invoiceNumber || '';
+        const invB = b.invoiceNumber || '';
         if (invA && !invB) comparison = 1;
         else if (!invA && invB) comparison = -1;
         else comparison = invA.localeCompare(invB, 'es', { numeric: true });
@@ -420,17 +409,35 @@ export default function BodegaInventario() {
     filterStatus,
     filterDate,
     sortField,
-    sortOrder,
-    getInvoiceForTracking
+    sortOrder
   ]);
+
+  const totalPages = useMemo(() => {
+    if (pageSize === 'all') return 1;
+    return Math.max(1, Math.ceil(filteredInventory.length / Number(pageSize)));
+  }, [filteredInventory.length, pageSize]);
+
+  // Ensure currentPage doesn't exceed totalPages
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedInventory = useMemo(() => {
+    if (pageSize === 'all') return filteredInventory;
+    const size = Number(pageSize);
+    const start = (currentPage - 1) * size;
+    return filteredInventory.slice(start, start + size);
+  }, [filteredInventory, currentPage, pageSize]);
 
   const activePackages = filteredInventory.filter(p => !(p.status || '').toLowerCase().includes('entregad')).length;
   const deliveredPackages = filteredInventory.filter(p => (p.status || '').toLowerCase().includes('entregad')).length;
 
   const handleExportExcel = () => {
     const rows = filteredInventory.map((item, idx) => {
-      const inv = getInvoiceForTracking(item.id)?.number || 'Sin Factura';
-      const shelf = shelfMap.get(item.id.trim().toUpperCase()) || '';
+      const inv = item.invoiceNumber || 'Sin Factura';
+      const shelf = item.shelfCode || '';
       const statusLabel = (item.status || '').toLowerCase().includes('entregad') ? 'Entregado' : 'En Bodega';
       return {
         index: idx + 1,
@@ -1239,7 +1246,58 @@ export default function BodegaInventario() {
             </thead>
 
             <tbody className="divide-y divide-slate-100 text-[13px]">
-              {filteredInventory.length === 0 && (
+              {initialLoading ? (
+                // Skeletons de carga ultrarrápida inicial
+                [...Array(8)].map((_, i) => (
+                  <tr key={`skel-${i}`} className="animate-pulse">
+                    <td className="py-3 px-3 pl-5 text-center">
+                      <div className="h-4 w-6 bg-slate-200/70 rounded mx-auto" />
+                    </td>
+                    <td className="py-3 px-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-md bg-slate-200/70 shrink-0" />
+                        <div className="space-y-1.5 w-40">
+                          <div className="h-3.5 bg-slate-200/70 rounded w-full" />
+                          <div className="h-2.5 bg-slate-100 rounded w-20" />
+                        </div>
+                      </div>
+                    </td>
+                    {visibleColumns.client && (
+                      <td className="py-3 px-3.5">
+                        <div className="h-3.5 bg-slate-200/70 rounded w-32" />
+                      </td>
+                    )}
+                    {visibleColumns.company && (
+                      <td className="py-3 px-3.5">
+                        <div className="h-5 bg-slate-200/70 rounded-md w-24" />
+                      </td>
+                    )}
+                    {visibleColumns.weight && (
+                      <td className="py-3 px-3.5">
+                        <div className="h-3.5 bg-slate-200/70 rounded w-16" />
+                      </td>
+                    )}
+                    {visibleColumns.invoice && (
+                      <td className="py-3 px-3.5">
+                        <div className="h-5 bg-slate-200/70 rounded-md w-16" />
+                      </td>
+                    )}
+                    {visibleColumns.date && (
+                      <td className="py-3 px-3.5">
+                        <div className="h-3.5 bg-slate-200/70 rounded w-20" />
+                      </td>
+                    )}
+                    {visibleColumns.status && (
+                      <td className="py-3 px-3.5">
+                        <div className="h-5 bg-slate-200/70 rounded-full w-24" />
+                      </td>
+                    )}
+                    <td className="py-3 px-3.5 pr-5 text-right">
+                      <div className="h-7 w-20 bg-slate-200/70 rounded-md ml-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : filteredInventory.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 px-6 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-2">
@@ -1257,190 +1315,315 @@ export default function BodegaInventario() {
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : (
+                paginatedInventory.map((item, index) => {
+                  const isDelivered = (item.status || '').toLowerCase().includes('entregad');
+                  const shelfCode = item.shelfCode || shelfMap.get(item.id.trim().toUpperCase());
+                  const invNumber = item.invoiceNumber;
+                  const invId = item.invoiceId;
+                  const isSelected = selectedDetailItem?.id === item.id;
+                  const rowNumber = pageSize === 'all' ? index + 1 : (currentPage - 1) * Number(pageSize) + index + 1;
 
-              {filteredInventory.map((item, index) => {
-                const isDelivered = (item.status || '').toLowerCase().includes('entregad');
-                const shelfCode = shelfMap.get(item.id.trim().toUpperCase());
-                const inv = getInvoiceForTracking(item.id);
-                const isSelected = selectedDetailItem?.id === item.id;
-
-                return (
-                  <tr
-                    key={item.id}
-                    onClick={() => setSelectedDetailItem(item)}
-                    className={`transition-colors group cursor-pointer ${
-                      isSelected ? 'bg-brand-blue/[0.04]' : 'hover:bg-slate-50/90'
-                    }`}
-                  >
-                    <td className="py-2.5 px-3 pl-5 text-center">
-                      <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
-                        {index + 1}
-                      </span>
-                    </td>
-
-                    {/* Tracking con botón de fotos, icono de copiar y badge de estante */}
-                    <td className="py-2.5 px-3.5">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleViewPhotos(item.id);
-                          }}
-                          disabled={loadingPhotosFor === item.id}
-                          className="w-7 h-7 rounded-md bg-slate-100/80 hover:bg-brand-blue/10 text-brand-blue flex items-center justify-center transition-colors shrink-0 cursor-pointer"
-                          title="Ver fotos de WorldBox"
-                        >
-                          {loadingPhotosFor === item.id ? (
-                            <div className="w-3.5 h-3.5 rounded-full border-2 border-brand-blue border-t-transparent animate-spin" />
-                          ) : (
-                            <Package size={14} />
-                          )}
-                        </button>
-
-                        <div className="min-w-0 flex flex-col">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-slate-900 group-hover:text-brand-blue transition-colors truncate">
-                              {item.id}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={e => handleCopyTracking(item.id, e)}
-                              className="p-1 rounded text-slate-400 hover:text-brand-blue hover:bg-slate-100 opacity-70 group-hover:opacity-100 transition-all cursor-pointer"
-                              title="Copiar número de tracking"
-                            >
-                              {copiedTracking === item.id ? (
-                                <Check size={12} className="text-emerald-600" />
-                              ) : (
-                                <Copy size={12} />
-                              )}
-                            </button>
-                          </div>
-
-                          {shelfCode && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-0.5 rounded bg-[#0B1D2B] text-brand-yellow text-[10px] font-bold font-mono w-fit">
-                              <MapPin size={9} />
-                              {shelfCode}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {visibleColumns.client && (
-                      <td className="py-2.5 px-3.5 font-medium text-slate-800 max-w-[200px] truncate" title={item.client}>
-                        {item.client}
-                      </td>
-                    )}
-
-                    {visibleColumns.company && (
-                      <td className="py-2.5 px-3.5 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">
-                          {item.company}
+                  return (
+                    <tr
+                      key={item.id}
+                      onClick={() => setSelectedDetailItem(item)}
+                      className={`transition-colors group cursor-pointer ${
+                        isSelected ? 'bg-brand-blue/[0.04]' : 'hover:bg-slate-50/90'
+                      }`}
+                    >
+                      <td className="py-2.5 px-3 pl-5 text-center">
+                        <span className="text-[11px] font-semibold text-slate-400 tabular-nums">
+                          {rowNumber}
                         </span>
                       </td>
-                    )}
 
-                    {visibleColumns.weight && (
-                      <td className="py-2.5 px-3.5 text-slate-600 whitespace-nowrap tabular-nums">
-                        <span className="font-medium text-slate-800">{item.weight}</span>
-                        {item.weight && !item.weight.includes('kg') && (
-                          <span className="text-slate-400 text-xs ml-1">
-                            / {(parseFloat(item.weight) * 0.453592).toFixed(2)} kg
-                          </span>
-                        )}
-                      </td>
-                    )}
-
-                    {visibleColumns.invoice && (
-                      <td className="py-2.5 px-3.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                        {inv ? (
-                          <Link
-                            href={'/admin/facturacion/' + inv.id}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-blue/[0.08] text-brand-blue border border-brand-blue/15 rounded-md text-xs font-semibold hover:bg-brand-blue/15 transition-colors"
+                      {/* Tracking con botón de fotos, icono de copiar y badge de estante */}
+                      <td className="py-2.5 px-3.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleViewPhotos(item.id);
+                            }}
+                            disabled={loadingPhotosFor === item.id}
+                            className="w-7 h-7 rounded-md bg-slate-100/80 hover:bg-brand-blue/10 text-brand-blue flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                            title="Ver fotos de WorldBox"
                           >
-                            <FileText size={11} />
-                            {inv.number}
-                          </Link>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
-                      </td>
-                    )}
+                            {loadingPhotosFor === item.id ? (
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-brand-blue border-t-transparent animate-spin" />
+                            ) : (
+                              <Package size={14} />
+                            )}
+                          </button>
 
-                    {visibleColumns.date && (
-                      <td className="py-2.5 px-3.5 text-slate-500 whitespace-nowrap tabular-nums text-xs">
-                        {item.date}
-                      </td>
-                    )}
+                          <div className="min-w-0 flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-slate-900 group-hover:text-brand-blue transition-colors truncate">
+                                {item.id}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={e => handleCopyTracking(item.id, e)}
+                                className="p-1 rounded text-slate-400 hover:text-brand-blue hover:bg-slate-100 opacity-70 group-hover:opacity-100 transition-all cursor-pointer"
+                                title="Copiar número de tracking"
+                              >
+                                {copiedTracking === item.id ? (
+                                  <Check size={12} className="text-emerald-600" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            </div>
 
-                    {visibleColumns.status && (
-                      <td className="py-2.5 px-3.5 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                            isDelivered
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                              : 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
-                          }`}
-                        >
+                            {shelfCode && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-0.5 rounded bg-[#0B1D2B] text-brand-yellow text-[10px] font-bold font-mono w-fit">
+                                <MapPin size={9} />
+                                {shelfCode}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {visibleColumns.client && (
+                        <td className="py-2.5 px-3.5 font-medium text-slate-800 max-w-[200px] truncate" title={item.client}>
+                          {item.client}
+                        </td>
+                      )}
+
+                      {visibleColumns.company && (
+                        <td className="py-2.5 px-3.5 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">
+                            {item.company}
+                          </span>
+                        </td>
+                      )}
+
+                      {visibleColumns.weight && (
+                        <td className="py-2.5 px-3.5 text-slate-600 whitespace-nowrap tabular-nums">
+                          <span className="font-medium text-slate-800">{item.weight}</span>
+                          {item.weight && !item.weight.includes('kg') && (
+                            <span className="text-slate-400 text-xs ml-1">
+                              / {(parseFloat(item.weight) * 0.453592).toFixed(2)} kg
+                            </span>
+                          )}
+                        </td>
+                      )}
+
+                      {visibleColumns.invoice && (
+                        <td className="py-2.5 px-3.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                          {invNumber ? (
+                            <Link
+                              href={'/admin/facturacion/' + (invId || '')}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-brand-blue/[0.08] text-brand-blue border border-brand-blue/15 rounded-md text-xs font-semibold hover:bg-brand-blue/15 transition-colors"
+                            >
+                              <FileText size={11} />
+                              {invNumber}
+                            </Link>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
+
+                      {visibleColumns.date && (
+                        <td className="py-2.5 px-3.5 text-slate-500 whitespace-nowrap tabular-nums text-xs">
+                          {item.date}
+                        </td>
+                      )}
+
+                      {visibleColumns.status && (
+                        <td className="py-2.5 px-3.5 whitespace-nowrap">
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isDelivered ? 'bg-emerald-500' : 'bg-brand-yellow'
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                              isDelivered
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+                                : 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
                             }`}
-                          />
-                          {isDelivered ? 'Entregado' : 'En Bodega'}
-                        </span>
-                      </td>
-                    )}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isDelivered ? 'bg-emerald-500' : 'bg-brand-yellow'
+                              }`}
+                            />
+                            {isDelivered ? 'Entregado' : 'En Bodega'}
+                          </span>
+                        </td>
+                      )}
 
-                    <td className="py-2.5 px-3.5 pr-5 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                      <div className="inline-flex items-center justify-end gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedDetailItem(item)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-                          title="Ver detalles"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={e => openEditModal(item, e)}
-                          className="p-1.5 text-slate-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-md transition-colors cursor-pointer"
-                          title="Editar"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={e => {
-                            e.stopPropagation();
-                            setDeletingItem(item);
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      <td className="py-2.5 px-3.5 pr-5 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                        <div className="inline-flex items-center justify-end gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetailItem(item)}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                            title="Ver detalles"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={e => openEditModal(item, e)}
+                            className="p-1.5 text-slate-500 hover:text-brand-blue hover:bg-brand-blue/10 rounded-md transition-colors cursor-pointer"
+                            title="Editar"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setDeletingItem(item);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Footer Tabla */}
-        <div className="px-5 py-3 bg-slate-50/80 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-          <span>
-            Mostrando <strong className="font-semibold text-slate-700">{filteredInventory.length}</strong> de{' '}
-            <strong className="font-semibold text-slate-700">{inventory.length}</strong> paquetes totales
-          </span>
-          <span className="text-[11px] text-slate-400">
-            Haz clic en cualquier fila para abrir el panel de detalle del paquete
-          </span>
+        {/* Footer Tabla con Paginación de Alto Rendimiento */}
+        <div className="px-5 py-3.5 bg-slate-50/90 border-t border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span>
+              Mostrando{' '}
+              <strong className="font-semibold text-slate-800">
+                {filteredInventory.length === 0
+                  ? 0
+                  : pageSize === 'all'
+                  ? `1 - ${filteredInventory.length}`
+                  : `${(currentPage - 1) * Number(pageSize) + 1} - ${Math.min(
+                      currentPage * Number(pageSize),
+                      filteredInventory.length
+                    )}`}
+              </strong>{' '}
+              de <strong className="font-semibold text-slate-800">{filteredInventory.length}</strong> paquetes
+              {filteredInventory.length !== inventory.length && (
+                <span className="text-slate-400 ml-1">(filtrados de {inventory.length})</span>
+              )}
+            </span>
+
+            <div className="flex items-center gap-1.5 ml-1 sm:ml-2">
+              <span className="text-slate-400 text-[11px]">Por página:</span>
+              <select
+                value={pageSize}
+                onChange={e => {
+                  const val = e.target.value === 'all' ? 'all' : Number(e.target.value);
+                  setPageSize(val);
+                  setCurrentPage(1);
+                }}
+                className="h-7 px-2 bg-white border border-slate-200 rounded-md text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none focus:border-brand-blue cursor-pointer"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+                <option value="all">Todos ({filteredInventory.length})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Controles de navegación de página */}
+          {totalPages > 1 && pageSize !== 'all' && (
+            <div className="flex items-center gap-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="h-8 w-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                title="Primera página"
+              >
+                <ChevronsLeft size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs disabled:opacity-35 disabled:cursor-not-allowed inline-flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
+                title="Página anterior"
+              >
+                <ChevronLeft size={14} />
+                <span className="hidden sm:inline">Anterior</span>
+              </button>
+
+              {/* Botones de páginas numéricas con elipsis inteligente */}
+              <div className="flex items-center gap-1 mx-1">
+                {(() => {
+                  const pages: (number | string)[] = [];
+                  if (totalPages <= 7) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    pages.push(1);
+                    if (currentPage > 3) pages.push('ellipsis-start');
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+                    for (let i = start; i <= end; i++) {
+                      if (!pages.includes(i)) pages.push(i);
+                    }
+                    if (currentPage < totalPages - 2) pages.push('ellipsis-end');
+                    if (!pages.includes(totalPages)) pages.push(totalPages);
+                  }
+
+                  return pages.map((p, idx) => {
+                    if (typeof p === 'string') {
+                      return (
+                        <span key={`el-${idx}`} className="px-1 text-slate-400 font-bold text-xs select-none">
+                          …
+                        </span>
+                      );
+                    }
+                    const isCur = p === currentPage;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setCurrentPage(p)}
+                        className={`h-8 min-w-[32px] px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isCur
+                            ? 'bg-brand-blue text-white shadow-2xs'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-2xs'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs disabled:opacity-35 disabled:cursor-not-allowed inline-flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
+                title="Página siguiente"
+              >
+                <span className="hidden sm:inline">Siguiente</span>
+                <ChevronRight size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-35 disabled:cursor-not-allowed flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+                title="Última página"
+              >
+                <ChevronsRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1516,10 +1699,10 @@ export default function BodegaInventario() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                     Ubicación Física (QR)
                   </span>
-                  {shelfMap.get(selectedDetailItem.id.trim().toUpperCase()) ? (
+                  {selectedDetailItem.shelfCode || shelfMap.get(selectedDetailItem.id.trim().toUpperCase()) ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0B1D2B] text-brand-yellow text-xs font-mono font-bold">
                       <MapPin size={12} />
-                      {shelfMap.get(selectedDetailItem.id.trim().toUpperCase())}
+                      {selectedDetailItem.shelfCode || shelfMap.get(selectedDetailItem.id.trim().toUpperCase())}
                     </span>
                   ) : (
                     <span className="text-xs font-medium text-slate-400">Sin estante asignado</span>
@@ -1578,14 +1761,27 @@ export default function BodegaInventario() {
                     <span>Factura Asociada</span>
                   </div>
                   {(() => {
-                    const inv = getInvoiceForTracking(selectedDetailItem.id);
-                    if (inv) {
+                    const invNumber = selectedDetailItem.invoiceNumber;
+                    const invId = selectedDetailItem.invoiceId;
+                    if (invNumber) {
                       return (
                         <Link
-                          href={'/admin/facturacion/' + inv.id}
+                          href={'/admin/facturacion/' + (invId || '')}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-blue/10 text-brand-blue rounded-md text-xs font-bold hover:bg-brand-blue/20 transition-colors"
                         >
-                          <span>{inv.number}</span>
+                          <span>{invNumber}</span>
+                          <ExternalLink size={11} />
+                        </Link>
+                      );
+                    }
+                    const fallbackInv = getInvoiceForTracking(selectedDetailItem.id);
+                    if (fallbackInv) {
+                      return (
+                        <Link
+                          href={'/admin/facturacion/' + fallbackInv.id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-blue/10 text-brand-blue rounded-md text-xs font-bold hover:bg-brand-blue/20 transition-colors"
+                        >
+                          <span>{fallbackInv.number}</span>
                           <ExternalLink size={11} />
                         </Link>
                       );

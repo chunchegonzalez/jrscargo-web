@@ -1,10 +1,39 @@
 import { NextResponse } from 'next/server';
-import { getInventory, insertInventoryItem } from '@/lib/supabase';
+import {
+  getInventory,
+  getTrackingInvoiceMap,
+  getTrackingShelfMap,
+  insertInventoryItem
+} from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const includeMeta = searchParams.get('includeMeta') === 'true';
+
+    if (includeMeta) {
+      // Execute inventory, invoice map, and shelf assignments in PARALLEL on server
+      const [data, invoiceMap, shelfMap] = await Promise.all([
+        getInventory(),
+        getTrackingInvoiceMap(),
+        getTrackingShelfMap()
+      ]);
+
+      const response = NextResponse.json(
+        {
+          success: true,
+          data,
+          invoiceMap,
+          shelfMap
+        },
+        { status: 200 }
+      );
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      return response;
+    }
+
     const data = await getInventory();
     const response = NextResponse.json({ success: true, data }, { status: 200 });
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');

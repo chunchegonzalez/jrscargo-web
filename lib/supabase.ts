@@ -45,6 +45,103 @@ export async function getInventory() {
   return fetchAllRows(`${url}/rest/v1/local_inventory?id=neq.__JRS_MOBILE_SHELVES_STATE__&order=created_at.desc`);
 }
 
+/**
+ * Lightweight, fast lookup for invoice mappings by tracking number.
+ * Fetches only invoice numbers and tracking references without loading entire billing/payment objects.
+ */
+export async function getTrackingInvoiceMap(): Promise<Record<string, { number: string; id: string }>> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  if (!url) return {};
+  try {
+    const invoices = await fetchAllRows(
+      `${url}/rest/v1/invoices?select=id,invoice_number,status,invoice_items(tracking_number)&status=neq.Anulada&order=created_at.desc`,
+      false
+    );
+
+    const map: Record<string, { number: string; id: string }> = {};
+
+    const registerTrackKey = (key: string, val: { number: string; id: string }) => {
+      if (!key) return;
+      const upper = key.trim().toUpperCase();
+      if (upper && !map[upper]) {
+        map[upper] = val;
+      }
+      const compact = upper.replace(/[\s-]+/g, '');
+      if (compact && !map[compact]) {
+        map[compact] = val;
+      }
+      const stripped = compact.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+      if (stripped && stripped !== compact && stripped.length >= 8 && !map[stripped]) {
+        map[stripped] = val;
+      }
+    };
+
+    for (const inv of invoices) {
+      if (!inv || !inv.invoice_items) continue;
+      const invRef = { number: inv.invoice_number, id: inv.id };
+      for (const item of inv.invoice_items) {
+        if (!item?.tracking_number) continue;
+        const rawTrack = String(item.tracking_number).trim().toUpperCase();
+        registerTrackKey(rawTrack, invRef);
+
+        const tokens = rawTrack.split(/[,/;\s]+/).map((t: string) => t.replace(/[\s-]+/g, '')).filter((t: string) => t.length >= 6);
+        for (const tok of tokens) {
+          registerTrackKey(tok, invRef);
+          const tokStripped = tok.replace(/^420\d{5,12}(?=9\d{14,})/i, '').replace(/^420\d{5}/i, '');
+          if (tokStripped !== tok && tokStripped.length >= 8) {
+            registerTrackKey(tokStripped, invRef);
+          }
+        }
+      }
+    }
+
+    return map;
+  } catch (err) {
+    console.error('Error fetching tracking invoice map:', err);
+    return {};
+  }
+}
+
+/**
+ * Lightweight, 1-row lookup for active shelf assignments from JRS Mobile state.
+ */
+export async function getTrackingShelfMap(): Promise<Record<string, string>> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  if (!url) return {};
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/local_inventory?id=eq.__JRS_MOBILE_SHELVES_STATE__&limit=1`,
+      {
+        headers: getHeaders(),
+        cache: 'no-store'
+      }
+    );
+    if (!res.ok) return {};
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) return {};
+    const rawHistory = rows[0]?.history;
+    const container = Array.isArray(rawHistory) ? rawHistory[0] : rawHistory;
+    const assignments = container?.assignments;
+    if (!assignments || typeof assignments !== 'object') return {};
+
+    const map: Record<string, string> = {};
+    for (const [tracking, assign] of Object.entries(assignments)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const shelfCode = (assign as any)?.shelfCode;
+      if (shelfCode && typeof shelfCode === 'string') {
+        const clean = tracking.trim().toUpperCase();
+        map[clean] = shelfCode;
+        const compact = clean.replace(/[\s-]+/g, '');
+        if (compact) map[compact] = shelfCode;
+      }
+    }
+    return map;
+  } catch (err) {
+    console.error('Error fetching tracking shelf map:', err);
+    return {};
+  }
+}
+
 export async function getInventoryItem(id: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const cleanId = id.trim();
