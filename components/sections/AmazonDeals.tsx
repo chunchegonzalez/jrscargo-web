@@ -20,67 +20,73 @@ export default function AmazonDeals() {
   const cardsGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
+    try {
+      gsap.registerPlugin(ScrollTrigger);
 
-    const mm = gsap.matchMedia();
+      const mm = gsap.matchMedia();
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      if (headerRef.current) {
-        gsap.fromTo(
-          headerRef.current,
-          { y: 16, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.55,
-            ease: 'power2.out',
-            clearProps: 'transform',
-            scrollTrigger: {
-              trigger: headerRef.current,
-              start: 'top 88%',
-              toggleActions: 'play none none none',
-            },
-          }
-        );
-      }
-
-      if (cardsGridRef.current) {
-        const cards = cardsGridRef.current.querySelectorAll<HTMLElement>('[data-amazon-card]');
-        if (cards.length) {
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        if (headerRef.current) {
           gsap.fromTo(
-            cards,
-            { y: 18, opacity: 0 },
+            headerRef.current,
+            { y: 16, opacity: 0 },
             {
               y: 0,
               opacity: 1,
-              duration: 0.5,
-              stagger: 0.08,
+              duration: 0.55,
               ease: 'power2.out',
               clearProps: 'transform',
               scrollTrigger: {
-                trigger: cardsGridRef.current,
+                trigger: headerRef.current,
                 start: 'top 88%',
                 toggleActions: 'play none none none',
               },
             }
           );
         }
-      }
-    });
 
-    mm.add('(prefers-reduced-motion: reduce)', () => {
-      if (headerRef.current) {
-        gsap.set(headerRef.current, { clearProps: 'all', opacity: 1, y: 0 });
-      }
-      if (cardsGridRef.current) {
-        const cards = cardsGridRef.current.querySelectorAll<HTMLElement>('[data-amazon-card]');
-        gsap.set(cards, { clearProps: 'all', opacity: 1, y: 0 });
-      }
-    });
+        if (cardsGridRef.current) {
+          const cards = cardsGridRef.current.querySelectorAll<HTMLElement>('[data-amazon-card]');
+          if (cards.length) {
+            gsap.fromTo(
+              cards,
+              { y: 18, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 0.5,
+                stagger: 0.08,
+                ease: 'power2.out',
+                clearProps: 'transform',
+                scrollTrigger: {
+                  trigger: cardsGridRef.current,
+                  start: 'top 88%',
+                  toggleActions: 'play none none none',
+                },
+              }
+            );
+          }
+        }
+      });
 
-    return () => {
-      mm.revert();
-    };
+      mm.add('(prefers-reduced-motion: reduce)', () => {
+        if (headerRef.current) {
+          gsap.set(headerRef.current, { clearProps: 'all', opacity: 1, y: 0 });
+        }
+        if (cardsGridRef.current) {
+          const cards = cardsGridRef.current.querySelectorAll<HTMLElement>('[data-amazon-card]');
+          if (cards.length) {
+            gsap.set(cards, { clearProps: 'all', opacity: 1, y: 0 });
+          }
+        }
+      });
+
+      return () => {
+        mm.revert();
+      };
+    } catch (err) {
+      console.warn('GSAP AmazonDeals animation bypassed:', err);
+    }
   }, []);
 
   const deals = [

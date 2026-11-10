@@ -104,42 +104,50 @@ export default function Rates() {
   };
 
   useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    const mm = gsap.matchMedia();
+    try {
+      gsap.registerPlugin(ScrollTrigger);
+      const mm = gsap.matchMedia();
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      if (cardsContainerRef.current) {
-        const items = cardsContainerRef.current.querySelectorAll('[data-rate-card]');
-        gsap.fromTo(
-          items,
-          { y: 16, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.45,
-            stagger: 0.07,
-            ease: 'power2.out',
-            clearProps: 'transform',
-            scrollTrigger: {
-              trigger: cardsContainerRef.current,
-              start: 'top 88%',
-              toggleActions: 'play none none none',
-            },
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        if (cardsContainerRef.current) {
+          const items = cardsContainerRef.current.querySelectorAll('[data-rate-card]');
+          if (items && items.length > 0) {
+            gsap.fromTo(
+              items,
+              { y: 16, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 0.45,
+                stagger: 0.07,
+                ease: 'power2.out',
+                clearProps: 'transform',
+                scrollTrigger: {
+                  trigger: cardsContainerRef.current,
+                  start: 'top 88%',
+                  toggleActions: 'play none none none',
+                },
+              }
+            );
           }
-        );
-      }
-    });
+        }
+      });
 
-    mm.add('(prefers-reduced-motion: reduce)', () => {
-      if (cardsContainerRef.current) {
-        const items = cardsContainerRef.current.querySelectorAll('[data-rate-card]');
-        gsap.set(items, { clearProps: 'all', opacity: 1, y: 0 });
-      }
-    });
+      mm.add('(prefers-reduced-motion: reduce)', () => {
+        if (cardsContainerRef.current) {
+          const items = cardsContainerRef.current.querySelectorAll('[data-rate-card]');
+          if (items && items.length > 0) {
+            gsap.set(items, { clearProps: 'all', opacity: 1, y: 0 });
+          }
+        }
+      });
 
-    return () => {
-      mm.revert();
-    };
+      return () => {
+        mm.revert();
+      };
+    } catch (err) {
+      console.warn('GSAP Rates animation bypassed:', err);
+    }
   }, [activeFilter]);
 
   return (

@@ -71,99 +71,89 @@ export default function Hero() {
   const { isHalloween } = useHalloween();
 
   const heroRef = useRef<HTMLElement>(null);
-  const bgGlowRef = useRef<HTMLDivElement>(null);
   const bgLayerRef = useRef<HTMLDivElement>(null);
   const midLayerRef = useRef<HTMLDivElement>(null);
   const fgLayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
+    try {
+      gsap.registerPlugin(ScrollTrigger);
 
-    const mm = gsap.matchMedia();
+      const mm = gsap.matchMedia();
 
-    // Escritorio: Parallax multicapa sutil (Fondo/Mapa -> Avión y Ruta -> Paquete/Hub en Primer Plano)
-    mm.add(
-      '(min-width: 1024px) and (prefers-reduced-motion: no-preference)',
-      () => {
-        if (!heroRef.current) return;
+      // Escritorio: Parallax multicapa sutil (Fondo/Mapa -> Avión y Ruta -> Paquete/Hub en Primer Plano)
+      mm.add(
+        '(min-width: 1024px) and (prefers-reduced-motion: no-preference)',
+        () => {
+          if (!heroRef.current) return;
 
-        // Resplandor ambiental de fondo
-        if (bgGlowRef.current) {
-          gsap.to(bgGlowRef.current, {
-            y: 80,
-            ease: 'none',
-            force3D: true,
-            scrollTrigger: {
-              trigger: heroRef.current,
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 0.9,
-            },
-          });
-        }
+          // Capa 1 (Fondo / Mapa y Anillos Radar): velocidad mayor hacia abajo para sensación de profundidad
+          if (bgLayerRef.current) {
+            gsap.to(bgLayerRef.current, {
+              y: 68,
+              scale: 1.03,
+              ease: 'none',
+              force3D: true,
+              scrollTrigger: {
+                trigger: heroRef.current,
+                start: 'top top',
+                end: 'bottom top',
+                scrub: 0.85,
+              },
+            });
+          }
 
-        // Capa 1 (Fondo / Mapa y Anillos Radar): velocidad mayor hacia abajo para sensación de profundidad
-        if (bgLayerRef.current) {
-          gsap.to(bgLayerRef.current, {
-            y: 68,
-            scale: 1.03,
-            ease: 'none',
-            force3D: true,
-            scrollTrigger: {
-              trigger: heroRef.current,
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 0.85,
-            },
-          });
-        }
+          // Capa 2 (Aviones y Rutas Aéreas / Marítimas): velocidad intermedia con leve desplazamiento diagonal
+          if (midLayerRef.current) {
+            gsap.to(midLayerRef.current, {
+              y: -48,
+              x: 12,
+              ease: 'none',
+              force3D: true,
+              scrollTrigger: {
+                trigger: heroRef.current,
+                start: 'top top',
+                end: 'bottom top',
+                scrub: 0.65,
+              },
+            });
+          }
 
-        // Capa 2 (Aviones y Rutas Aéreas / Marítimas): velocidad intermedia con leve desplazamiento diagonal
-        if (midLayerRef.current) {
-          gsap.to(midLayerRef.current, {
-            y: -48,
-            x: 12,
-            ease: 'none',
-            force3D: true,
-            scrollTrigger: {
-              trigger: heroRef.current,
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 0.65,
-            },
-          });
-        }
-
-        // Capa 3 (Primer plano: Hub Central, Paquete Prioritario y Tarjetas de Servicio): movimiento más lento y estable
-        if (fgLayerRef.current) {
-          gsap.to(fgLayerRef.current, {
-            y: -22,
-            ease: 'none',
-            force3D: true,
-            scrollTrigger: {
-              trigger: heroRef.current,
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 0.5,
-            },
-          });
-        }
-      }
-    );
-
-    // Móvil y preferencia de reducir movimiento: mantener todo completamente estable
-    mm.add('(max-width: 1023px), (prefers-reduced-motion: reduce)', () => {
-      gsap.set(
-        [bgGlowRef.current, bgLayerRef.current, midLayerRef.current, fgLayerRef.current],
-        {
-          clearProps: 'all',
+          // Capa 3 (Primer plano: Hub Central, Paquete Prioritario y Tarjetas de Servicio): movimiento más lento y estable
+          if (fgLayerRef.current) {
+            gsap.to(fgLayerRef.current, {
+              y: -22,
+              ease: 'none',
+              force3D: true,
+              scrollTrigger: {
+                trigger: heroRef.current,
+                start: 'top top',
+                end: 'bottom top',
+                scrub: 0.5,
+              },
+            });
+          }
         }
       );
-    });
 
-    return () => {
-      mm.revert();
-    };
+      // Móvil y preferencia de reducir movimiento: mantener todo completamente estable
+      mm.add('(max-width: 1023px), (prefers-reduced-motion: reduce)', () => {
+        const targets = [bgLayerRef.current, midLayerRef.current, fgLayerRef.current].filter(
+          (el): el is HTMLDivElement => el !== null
+        );
+        if (targets.length) {
+          gsap.set(targets, {
+            clearProps: 'all',
+          });
+        }
+      });
+
+      return () => {
+        mm.revert();
+      };
+    } catch (err) {
+      console.warn('GSAP Hero animation bypassed:', err);
+    }
   }, []);
 
   return (
