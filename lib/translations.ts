@@ -198,8 +198,8 @@ export const translations = {
 
     // Map / Locations
     location: {
-      title: 'Encuéntranos en Heredia',
-      subtitle: 'Ubicados estratégicamente para facilitar el procesamiento de tus envíos.',
+      title: '¿Dónde estamos?',
+      subtitle: 'Consulta la ubicación de nuestra oficina central y cómo llegar.',
       officeCR: 'Oficina central Costa Rica',
       warehouseMIA: 'Bodega principal Miami',
       warehouseSpain: 'Bodega consolidación España',

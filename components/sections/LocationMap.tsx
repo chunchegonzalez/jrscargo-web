@@ -26,15 +26,15 @@ export default function LocationMap() {
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
             {isEn ? (
-              <>Find Us in <span className="text-brand-red">Heredia</span></>
+              <>Where to <span className="text-brand-red">Find Us?</span></>
             ) : (
-              <>Encuéntranos en <span className="text-brand-red">Heredia</span></>
+              <>¿Dónde <span className="text-brand-red">estamos?</span></>
             )}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
             {isEn
-              ? 'Strategically located to expedite your parcel processing and dispatch.'
-              : 'Ubicados estratégicamente para facilitar el procesamiento de tus envíos.'}
+              ? 'Check the location of our headquarters and how to get here.'
+              : 'Consulta la ubicación de nuestra oficina central y cómo llegar.'}
           </p>
         </div>
 
