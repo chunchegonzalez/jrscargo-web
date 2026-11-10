@@ -118,7 +118,7 @@ export default function QuoteCalculator() {
   const waUrl = `https://wa.me/50672601238?text=${encodeURIComponent(waMessage)}`;
 
   return (
-    <section id="cotizador" className="section-padding bg-white relative overflow-hidden">
+    <section id="cotizador" className="py-12 lg:py-16 bg-white relative overflow-hidden">
       <div className="container-max relative z-10">
         <div data-parallax-header className="text-center mb-10 sm:mb-12 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">

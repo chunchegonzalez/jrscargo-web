@@ -159,7 +159,7 @@ export default function Hero() {
   return (
     <section
       ref={heroRef}
-      className="relative pt-20 pb-20 lg:pt-32 lg:pb-28 overflow-hidden bg-white"
+      className="relative pt-6 sm:pt-8 lg:pt-10 pb-12 lg:pb-16 overflow-hidden bg-white"
     >
       {/* Halloween Dynamic Background Layer */}
       <HalloweenHeroBackground />

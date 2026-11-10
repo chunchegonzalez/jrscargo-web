@@ -138,10 +138,10 @@ export default function AmazonDeals() {
   return (
     <section
       ref={sectionRef}
-      className="pb-14 sm:pb-16 bg-[#071724] relative overflow-hidden"
+      className="pb-12 lg:pb-16 bg-[#071724] relative overflow-hidden"
     >
       {/* Franja superior delgada con movimiento dinámico continuo estilo marquee */}
-      <div className="relative w-full border-y border-white/10 bg-[#05111B] py-2.5 mb-10 sm:mb-12 overflow-hidden z-20">
+      <div className="relative w-full border-y border-white/10 bg-[#05111B] py-2.5 mb-8 sm:mb-10 overflow-hidden z-20">
         {/* Desvanecimiento suave en los bordes laterales */}
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-[#05111B] to-transparent z-10" />
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-[#05111B] to-transparent z-10" />

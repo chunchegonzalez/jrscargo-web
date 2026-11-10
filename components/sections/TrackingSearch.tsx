@@ -123,9 +123,9 @@ export default function TrackingSearch() {
   };
 
   return (
-    <section id="tracking" className="section-padding bg-white relative overflow-hidden">
+    <section id="tracking" className="py-12 lg:py-16 bg-white relative overflow-hidden">
       <div className="container-max max-w-5xl mx-auto relative z-10">
-        <div data-parallax-header className="text-center mb-10 sm:mb-12 max-w-2xl mx-auto">
+        <div data-parallax-header className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
             <Package size={15} className="text-brand-red" />
             <span>{t.nav.tracking}</span>
@@ -143,7 +143,7 @@ export default function TrackingSearch() {
         </div>
 
         {/* Clean Search Form */}
-        <div data-parallax-content className="relative max-w-3xl mx-auto mb-16">
+        <div data-parallax-content className={`relative max-w-3xl mx-auto ${result ? 'mb-10 sm:mb-12' : 'mb-0'}`}>
           <form onSubmit={handleSearch} className="relative bg-white flex flex-col sm:flex-row gap-3 p-3 rounded-[2rem] shadow-[0_4px_24px_rgba(18,67,94,0.08)] items-center border border-slate-200/90">
             <div className="relative flex-1 w-full">
               <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">

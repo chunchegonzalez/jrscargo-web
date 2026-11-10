@@ -54,7 +54,7 @@ export default function ContactSection() {
   return (
     <section
       id="contacto"
-      className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-white"
+      className="py-12 lg:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-white"
     >
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Encabezado proporcionado con icono dinámico */}

@@ -151,7 +151,7 @@ export default function Rates() {
   }, [activeFilter]);
 
   return (
-    <section id="tarifas" className="py-14 lg:py-20 bg-white relative overflow-hidden">
+    <section id="tarifas" className="py-12 lg:py-16 bg-white relative overflow-hidden">
       <div className="container-max px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado */}
         <div data-parallax-header className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto">
