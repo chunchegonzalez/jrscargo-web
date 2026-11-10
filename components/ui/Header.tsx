@@ -192,14 +192,14 @@ export default function Header() {
         {/* Barra completa (estado superior): se desvanece suavemente al hacer scroll */}
         <div
           aria-hidden="true"
-          className={`absolute inset-0 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-opacity duration-500 ease-out ${
+          className={`glass-bar absolute inset-0 transition-opacity duration-500 ease-out ${
             isScrolled && !isMobileMenuOpen ? 'opacity-0' : 'opacity-100 pointer-events-auto'
           }`}
         />
         <div
           className={`relative mx-auto w-full max-w-7xl flex items-center justify-between gap-4 pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] rounded-full border ${
             isScrolled && !isMobileMenuOpen
-              ? 'bg-white/90 backdrop-blur-lg shadow-[0_4px_20px_rgba(18,67,94,0.10)] border-slate-200/80 py-2 px-5 sm:px-7'
+              ? 'glass-pill py-2 px-5 sm:px-7'
               : 'bg-transparent border-transparent shadow-none py-3 px-4 sm:px-6 lg:px-8'
           }`}
         >

@@ -562,3 +562,33 @@
   will-change: transform;
   animation: gpu-ticker 25s linear infinite;
 }
+
+/* ===== Efecto glass del menú superior ===== */
+/* Fallback sólido para navegadores sin soporte de backdrop-filter */
+.glass-bar,
+.glass-pill {
+  background-color: #ffffff;
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-bar {
+    background-color: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    backdrop-filter: saturate(160%) blur(14px);
+  }
+  .glass-pill {
+    background-color: rgba(255, 255, 255, 0.68);
+    -webkit-backdrop-filter: saturate(170%) blur(16px);
+    backdrop-filter: saturate(170%) blur(16px);
+  }
+}
+
+.glass-bar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 0 rgba(18, 67, 94, 0.05), 0 6px 20px rgba(18, 67, 94, 0.06);
+}
+
+.glass-pill {
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 28px rgba(18, 67, 94, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
