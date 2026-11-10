@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const updates = { ...body };
 
     if (updates.password && typeof updates.password === 'string' && updates.password.trim().length > 0) {
-      updates.password = await hashPassword(updates.password.trim());
+      updates.password = updates.password.trim();
     } else {
       delete updates.password;
     }

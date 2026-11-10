@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUsers, createUser } from '@/lib/supabase';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { hashPassword } from '@/lib/password';
+import { isHashed } from '@/lib/password';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,14 +13,16 @@ export async function GET(request: Request) {
     }
 
     const data = await getUsers();
-    // Sanitize: Never expose password hashes to frontend
-    const sanitized = (data || []).map((u: Record<string, unknown>) => {
-      const safeUser = { ...u };
-      delete safeUser.password;
-      return safeUser;
+    const formatted = (data || []).map((u: Record<string, unknown>) => {
+      const rawPassword = typeof u.password === 'string' ? u.password : '';
+      return {
+        ...u,
+        password: rawPassword,
+        isHashed: isHashed(rawPassword)
+      };
     });
 
-    return NextResponse.json({ success: true, data: sanitized }, { status: 200 });
+    return NextResponse.json({ success: true, data: formatted }, { status: 200 });
   } catch {
     return NextResponse.json({ success: false, error: 'Error fetching users' }, { status: 500 });
   }
@@ -40,12 +42,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Usuario y contraseña son requeridos' }, { status: 400 });
     }
 
-    // Hash password with PBKDF2 before storing in database
-    const hashedPassword = await hashPassword(password);
+    const cleanPassword = String(password).trim();
 
     await createUser({
       username: String(username).trim(),
-      password: hashedPassword,
+      password: cleanPassword,
       role: role || 'operator'
     });
 

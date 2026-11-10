@@ -20,11 +20,12 @@ interface LeadItem {
 
 export default function AjustesPage() {
   const { showAlert, showConfirm } = useModal();
-  const [users, setUsers] = useState<{id: string, username: string, role: string, password?: string}[]>([]);
+  const [users, setUsers] = useState<{id: string, username: string, role: string, password?: string, isHashed?: boolean}[]>([]);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadSearch, setLeadSearch] = useState('');
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
 
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -36,6 +37,12 @@ export default function AjustesPage() {
   const [editPasswordValue, setEditPasswordValue] = useState('');
 
   const [loading, setLoading] = useState(false);
+
+  const copyPassword = (pwd: string) => {
+    navigator.clipboard.writeText(pwd).catch(() => {});
+    setCopiedPassword(pwd);
+    setTimeout(() => setCopiedPassword(null), 2000);
+  };
 
   useEffect(() => {
     loadData();
@@ -365,6 +372,7 @@ export default function AjustesPage() {
                     required
                     type="text"
                     placeholder="Ej. OperadorBodega"
+                    autoComplete="off"
                     value={newUsername}
                     onChange={e => setNewUsername(e.target.value)}
                     className="w-full h-9 px-3 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
@@ -377,6 +385,7 @@ export default function AjustesPage() {
                       required
                       type={showNewPassword ? "text" : "password"}
                       placeholder="••••••••"
+                      autoComplete="new-password"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
                       className="w-full h-9 pl-3 pr-9 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
@@ -385,6 +394,7 @@ export default function AjustesPage() {
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      title={showNewPassword ? "Ocultar" : "Mostrar"}
                     >
                       {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
@@ -453,12 +463,40 @@ export default function AjustesPage() {
                         type="text" 
                         value={editPasswordValue}
                         onChange={(e) => setEditPasswordValue(e.target.value)}
-                        className="w-full h-8 px-2.5 bg-white text-xs sm:text-sm text-slate-800 border border-slate-200/90 rounded-lg focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                        className="w-full h-8 px-2.5 bg-white text-xs sm:text-sm font-mono text-slate-800 border border-slate-200/90 rounded-lg focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                         placeholder="Nueva contraseña"
+                        autoFocus
                       />
+                    ) : showPasswordFor === u.id ? (
+                      u.isHashed ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono bg-amber-50 text-amber-800 border border-amber-200/70">
+                          <Shield size={12} className="text-amber-600 shrink-0" />
+                          <span>Protegida (Hash PBKDF2)</span>
+                          <span className="text-[10px] text-amber-700 font-sans hidden sm:inline">— Presiona ✏️ para reasignar clave</span>
+                        </span>
+                      ) : (
+                        <div className="inline-flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-mono font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-2xs select-all">
+                            {u.password || 'Sin clave asignada'}
+                          </span>
+                          {u.password && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyPassword(u.password!);
+                              }}
+                              className="p-1 text-slate-400 hover:text-brand-blue hover:bg-slate-200/60 rounded transition-colors cursor-pointer"
+                              title="Copiar contraseña"
+                            >
+                              {copiedPassword === u.password ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                            </button>
+                          )}
+                        </div>
+                      )
                     ) : (
-                      <span className="text-xs font-mono text-slate-600 truncate">
-                        {showPasswordFor === u.id ? (u.password || '••••••••') : '••••••••'}
+                      <span className="text-xs font-mono text-slate-400 select-none">
+                        ••••••••
                       </span>
                     )}
                   </div>
@@ -483,16 +521,22 @@ export default function AjustesPage() {
                     ) : (
                       <>
                         <button 
+                          type="button"
                           onClick={() => setShowPasswordFor(showPasswordFor === u.id ? null : u.id)} 
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-md transition-colors cursor-pointer"
-                          title={showPasswordFor === u.id ? "Ocultar" : "Mostrar"}
+                          className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                            showPasswordFor === u.id
+                              ? 'text-brand-blue bg-brand-blue/10 border border-brand-blue/20'
+                              : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/60'
+                          }`}
+                          title={showPasswordFor === u.id ? "Ocultar contraseña" : "Ver contraseña"}
                         >
                           {showPasswordFor === u.id ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                         <button 
+                          type="button"
                           onClick={() => {
                             setEditingPasswordFor(u.id);
-                            setEditPasswordValue(u.password || '');
+                            setEditPasswordValue(u.isHashed ? '' : (u.password || ''));
                           }} 
                           className="p-1.5 text-brand-blue hover:bg-brand-blue/10 rounded-md transition-colors cursor-pointer"
                           title="Editar contraseña"
