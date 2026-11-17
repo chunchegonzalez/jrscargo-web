@@ -185,15 +185,17 @@ export default function Header() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 pointer-events-none transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`fixed top-0 left-0 right-0 z-50 ${
+          isMobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'
+        } transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isScrolled && !isMobileMenuOpen ? 'pt-2 sm:pt-3 px-3 sm:px-6' : 'pt-0 px-0'
         }`}
       >
         {/* Barra completa (estado superior): se desvanece suavemente al hacer scroll */}
         <div
           aria-hidden="true"
-          className={`glass-bar absolute inset-0 transition-opacity duration-500 ease-out ${
-            isScrolled && !isMobileMenuOpen ? 'opacity-0' : 'opacity-100 pointer-events-auto'
+          className={`glass-bar absolute top-0 left-0 right-0 h-16 sm:h-20 pointer-events-none transition-opacity duration-500 ease-out ${
+            isScrolled && !isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
           }`}
         />
         <div
@@ -347,7 +349,7 @@ export default function Header() {
 
         {/* Mobile Menu Dropdown from Header */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden bg-white/98 backdrop-blur-xl border-t border-slate-100 shadow-2xl max-h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain">
+          <div className="lg:hidden relative z-50 pointer-events-auto bg-white/98 backdrop-blur-xl border-t border-slate-100 shadow-2xl max-h-[calc(100dvh-72px)] overflow-y-auto overscroll-contain">
             <div className="px-4 py-4 space-y-1">
               {/* Navigation Links */}
               {navLinks.map((link) => {
@@ -358,7 +360,7 @@ export default function Header() {
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
                     style={{ outline: 'none', WebkitTapHighlightColor: 'transparent', boxShadow: 'none' }}
-                    className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-base font-semibold transition-colors outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 select-none ${
+                    className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-base font-semibold transition-colors outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 select-none cursor-pointer ${
                       isActive
                         ? 'text-brand-blue bg-slate-100 font-bold'
                         : 'text-slate-700 hover:text-brand-blue hover:bg-slate-50'
@@ -379,7 +381,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => setLanguage('es')}
-                    className={`px-3 py-1 rounded-full transition-all ${
+                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                       language === 'es'
                         ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
                         : 'text-slate-600'
@@ -390,7 +392,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => setLanguage('en')}
-                    className={`px-3 py-1 rounded-full transition-all ${
+                    className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                       language === 'en'
                         ? 'bg-white text-brand-blue shadow-2xs font-extrabold'
                         : 'text-slate-600'
@@ -407,8 +409,10 @@ export default function Header() {
                   href="https://worldboxcr.com/jrscargo/login"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full py-3 px-4 text-sm font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                  onClick={() => {
+                    setTimeout(() => setIsMobileMenuOpen(false), 200);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3 px-4 text-sm font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-xl transition-colors cursor-pointer select-none"
                 >
                   <UserCircle size={19} className="text-slate-600" />
                   <span>{t.nav.login}</span>
@@ -418,8 +422,10 @@ export default function Header() {
                   href="https://worldboxcr.com/jrscargo/register"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="relative group flex items-center justify-center gap-2 w-full py-3.5 px-4 text-sm font-bold text-white bg-brand-blue hover:bg-[#0c2f42] rounded-xl shadow-md transition-colors"
+                  onClick={() => {
+                    setTimeout(() => setIsMobileMenuOpen(false), 200);
+                  }}
+                  className="relative group flex items-center justify-center gap-2 w-full py-3.5 px-4 text-sm font-bold text-white bg-brand-blue hover:bg-[#0c2f42] active:bg-[#092230] rounded-xl shadow-md transition-colors cursor-pointer select-none"
                 >
                   {isHalloween && (
                     <span className="absolute -top-2 right-4 pointer-events-none transform rotate-12 drop-shadow-xs">
@@ -435,8 +441,10 @@ export default function Header() {
                   href="https://wa.me/50672601238"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors mt-2"
+                  onClick={() => {
+                    setTimeout(() => setIsMobileMenuOpen(false), 200);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 rounded-xl transition-colors mt-2 cursor-pointer select-none"
                 >
                   <MessageCircle size={16} className="text-emerald-600" />
                   <span>{language === 'es' ? 'Atención por WhatsApp: +506 7260 1238' : 'WhatsApp Support: +506 7260 1238'}</span>
