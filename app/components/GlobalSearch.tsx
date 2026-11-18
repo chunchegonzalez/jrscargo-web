@@ -11,7 +11,6 @@ const MODULES = [
   { label: 'Escanear Individual (Bodega)', url: '/admin/bodega' },
   { label: 'Acción Masiva', url: '/admin/bodega/masivo' },
   { label: 'Inventario CR', url: '/admin/inventario' },
-  { label: 'Comparar Cargos por Paquete', url: '/admin/bodega/comparar-cargos' },
   { label: 'Facturas a Clientes', url: '/admin/facturacion', adminOnly: true },
   { label: 'Cuentas por cobrar', url: '/admin/cuentas-por-cobrar', adminOnly: true },
   { label: 'Gastos y Compras', url: '/admin/gastos', adminOnly: true },
