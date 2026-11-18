@@ -6,6 +6,7 @@ import {
   Laptop,
   Smartphone,
   Shirt,
+  ShieldCheck,
   Zap,
   Tag,
   Calendar,
@@ -27,7 +28,8 @@ type CountdownState = {
   hours: string;
   minutes: string;
   seconds: string;
-  phase: 'early' | 'main' | 'cyber' | 'ended';
+  phase: 'pre' | 'early' | 'main' | 'cyber' | 'ended';
+  isBlackFridayActive: boolean;
 };
 
 function getCostaRicaNow(): Date {
@@ -36,21 +38,38 @@ function getCostaRicaNow(): Date {
   );
 }
 
+/**
+ * Temporada Black Friday activa hasta el 1 de diciembre inclusive (hora Costa Rica).
+ * A partir del 2 de diciembre (después del 1 de diciembre), vuelve automáticamente
+ * al diseño original de Promociones Exclusivas sin temática de Black Friday.
+ */
+function checkIsBlackFridaySeason(now: Date): boolean {
+  const month = now.getMonth(); // 10 = Noviembre, 11 = Diciembre
+  const day = now.getDate();
+  return (month === 10 && day >= 10) || (month === 11 && day <= 1);
+}
+
 function computeBlackFridayCountdown(): CountdownState {
   const now = getCostaRicaNow();
+  const isBlackFridayActive = checkIsBlackFridaySeason(now);
   const year = now.getFullYear();
 
+  // Inicio ofertas anticipadas: 19 de noviembre 00:00:00 CR
+  const earlyStart = new Date(year, 10, 19, 0, 0, 0);
   // Evento principal: 27 de noviembre 00:00:00 CR
   const mainEventStart = new Date(year, 10, 27, 0, 0, 0);
   // Fin del evento principal: 27 de noviembre 23:59:59 CR
   const mainEventEnd = new Date(year, 10, 27, 23, 59, 59);
-  // Fin de semana de ofertas / Cyber Monday: 30 de noviembre 23:59:59 CR
+  // Cierre Semana de Ofertas / Cyber Monday: 30 de noviembre 23:59:59 CR
   const cyberEnd = new Date(year, 10, 30, 23, 59, 59);
 
   let target = mainEventStart;
   let phase: CountdownState['phase'] = 'early';
 
-  if (now < mainEventStart) {
+  if (now < earlyStart) {
+    phase = 'pre';
+    target = earlyStart;
+  } else if (now < mainEventStart) {
     phase = 'early';
     target = mainEventStart;
   } else if (now <= mainEventEnd) {
@@ -78,6 +97,7 @@ function computeBlackFridayCountdown(): CountdownState {
     minutes: pad(minutes),
     seconds: pad(seconds),
     phase,
+    isBlackFridayActive,
   };
 }
 
@@ -89,28 +109,27 @@ export default function AmazonDeals() {
   const headerRef = useRef<HTMLDivElement>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
 
-  const [countdown, setCountdown] = useState<CountdownState>({
+  const [countdown, setCountdown] = useState<CountdownState>(() => ({
     days: '--',
     hours: '--',
     minutes: '--',
     seconds: '--',
-    phase: 'early',
-  });
+    phase: 'pre',
+    isBlackFridayActive: checkIsBlackFridaySeason(getCostaRicaNow()),
+  }));
   const [selectedStage, setSelectedStage] = useState<number>(0);
 
-  // Actualización en vivo del contador de Black Friday (hora Costa Rica)
+  // Actualización en vivo del contador y verificación automática de fecha (hora Costa Rica)
   useEffect(() => {
-    const update = () => {
-      const next = computeBlackFridayCountdown();
-      setCountdown(next);
-    };
-    update();
     const initial = computeBlackFridayCountdown();
+    setCountdown(initial);
     if (initial.phase === 'main') setSelectedStage(1);
     else if (initial.phase === 'cyber') setSelectedStage(2);
     else setSelectedStage(0);
 
-    const interval = setInterval(update, 1000);
+    const interval = setInterval(() => {
+      setCountdown(computeBlackFridayCountdown());
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -182,37 +201,210 @@ export default function AmazonDeals() {
     } catch (err) {
       console.warn('GSAP AmazonDeals animation bypassed:', err);
     }
-  }, []);
+  }, [countdown.isBlackFridayActive]);
 
+  // =========================================================================
+  // MODO NORMAL (Automático después del 1 de diciembre — diseño original)
+  // =========================================================================
+  if (!countdown.isBlackFridayActive) {
+    const classicDeals = [
+      {
+        title: isEn ? 'Deals of the Day' : 'Ofertas del día',
+        discount: isEn ? 'Up to 50% discount' : 'Hasta 50% de descuento',
+        icon: Zap,
+        link: 'https://www.amazon.com/deals',
+      },
+      {
+        title: isEn ? 'Electronics' : 'Electrónica',
+        discount: isEn ? 'Top trending tech' : 'Lo más buscado',
+        icon: Laptop,
+        link: 'https://www.amazon.com/b?node=16225009011',
+      },
+      {
+        title: isEn ? 'Smartphones' : 'Celulares',
+        discount: isEn ? 'Accessories & gadgets' : 'Accesorios y más',
+        icon: Smartphone,
+        link: 'https://www.amazon.com/b?node=2335752011',
+      },
+      {
+        title: isEn ? 'Fashion & Apparel' : 'Moda y ropa',
+        discount: isEn ? 'Seasonal collections' : 'Tendencias actuales',
+        icon: Shirt,
+        link: 'https://www.amazon.com/b?node=7141123011',
+      },
+    ];
+
+    const classicTickerItems = [
+      {
+        icon: ShieldCheck,
+        text: isEn ? '100% GUARANTEED SHIPMENTS' : 'ENVÍOS 100% GARANTIZADOS',
+      },
+      {
+        icon: ShieldCheck,
+        text: isEn ? 'PRIORITY DISPATCH IN MIAMI' : 'DESPACHOS PRIORITARIOS EN MIAMI',
+      },
+      {
+        icon: Tag,
+        text: isEn ? 'EXCLUSIVE IMPORT RATES' : 'TARIFAS EXCLUSIVAS DE IMPORTACIÓN',
+      },
+      {
+        icon: Zap,
+        text: isEn ? 'DIRECT CONNECTION TO COSTA RICA' : 'CONEXIÓN DIRECTA A COSTA RICA',
+      },
+    ];
+
+    return (
+      <section
+        ref={sectionRef}
+        className="pb-12 lg:pb-16 bg-[#071724] relative overflow-hidden"
+      >
+        <div className="relative w-full border-y border-white/10 bg-[#05111B] py-2.5 mb-8 sm:mb-10 overflow-hidden z-20">
+          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-[#05111B] to-transparent z-10" />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-[#05111B] to-transparent z-10" />
+
+          <div className="flex select-none overflow-hidden">
+            <div className="flex items-center whitespace-nowrap shrink-0 animate-gpu-ticker hover:[animation-play-state:paused]">
+              {[
+                ...classicTickerItems,
+                ...classicTickerItems,
+                ...classicTickerItems,
+                ...classicTickerItems,
+                ...classicTickerItems,
+                ...classicTickerItems,
+              ].map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <div key={idx} className="flex items-center">
+                    <div className="flex items-center gap-2 px-5 sm:px-8">
+                      <Icon size={14} className="text-[#F5B027] shrink-0" />
+                      <span className="text-[11px] sm:text-xs tracking-[0.08em] uppercase text-slate-200 font-bold">
+                        {item.text}
+                      </span>
+                    </div>
+                    <span className="h-3.5 w-px bg-white/20 shrink-0" aria-hidden="true" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div ref={headerRef} className="mb-8 sm:mb-10">
+            <div className="inline-flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                <FaAmazon size={24} className="text-[#0B1D2B]" />
+              </div>
+              <span className="h-5 w-px bg-white/20" aria-hidden="true" />
+              <span className="text-xs sm:text-sm font-bold text-[#F5B027] tracking-wide">
+                {isEn
+                  ? 'Official Amazon Business Partner'
+                  : 'Socio Oficial Amazon Business Partner'}
+              </span>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div>
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight mb-2">
+                  {isEn ? 'Exclusive promotions' : 'Promociones exclusivas'}
+                </h2>
+                <p className="text-slate-300 text-sm sm:text-[15px] max-w-xl leading-relaxed">
+                  {isEn
+                    ? 'Take advantage of daily Amazon savings and ship your purchases directly to Costa Rica quickly and securely with JRS Cargo.'
+                    : 'Aprovecha los mejores descuentos de Amazon y trae tus compras a Costa Rica de forma rápida y segura con JRS Cargo.'}
+                </p>
+              </div>
+
+              <a
+                href="https://www.amazon.com/deals"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center justify-center gap-2 bg-[#F5B027] hover:bg-[#FF9900] text-[#071724] px-5 py-3 rounded-xl font-extrabold text-sm transition-all duration-200 shadow-sm hover:-translate-y-0.5 shrink-0 self-start md:self-center"
+              >
+                <span>{isEn ? 'View all deals' : 'Ver todas las ofertas'}</span>
+                <ArrowRight
+                  size={16}
+                  strokeWidth={2.4}
+                  className="group-hover:translate-x-0.5 transition-transform"
+                />
+              </a>
+            </div>
+          </div>
+
+          <div
+            ref={cardsGridRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          >
+            {classicDeals.map((deal, index) => {
+              const Icon = deal.icon;
+              return (
+                <a
+                  key={index}
+                  data-amazon-card
+                  href={deal.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group bg-[#0D2132]/90 hover:bg-[#122B40] p-5 sm:p-6 rounded-2xl border border-slate-700/75 hover:border-[#F5B027]/50 flex flex-col justify-between min-h-[140px] transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="mb-4 text-[#EF4444] group-hover:scale-105 transition-transform duration-200 origin-left">
+                    <Icon size={24} strokeWidth={1.85} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base sm:text-lg text-white mb-0.5 group-hover:text-[#F5B027] transition-colors">
+                      {deal.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300/90 font-medium">
+                      {deal.discount}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // =========================================================================
+  // MODO BLACK FRIDAY AMAZON (Del 19 al 30 de noviembre · se apaga > 1 Dic)
+  // =========================================================================
   const stages = [
     {
       id: 'early',
-      dates: isEn ? 'Nov 9 – 26' : '9 – 26 de Nov',
-      title: isEn ? 'Early Black Friday Deals' : 'Ofertas Anticipadas',
-      badge: isEn ? 'LIVE NOW' : 'EN VIVO',
+      dates: isEn ? 'Nov 19 – 26' : '19 – 26 de Nov',
+      title: isEn ? 'Black Friday Week Starts' : 'Inicio Semana Black Friday',
+      badge:
+        countdown.phase === 'pre'
+          ? isEn
+            ? 'STARTS NOV 19'
+            : 'INICIA 19 NOV'
+          : isEn
+          ? 'LIVE NOW'
+          : 'EN VIVO',
       tip: isEn
-        ? 'Daily early discounts across thousands of items. Ship to your JRS Miami locker and consolidate purchases with zero monthly fees.'
-        : 'Descuentos diarios anticipados desde el 9 de noviembre. Envía a tu casillero JRS en Miami con despachos diarios hacia Costa Rica.',
-      isActive: countdown.phase === 'early',
+        ? 'Amazon Black Friday Week kicks off on November 19 with daily discounts. Ship directly to your JRS Miami locker with fast flights to Costa Rica.'
+        : 'La Semana de Black Friday comienza el 19 de noviembre con descuentos diarios. Envía a tu casillero JRS en Miami con despachos rápidos hacia Costa Rica.',
+      isActive: countdown.phase === 'pre' || countdown.phase === 'early',
     },
     {
       id: 'main',
       dates: isEn ? 'Nov 27' : '27 de Noviembre',
       title: isEn ? 'Black Friday Main Event' : 'Evento Principal Black Friday',
-      badge: isEn ? 'MAIN EVENT' : 'DÍA PRINCIPAL',
+      badge: isEn ? 'MAIN EVENT' : 'EVENTO PRINCIPAL',
       tip: isEn
-        ? 'Amazon’s biggest savings day of the year on tech, fashion, and home essentials. Priority dispatch in Miami for JRS Cargo clients.'
-        : 'El día más fuerte de descuentos del año en Amazon: tecnología, celulares, hogar y moda con tarifas aéreas y marítimas exclusivas.',
+        ? 'The biggest savings day of the year on Amazon: tech, smartphones, fashion, and home essentials with exclusive JRS Cargo shipping rates.'
+        : 'El evento principal del año en Amazon: tecnología, celulares, hogar y moda con las mejores rebajas y envío seguro con JRS Cargo.',
       isActive: countdown.phase === 'main',
     },
     {
       id: 'cyber',
       dates: isEn ? 'Nov 28 – 30' : '28 – 30 de Nov',
-      title: isEn ? 'Deals Week & Cyber Monday' : 'Semana de Ofertas y Cyber Monday',
-      badge: isEn ? 'CYBER MONDAY' : 'CYBER MONDAY',
+      title: isEn ? 'Closing Deals & Cyber Monday' : 'Cierre en Cyber Monday',
+      badge: 'CYBER MONDAY',
       tip: isEn
-        ? 'Final stretch through November 30 including Cyber Monday flash drops. Track every package live from Miami to Costa Rica.'
-        : 'Cierre de temporada hasta el 30 de noviembre incluyendo Cyber Monday. Rastrea cada paquete en tiempo real hasta tu puerta en Costa Rica.',
+        ? 'Promotions wrap up on November 30 with Cyber Monday flash drops. Track every package live from Miami to Costa Rica.'
+        : 'Las promociones cierran el 30 de noviembre en Cyber Monday. Rastrea cada paquete en tiempo real hasta tu puerta en Costa Rica.',
       isActive: countdown.phase === 'cyber',
     },
   ];
@@ -242,7 +434,7 @@ export default function AmazonDeals() {
     {
       title: isEn ? 'Fashion & Apparel' : 'Moda y ropa',
       discount: isEn ? 'Black Friday collections' : 'Marcas con súper rebaja',
-      badge: 'CYBER WEEK',
+      badge: 'CYBER MONDAY',
       icon: Shirt,
       link: 'https://www.amazon.com/b?node=7141123011',
     },
@@ -251,21 +443,25 @@ export default function AmazonDeals() {
   const tapeSegments = Array.from({ length: 12 });
 
   const countdownLabel =
-    countdown.phase === 'early'
+    countdown.phase === 'pre'
+      ? isEn
+        ? 'Black Friday Week starts Nov 19 in:'
+        : 'La Semana de Black Friday inicia (19 Nov) en:'
+      : countdown.phase === 'early'
       ? isEn
         ? 'Countdown to Black Friday Main Event (Nov 27)'
         : 'Cuenta regresiva al Evento Principal (27 Nov)'
       : countdown.phase === 'main'
       ? isEn
         ? 'Black Friday LIVE · Cyber Monday ends in:'
-        : '¡Black Friday EN VIVO! · Cierre Cyber Monday en:'
+        : '¡Black Friday EN VIVO! · Cierra Cyber Monday en:'
       : countdown.phase === 'cyber'
       ? isEn
-        ? 'Cyber Monday Deals Week ends in:'
-        : 'Semana de Ofertas y Cyber Monday cierra en:'
+        ? 'Cyber Monday promotions close in:'
+        : 'Las promociones cierran en Cyber Monday en:'
       : isEn
-      ? 'Amazon Seasonal Deals'
-      : 'Ofertas de Temporada Amazon';
+      ? 'Final Cyber Monday Deals'
+      : 'Últimas horas de Cyber Monday';
 
   return (
     <section
@@ -292,7 +488,6 @@ export default function AmazonDeals() {
         aria-label={isEn ? 'Explore Amazon Black Friday Deals' : 'Ver ofertas de Black Friday en Amazon'}
         className="group relative block w-full overflow-hidden border-y border-black/30 mb-9 sm:mb-12 z-20 cursor-pointer select-none"
       >
-        {/* Fondo dividido diagonalmente: Naranja Amazon (#FF4D00) + Cartón Kraft */}
         <div className="relative w-full h-[68px] sm:h-[78px] bg-[#FF4D00] overflow-hidden flex items-center">
           {/* Mitad derecha con textura de cartón kraft en ángulo */}
           <div
@@ -301,7 +496,7 @@ export default function AmazonDeals() {
             style={{ clipPath: 'polygon(14% 0, 100% 0, 100% 100%, 0% 100%)' }}
           />
 
-          {/* Cinta blanca cruzada inclinada con "Epic deals" (como en la imagen de referencia) */}
+          {/* Cinta blanca cruzada inclinada con "Epic deals" */}
           <div
             aria-hidden="true"
             className="hidden sm:flex flex-col items-center justify-center absolute left-[43%] md:left-[46%] -top-6 -bottom-6 w-20 bg-[#FAF7F2] shadow-md transform -rotate-[16deg] border-x border-black/5 z-10 pointer-events-none"
@@ -320,7 +515,6 @@ export default function AmazonDeals() {
             </span>
           </div>
 
-          {/* Segunda cinta blanca decorativa en pantallas grandes */}
           <div
             aria-hidden="true"
             className="hidden lg:flex flex-col items-center justify-center absolute right-[14%] -top-6 -bottom-6 w-20 bg-[#FAF7F2]/95 shadow-md transform -rotate-[16deg] border-x border-black/5 z-10 pointer-events-none"
@@ -354,11 +548,11 @@ export default function AmazonDeals() {
                     <span className="text-xs sm:text-sm font-extrabold tracking-wide text-[#FACC15] px-4 sm:px-6 uppercase">
                       {idx % 2 === 0
                         ? isEn
-                          ? 'NOV 9 – 30 · MAIN EVENT NOV 27'
-                          : '9 – 30 NOV · EVENTO PRINCIPAL 27 NOV'
+                          ? 'NOV 19 – 30 · MAIN EVENT NOV 27'
+                          : '19 – 30 NOV · EVENTO PRINCIPAL 27 NOV'
                         : isEn
-                        ? 'CYBER MONDAY UNTIL NOV 30'
-                        : 'SEMANA DE OFERTAS Y CYBER MONDAY'}
+                        ? 'CLOSING ON CYBER MONDAY · NOV 30'
+                        : 'CIERRE EN CYBER MONDAY · 30 NOV'}
                     </span>
                   </div>
                 ))}
@@ -385,14 +579,16 @@ export default function AmazonDeals() {
               </span>
             </div>
 
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF4D00]/20 border border-[#FF5500]/50 text-[#FFB380] text-[11px] font-extrabold uppercase tracking-wider">
-              <span className="w-2 h-2 rounded-full bg-[#FF5500] animate-ping absolute" aria-hidden="true" />
-              <span className="w-2 h-2 rounded-full bg-[#FF5500] relative" aria-hidden="true" />
-              <span>{isEn ? 'Black Friday · Nov 9 – 30' : 'Black Friday · 9 al 30 Nov'}</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF4D00]/20 border border-[#FF5500]/50 text-[#FFB380] text-[11px] font-extrabold uppercase tracking-wider relative">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF5500] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF5500]" />
+              </span>
+              <span>{isEn ? 'Black Friday · Nov 19 – 30' : 'Black Friday · 19 al 30 Nov'}</span>
             </span>
           </div>
 
-          {/* Grid encabezado: Título/descripción a la izquierda + Contador & CTA a la derecha */}
+          {/* Grid encabezado: Título/descripción a la izquierda + Contador a la derecha */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div className="lg:col-span-7">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight mb-2.5 leading-tight">
@@ -415,8 +611,8 @@ export default function AmazonDeals() {
               </h2>
               <p className="text-slate-300 text-sm sm:text-[15px] max-w-xl leading-relaxed mb-5">
                 {isEn
-                  ? 'Starting November 9 through November 30 — featuring the main Black Friday event on November 27 and Cyber Monday deals week. Ship your Amazon finds to Costa Rica fast and safely with JRS Cargo.'
-                  : 'Del 9 al 30 de noviembre disfruta las ofertas más grandes de Amazon, con el evento principal el 27 de noviembre y cierre en Cyber Monday. Trae tus compras a Costa Rica rápido y seguro con JRS Cargo.'}
+                  ? 'From November 19 to 30, enjoy Amazon deals. The main event will be on November 27, and promotions close on Cyber Monday. Ship your purchases to Costa Rica fast and safely with JRS Cargo.'
+                  : 'Del 19 al 30 de noviembre, disfruta las ofertas de Amazon. El evento principal será el 27 de noviembre, y las promociones cerrarán en Cyber Monday. Trae tus compras a Costa Rica rápido y seguro con JRS Cargo.'}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -483,15 +679,15 @@ export default function AmazonDeals() {
                 ) : (
                   <p className="text-sm font-bold text-white">
                     {isEn
-                      ? 'Daily Amazon Business deals available all year!'
-                      : '¡Ofertas diarias en Amazon disponibles todo el año!'}
+                      ? 'Last hours of Cyber Monday deals on Amazon!'
+                      : '¡Últimas horas de ofertas de Cyber Monday en Amazon!'}
                   </p>
                 )}
 
                 <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-300">
                   <span className="inline-flex items-center gap-1.5 font-semibold">
                     <Calendar size={13} className="text-[#F5B027]" />
-                    {isEn ? 'Nov 9 – Nov 30' : '9 Nov – 30 Nov'}
+                    {isEn ? 'Nov 19 – Nov 30' : '19 Nov – 30 Nov'}
                   </span>
                   <span className="font-bold text-[#F5B027]">
                     {isEn ? 'Main Event: Nov 27' : 'Principal: 27 Nov'}
