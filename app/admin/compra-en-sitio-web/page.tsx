@@ -194,7 +194,7 @@ export default function CompraEnSitioWebPage() {
 
   const openEmailModal = (inv: Invoice) => {
     if (!inv.clients?.email) {
-      showAlert('Este cliente no tiene un correo electrónico registrado.', 'error');
+      showAlert('Sin correo registrado', 'Este cliente no tiene un correo electrónico registrado.', 'error');
       return;
     }
     const extra = parseClientAddress(inv.clients?.address);
@@ -223,12 +223,12 @@ export default function CompraEnSitioWebPage() {
           prev.map(it => (it.id === emailInvoice.id ? { ...it, email_sent_at: sentAt } : it))
         );
         setEmailModalOpen(false);
-        showAlert('Comprobante enviado correctamente por correo.', 'success');
+        showAlert('Correo enviado', 'Comprobante enviado correctamente por correo.', 'success');
       } else {
-        showAlert(data.error || 'No se pudo enviar el correo.', 'error');
+        showAlert('Error al enviar', data.error || 'No se pudo enviar el correo.', 'error');
       }
     } catch {
-      showAlert('Error de conexión al enviar correo.', 'error');
+      showAlert('Error de conexión', 'Error de conexión al enviar correo.', 'error');
     } finally {
       setIsSendingEmail(false);
     }
@@ -236,6 +236,7 @@ export default function CompraEnSitioWebPage() {
 
   const handleDeleteInvoice = async (inv: Invoice) => {
     const ok = await showConfirm(
+      'Eliminar factura',
       `¿Seguro que deseas eliminar la factura ${inv.invoice_number} de ${inv.clients?.name || 'este cliente'}? Esta acción no se puede deshacer.`
     );
     if (!ok) return;
@@ -244,12 +245,12 @@ export default function CompraEnSitioWebPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setInvoices(prev => prev.filter(item => item.id !== inv.id));
-        showAlert(`Factura ${inv.invoice_number} eliminada.`, 'success');
+        showAlert('Factura eliminada', `Factura ${inv.invoice_number} eliminada correctamente.`, 'success');
       } else {
-        showAlert(data.error || 'Error eliminando factura.', 'error');
+        showAlert('Error al eliminar', data.error || 'Error eliminando factura.', 'error');
       }
     } catch {
-      showAlert('Error de conexión al eliminar factura.', 'error');
+      showAlert('Error de conexión', 'Error de conexión al eliminar factura.', 'error');
     }
   };
 
