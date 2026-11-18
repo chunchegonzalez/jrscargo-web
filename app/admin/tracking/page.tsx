@@ -28,7 +28,7 @@ import {
   Warehouse,
   ShieldCheck
 } from 'lucide-react';
-import { formatPackageWeightAndRate, extractDeliveryAgentInfo, InventoryHistoryEvent } from '@/lib/billing';
+import { formatPackageWeightAndRate, extractDeliveryAgentInfo, formatCostaRicaDateTime, InventoryHistoryEvent } from '@/lib/billing';
 
 interface TrackingEvent {
   date: string;
@@ -236,8 +236,24 @@ function TrackingPageContent() {
   const [timeline, setTimeline] = useState<TrackingEvent[]>([]);
   const [localItem, setLocalItem] = useState<LocalItem | null>(null);
   const [matchedInvoice, setMatchedInvoice] = useState<MatchedInvoice | null>(null);
+  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
+  const [isUpdatingAgent, setIsUpdatingAgent] = useState(false);
 
   const searchSeqRef = useRef(0);
+
+  useEffect(() => {
+    fetch('/api/users?namesOnly=true', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (d?.success && Array.isArray(d.data)) {
+          const names = d.data
+            .map((u: { username?: string }) => String(u.username || '').trim())
+            .filter(Boolean);
+          setRegisteredUsers(names);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -367,6 +383,48 @@ function TrackingPageContent() {
     navigator.clipboard.writeText(val);
     setCopiedTracking(true);
     setTimeout(() => setCopiedTracking(false), 2000);
+  };
+
+  const handleAssignDeliveryAgent = async (newAgentName: string) => {
+    if (!localItem || !newAgentName.trim() || isUpdatingAgent) return;
+    const cleanAgent = newAgentName.trim();
+    setIsUpdatingAgent(true);
+    try {
+      const currentHistory: InventoryHistoryEvent[] = Array.isArray(localItem.history)
+        ? [...localItem.history]
+        : [];
+      const delIdx = currentHistory.findIndex(ev => {
+        const act = String(ev?.action || '').toLowerCase();
+        return act.includes('entregad') && !act.includes('reversi') && !act.includes('devuelto');
+      });
+
+      if (delIdx >= 0) {
+        currentHistory[delIdx] = { ...currentHistory[delIdx], user: cleanAgent };
+      } else {
+        currentHistory.unshift({
+          date: formatCostaRicaDateTime(),
+          action: 'Paquete Entregado al Cliente',
+          user: cleanAgent,
+        });
+      }
+
+      const res = await fetch(`/api/inventory/${encodeURIComponent(localItem.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: localItem.status || 'Entregado',
+          history: currentHistory,
+        }),
+      });
+
+      if (res.ok) {
+        setLocalItem(prev => (prev ? { ...prev, history: currentHistory } : prev));
+      }
+    } catch (e) {
+      console.error('Error actualizando agente de entrega:', e);
+    } finally {
+      setIsUpdatingAgent(false);
+    }
   };
 
   const fotos = pkg?.fotos || [];
@@ -1033,7 +1091,7 @@ function TrackingPageContent() {
             </div>
           </div>
 
-          {/* 4. Banner de Inventario Local + Agente que entregó */}
+          {/* 4. Banner de Inventario Local + Usuario Registrado que entregó */}
           {localItem && (
             <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-start sm:items-center gap-3.5">
@@ -1062,7 +1120,7 @@ function TrackingPageContent() {
                       <span>
                         Entregado por:{' '}
                         <strong className="text-emerald-800">
-                          {deliveryAgentInfo.deliveredBy || 'Sin agente registrado'}
+                          {deliveryAgentInfo.deliveredBy || 'Pendiente de asignar usuario'}
                         </strong>
                       </span>
                       {deliveryAgentInfo.deliveredAt ? (
@@ -1076,11 +1134,27 @@ function TrackingPageContent() {
               </div>
 
               <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-                {deliveryProgress.isDelivered && deliveryAgentInfo.deliveredBy && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-2xs">
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>Agente: {deliveryAgentInfo.deliveredBy}</span>
-                  </span>
+                {deliveryProgress.isDelivered && registeredUsers.length > 0 && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-2xs">
+                    <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span>Agente:</span>
+                    <select
+                      value={deliveryAgentInfo.deliveredBy || ''}
+                      disabled={isUpdatingAgent}
+                      onChange={e => handleAssignDeliveryAgent(e.target.value)}
+                      aria-label="Usuario que entregó el paquete"
+                      className="bg-transparent text-white font-bold focus:outline-none cursor-pointer pr-1"
+                    >
+                      <option value="" className="text-slate-900">
+                        Seleccionar usuario...
+                      </option>
+                      {registeredUsers.map(u => (
+                        <option key={u} value={u} className="text-slate-900 font-semibold">
+                          {u}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 )}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-emerald-800 border border-emerald-200/90 shadow-2xs">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />

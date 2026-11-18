@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Play, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Layers, Play, CheckCircle2, XCircle, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
 import { formatCostaRicaDateTime } from '@/lib/billing';
 
@@ -15,11 +15,39 @@ export default function EntregasMasivo() {
   const [text, setText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     textareaRef.current?.focus();
+    fetch('/api/users?namesOnly=true', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (d?.success && Array.isArray(d.data)) {
+          const names: string[] = d.data
+            .map((u: { username?: string }) => String(u.username || '').trim())
+            .filter(Boolean);
+          setRegisteredUsers(names);
+          const saved = typeof window !== 'undefined' ? localStorage.getItem('jrs_active_agent') : null;
+          if (saved && names.includes(saved)) {
+            setSelectedAgent(saved);
+          } else if (d.currentUser) {
+            setSelectedAgent(String(d.currentUser));
+          } else if (names.length > 0) {
+            setSelectedAgent(names[0]);
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const handleAgentChange = (val: string) => {
+    setSelectedAgent(val);
+    if (typeof window !== 'undefined' && val) {
+      localStorage.setItem('jrs_active_agent', val);
+    }
+  };
 
   const handleProcess = async () => {
     const trackings = text
@@ -53,7 +81,7 @@ export default function EntregasMasivo() {
           {
             date: formattedDate,
             action: 'Paquete Entregado al Cliente (Proceso Masivo)',
-            user: 'Operador Entregas'
+            user: selectedAgent || 'Operador Entregas'
           },
           ...currentHistory
         ];
@@ -102,7 +130,24 @@ export default function EntregasMasivo() {
             Escanea múltiples trackings para marcarlos como entregados al cliente de una sola vez.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {registeredUsers.length > 0 && (
+            <div className="h-9 px-3 rounded-lg bg-white border border-slate-200 inline-flex items-center gap-2 text-xs">
+              <User size={14} className="text-brand-blue shrink-0" />
+              <span className="text-slate-500 font-medium">Agente:</span>
+              <select
+                value={selectedAgent}
+                onChange={e => handleAgentChange(e.target.value)}
+                className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              >
+                {registeredUsers.map(u => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <Link
             href="/admin/bodega"
             className="h-9 px-3.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm inline-flex items-center gap-1.5 transition-all"

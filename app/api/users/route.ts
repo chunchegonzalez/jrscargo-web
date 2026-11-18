@@ -8,6 +8,30 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const authUser = await getAuthUserFromRequest(request);
+    const { searchParams } = new URL(request.url);
+    const namesOnly = searchParams.get('namesOnly') === 'true';
+
+    if (namesOnly) {
+      if (!authUser) {
+        return NextResponse.json({ success: false, error: 'Sesión requerida' }, { status: 401 });
+      }
+      const data = await getUsers();
+      const safeUsers = (data || []).map((u: Record<string, unknown>) => ({
+        id: String(u.id || ''),
+        username: String(u.username || '').trim(),
+        role: String(u.role || 'operator'),
+      })).filter((u: { username: string }) => Boolean(u.username));
+
+      return NextResponse.json(
+        {
+          success: true,
+          currentUser: authUser.username,
+          data: safeUsers,
+        },
+        { status: 200 }
+      );
+    }
+
     if (!authUser || authUser.role !== 'admin') {
       return NextResponse.json({ success: false, error: 'Requiere permisos de administrador' }, { status: 403 });
     }

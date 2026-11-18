@@ -628,7 +628,7 @@ export function extractDeliveryAgentInfo(
   });
 
   const deliveredBy =
-    deliveryEvent?.user && String(deliveryEvent.user).trim()
+    deliveryEvent?.user && !isGenericAgentLabel(deliveryEvent.user)
       ? formatAgentDisplayName(deliveryEvent.user)
       : null;
 
@@ -637,7 +637,7 @@ export function extractDeliveryAgentInfo(
     (isDeliveredStatus ? localItem.updated_at || localItem.created_at || null : null);
 
   const receivedBy =
-    receivedEvent?.user && String(receivedEvent.user).trim()
+    receivedEvent?.user && !isGenericAgentLabel(receivedEvent.user)
       ? formatAgentDisplayName(receivedEvent.user)
       : null;
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, FileText, User, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, User, ArrowRight, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
 import { parseClientAddress, formatPackageWeightAndRate, extractDeliveryAgentInfo } from '@/lib/billing';
 
 // Static Modules for quick navigation
@@ -123,32 +123,47 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
   const isFetchingRef = useRef(false);
   const lastFetchedAtRef = useRef<number>(0);
 
+  const loadSearchIndex = () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (lastFetchedAtRef.current === 0) {
+      setIsFetching(true);
+    }
+
+    Promise.all([
+      fetch('/api/clients', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
+      fetch('/api/invoices?includeItems=true', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
+      fetch('/api/inventory', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] }))
+    ])
+      .then(([clientsRes, invoicesRes, invRes]) => {
+        if (clientsRes?.success) setClients(clientsRes.data || []);
+        if (invoicesRes?.success) setInvoices(invoicesRes.data || []);
+        if (invRes?.success) setInventory(invRes.data || []);
+        lastFetchedAtRef.current = Date.now();
+      })
+      .catch(err => {
+        console.error("Error loading search data:", err);
+      })
+      .finally(() => {
+        isFetchingRef.current = false;
+        setIsFetching(false);
+      });
+  };
+
+  // Precargar silenciosamente al iniciar el panel para que el buscador responda al instante sin mostrar spinner
+  useEffect(() => {
+    const t = setTimeout(() => {
+      loadSearchIndex();
+    }, 300);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     const isStale = Date.now() - lastFetchedAtRef.current > 30_000;
-    if (isOpen && query.trim().length > 0 && isStale && !isFetchingRef.current) {
-      isFetchingRef.current = true;
-      setIsFetching(true);
-
-      Promise.all([
-        fetch('/api/clients', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
-        fetch('/api/invoices?includeItems=true', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
-        fetch('/api/inventory', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] }))
-      ])
-        .then(([clientsRes, invoicesRes, invRes]) => {
-          if (clientsRes?.success) setClients(clientsRes.data || []);
-          if (invoicesRes?.success) setInvoices(invoicesRes.data || []);
-          if (invRes?.success) setInventory(invRes.data || []);
-          lastFetchedAtRef.current = Date.now();
-        })
-        .catch(err => {
-          console.error("Error loading search data:", err);
-        })
-        .finally(() => {
-          isFetchingRef.current = false;
-          setIsFetching(false);
-        });
+    if (isOpen && isStale) {
+      loadSearchIndex();
     }
-  }, [isOpen, query]);
+  }, [isOpen]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -257,13 +272,9 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
           className="w-full h-9 bg-slate-50/90 border border-slate-200/80 hover:bg-white hover:border-slate-300 focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 rounded-lg px-3.5 pl-9 pr-14 text-xs sm:text-[13px] font-medium text-slate-800 transition-all outline-none placeholder-slate-400"
         />
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors" size={15} />
-        {isFetching && query.trim().length > 0 ? (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-blue animate-spin" size={14} />
-        ) : (
-          <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-slate-200/60 text-slate-500 text-[10px] font-semibold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-            Enter
-          </span>
-        )}
+        <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-slate-200/60 text-slate-500 text-[10px] font-semibold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          Enter
+        </span>
       </div>
 
       {isOpen && query.length > 0 && (
