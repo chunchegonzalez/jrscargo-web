@@ -1,12 +1,32 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import {
   getInventory,
   getTrackingInvoiceMap,
   getTrackingShelfMap,
   insertInventoryItem
 } from '@/lib/supabase';
+import { verifySignedCookie } from '@/lib/auth';
+import { formatCostaRicaDateTime, isGenericAgentLabel } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
+
+type HistoryEntry = {
+  date?: string;
+  action?: string;
+  user?: string;
+};
+
+async function getCurrentAgentUsername(): Promise<string | null> {
+  try {
+    const cookieStore = cookies();
+    const raw = cookieStore.get('jrs_admin_auth')?.value;
+    const user = await verifySignedCookie(raw);
+    return user?.username || null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: Request) {
   try {
@@ -45,7 +65,29 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
+    const agentUsername = await getCurrentAgentUsername();
+
+    if (agentUsername) {
+      const incomingHistory = Array.isArray(body.history) ? (body.history as HistoryEntry[]) : [];
+      if (incomingHistory.length > 0) {
+        body.history = incomingHistory.map((ev, idx) =>
+          idx === 0 && isGenericAgentLabel(ev?.user) ? { ...ev, user: agentUsername } : ev
+        );
+      } else {
+        const isDelivered = String(body.status || '').toLowerCase().includes('entregad');
+        body.history = [
+          {
+            date: formatCostaRicaDateTime(),
+            action: isDelivered
+              ? 'Paquete Entregado al Cliente'
+              : 'Paquete Recibido en Bodega Costa Rica',
+            user: agentUsername,
+          },
+        ];
+      }
+    }
+
     const data = await insertInventoryItem(body);
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {

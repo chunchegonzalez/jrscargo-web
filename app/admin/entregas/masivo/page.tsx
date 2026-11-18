@@ -37,26 +37,9 @@ export default function EntregasMasivo() {
     for (const tracking of trackings) {
       try {
         const formattedDate = formatCostaRicaDateTime();
-        
-        await fetch(`/api/inventory/${tracking}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: 'Entregado',
-            history: [{
-              date: formattedDate,
-              action: 'Paquete Entregado al Cliente (Proceso Masivo)',
-              user: 'Operador Entregas'
-            }] // Note: In the real app we should fetch existing history and append, 
-               // but the API PATCH logic in /api/inventory/[id]/route.ts handles appending if we pass it, 
-               // or maybe it replaces it. Let's see. If the API replaces, we might lose history. 
-               // The single item scanner does: newHistory = [newEvent, ...history] and sends it.
-               // Let's modify the body to just send what to append, or fetch first.
-          })
-        });
 
-        // Let's fetch first to get current history and append
-        const getRes = await fetch(`/api/inventory/${tracking}`);
+        // Primero consultamos el paquete para conservar su historial previo intacto
+        const getRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, { cache: 'no-store' });
         if (!getRes.ok) {
           newResults.push({ tracking, status: 'error', message: 'Paquete no encontrado en Inventario CR' });
           setResults([...newResults]);
@@ -64,8 +47,8 @@ export default function EntregasMasivo() {
         }
 
         const getData = await getRes.json();
-        const currentHistory = getData.success && getData.data?.history ? getData.data.history : [];
-        
+        const currentHistory = getData.success && Array.isArray(getData.data?.history) ? getData.data.history : [];
+
         const newHistory = [
           {
             date: formattedDate,
@@ -75,11 +58,11 @@ export default function EntregasMasivo() {
           ...currentHistory
         ];
 
-        const patchRes = await fetch(`/api/inventory/${tracking}`, {
+        const patchRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: 'Entregado al Cliente',
+            status: 'Entregado',
             history: newHistory
           })
         });

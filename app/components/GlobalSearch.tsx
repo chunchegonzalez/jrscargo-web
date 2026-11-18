@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, FileText, User, ArrowRight, Loader2, Link as LinkIcon, Package, CheckCircle2 } from 'lucide-react';
-import { parseClientAddress, formatPackageWeightAndRate } from '@/lib/billing';
+import { parseClientAddress, formatPackageWeightAndRate, extractDeliveryAgentInfo } from '@/lib/billing';
 
 // Static Modules for quick navigation
 const MODULES = [
@@ -121,23 +121,24 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
   const router = useRouter();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isFetchingRef = useRef(false);
-  const dataLoadedRef = useRef(false);
+  const lastFetchedAtRef = useRef<number>(0);
 
   useEffect(() => {
-    if (isOpen && query.trim().length > 0 && !dataLoadedRef.current && !isFetchingRef.current) {
+    const isStale = Date.now() - lastFetchedAtRef.current > 30_000;
+    if (isOpen && query.trim().length > 0 && isStale && !isFetchingRef.current) {
       isFetchingRef.current = true;
       setIsFetching(true);
 
       Promise.all([
-        fetch('/api/clients').then(r => r.json()).catch(() => ({ success: false, data: [] })),
-        fetch('/api/invoices?includeItems=true').then(r => r.json()).catch(() => ({ success: false, data: [] })),
-        fetch('/api/inventory').then(r => r.json()).catch(() => ({ success: false, data: [] }))
+        fetch('/api/clients', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
+        fetch('/api/invoices?includeItems=true', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] })),
+        fetch('/api/inventory', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ success: false, data: [] }))
       ])
         .then(([clientsRes, invoicesRes, invRes]) => {
           if (clientsRes?.success) setClients(clientsRes.data || []);
           if (invoicesRes?.success) setInvoices(invoicesRes.data || []);
           if (invRes?.success) setInventory(invRes.data || []);
-          dataLoadedRef.current = true;
+          lastFetchedAtRef.current = Date.now();
         })
         .catch(err => {
           console.error("Error loading search data:", err);
@@ -296,6 +297,7 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                   const clientName = item.client || item.client_name || 'Sin asignar';
                   const sc = getStatusConfig(item.status);
                   const StatusIcon = sc.icon;
+                  const agentInfo = extractDeliveryAgentInfo(item);
                   const rd = item.created_at || item.received_date;
                   const dateStr = rd ? new Date(rd).toLocaleDateString('es-CR', { timeZone: 'America/Costa_Rica', day: '2-digit', month: 'short', year: 'numeric' }) : '';
                   
@@ -365,6 +367,11 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
                           {matchedInvoiceItem && (
                             <span className="text-brand-blue font-semibold">
                               • Factura #{matchedInvoiceItem.invoiceNumber}
+                            </span>
+                          )}
+                          {sc.label === 'Entregado' && agentInfo.deliveredBy && (
+                            <span className="text-emerald-700 font-semibold">
+                              • Entregado por: {agentInfo.deliveredBy}
                             </span>
                           )}
                           {dateStr ? <span className="text-gray-400">• {dateStr}</span> : null}

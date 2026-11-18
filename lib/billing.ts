@@ -548,3 +548,111 @@ export function isCompraSitioWebInvoice(
   return list.some(item => isCompraSitioWebService(item?.service_name));
 }
 
+export type InventoryHistoryEvent = {
+  date?: string;
+  action?: string;
+  user?: string;
+};
+
+export type DeliveryAgentInfo = {
+  deliveredBy: string | null;
+  deliveredAt: string | null;
+  receivedBy: string | null;
+  receivedAt: string | null;
+};
+
+const GENERIC_AGENT_LABELS = new Set([
+  '',
+  'operador bodega',
+  'operador entregas',
+  'sistema',
+  'sistema administrativo',
+  'desconocido',
+]);
+
+export function isGenericAgentLabel(user?: string | null): boolean {
+  return GENERIC_AGENT_LABELS.has(String(user || '').trim().toLowerCase());
+}
+
+export function formatAgentDisplayName(user?: string | null): string {
+  const clean = String(user || '').trim();
+  if (!clean) return '';
+  // Capitaliza usernames simples (ej. "jose" -> "Jose") respetando nombres ya formateados
+  if (/^[a-z0-9._-]+$/.test(clean)) {
+    return clean
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+  return clean;
+}
+
+/**
+ * Extrae el agente y fecha de entrega (y de recepción en bodega CR)
+ * a partir del historial de eventos de `local_inventory`.
+ */
+export function extractDeliveryAgentInfo(
+  localItem:
+    | {
+        status?: string | null;
+        created_at?: string | null;
+        updated_at?: string | null;
+        received_date?: string | null;
+        history?: InventoryHistoryEvent[] | null;
+      }
+    | null
+    | undefined
+): DeliveryAgentInfo {
+  if (!localItem) {
+    return { deliveredBy: null, deliveredAt: null, receivedBy: null, receivedAt: null };
+  }
+
+  const history = Array.isArray(localItem.history) ? localItem.history : [];
+  const isDeliveredStatus = String(localItem.status || '').toLowerCase().includes('entregad');
+
+  // El historial suele guardarse del más reciente al más antiguo
+  const deliveryEvent = history.find(ev => {
+    const act = String(ev?.action || '').toLowerCase();
+    return act.includes('entregad') && !act.includes('reversi') && !act.includes('devuelto');
+  });
+
+  const receivedEvent = [...history].reverse().find(ev => {
+    const act = String(ev?.action || '').toLowerCase();
+    return (
+      act.includes('recibido en bodega') ||
+      act.includes('ingresado') ||
+      act.includes('recepción') ||
+      act.includes('recepcion')
+    );
+  });
+
+  const deliveredBy =
+    deliveryEvent?.user && String(deliveryEvent.user).trim()
+      ? formatAgentDisplayName(deliveryEvent.user)
+      : null;
+
+  const deliveredAt =
+    deliveryEvent?.date ||
+    (isDeliveredStatus ? localItem.updated_at || localItem.created_at || null : null);
+
+  const receivedBy =
+    receivedEvent?.user && String(receivedEvent.user).trim()
+      ? formatAgentDisplayName(receivedEvent.user)
+      : null;
+
+  const receivedAt =
+    localItem.received_date ||
+    receivedEvent?.date ||
+    localItem.created_at ||
+    null;
+
+  return {
+    deliveredBy,
+    deliveredAt,
+    receivedBy,
+    receivedAt,
+  };
+}
+
+

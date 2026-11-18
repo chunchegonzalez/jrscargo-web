@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Search,
   Package,
@@ -16,6 +17,7 @@ import {
   Plus,
   Plane,
   User,
+  UserCheck,
   Scale,
   Image as ImageIcon,
   Check,
@@ -26,7 +28,7 @@ import {
   Warehouse,
   ShieldCheck
 } from 'lucide-react';
-import { formatPackageWeightAndRate } from '@/lib/billing';
+import { formatPackageWeightAndRate, extractDeliveryAgentInfo, InventoryHistoryEvent } from '@/lib/billing';
 
 interface TrackingEvent {
   date: string;
@@ -60,12 +62,16 @@ interface TrackingPackage {
 
 interface LocalItem {
   id: string;
-  tracking_number: string;
-  client_name: string;
+  tracking_number?: string;
+  client?: string;
+  client_name?: string;
+  company?: string;
   status: string;
-  weight: number | null;
-  received_date: string | null;
-  created_at: string;
+  weight: number | string | null;
+  received_date?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
+  history?: InventoryHistoryEvent[];
 }
 
 interface MatchedInvoice {
@@ -83,11 +89,38 @@ interface MatchedInvoice {
   package_tracking?: string;
 }
 
+function parseFlexibleDate(ds: string | null | undefined): Date | null {
+  if (!ds) return null;
+  const direct = new Date(ds);
+  if (!isNaN(direct.getTime())) return direct;
+
+  // Soportar formato Costa Rica guardado en history: "18/11/2026, 4:32:10 p. m." o "18/11/2026 16:32"
+  const crMatch = String(ds).match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?)?/i
+  );
+  if (crMatch) {
+    const day = Number(crMatch[1]);
+    const month = Number(crMatch[2]) - 1;
+    const year = Number(crMatch[3]);
+    let hour = crMatch[4] ? Number(crMatch[4]) : 0;
+    const minute = crMatch[5] ? Number(crMatch[5]) : 0;
+    const second = crMatch[6] ? Number(crMatch[6]) : 0;
+    const meridiem = (crMatch[7] || '').toLowerCase().replace(/[\s.]/g, '');
+    if (meridiem === 'pm' && hour < 12) hour += 12;
+    if (meridiem === 'am' && hour === 12) hour = 0;
+    // Construir en hora de Costa Rica (UTC-6)
+    const utcMs = Date.UTC(year, month, day, hour + 6, minute, second);
+    const parsed = new Date(utcMs);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
+}
+
 function formatDate(ds: string | null | undefined): string {
   if (!ds) return 'N/A';
   try {
-    const d = new Date(ds);
-    if (isNaN(d.getTime())) return ds;
+    const d = parseFlexibleDate(ds);
+    if (!d) return ds;
     return d.toLocaleDateString('es-CR', {
       timeZone: 'America/Costa_Rica',
       year: 'numeric',
@@ -104,9 +137,9 @@ function formatDate(ds: string | null | undefined): string {
 function formatShortStepDate(ds: string | null | undefined): string {
   if (!ds) return '';
   try {
-    const d = new Date(ds);
-    if (isNaN(d.getTime())) {
-      return ds.length > 16 ? ds.slice(0, 16) : ds;
+    const d = parseFlexibleDate(ds);
+    if (!d) {
+      return ds.length > 22 ? ds.slice(0, 22) : ds;
     }
     const day = d.toLocaleDateString('es-CR', {
       timeZone: 'America/Costa_Rica',
@@ -189,7 +222,8 @@ function getTimelineIcon(status?: string) {
   return <Package className="w-4 h-4 text-slate-400" />;
 }
 
-export default function TrackingPage() {
+function TrackingPageContent() {
+  const searchParams = useSearchParams();
   const [trackingInput, setTrackingInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +236,8 @@ export default function TrackingPage() {
   const [timeline, setTimeline] = useState<TrackingEvent[]>([]);
   const [localItem, setLocalItem] = useState<LocalItem | null>(null);
   const [matchedInvoice, setMatchedInvoice] = useState<MatchedInvoice | null>(null);
+
+  const searchSeqRef = useRef(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -234,6 +270,7 @@ export default function TrackingPage() {
     const num = searchNumber.trim();
     if (!num) return;
 
+    const seq = ++searchSeqRef.current;
     setLoading(true);
     setError(null);
     setPkg(null);
@@ -250,33 +287,61 @@ export default function TrackingPage() {
         fetch(`/api/invoices/by-tracking?tracking=${encodeURIComponent(num)}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
       ]);
 
-      // Process tracking API result
+      // Ignorar respuestas viejas si el usuario lanzó otra búsqueda mientras tanto
+      if (seq !== searchSeqRef.current) return;
+
       const trackingData = trackingResult.status === 'fulfilled' ? trackingResult.value : null;
+      const localData = localResult.status === 'fulfilled' ? localResult.value : null;
+      const invoiceData = invoiceResult.status === 'fulfilled' ? invoiceResult.value : null;
+
+      const resolvedLocal: LocalItem | null =
+        localData?.success && localData.data
+          ? localData.data
+          : trackingData?.localItem || null;
+
+      if (resolvedLocal) {
+        setLocalItem(resolvedLocal);
+      }
+
+      if (invoiceData?.success && invoiceData.data) {
+        setMatchedInvoice(invoiceData.data);
+      }
+
       if (trackingData?.status === 'SUCCESS' && trackingData.rawData) {
         setPkg(trackingData.rawData.package || null);
         setTimeline(trackingData.rawData.timeline || []);
         saveRecentTracking(trackingData.rawData.package?.tracking || num);
+      } else if (resolvedLocal) {
+        // Respaldo resiliente: si Worldbox tarda o falla, mostramos los datos locales de inventario CR
+        const isDel = String(resolvedLocal.status || '').toLowerCase().includes('entregad');
+        const numericWeight = parseFloat(String(resolvedLocal.weight ?? '').replace(/[^\d.]/g, ''));
+        setPkg({
+          tracking: resolvedLocal.id || resolvedLocal.tracking_number || num,
+          consignatario: resolvedLocal.client || resolvedLocal.client_name || 'Desconocido',
+          weight: !isNaN(numericWeight) && numericWeight > 0 ? numericWeight : undefined,
+          weightUnit: String(resolvedLocal.weight ?? '').toLowerCase().includes('kg') ? 'kg' : 'lbs',
+          statusLabel: isDel ? 'Entregado' : 'Por Entregar',
+          description: 'Paquete registrado en inventario local de Costa Rica',
+        });
+        const fallbackEvents: TrackingEvent[] = Array.isArray(resolvedLocal.history)
+          ? resolvedLocal.history.map(h => ({
+              date: h.date || resolvedLocal.updated_at || resolvedLocal.created_at || '',
+              status: h.action || 'Actualización en Bodega CR',
+              description: h.user ? `Registrado por: ${h.user}` : '',
+            }))
+          : [];
+        setTimeline(fallbackEvents);
+        saveRecentTracking(resolvedLocal.id || num);
       } else {
         throw new Error('No se encontraron datos para este tracking');
       }
-
-      // Process local inventory result
-      const localData = localResult.status === 'fulfilled' ? localResult.value : null;
-      if (localData?.success && localData.data) {
-        setLocalItem(localData.data);
-      } else if (trackingData?.localItem) {
-        setLocalItem(trackingData.localItem);
-      }
-
-      // Process invoice lookup result
-      const invoiceData = invoiceResult.status === 'fulfilled' ? invoiceResult.value : null;
-      if (invoiceData?.success && invoiceData.data) {
-        setMatchedInvoice(invoiceData.data);
-      }
     } catch (err: unknown) {
+      if (seq !== searchSeqRef.current) return;
       setError(err instanceof Error ? err.message : 'Error al buscar tracking');
     } finally {
-      setLoading(false);
+      if (seq === searchSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, [saveRecentTracking]);
 
@@ -284,16 +349,14 @@ export default function TrackingPage() {
     executeSearch(trackingInput);
   };
 
+  const urlQueryNumber = searchParams.get('number') || searchParams.get('tracking') || '';
+
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const queryNumber = urlParams.get('number') || urlParams.get('tracking');
-      if (queryNumber) {
-        setTrackingInput(queryNumber);
-        executeSearch(queryNumber);
-      }
+    if (urlQueryNumber) {
+      setTrackingInput(urlQueryNumber);
+      executeSearch(urlQueryNumber);
     }
-  }, [executeSearch]);
+  }, [urlQueryNumber, executeSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSearch();
@@ -308,9 +371,17 @@ export default function TrackingPage() {
 
   const fotos = pkg?.fotos || [];
   const fotoUrls = fotos.map(f => typeof f === 'string' ? f : f.url).filter(Boolean);
-  const consignatario = pkg?.consignatario || pkg?.consignee || pkg?.client || pkg?.name || localItem?.client_name || '';
+  const consignatario =
+    pkg?.consignatario ||
+    pkg?.consignee ||
+    pkg?.client ||
+    pkg?.name ||
+    localItem?.client ||
+    localItem?.client_name ||
+    '';
   const statusLabel = pkg?.statusLabel || localItem?.status || '';
   const statusStyle = statusLabel ? getStatusStyle(statusLabel) : null;
+  const deliveryAgentInfo = useMemo(() => extractDeliveryAgentInfo(localItem), [localItem]);
 
   const invWeightInfo = matchedInvoice ? formatPackageWeightAndRate({
     weight: matchedInvoice.package_weight,
@@ -379,8 +450,14 @@ export default function TrackingPage() {
 
     const receivedDateStr = formatShortStepDate(receivedEvent?.date || pkg?.receivedAt || pkg?.createdAt);
     const transitDateStr = formatShortStepDate(transitEvent?.date || (isInTransit ? receivedEvent?.date : ''));
-    const crDateStr = formatShortStepDate(localItem?.received_date || localItem?.created_at || crEvent?.date);
-    const deliveredDateStr = formatShortStepDate(deliveredEvent?.date || (isDelivered ? localItem?.received_date || localItem?.created_at : ''));
+    const crDateStr = formatShortStepDate(
+      deliveryAgentInfo.receivedAt || localItem?.received_date || localItem?.created_at || crEvent?.date
+    );
+    const deliveredDateStr = formatShortStepDate(
+      deliveryAgentInfo.deliveredAt ||
+        deliveredEvent?.date ||
+        (isDelivered ? localItem?.updated_at || localItem?.received_date || localItem?.created_at : '')
+    );
 
     const activeStepIndex = isDelivered ? 3 : isInCR ? 2 : isInTransit ? 1 : isReceived ? 0 : -1;
 
@@ -422,7 +499,7 @@ export default function TrackingPage() {
         }
       ]
     };
-  }, [statusLabel, localItem, timeline, pkg]);
+  }, [statusLabel, localItem, timeline, pkg, deliveryAgentInfo]);
 
   const formattedWeightDisplay = useMemo(() => {
     const effWeight =
@@ -956,25 +1033,55 @@ export default function TrackingPage() {
             </div>
           </div>
 
-          {/* 4. Banner de Inventario Local (sin repetir datos ya visibles de factura) */}
+          {/* 4. Banner de Inventario Local + Agente que entregó */}
           {localItem && (
             <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-start sm:items-center gap-3.5">
                 <div className="w-10 h-10 bg-emerald-100/80 border border-emerald-200/80 rounded-xl flex items-center justify-center shrink-0 text-emerald-700">
-                  <Package className="w-5 h-5" />
+                  {deliveryProgress.isDelivered ? (
+                    <UserCheck className="w-5 h-5" />
+                  ) : (
+                    <Package className="w-5 h-5" />
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-900">En inventario local</p>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Recibido: <span className="font-medium text-slate-800">{formatDate(localItem.received_date || localItem.created_at)}</span>
-                    {localItem.client_name && localItem.client_name !== consignatario
-                      ? ` • Registrado a: ${localItem.client_name}`
-                      : ''}
+                <div className="space-y-0.5">
+                  <p className="text-sm font-bold text-slate-900">
+                    {deliveryProgress.isDelivered ? 'Entregado desde Bodega CR' : 'En inventario local'}
                   </p>
+                  <p className="text-xs text-slate-600">
+                    Recibido en Bodega CR:{' '}
+                    <span className="font-medium text-slate-800">
+                      {formatDate(deliveryAgentInfo.receivedAt || localItem.received_date || localItem.created_at)}
+                    </span>
+                    {deliveryAgentInfo.receivedBy ? (
+                      <span className="text-slate-500"> · por <strong className="text-slate-700">{deliveryAgentInfo.receivedBy}</strong></span>
+                    ) : null}
+                  </p>
+                  {deliveryProgress.isDelivered && (
+                    <p className="text-xs text-emerald-900 font-medium flex items-center gap-1.5 flex-wrap">
+                      <span>
+                        Entregado por:{' '}
+                        <strong className="text-emerald-800">
+                          {deliveryAgentInfo.deliveredBy || 'Sin agente registrado'}
+                        </strong>
+                      </span>
+                      {deliveryAgentInfo.deliveredAt ? (
+                        <span className="text-slate-500">
+                          · {formatDate(deliveryAgentInfo.deliveredAt)}
+                        </span>
+                      ) : null}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-start sm:self-center">
+              <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+                {deliveryProgress.isDelivered && deliveryAgentInfo.deliveredBy && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-2xs">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Agente: {deliveryAgentInfo.deliveredBy}</span>
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-emerald-800 border border-emerald-200/90 shadow-2xs">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   {(localItem.status || '').toLowerCase().includes('entregad')
@@ -1065,5 +1172,19 @@ export default function TrackingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TrackingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-5xl mx-auto py-16 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-brand-blue" />
+        </div>
+      }
+    >
+      <TrackingPageContent />
+    </Suspense>
   );
 }

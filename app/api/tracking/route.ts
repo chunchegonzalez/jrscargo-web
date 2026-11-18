@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInventoryItem } from '@/lib/supabase';
+import { extractDeliveryAgentInfo, InventoryHistoryEvent } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,7 +130,13 @@ function normalizeAndDeduplicateTimeline(
   rawTimeline: RawTimelineEvent[],
   isRegisteredInCR: boolean,
   isDeliveredInCR: boolean,
-  localItem: { created_at?: string; updated_at?: string; received_date?: string } | null,
+  localItem: {
+    status?: string;
+    created_at?: string;
+    updated_at?: string;
+    received_date?: string;
+    history?: InventoryHistoryEvent[];
+  } | null,
   originHint?: string,
   weightUnitHint?: string
 ): { timeline: Array<{ date: string; status: string; description: string; icon: string }>; stageKeys: Set<string> } {
@@ -258,21 +265,27 @@ function normalizeAndDeduplicateTimeline(
 
   // Prepend official Costa Rica local inventory milestones if registered in CR
   if (isRegisteredInCR && localItem) {
+    const agentInfo = extractDeliveryAgentInfo(localItem);
+
     if (isDeliveredInCR) {
       seenStages.add('STAGE_JRS_DELIVERED');
       deduped.push({
-        date: localItem.updated_at || localItem.created_at || new Date().toISOString(),
+        date: agentInfo.deliveredAt || localItem.updated_at || localItem.created_at || new Date().toISOString(),
         status: 'Paquete Entregado',
-        description: 'El paquete ha sido entregado exitosamente al cliente.',
+        description: agentInfo.deliveredBy
+          ? `El paquete fue entregado exitosamente al cliente por ${agentInfo.deliveredBy}.`
+          : 'El paquete ha sido entregado exitosamente al cliente.',
         icon: 'circle'
       });
     }
 
     seenStages.add('STAGE_JRS_POR_ENTREGAR');
     deduped.push({
-      date: localItem.received_date || localItem.created_at || new Date().toISOString(),
+      date: agentInfo.receivedAt || localItem.received_date || localItem.created_at || new Date().toISOString(),
       status: 'Por Entregar — En Bodega Costa Rica',
-      description: 'Registrado en el inventario de Costa Rica y disponible para entrega al cliente.',
+      description: agentInfo.receivedBy
+        ? `Registrado en el inventario de Costa Rica por ${agentInfo.receivedBy} y disponible para entrega al cliente.`
+        : 'Registrado en el inventario de Costa Rica y disponible para entrega al cliente.',
       icon: 'warehouse'
     });
   }
