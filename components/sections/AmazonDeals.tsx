@@ -12,7 +12,8 @@ import {
   Calendar,
   Clock,
   Sparkles,
-  Package,
+  MessageCircle,
+  Send,
 } from 'lucide-react';
 import { FaAmazon } from 'react-icons/fa';
 import gsap from 'gsap';
@@ -28,9 +29,12 @@ type CountdownState = {
   hours: string;
   minutes: string;
   seconds: string;
-  phase: 'pre' | 'early' | 'main' | 'cyber' | 'ended';
+  phase: 'pre' | 'live' | 'main' | 'cyber';
+  progressPct: number;
   isBlackFridayActive: boolean;
 };
+
+const WHATSAPP_NUMBER = '50672601238';
 
 function getCostaRicaNow(): Date {
   return new Date(
@@ -39,14 +43,14 @@ function getCostaRicaNow(): Date {
 }
 
 /**
- * Temporada Black Friday activa hasta el 1 de diciembre inclusive (hora Costa Rica).
- * A partir del 2 de diciembre (después del 1 de diciembre), vuelve automáticamente
- * al diseño original de Promociones Exclusivas sin temática de Black Friday.
+ * Temporada Black Friday activa hasta el 30 de noviembre 23:59:59 (hora Costa Rica).
+ * A partir del 1 de diciembre (después del 30 de noviembre), la sección vuelve
+ * automáticamente al diseño original sin nada de Black Friday.
  */
 function checkIsBlackFridaySeason(now: Date): boolean {
-  const month = now.getMonth(); // 10 = Noviembre, 11 = Diciembre
+  const month = now.getMonth(); // 10 = Noviembre
   const day = now.getDate();
-  return (month === 10 && day >= 10) || (month === 11 && day <= 1);
+  return month === 10 && day >= 10 && day <= 30;
 }
 
 function computeBlackFridayCountdown(): CountdownState {
@@ -54,33 +58,39 @@ function computeBlackFridayCountdown(): CountdownState {
   const isBlackFridayActive = checkIsBlackFridaySeason(now);
   const year = now.getFullYear();
 
-  // Inicio ofertas anticipadas: 19 de noviembre 00:00:00 CR
-  const earlyStart = new Date(year, 10, 19, 0, 0, 0);
-  // Evento principal: 27 de noviembre 00:00:00 CR
+  // Inicio Semana Black Friday: 19 de noviembre 00:00:00 CR
+  const offersStart = new Date(year, 10, 19, 0, 0, 0);
+  // Evento principal: 27 de noviembre CR
   const mainEventStart = new Date(year, 10, 27, 0, 0, 0);
-  // Fin del evento principal: 27 de noviembre 23:59:59 CR
   const mainEventEnd = new Date(year, 10, 27, 23, 59, 59);
-  // Cierre Semana de Ofertas / Cyber Monday: 30 de noviembre 23:59:59 CR
-  const cyberEnd = new Date(year, 10, 30, 23, 59, 59);
+  // Fin de las ofertas (Cyber Monday): 30 de noviembre 23:59:59 CR
+  const offersEnd = new Date(year, 10, 30, 23, 59, 59);
 
-  let target = mainEventStart;
-  let phase: CountdownState['phase'] = 'early';
+  let target = offersStart;
+  let phase: CountdownState['phase'] = 'pre';
+  let progressPct = 0;
 
-  if (now < earlyStart) {
+  if (now < offersStart) {
+    // Antes del 19 de noviembre: cuenta regresiva al inicio
     phase = 'pre';
-    target = earlyStart;
-  } else if (now < mainEventStart) {
-    phase = 'early';
-    target = mainEventStart;
-  } else if (now <= mainEventEnd) {
-    phase = 'main';
-    target = cyberEnd;
-  } else if (now <= cyberEnd) {
-    phase = 'cyber';
-    target = cyberEnd;
+    target = offersStart;
+    const preWindowStart = new Date(year, 10, 10, 0, 0, 0);
+    const totalPre = offersStart.getTime() - preWindowStart.getTime();
+    const elapsedPre = Math.max(0, now.getTime() - preWindowStart.getTime());
+    progressPct = Math.min(98, Math.max(8, Math.round((elapsedPre / totalPre) * 100)));
   } else {
-    phase = 'ended';
-    target = cyberEnd;
+    // Desde el 19 hasta el 30 de noviembre: cuenta regresiva hacia cuando se acaban las ofertas
+    target = offersEnd;
+    if (now >= mainEventStart && now <= mainEventEnd) {
+      phase = 'main';
+    } else if (now > mainEventEnd) {
+      phase = 'cyber';
+    } else {
+      phase = 'live';
+    }
+    const totalWindow = offersEnd.getTime() - offersStart.getTime();
+    const elapsed = Math.max(0, now.getTime() - offersStart.getTime());
+    progressPct = Math.min(100, Math.max(4, Math.round((elapsed / totalWindow) * 100)));
   }
 
   const diffMs = Math.max(0, target.getTime() - now.getTime());
@@ -97,6 +107,7 @@ function computeBlackFridayCountdown(): CountdownState {
     minutes: pad(minutes),
     seconds: pad(seconds),
     phase,
+    progressPct,
     isBlackFridayActive,
   };
 }
@@ -108,6 +119,7 @@ export default function AmazonDeals() {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const cardsGridRef = useRef<HTMLDivElement>(null);
+  const quoteInputRef = useRef<HTMLInputElement>(null);
 
   const [countdown, setCountdown] = useState<CountdownState>(() => ({
     days: '--',
@@ -115,11 +127,13 @@ export default function AmazonDeals() {
     minutes: '--',
     seconds: '--',
     phase: 'pre',
+    progressPct: 12,
     isBlackFridayActive: checkIsBlackFridaySeason(getCostaRicaNow()),
   }));
   const [selectedStage, setSelectedStage] = useState<number>(0);
+  const [quoteText, setQuoteText] = useState<string>('');
 
-  // Actualización en vivo del contador y verificación automática de fecha (hora Costa Rica)
+  // Actualización en vivo cada segundo (hora Costa Rica)
   useEffect(() => {
     const initial = computeBlackFridayCountdown();
     setCountdown(initial);
@@ -203,8 +217,25 @@ export default function AmazonDeals() {
     }
   }, [countdown.isBlackFridayActive]);
 
+  const handleOpenWhatsAppQuote = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleaned = quoteText.trim();
+    const msg = cleaned
+      ? isEn
+        ? `Hi JRS Cargo! I need help quoting this Amazon Black Friday item: ${cleaned}`
+        : `¡Hola JRS Cargo! Necesito ayuda con una cotización para este artículo de Black Friday en Amazon: ${cleaned}`
+      : isEn
+      ? 'Hi JRS Cargo! I would like help from an agent to quote my Amazon Black Friday purchases.'
+      : '¡Hola JRS Cargo! Me gustaría hablar con un agente para recibir ayuda con cotizaciones de Black Friday en Amazon.';
+    window.open(
+      `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  };
+
   // =========================================================================
-  // MODO NORMAL (Automático después del 1 de diciembre — diseño original)
+  // MODO NORMAL (Automático después del 30 de noviembre — diseño original)
   // =========================================================================
   if (!countdown.isBlackFridayActive) {
     const classicDeals = [
@@ -263,7 +294,7 @@ export default function AmazonDeals() {
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-[#05111B] to-transparent z-10" />
 
           <div className="flex select-none overflow-hidden">
-            <div className="flex items-center whitespace-nowrap shrink-0 animate-gpu-ticker hover:[animation-play-state:paused]">
+            <div className="flex items-center whitespace-nowrap shrink-0 animate-gpu-ticker">
               {[
                 ...classicTickerItems,
                 ...classicTickerItems,
@@ -367,7 +398,7 @@ export default function AmazonDeals() {
   }
 
   // =========================================================================
-  // MODO BLACK FRIDAY AMAZON (Del 19 al 30 de noviembre · se apaga > 1 Dic)
+  // MODO BLACK FRIDAY AMAZON (Del 19 al 30 de noviembre · vuelve > 30 Nov)
   // =========================================================================
   const stages = [
     {
@@ -385,7 +416,7 @@ export default function AmazonDeals() {
       tip: isEn
         ? 'Amazon Black Friday Week kicks off on November 19 with daily discounts. Ship directly to your JRS Miami locker with fast flights to Costa Rica.'
         : 'La Semana de Black Friday comienza el 19 de noviembre con descuentos diarios. Envía a tu casillero JRS en Miami con despachos rápidos hacia Costa Rica.',
-      isActive: countdown.phase === 'pre' || countdown.phase === 'early',
+      isActive: countdown.phase === 'pre' || countdown.phase === 'live',
     },
     {
       id: 'main',
@@ -445,41 +476,37 @@ export default function AmazonDeals() {
   const countdownLabel =
     countdown.phase === 'pre'
       ? isEn
-        ? 'Black Friday Week starts Nov 19 in:'
+        ? 'Black Friday Week starts (Nov 19) in:'
         : 'La Semana de Black Friday inicia (19 Nov) en:'
-      : countdown.phase === 'early'
-      ? isEn
-        ? 'Countdown to Black Friday Main Event (Nov 27)'
-        : 'Cuenta regresiva al Evento Principal (27 Nov)'
       : countdown.phase === 'main'
       ? isEn
-        ? 'Black Friday LIVE · Cyber Monday ends in:'
-        : '¡Black Friday EN VIVO! · Cierra Cyber Monday en:'
+        ? 'MAIN EVENT LIVE! · Deals end (Nov 30) in:'
+        : '¡EVENTO PRINCIPAL EN VIVO! · Las ofertas terminan en:'
       : countdown.phase === 'cyber'
       ? isEn
-        ? 'Cyber Monday promotions close in:'
-        : 'Las promociones cierran en Cyber Monday en:'
+        ? 'CYBER MONDAY LIVE! · Deals end in:'
+        : '¡CYBER MONDAY EN VIVO! · Las ofertas terminan en:'
       : isEn
-      ? 'Final Cyber Monday Deals'
-      : 'Últimas horas de Cyber Monday';
+      ? 'DEALS LIVE NOW! · Offers end (Nov 30) in:'
+      : '¡OFERTAS EN VIVO! · Las ofertas terminan en:';
 
   return (
     <section
       ref={sectionRef}
       className="pb-14 lg:pb-20 bg-[#071724] relative overflow-hidden"
     >
-      {/* Brillo ambiental sutil naranja Black Friday */}
+      {/* Brillos ambientales dinámicos */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-16 right-[-8%] w-[420px] h-[420px] rounded-full bg-[#FF5500]/15 blur-[110px]"
+        className="pointer-events-none absolute top-16 right-[-8%] w-[440px] h-[440px] rounded-full bg-[#FF5500]/18 blur-[115px] animate-pulse"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 left-[-6%] w-[320px] h-[320px] rounded-full bg-[#F5B027]/10 blur-[100px]"
+        className="pointer-events-none absolute bottom-0 left-[-6%] w-[340px] h-[340px] rounded-full bg-[#F5B027]/12 blur-[100px]"
       />
 
       {/* ===================================================================== */}
-      {/* BANNER SUPERIOR ESTILO CINTA AMAZON BLACK FRIDAY (Inspirado Imagen 2) */}
+      {/* BANNER SUPERIOR CINTA AMAZON BLACK FRIDAY (Movimiento continuo 100%)  */}
       {/* ===================================================================== */}
       <a
         href="https://www.amazon.com/deals"
@@ -496,7 +523,7 @@ export default function AmazonDeals() {
             style={{ clipPath: 'polygon(14% 0, 100% 0, 100% 100%, 0% 100%)' }}
           />
 
-          {/* Cinta blanca cruzada inclinada con "Epic deals" */}
+          {/* Cintas blancas inclinadas "Epic deals" */}
           <div
             aria-hidden="true"
             className="hidden sm:flex flex-col items-center justify-center absolute left-[43%] md:left-[46%] -top-6 -bottom-6 w-20 bg-[#FAF7F2] shadow-md transform -rotate-[16deg] border-x border-black/5 z-10 pointer-events-none"
@@ -533,10 +560,10 @@ export default function AmazonDeals() {
             </span>
           </div>
 
-          {/* Cinta oscura principal con texto "Black Friday" en movimiento continuo */}
-          <div className="relative z-20 w-[108%] -ml-[4%] bg-[#16202A] py-2.5 sm:py-3 shadow-[0_6px_22px_rgba(0,0,0,0.35)] border-y border-white/10 transform -rotate-[1.1deg] group-hover:bg-[#101820] transition-colors">
+          {/* Cinta oscura principal — nunca se detiene al pasar el mouse */}
+          <div className="relative z-20 w-[108%] -ml-[4%] bg-[#16202A] py-2.5 sm:py-3 shadow-[0_6px_22px_rgba(0,0,0,0.35)] border-y border-white/10 transform -rotate-[1.1deg]">
             <div className="flex overflow-hidden">
-              <div className="flex items-center whitespace-nowrap shrink-0 animate-bf-tape group-hover:[animation-play-state:paused]">
+              <div className="flex items-center whitespace-nowrap shrink-0 animate-bf-tape">
                 {tapeSegments.map((_, idx) => (
                   <div key={idx} className="flex items-center">
                     <span className="text-base sm:text-xl font-black tracking-tight text-white px-4 sm:px-6">
@@ -565,30 +592,20 @@ export default function AmazonDeals() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado principal + Contador en vivo */}
         <div ref={headerRef} className="mb-8 sm:mb-10">
-          {/* Fila superior: Socio Oficial + Pill en vivo Black Friday */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div className="inline-flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
-                <FaAmazon size={24} className="text-[#0B1D2B]" />
-              </div>
-              <span className="h-5 w-px bg-white/20" aria-hidden="true" />
-              <span className="text-xs sm:text-sm font-bold text-[#F5B027] tracking-wide">
-                {isEn
-                  ? 'Official Amazon Business Partner'
-                  : 'Socio Oficial Amazon Business Partner'}
-              </span>
+          {/* Distintivo limpio de Socio Oficial Amazon Business Partner */}
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+              <FaAmazon size={24} className="text-[#0B1D2B]" />
             </div>
-
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF4D00]/20 border border-[#FF5500]/50 text-[#FFB380] text-[11px] font-extrabold uppercase tracking-wider relative">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF5500] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF5500]" />
-              </span>
-              <span>{isEn ? 'Black Friday · Nov 19 – 30' : 'Black Friday · 19 al 30 Nov'}</span>
+            <span className="h-5 w-px bg-white/20" aria-hidden="true" />
+            <span className="text-xs sm:text-sm font-bold text-[#F5B027] tracking-wide">
+              {isEn
+                ? 'Official Amazon Business Partner'
+                : 'Socio Oficial Amazon Business Partner'}
             </span>
           </div>
 
-          {/* Grid encabezado: Título/descripción a la izquierda + Contador a la derecha */}
+          {/* Grid encabezado: Título/descripción a la izquierda + Contador dinámico a la derecha */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div className="lg:col-span-7">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight mb-2.5 leading-tight">
@@ -620,7 +637,7 @@ export default function AmazonDeals() {
                   href="https://www.amazon.com/deals"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#FF5500] to-[#FF9900] hover:from-[#FF6A1A] hover:to-[#FFAA1D] text-white px-5 py-3 rounded-xl font-extrabold text-sm transition-all duration-200 shadow-lg shadow-[#FF5500]/25 hover:-translate-y-0.5"
+                  className="bf-shimmer-bar group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#FF5500] to-[#FF9900] hover:from-[#FF6A1A] hover:to-[#FFAA1D] text-white px-5 py-3 rounded-xl font-extrabold text-sm transition-all duration-200 shadow-lg shadow-[#FF5500]/30 hover:-translate-y-0.5"
                 >
                   <Sparkles size={16} className="shrink-0" />
                   <span>{isEn ? 'Shop Black Friday Deals' : 'Ver ofertas Black Friday'}</span>
@@ -631,60 +648,72 @@ export default function AmazonDeals() {
                   />
                 </a>
 
-                <a
-                  href="https://worldboxcr.com/jrscargo/register"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white border border-white/15 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200"
+                <button
+                  type="button"
+                  onClick={() => {
+                    quoteInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => quoteInputRef.current?.focus(), 350);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-400/35 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
                 >
-                  <Package size={16} className="text-[#F5B027] shrink-0" />
-                  <span>{isEn ? 'Free Miami Locker' : 'Abrir casillero gratis'}</span>
-                </a>
+                  <MessageCircle size={16} className="text-emerald-400 shrink-0" />
+                  <span>{isEn ? 'Quote with a JRS Agent' : 'Cotizar con agente JRS'}</span>
+                </button>
               </div>
             </div>
 
-            {/* Tarjeta de Cuenta Regresiva Dinámica */}
+            {/* Tarjeta de Cuenta Regresiva Dinámica (Inicio -> Fin de Ofertas) */}
             <div className="lg:col-span-5">
-              <div className="bg-[#0D2132]/95 border border-[#FF5500]/35 rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+              <div className="bg-[#0D2132]/95 border border-[#FF5500]/40 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-black/30 relative overflow-hidden">
                 <div
                   aria-hidden="true"
                   className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF4D00] via-[#FF9900] to-[#FACC15]"
                 />
-                <div className="flex items-center gap-2 text-[11px] sm:text-xs font-bold text-[#FFB380] uppercase tracking-wider mb-3">
-                  <Clock size={14} className="text-[#FF6200] shrink-0" />
-                  <span>{countdownLabel}</span>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 text-[11px] sm:text-xs font-extrabold text-[#FFB380] uppercase tracking-wider">
+                    <Clock size={14} className="text-[#FF6200] shrink-0" />
+                    <span>{countdownLabel}</span>
+                  </div>
+                  {countdown.phase !== 'pre' && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {isEn ? 'LIVE' : 'ACTIVO'}
+                    </span>
+                  )}
                 </div>
 
-                {countdown.phase !== 'ended' ? (
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    {[
-                      { val: countdown.days, lbl: isEn ? 'Days' : 'Días' },
-                      { val: countdown.hours, lbl: isEn ? 'Hrs' : 'Hrs' },
-                      { val: countdown.minutes, lbl: isEn ? 'Min' : 'Min' },
-                      { val: countdown.seconds, lbl: isEn ? 'Sec' : 'Seg' },
-                    ].map((unit, i) => (
-                      <div
-                        key={i}
-                        className="bg-[#071724] border border-white/10 rounded-xl py-2.5 px-1"
-                      >
-                        <div className="text-xl sm:text-2xl font-black text-white tabular-nums leading-none">
-                          {unit.val}
-                        </div>
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
-                          {unit.lbl}
-                        </div>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  {[
+                    { val: countdown.days, lbl: isEn ? 'Days' : 'Días' },
+                    { val: countdown.hours, lbl: isEn ? 'Hrs' : 'Hrs' },
+                    { val: countdown.minutes, lbl: isEn ? 'Min' : 'Min' },
+                    { val: countdown.seconds, lbl: isEn ? 'Sec' : 'Seg' },
+                  ].map((unit, i) => (
+                    <div
+                      key={i}
+                      className="bg-gradient-to-b from-[#071724] to-[#0A1E2F] border border-white/10 rounded-xl py-2.5 px-1 shadow-inner"
+                    >
+                      <div className="text-xl sm:text-2xl font-black text-white tabular-nums leading-none">
+                        {unit.val}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm font-bold text-white">
-                    {isEn
-                      ? 'Last hours of Cyber Monday deals on Amazon!'
-                      : '¡Últimas horas de ofertas de Cyber Monday en Amazon!'}
-                  </p>
-                )}
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
+                        {unit.lbl}
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-                <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-300">
+                {/* Barra de progreso en vivo de la temporada */}
+                <div className="mt-3.5">
+                  <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#FF4D00] via-[#FF9900] to-[#FACC15] rounded-full transition-all duration-700"
+                      style={{ width: `${countdown.progressPct}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-300">
                   <span className="inline-flex items-center gap-1.5 font-semibold">
                     <Calendar size={13} className="text-[#F5B027]" />
                     {isEn ? 'Nov 19 – Nov 30' : '19 Nov – 30 Nov'}
@@ -711,8 +740,8 @@ export default function AmazonDeals() {
                     onClick={() => setSelectedStage(idx)}
                     className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#122B40] border-[#FF6200]/70 shadow-md'
-                        : 'bg-[#071724]/60 border-white/5 hover:border-white/15 hover:bg-[#0D2132]'
+                        ? 'bg-[#122B40] border-[#FF6200]/75 shadow-lg shadow-[#FF5500]/10 -translate-y-0.5'
+                        : 'bg-[#071724]/60 border-white/5 hover:border-white/20 hover:bg-[#0D2132]'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
@@ -722,7 +751,7 @@ export default function AmazonDeals() {
                       <span
                         className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
                           stage.isActive
-                            ? 'bg-[#FF5500] text-white'
+                            ? 'bg-[#FF5500] text-white shadow-xs'
                             : isSelected
                             ? 'bg-[#F5B027]/20 text-[#F5B027]'
                             : 'bg-white/10 text-slate-300'
@@ -750,7 +779,7 @@ export default function AmazonDeals() {
         {/* ================================================================= */}
         <div
           ref={cardsGridRef}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
         >
           {deals.map((deal, index) => {
             const Icon = deal.icon;
@@ -761,17 +790,17 @@ export default function AmazonDeals() {
                 href={deal.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative bg-[#0D2132]/90 hover:bg-[#122B40] p-5 sm:p-6 rounded-2xl border border-slate-700/75 hover:border-[#FF6200]/70 flex flex-col justify-between min-h-[152px] transition-all duration-200 hover:-translate-y-1 overflow-hidden"
+                className="group relative bg-[#0D2132]/90 hover:bg-[#122B40] p-5 sm:p-6 rounded-2xl border border-slate-700/75 hover:border-[#FF6200]/80 flex flex-col justify-between min-h-[154px] transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#FF5500]/10 overflow-hidden"
               >
                 <div
                   aria-hidden="true"
-                  className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#FF5500]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#FF5500] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
                 />
                 <div className="flex items-start justify-between gap-2 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#FF5500]/15 border border-[#FF5500]/30 text-[#FF6200] flex items-center justify-center group-hover:bg-[#FF5500] group-hover:text-white transition-colors duration-200">
+                  <div className="w-10 h-10 rounded-xl bg-[#FF5500]/15 border border-[#FF5500]/30 text-[#FF6200] flex items-center justify-center group-hover:bg-[#FF5500] group-hover:text-white group-hover:scale-105 transition-all duration-200">
                     <Icon size={20} strokeWidth={2} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/10 text-[#F5B027] group-hover:bg-[#FF5500]/20 group-hover:text-[#FFB380] transition-colors">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/10 text-[#F5B027] group-hover:bg-[#FF5500]/25 group-hover:text-[#FFB380] transition-colors">
                     {deal.badge}
                   </span>
                 </div>
@@ -791,6 +820,67 @@ export default function AmazonDeals() {
               </a>
             );
           })}
+        </div>
+
+        {/* ================================================================= */}
+        {/* SECCIÓN DINÁMICA: CONTACTAR AGENTE JRS PARA AYUDA CON COTIZACIÓN  */}
+        {/* ================================================================= */}
+        <div className="relative rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-[#0B2538] via-[#0E2E42] to-[#0B2832] p-5 sm:p-6 shadow-xl overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-emerald-500/15 blur-3xl"
+          />
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="flex items-start gap-3.5 max-w-xl">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/35 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                <MessageCircle size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    {isEn ? 'JRS Advisor Available' : 'Agente JRS en línea'}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-extrabold text-white leading-snug">
+                  {isEn
+                    ? 'Need help quoting your Black Friday purchase?'
+                    : '¿Necesitas ayuda para cotizar tus compras de Black Friday?'}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 mt-0.5 leading-relaxed">
+                  {isEn
+                    ? 'Paste your Amazon product link or tell us what you want to bring — a JRS Cargo agent will calculate your air or ocean shipping to Costa Rica right away.'
+                    : 'Pega el enlace de Amazon o escríbenos qué deseas traer y un agente de JRS Cargo te cotiza al instante envío aéreo o marítimo hasta Costa Rica.'}
+                </p>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleOpenWhatsAppQuote}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto lg:min-w-[400px]"
+            >
+              <input
+                ref={quoteInputRef}
+                type="text"
+                value={quoteText}
+                onChange={(e) => setQuoteText(e.target.value)}
+                placeholder={
+                  isEn
+                    ? 'Paste Amazon link or item name...'
+                    : 'Pega el link de Amazon o producto...'
+                }
+                aria-label={isEn ? 'Amazon product or link to quote' : 'Enlace o producto de Amazon a cotizar'}
+                className="flex-1 h-11 px-3.5 rounded-xl bg-[#071724]/90 border border-white/15 focus:border-emerald-400/70 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-400 transition-colors"
+              />
+              <button
+                type="submit"
+                className="h-11 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#051B14] font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 shrink-0 cursor-pointer"
+              >
+                <Send size={15} />
+                <span>{isEn ? 'Ask JRS Agent' : 'Cotizar por WhatsApp'}</span>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </section>
