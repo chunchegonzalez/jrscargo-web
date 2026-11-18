@@ -2,8 +2,19 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2 } from 'lucide-react';
-import { formatCurrency, formatDisplayDate, getLocalTodayDate, parseLocalDate } from '@/lib/billing';
+import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2, ExternalLink } from 'lucide-react';
+import { formatCurrency, formatDisplayDate, getLocalTodayDate } from '@/lib/billing';
+import {
+  ExpenseAttachment,
+  parseExpenseAttachments,
+  isImageAttachment,
+  isPdfAttachment,
+  isTextLikeAttachment,
+  getAttachmentBadge,
+  formatFileSize,
+  dataUrlToBlobUrl,
+  decodeTextFromDataUrl,
+} from '@/lib/expense-attachments';
 import { useModal } from '@/app/components/ModalProvider';
 
 type Expense = {
@@ -18,7 +29,8 @@ type Expense = {
 };
 
 interface SelectedReceiptModal {
-  image: string;
+  attachments: ExpenseAttachment[];
+  activeIndex: number;
   provider: string;
   amount: string;
   date: string;
@@ -44,6 +56,7 @@ export default function GastosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
   const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceiptModal | null>(null);
+  const [activePdfBlobUrl, setActivePdfBlobUrl] = useState<string | null>(null);
 
   // Edit Expense State
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -59,6 +72,24 @@ export default function GastosPage() {
   useEffect(() => {
     loadExpenses();
   }, []);
+
+  useEffect(() => {
+    if (!selectedReceipt) {
+      setActivePdfBlobUrl(null);
+      return;
+    }
+    const current = selectedReceipt.attachments[selectedReceipt.activeIndex];
+    if (current && isPdfAttachment(current)) {
+      const url = dataUrlToBlobUrl(current.dataUrl);
+      setActivePdfBlobUrl(url);
+      return () => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      };
+    }
+    setActivePdfBlobUrl(null);
+  }, [selectedReceipt]);
 
   const loadExpenses = async () => {
     try {
@@ -325,7 +356,7 @@ export default function GastosPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-[13px]">
                 {filteredExpenses.map((expense) => {
-                  const docImg = expense.receipt_image || expense.receipt_url;
+                  const attachments = parseExpenseAttachments(expense.receipt_image || expense.receipt_url);
                   return (
                     <tr key={expense.id} className="hover:bg-slate-50/90 transition-colors group">
                       <td className="py-2.5 px-3.5 pl-5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
@@ -338,20 +369,23 @@ export default function GastosPage() {
                         </span>
                       </td>
                       <td className="py-2.5 px-3.5 whitespace-nowrap">
-                        {docImg ? (
+                        {attachments.length > 0 ? (
                           <button
                             onClick={() => setSelectedReceipt({
-                              image: docImg,
+                              attachments,
+                              activeIndex: 0,
                               provider: expense.provider_name,
                               amount: formatCurrency(Number(expense.amount), expense.currency),
                               date: formatDisplayDate(expense.date),
                               category: expense.category
                             })}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-blue/[0.08] hover:bg-brand-blue text-brand-blue hover:text-white border border-brand-blue/15 rounded-md text-xs font-semibold transition-all cursor-pointer"
-                            title="Ver factura escaneada"
+                            title={attachments.length === 1 ? 'Ver archivo adjunto' : `Ver ${attachments.length} archivos adjuntos`}
                           >
                             <Eye size={13} />
-                            <span>Ver Documento</span>
+                            <span>
+                              {attachments.length === 1 ? 'Ver Documento' : `Ver ${attachments.length} archivos`}
+                            </span>
                           </button>
                         ) : (
                           <span className="text-xs text-slate-400">Sin adjunto</span>
@@ -540,58 +574,138 @@ export default function GastosPage() {
         </div>
       )}
 
-      {/* Modal Lightbox para Ver Documento Escaneado */}
-      {selectedReceipt && (
-        <div 
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setSelectedReceipt(null)}
-        >
-          <div 
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-200/80 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+      {/* Modal Lightbox para Ver Documentos Adjuntos (imágenes, PDF, XML y cualquier archivo) */}
+      {selectedReceipt && selectedReceipt.attachments.length > 0 && (() => {
+        const activeFile = selectedReceipt.attachments[selectedReceipt.activeIndex] || selectedReceipt.attachments[0];
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => setSelectedReceipt(null)}
           >
-            {/* Header del Modal */}
-            <div className="px-5 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/80">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-brand-blue/10 text-brand-blue rounded-lg flex items-center justify-center">
-                  <FileText size={16} />
+            <div
+              className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-slate-200/80 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header del Modal */}
+              <div className="px-5 py-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/80 gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 bg-brand-blue/10 text-brand-blue rounded-lg flex items-center justify-center shrink-0">
+                    <FileText size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm truncate">{selectedReceipt.provider}</h3>
+                    <p className="text-xs text-slate-500 truncate">
+                      {selectedReceipt.date} • {selectedReceipt.category} • <strong className="text-brand-blue">{selectedReceipt.amount}</strong>
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">{selectedReceipt.provider}</h3>
-                  <p className="text-xs text-slate-500">{selectedReceipt.date} • {selectedReceipt.category} • <strong className="text-brand-blue">{selectedReceipt.amount}</strong></p>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {activePdfBlobUrl && (
+                    <a
+                      href={activePdfBlobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
+                      title="Abrir en nueva pestaña"
+                    >
+                      <ExternalLink size={14} />
+                      <span className="hidden sm:inline">Abrir</span>
+                    </a>
+                  )}
+                  <a
+                    href={activeFile.dataUrl}
+                    download={activeFile.name || `comprobante-${selectedReceipt.provider.replace(/\s+/g, '_')}`}
+                    className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
+                    title="Descargar archivo"
+                  >
+                    <Download size={14} />
+                    <span className="hidden sm:inline">Descargar</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReceipt(null)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <a 
-                  href={selectedReceipt.image} 
-                  download={`factura-${selectedReceipt.provider.replace(/\s+/g, '_')}.jpg`}
-                  className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
-                  title="Descargar imagen"
-                >
-                  <Download size={14} />
-                  <span className="hidden sm:inline">Descargar</span>
-                </a>
-                <button 
-                  onClick={() => setSelectedReceipt(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
 
-            {/* Contenido / Imagen */}
-            <div className="p-4 sm:p-6 overflow-y-auto flex items-center justify-center bg-slate-900/5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src={selectedReceipt.image} 
-                alt={`Comprobante ${selectedReceipt.provider}`} 
-                className="max-h-[65vh] w-auto object-contain rounded-xl shadow-md border border-slate-200"
-              />
+              {/* Selector de archivos cuando hay múltiples adjuntos */}
+              {selectedReceipt.attachments.length > 1 && (
+                <div className="px-4 py-2.5 border-b border-slate-200/80 bg-white flex items-center gap-2 overflow-x-auto">
+                  {selectedReceipt.attachments.map((file, idx) => {
+                    const badge = getAttachmentBadge(file);
+                    const isActive = idx === selectedReceipt.activeIndex;
+                    return (
+                      <button
+                        key={file.id || idx}
+                        type="button"
+                        onClick={() => setSelectedReceipt(prev => (prev ? { ...prev, activeIndex: idx } : prev))}
+                        className={`h-8 px-2.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#0B2737] text-white border-[#0B2737]'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span
+                          className={`px-1 py-0.5 rounded text-[9px] font-bold ${
+                            isActive ? 'bg-white/20 text-white' : badge.colorClass
+                          }`}
+                        >
+                          {badge.label}
+                        </span>
+                        <span className="max-w-[160px] truncate">{file.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Contenido según tipo de archivo */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-slate-900/5 min-h-[260px]">
+                {isImageAttachment(activeFile) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={activeFile.dataUrl}
+                    alt={`Comprobante ${activeFile.name}`}
+                    className="max-h-[65vh] w-auto object-contain rounded-xl shadow-md border border-slate-200 bg-white"
+                  />
+                ) : isPdfAttachment(activeFile) && activePdfBlobUrl ? (
+                  <iframe
+                    src={activePdfBlobUrl}
+                    title={activeFile.name}
+                    className="w-full h-[65vh] rounded-xl border border-slate-200 bg-white shadow-sm"
+                  />
+                ) : isTextLikeAttachment(activeFile) ? (
+                  <pre className="w-full max-h-[65vh] overflow-auto p-4 rounded-xl bg-white border border-slate-200 text-xs font-mono text-slate-700 whitespace-pre-wrap break-words">
+                    {decodeTextFromDataUrl(activeFile.dataUrl) || 'No se pudo previsualizar este archivo.'}
+                  </pre>
+                ) : (
+                  <div className="text-center py-8 px-4 max-w-sm">
+                    <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center mx-auto mb-3 text-brand-blue">
+                      <FileText size={26} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-800 break-all">{activeFile.name}</p>
+                    <p className="text-xs text-slate-500 mt-1 mb-4">
+                      {activeFile.mimeType}
+                      {activeFile.size ? ` · ${formatFileSize(activeFile.size)}` : ''}
+                    </p>
+                    <a
+                      href={activeFile.dataUrl}
+                      download={activeFile.name}
+                      className="h-9 px-4 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white text-xs font-semibold inline-flex items-center gap-1.5"
+                    >
+                      <Download size={14} />
+                      <span>Descargar archivo</span>
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
