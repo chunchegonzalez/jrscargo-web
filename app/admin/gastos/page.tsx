@@ -6,7 +6,8 @@ import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save
 import { formatCurrency, formatDisplayDate, getLocalTodayDate } from '@/lib/billing';
 import {
   ExpenseAttachment,
-  parseExpenseAttachments,
+  parseExpenseMetadata,
+  serializeExpenseMetadata,
   isImageAttachment,
   isPdfAttachment,
   isTextLikeAttachment,
@@ -31,6 +32,7 @@ type Expense = {
 interface SelectedReceiptModal {
   attachments: ExpenseAttachment[];
   activeIndex: number;
+  documentNumber?: string;
   provider: string;
   amount: string;
   date: string;
@@ -38,13 +40,17 @@ interface SelectedReceiptModal {
 }
 
 const CATEGORY_OPTIONS = [
+  'Pago de Proveedor',
   'Combustible',
+  'Mantenimiento',
   'Mantenimiento de Vehículos',
+  'Papelería',
   'Papelería y Oficina',
+  'Planillas',
   'Planillas / Salarios',
+  'Viáticos',
   'Viáticos / Alimentación',
   'Servicios',
-  'Pago de Proveedor',
   'Local San Pablo',
   'Otros'
 ];
@@ -61,6 +67,7 @@ export default function GastosPage() {
   // Edit Expense State
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editForm, setEditForm] = useState({
+    document_number: '',
     provider_name: '',
     date: '',
     amount: '',
@@ -120,8 +127,10 @@ export default function GastosPage() {
   };
 
   const handleOpenEdit = (expense: Expense) => {
+    const meta = parseExpenseMetadata(expense.receipt_image || expense.receipt_url);
     setEditingExpense(expense);
     setEditForm({
+      document_number: meta.documentNumber || '',
       provider_name: expense.provider_name || '',
       date: expense.date ? expense.date.split('T')[0] : getLocalTodayDate(),
       amount: String(expense.amount || ''),
@@ -147,6 +156,9 @@ export default function GastosPage() {
 
     setIsUpdating(true);
     try {
+      const existingMeta = parseExpenseMetadata(editingExpense.receipt_image || editingExpense.receipt_url);
+      const nextReceiptPayload = serializeExpenseMetadata(existingMeta.attachments, editForm.document_number);
+
       const res = await fetch(`/api/expenses/${editingExpense.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -155,7 +167,8 @@ export default function GastosPage() {
           date: editForm.date,
           amount: numAmount,
           currency: editForm.currency,
-          category: editForm.category
+          category: editForm.category,
+          receipt_image: nextReceiptPayload
         })
       });
 
@@ -187,7 +200,13 @@ export default function GastosPage() {
   };
 
   const filteredExpenses = expenses.filter(exp => {
-    const matchesSearch = exp.provider_name.toLowerCase().includes(searchTerm.toLowerCase()) || exp.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase().trim();
+    const meta = parseExpenseMetadata(exp.receipt_image || exp.receipt_url);
+    const matchesSearch =
+      !q ||
+      exp.provider_name.toLowerCase().includes(q) ||
+      exp.category.toLowerCase().includes(q) ||
+      meta.documentNumber.toLowerCase().includes(q);
     const expMonth = getExpenseMonth(exp.date);
     const matchesMonth = selectedMonth === 'all' || expMonth === selectedMonth;
     return matchesSearch && matchesMonth;
@@ -274,7 +293,7 @@ export default function GastosPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
             <input 
               type="text" 
-              placeholder="Buscar proveedor o categoría..." 
+              placeholder="Buscar proveedor, N° documento o categoría..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
@@ -347,20 +366,33 @@ export default function GastosPage() {
               <thead className="bg-slate-50/95 border-b border-slate-200/90">
                 <tr className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold select-none">
                   <th className="py-2.5 px-3.5 pl-5">Fecha</th>
+                  <th className="py-2.5 px-3.5">N° Documento</th>
                   <th className="py-2.5 px-3.5">Proveedor</th>
                   <th className="py-2.5 px-3.5">Categoría</th>
-                  <th className="py-2.5 px-3.5">Documento</th>
+                  <th className="py-2.5 px-3.5">Archivo</th>
                   <th className="py-2.5 px-3.5 text-right">Monto</th>
                   <th className="py-2.5 px-3.5 pr-5 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-[13px]">
                 {filteredExpenses.map((expense) => {
-                  const attachments = parseExpenseAttachments(expense.receipt_image || expense.receipt_url);
+                  const { documentNumber, attachments } = parseExpenseMetadata(expense.receipt_image || expense.receipt_url);
                   return (
                     <tr key={expense.id} className="hover:bg-slate-50/90 transition-colors group">
                       <td className="py-2.5 px-3.5 pl-5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
                         {formatDisplayDate(expense.date)}
+                      </td>
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        {documentNumber ? (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[11px] font-semibold max-w-[165px] truncate"
+                            title={documentNumber}
+                          >
+                            {documentNumber}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="py-2.5 px-3.5 font-semibold text-slate-900 uppercase">{expense.provider_name}</td>
                       <td className="py-2.5 px-3.5 whitespace-nowrap">
@@ -374,6 +406,7 @@ export default function GastosPage() {
                             onClick={() => setSelectedReceipt({
                               attachments,
                               activeIndex: 0,
+                              documentNumber,
                               provider: expense.provider_name,
                               amount: formatCurrency(Number(expense.amount), expense.currency),
                               date: formatDisplayDate(expense.date),
@@ -464,18 +497,33 @@ export default function GastosPage() {
             {/* Formulario */}
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
               
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Proveedor / Beneficiario
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.provider_name}
-                  onChange={e => setEditForm({ ...editForm, provider_name: e.target.value })}
-                  placeholder="Ej: KARRY CARGO S.A."
-                  className="w-full h-9 px-3.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    N° Documento / Factura
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.document_number}
+                    onChange={e => setEditForm({ ...editForm, document_number: e.target.value })}
+                    placeholder="Ej: 00100001010000012345"
+                    className="w-full h-9 px-3.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-mono text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Proveedor / Beneficiario
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.provider_name}
+                    onChange={e => setEditForm({ ...editForm, provider_name: e.target.value })}
+                    placeholder="Ej: KARRY CARGO S.A."
+                    className="w-full h-9 px-3.5 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3.5">
@@ -593,7 +641,14 @@ export default function GastosPage() {
                     <FileText size={16} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-bold text-slate-900 text-sm truncate">{selectedReceipt.provider}</h3>
+                    <h3 className="font-bold text-slate-900 text-sm truncate">
+                      {selectedReceipt.provider}
+                      {selectedReceipt.documentNumber ? (
+                        <span className="ml-2 font-mono text-[11px] font-semibold text-slate-500">
+                          #{selectedReceipt.documentNumber}
+                        </span>
+                      ) : null}
+                    </h3>
                     <p className="text-xs text-slate-500 truncate">
                       {selectedReceipt.date} • {selectedReceipt.category} • <strong className="text-brand-blue">{selectedReceipt.amount}</strong>
                     </p>

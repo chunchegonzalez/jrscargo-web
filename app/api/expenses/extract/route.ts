@@ -21,14 +21,14 @@ const VALID_CATEGORIES = [
 ];
 
 const EXTRACTION_PROMPT =
-  "Analiza el o los comprobantes/facturas/recibos adjuntos (pueden ser imágenes, PDF o archivos XML/texto de facturación). " +
-  "Si hay varios archivos que corresponden al mismo gasto (por ejemplo, factura PDF + XML + comprobante SINPE), combínalos para obtener el dato más exacto. " +
-  "Responde ÚNICAMENTE con un objeto JSON válido sin bloques markdown ni texto adicional, con estos campos: " +
-  "'provider_name' (string, nombre del negocio o proveedor), " +
-  "'date' (string en formato YYYY-MM-DD), " +
-  "'amount' (number, monto total pagado numérico sin símbolos de moneda), " +
-  "'currency' (string, exactamente 'USD' o 'CRC' según la moneda del comprobante; si dice ₡ o colones usa 'CRC', si dice $ o USD usa 'USD'), " +
-  "'category' (string, escoge exactamente una de estas opciones: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Servicios, Pago de Proveedor, Local San Pablo, Otros).";
+  "Analiza esta factura, recibo o comprobante electrónico (puede ser imagen, PDF o XML de Hacienda Costa Rica). " +
+  "Extrae con máxima precisión los datos de ESTE documento específico y responde ÚNICAMENTE con un objeto JSON válido sin bloques markdown ni texto adicional, con estos campos: " +
+  "'document_number' (string: número de factura, consecutivo o número de documento visible en la factura; por ejemplo '00100001010000012345', 'FAC-004512' o '#1024'; si no aparece, usa cadena vacía ''), " +
+  "'provider_name' (string: nombre del negocio, emisor o proveedor), " +
+  "'date' (string en formato exacto YYYY-MM-DD correspondiente a la fecha de emisión de esta factura), " +
+  "'amount' (number: monto total final del comprobante numérico sin símbolos de moneda ni separadores de miles), " +
+  "'currency' (string: exactamente 'USD' o 'CRC' según la moneda principal facturada en el comprobante; si es en dólares/$ usa 'USD', si es en colones/₡ usa 'CRC'), " +
+  "'category' (string: escoge exactamente una de estas opciones: Combustible, Mantenimiento, Papelería, Planillas, Viáticos, Servicios, Pago de Proveedor, Local San Pablo, Otros. Nota: si el emisor es un proveedor de carga, flete, logística, courier, aduanas o mercadería usa 'Pago de Proveedor'; reserva 'Servicios' únicamente para agua, luz, electricidad, telefonía o internet).";
 
 function normalizeMime(file: IncomingFile): string {
   const raw = (file.mimeType || '').toLowerCase().trim();
@@ -68,6 +68,12 @@ function isTextMime(mime: string, name?: string): boolean {
 }
 
 function normalizeExtractedPayload(raw: Record<string, unknown>) {
+  const document_number =
+    typeof raw.document_number === 'string'
+      ? raw.document_number.trim()
+      : typeof raw.document_number === 'number'
+      ? String(raw.document_number)
+      : '';
   const provider_name = typeof raw.provider_name === 'string' ? raw.provider_name.trim() : '';
   const date = typeof raw.date === 'string' ? raw.date.trim() : '';
   const amountNum = typeof raw.amount === 'number' ? raw.amount : Number(String(raw.amount ?? '').replace(/,/g, ''));
@@ -82,6 +88,7 @@ function normalizeExtractedPayload(raw: Record<string, unknown>) {
   }
 
   return {
+    document_number,
     provider_name,
     date,
     amount: Number.isFinite(amountNum) ? amountNum : undefined,
@@ -275,6 +282,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         data: {
+          document_number: '',
           provider_name: 'Proveedor de Ejemplo (Faltan API Keys)',
           date: new Date().toISOString().split('T')[0],
           amount: 0,

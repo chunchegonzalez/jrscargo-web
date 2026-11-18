@@ -6,9 +6,15 @@ export type ExpenseAttachment = {
   dataUrl: string;
 };
 
+export type ExpenseMetadata = {
+  documentNumber: string;
+  attachments: ExpenseAttachment[];
+};
+
 type SerializedAttachmentsPayload = {
   __jrs_attachments: true;
   version: number;
+  document_number?: string;
   files: ExpenseAttachment[];
 };
 
@@ -85,7 +91,10 @@ export function getAttachmentBadge(file: { mimeType?: string; name?: string; dat
     return { label: 'ZIP', colorClass: 'bg-amber-50 text-amber-700 border-amber-200/80' };
   }
   if (isTextLikeAttachment(file)) {
-    return { label: ext ? ext.slice(1).toUpperCase().slice(0, 4) : 'TXT', colorClass: 'bg-slate-100 text-slate-700 border-slate-200' };
+    return {
+      label: ext ? ext.slice(1).toUpperCase().slice(0, 4) : 'TXT',
+      colorClass: 'bg-slate-100 text-slate-700 border-slate-200',
+    };
   }
   return {
     label: ext ? ext.slice(1).toUpperCase().slice(0, 5) : 'DOC',
@@ -100,12 +109,47 @@ export function formatFileSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-export function serializeExpenseAttachments(files: ExpenseAttachment[]): string | null {
-  if (!files || files.length === 0) return null;
+/**
+ * Extrae pista de fecha y consecutivo si el nombre del archivo contiene
+ * una clave numérica de 50 dígitos de Hacienda Costa Rica (506DDMMYY...).
+ */
+export function extractHaciendaHintFromFilename(filename: string): {
+  date?: string;
+  documentNumber?: string;
+} {
+  if (!filename) return {};
+  const match = filename.match(/506(\d{2})(\d{2})(\d{2})\d{12}(\d{20})\d{9}/);
+  if (!match) return {};
+  const dd = Number(match[1]);
+  const mm = Number(match[2]);
+  const yy = Number(match[3]);
+  const consecutivo = match[4];
+
+  let date: string | undefined;
+  if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+    const yyyy = 2000 + yy;
+    date = `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+  }
+
+  return {
+    date,
+    documentNumber: consecutivo,
+  };
+}
+
+export function serializeExpenseMetadata(
+  files: ExpenseAttachment[],
+  documentNumber?: string | null
+): string | null {
+  const cleanDoc = (documentNumber || '').trim();
+  const safeFiles = Array.isArray(files) ? files : [];
+  if (safeFiles.length === 0 && !cleanDoc) return null;
+
   const payload: SerializedAttachmentsPayload = {
     __jrs_attachments: true,
-    version: 1,
-    files: files.map((f, idx) => ({
+    version: 2,
+    ...(cleanDoc ? { document_number: cleanDoc } : {}),
+    files: safeFiles.map((f, idx) => ({
       id: f.id || `att-${idx}`,
       name: f.name || `archivo-${idx + 1}`,
       mimeType: f.mimeType || inferMimeTypeFromDataUrl(f.dataUrl),
@@ -116,16 +160,20 @@ export function serializeExpenseAttachments(files: ExpenseAttachment[]): string 
   return JSON.stringify(payload);
 }
 
-export function parseExpenseAttachments(raw?: string | null): ExpenseAttachment[] {
-  if (!raw) return [];
+export function serializeExpenseAttachments(files: ExpenseAttachment[]): string | null {
+  return serializeExpenseMetadata(files);
+}
+
+export function parseExpenseMetadata(raw?: string | null): ExpenseMetadata {
+  if (!raw) return { documentNumber: '', attachments: [] };
   const trimmed = raw.trim();
-  if (!trimmed) return [];
+  if (!trimmed) return { documentNumber: '', attachments: [] };
 
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed && parsed.__jrs_attachments && Array.isArray(parsed.files)) {
-        return parsed.files
+        const attachments: ExpenseAttachment[] = parsed.files
           .filter((item: unknown): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
           .map((item: Record<string, unknown>, idx: number) => {
             const dataUrl = String(item.dataUrl || '');
@@ -141,6 +189,11 @@ export function parseExpenseAttachments(raw?: string | null): ExpenseAttachment[
             };
           })
           .filter((f: ExpenseAttachment) => Boolean(f.dataUrl));
+
+        const documentNumber =
+          typeof parsed.document_number === 'string' ? parsed.document_number.trim() : '';
+
+        return { documentNumber, attachments };
       }
     } catch {
       // Fallback to treating raw as single legacy URL/dataUrl
@@ -149,14 +202,21 @@ export function parseExpenseAttachments(raw?: string | null): ExpenseAttachment[
 
   const mimeType = inferMimeTypeFromDataUrl(trimmed);
   const defaultName = mimeType === 'application/pdf' ? 'comprobante.pdf' : 'comprobante.jpg';
-  return [
-    {
-      id: 'legacy-0',
-      name: defaultName,
-      mimeType,
-      dataUrl: trimmed,
-    },
-  ];
+  return {
+    documentNumber: '',
+    attachments: [
+      {
+        id: 'legacy-0',
+        name: defaultName,
+        mimeType,
+        dataUrl: trimmed,
+      },
+    ],
+  };
+}
+
+export function parseExpenseAttachments(raw?: string | null): ExpenseAttachment[] {
+  return parseExpenseMetadata(raw).attachments;
 }
 
 export function dataUrlToBlobUrl(dataUrl: string): string | null {
