@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2, ExternalLink } from 'lucide-react';
 import { formatCurrency, formatDisplayDate, getLocalTodayDate } from '@/lib/billing';
 import {
   ExpenseAttachment,
+  ExpenseMetadata,
   parseExpenseMetadata,
   serializeExpenseMetadata,
   isImageAttachment,
@@ -25,11 +26,17 @@ type Expense = {
   amount: number | string;
   currency?: string;
   category: string;
+  document_number?: string;
+  attachment_count?: number;
+  has_receipt?: boolean;
   receipt_image?: string | null;
   receipt_url?: string | null;
 };
 
 interface SelectedReceiptModal {
+  expenseId: string;
+  loading: boolean;
+  error?: string;
   attachments: ExpenseAttachment[];
   activeIndex: number;
   documentNumber?: string;
@@ -63,6 +70,7 @@ export default function GastosPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
   const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceiptModal | null>(null);
   const [activePdfBlobUrl, setActivePdfBlobUrl] = useState<string | null>(null);
+  const receiptCacheRef = useRef<Record<string, ExpenseMetadata>>({});
 
   // Edit Expense State
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -81,7 +89,7 @@ export default function GastosPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedReceipt) {
+    if (!selectedReceipt || selectedReceipt.loading) {
       setActivePdfBlobUrl(null);
       return;
     }
@@ -100,7 +108,7 @@ export default function GastosPage() {
 
   const loadExpenses = async () => {
     try {
-      const res = await fetch('/api/expenses');
+      const res = await fetch('/api/expenses', { cache: 'no-store' });
       const data = await res.json();
       if (res.ok && data.success) {
         setExpenses(data.data);
@@ -112,12 +120,84 @@ export default function GastosPage() {
     }
   };
 
+  const fetchExpenseMetadataOnDemand = async (expense: Expense): Promise<ExpenseMetadata> => {
+    const cached = receiptCacheRef.current[expense.id];
+    if (cached) return cached;
+
+    if (expense.receipt_image || expense.receipt_url) {
+      const parsed = parseExpenseMetadata(expense.receipt_image || expense.receipt_url);
+      receiptCacheRef.current[expense.id] = parsed;
+      return parsed;
+    }
+
+    const res = await fetch(`/api/expenses/${expense.id}`, { cache: 'no-store' });
+    const json = await res.json();
+    if (!res.ok || !json.success || !json.data) {
+      throw new Error(json.error || 'No se pudo cargar el documento');
+    }
+    const parsed = parseExpenseMetadata(json.data.receipt_image || json.data.receipt_url);
+    receiptCacheRef.current[expense.id] = parsed;
+    return parsed;
+  };
+
+  const handleOpenReceipt = async (expense: Expense) => {
+    const cached = receiptCacheRef.current[expense.id];
+    const baseInfo = {
+      expenseId: expense.id,
+      documentNumber: expense.document_number || '',
+      provider: expense.provider_name,
+      amount: formatCurrency(Number(expense.amount), expense.currency),
+      date: formatDisplayDate(expense.date),
+      category: expense.category,
+    };
+
+    if (cached) {
+      setSelectedReceipt({
+        ...baseInfo,
+        loading: false,
+        attachments: cached.attachments,
+        activeIndex: 0,
+        documentNumber: cached.documentNumber || baseInfo.documentNumber,
+      });
+      return;
+    }
+
+    setSelectedReceipt({
+      ...baseInfo,
+      loading: true,
+      attachments: [],
+      activeIndex: 0,
+    });
+
+    try {
+      const meta = await fetchExpenseMetadataOnDemand(expense);
+      setSelectedReceipt(prev =>
+        prev && prev.expenseId === expense.id
+          ? {
+              ...prev,
+              loading: false,
+              attachments: meta.attachments,
+              documentNumber: meta.documentNumber || prev.documentNumber,
+            }
+          : prev
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error cargando documento';
+      setSelectedReceipt(prev =>
+        prev && prev.expenseId === expense.id
+          ? { ...prev, loading: false, error: msg }
+          : prev
+      );
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!(await showConfirm('Confirmación', '¿Estás seguro de que deseas eliminar este gasto?'))) return;
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        loadExpenses();
+        delete receiptCacheRef.current[id];
+        setExpenses(prev => prev.filter(e => e.id !== id));
       } else {
         await showAlert('Aviso', 'Error al eliminar');
       }
@@ -127,10 +207,9 @@ export default function GastosPage() {
   };
 
   const handleOpenEdit = (expense: Expense) => {
-    const meta = parseExpenseMetadata(expense.receipt_image || expense.receipt_url);
     setEditingExpense(expense);
     setEditForm({
-      document_number: meta.documentNumber || '',
+      document_number: expense.document_number || '',
       provider_name: expense.provider_name || '',
       date: expense.date ? expense.date.split('T')[0] : getLocalTodayDate(),
       amount: String(expense.amount || ''),
@@ -156,20 +235,29 @@ export default function GastosPage() {
 
     setIsUpdating(true);
     try {
-      const existingMeta = parseExpenseMetadata(editingExpense.receipt_image || editingExpense.receipt_url);
-      const nextReceiptPayload = serializeExpenseMetadata(existingMeta.attachments, editForm.document_number);
+      const patchPayload: Record<string, unknown> = {
+        provider_name: editForm.provider_name,
+        date: editForm.date,
+        amount: numAmount,
+        currency: editForm.currency,
+        category: editForm.category,
+      };
+
+      const prevDoc = (editingExpense.document_number || '').trim();
+      const nextDoc = editForm.document_number.trim();
+      if (prevDoc !== nextDoc) {
+        const existingMeta = await fetchExpenseMetadataOnDemand(editingExpense);
+        patchPayload.receipt_image = serializeExpenseMetadata(existingMeta.attachments, nextDoc);
+        receiptCacheRef.current[editingExpense.id] = {
+          documentNumber: nextDoc,
+          attachments: existingMeta.attachments,
+        };
+      }
 
       const res = await fetch(`/api/expenses/${editingExpense.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider_name: editForm.provider_name,
-          date: editForm.date,
-          amount: numAmount,
-          currency: editForm.currency,
-          category: editForm.category,
-          receipt_image: nextReceiptPayload
-        })
+        body: JSON.stringify(patchPayload)
       });
 
       const data = await res.json();
@@ -201,12 +289,12 @@ export default function GastosPage() {
 
   const filteredExpenses = expenses.filter(exp => {
     const q = searchTerm.toLowerCase().trim();
-    const meta = parseExpenseMetadata(exp.receipt_image || exp.receipt_url);
+    const docNum = (exp.document_number || '').toLowerCase();
     const matchesSearch =
       !q ||
       exp.provider_name.toLowerCase().includes(q) ||
       exp.category.toLowerCase().includes(q) ||
-      meta.documentNumber.toLowerCase().includes(q);
+      docNum.includes(q);
     const expMonth = getExpenseMonth(exp.date);
     const matchesMonth = selectedMonth === 'all' || expMonth === selectedMonth;
     return matchesSearch && matchesMonth;
@@ -376,7 +464,13 @@ export default function GastosPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-[13px]">
                 {filteredExpenses.map((expense) => {
-                  const { documentNumber, attachments } = parseExpenseMetadata(expense.receipt_image || expense.receipt_url);
+                  const documentNumber = expense.document_number || '';
+                  const attachmentCount =
+                    typeof expense.attachment_count === 'number'
+                      ? expense.attachment_count
+                      : expense.has_receipt || expense.receipt_image || expense.receipt_url
+                      ? 1
+                      : 0;
                   return (
                     <tr key={expense.id} className="hover:bg-slate-50/90 transition-colors group">
                       <td className="py-2.5 px-3.5 pl-5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
@@ -401,23 +495,15 @@ export default function GastosPage() {
                         </span>
                       </td>
                       <td className="py-2.5 px-3.5 whitespace-nowrap">
-                        {attachments.length > 0 ? (
+                        {attachmentCount > 0 ? (
                           <button
-                            onClick={() => setSelectedReceipt({
-                              attachments,
-                              activeIndex: 0,
-                              documentNumber,
-                              provider: expense.provider_name,
-                              amount: formatCurrency(Number(expense.amount), expense.currency),
-                              date: formatDisplayDate(expense.date),
-                              category: expense.category
-                            })}
+                            onClick={() => handleOpenReceipt(expense)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-blue/[0.08] hover:bg-brand-blue text-brand-blue hover:text-white border border-brand-blue/15 rounded-md text-xs font-semibold transition-all cursor-pointer"
-                            title={attachments.length === 1 ? 'Ver archivo adjunto' : `Ver ${attachments.length} archivos adjuntos`}
+                            title={attachmentCount === 1 ? 'Ver archivo adjunto' : `Ver ${attachmentCount} archivos adjuntos`}
                           >
                             <Eye size={13} />
                             <span>
-                              {attachments.length === 1 ? 'Ver Documento' : `Ver ${attachments.length} archivos`}
+                              {attachmentCount === 1 ? 'Ver Documento' : `Ver ${attachmentCount} archivos`}
                             </span>
                           </button>
                         ) : (
@@ -622,9 +708,9 @@ export default function GastosPage() {
         </div>
       )}
 
-      {/* Modal Lightbox para Ver Documentos Adjuntos (imágenes, PDF, XML y cualquier archivo) */}
-      {selectedReceipt && selectedReceipt.attachments.length > 0 && (() => {
-        const activeFile = selectedReceipt.attachments[selectedReceipt.activeIndex] || selectedReceipt.attachments[0];
+      {/* Modal Lightbox para Ver Documentos Adjuntos (carga bajo demanda al hacer clic) */}
+      {selectedReceipt && (() => {
+        const activeFile = selectedReceipt.attachments[selectedReceipt.activeIndex] || selectedReceipt.attachments[0] || null;
         return (
           <div
             className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center p-4 animate-fade-in"
@@ -667,15 +753,17 @@ export default function GastosPage() {
                       <span className="hidden sm:inline">Abrir</span>
                     </a>
                   )}
-                  <a
-                    href={activeFile.dataUrl}
-                    download={activeFile.name || `comprobante-${selectedReceipt.provider.replace(/\s+/g, '_')}`}
-                    className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
-                    title="Descargar archivo"
-                  >
-                    <Download size={14} />
-                    <span className="hidden sm:inline">Descargar</span>
-                  </a>
+                  {activeFile && (
+                    <a
+                      href={activeFile.dataUrl}
+                      download={activeFile.name || `comprobante-${selectedReceipt.provider.replace(/\s+/g, '_')}`}
+                      className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
+                      title="Descargar archivo"
+                    >
+                      <Download size={14} />
+                      <span className="hidden sm:inline">Descargar</span>
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => setSelectedReceipt(null)}
@@ -687,7 +775,7 @@ export default function GastosPage() {
               </div>
 
               {/* Selector de archivos cuando hay múltiples adjuntos */}
-              {selectedReceipt.attachments.length > 1 && (
+              {!selectedReceipt.loading && selectedReceipt.attachments.length > 1 && (
                 <div className="px-4 py-2.5 border-b border-slate-200/80 bg-white flex items-center gap-2 overflow-x-auto">
                   {selectedReceipt.attachments.map((file, idx) => {
                     const badge = getAttachmentBadge(file);
@@ -717,9 +805,22 @@ export default function GastosPage() {
                 </div>
               )}
 
-              {/* Contenido según tipo de archivo */}
+              {/* Contenido según estado y tipo de archivo */}
               <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-slate-900/5 min-h-[260px]">
-                {isImageAttachment(activeFile) ? (
+                {selectedReceipt.loading ? (
+                  <div className="flex flex-col items-center gap-2.5 py-10 text-slate-500">
+                    <Loader2 size={26} className="animate-spin text-brand-blue" />
+                    <p className="text-xs font-semibold">Cargando documento...</p>
+                  </div>
+                ) : selectedReceipt.error ? (
+                  <div className="text-center py-8 text-xs text-red-600 font-medium">
+                    {selectedReceipt.error}
+                  </div>
+                ) : !activeFile ? (
+                  <div className="text-center py-8 text-xs text-slate-400">
+                    Este gasto no tiene archivos adjuntos.
+                  </div>
+                ) : isImageAttachment(activeFile) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={activeFile.dataUrl}

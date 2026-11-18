@@ -235,7 +235,7 @@ export default function AdminDashboard() {
           fetch('/api/auth/me'),
           fetch('/api/invoices?includeItems=true', { cache: 'no-store' }),
           fetch('/api/inventory', { cache: 'no-store' }),
-          fetch('/api/expenses', { cache: 'no-store' }),
+          fetch('/api/expenses?minimal=true', { cache: 'no-store' }),
           fetch('/api/exchange-rate', { cache: 'no-store' }),
           fetch('/api/worldbox/packages', { cache: 'no-store' }).catch(() => null)
         ]);

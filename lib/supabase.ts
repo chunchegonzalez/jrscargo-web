@@ -497,14 +497,28 @@ export async function deleteService(id: string) {
 // GASTOS (EXPENSES)
 // ----------------------------------------------------
 
-export async function getExpenses() {
+export async function getExpenses(opts?: { minimal?: boolean }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const res = await fetch(`${url}/rest/v1/expenses?order=date.desc`, {
+  const select = opts?.minimal
+    ? 'select=id,provider_name,date,amount,currency,category&'
+    : '';
+  const res = await fetch(`${url}/rest/v1/expenses?${select}order=date.desc`, {
     headers: getHeaders(),
     cache: 'no-store'
   });
   if (!res.ok) throw new Error('Error fetching expenses');
   return await res.json();
+}
+
+export async function getExpenseById(id: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const res = await fetch(`${url}/rest/v1/expenses?id=eq.${encodeURIComponent(id)}&limit=1`, {
+    headers: getHeaders(),
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error('Error fetching expense');
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 }
 
 export async function createExpense(expense: Record<string, unknown>) {
