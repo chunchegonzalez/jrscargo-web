@@ -7,7 +7,6 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
 import GlobalSearch from '../components/GlobalSearch';
-import { isMobileAllowed } from '@/lib/mobile-access';
 
 function getAdminPageTitle(pathname: string): string {
   if (!pathname) return 'Panel de JRS';
@@ -278,8 +277,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 { href: '/admin/inventario', label: 'Inventario CR' },
                 { href: '/admin/tracking', label: 'Tracking de Paquetes' },
                 { href: '/admin/bodega/comparar-cargos', label: 'Comparar Cargos' },
-                { href: '/mobile', label: 'JRS Cargo Mobile (QR)', mobileDemo: true },
-              ].filter(link => !(link as { mobileDemo?: boolean }).mobileDemo || isMobileAllowed(currentUser?.username)).map(link => {
+              ].map(link => {
                 const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
                 return (
                   <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useMobileAccess } from '@/lib/useMobileAccess';
 import {
   BarChart,
   Bar,
@@ -201,7 +200,6 @@ function getPackageReceivedDate(pkg: InventoryItem): Date {
 }
 
 export default function AdminDashboard() {
-  const canUseMobile = useMobileAccess();
   const { showAlert } = useModal();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
@@ -765,17 +763,6 @@ export default function AdminDashboard() {
 
         {/* Acciones rápidas alineadas a la derecha */}
         <div className="flex items-center gap-2 flex-wrap">
-          {canUseMobile && (
-          <Link
-            href="/mobile"
-            className="h-9 px-3.5 rounded-lg border border-[#0B1D2B] bg-[#0B1D2B] hover:bg-[#123147] text-brand-yellow shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
-            title="Abrir JRS Cargo Mobile (QR)"
-          >
-            <QrCode size={14} />
-            <span>JRS Mobile</span>
-          </Link>
-          )}
-
           <Link
             href="/admin/bodega"
             className="h-9 px-3.5 rounded-lg border border-brand-yellow/40 bg-brand-yellow hover:bg-brand-yellow/90 text-[#0B1D2B] shadow-2xs inline-flex items-center gap-1.5 font-bold text-xs transition-all active:scale-[0.98]"

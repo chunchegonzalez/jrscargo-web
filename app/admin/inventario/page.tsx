@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useMobileAccess } from '@/lib/useMobileAccess';
 import {
   Package,
   Search,
@@ -57,7 +56,6 @@ interface InventoryItem {
 type ColumnKey = 'client' | 'company' | 'weight' | 'invoice' | 'date' | 'status';
 
 export default function BodegaInventario() {
-  const canUseMobile = useMobileAccess();
   const { showAlert } = useModal();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -486,17 +484,6 @@ export default function BodegaInventario() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {canUseMobile && (
-          <Link
-            href="/mobile"
-            className="h-9 px-3.5 rounded-lg border border-[#0B1D2B] bg-[#0B1D2B] hover:bg-[#123147] text-brand-yellow shadow-2xs inline-flex items-center gap-2 font-semibold text-xs transition-all active:scale-[0.98]"
-            title="Abrir aplicación móvil de estantes y códigos QR"
-          >
-            <QrCode size={14} />
-            <span>JRS Mobile (QR)</span>
-          </Link>
-          )}
-
           <button
             onClick={handleExportExcel}
             disabled={filteredInventory.length === 0}
