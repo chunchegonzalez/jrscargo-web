@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck, Download, Printer, FileSpreadsheet, Trash2, Hourglass } from 'lucide-react';
-import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
+import { Plus, Search, FileText, CheckCircle2, DollarSign, Mail, MailCheck, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ShieldCheck, Download, Printer, FileSpreadsheet, Trash2, Hourglass, ShoppingBag } from 'lucide-react';
+import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress, isCompraSitioWebInvoice } from '@/lib/billing';
 import { generateIncomeReportXlsx } from '@/lib/excel-export';
 import { useModal } from '@/app/components/ModalProvider';
 
@@ -19,6 +19,7 @@ type Invoice = {
   email_sent_at?: string | null;
   clients?: { id?: string; name: string; email: string; address?: string; secondary_email?: string };
   invoice_payments?: { amount_applied: number | string }[];
+  invoice_items?: { service_name?: string; tracking_number?: string; amount?: number | string }[];
 };
 
 type SortField = 'date' | 'number' | 'client' | 'amount' | 'status' | 'email';
@@ -64,6 +65,7 @@ function getCurrentMonthRangeCR(): { start: string; end: string } {
 export default function FacturacionDashboard() {
   const { showAlert } = useModal();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [webPurchasesCount, setWebPurchasesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   
   // Filter States (por defecto filtrado al mes actual)
@@ -109,10 +111,13 @@ export default function FacturacionDashboard() {
   const loadInvoices = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/invoices');
+      const res = await fetch('/api/invoices?includeItems=true', { cache: 'no-store' });
       const data = await res.json();
       if (data.success) {
-        setInvoices(data.data || []);
+        const all: Invoice[] = data.data || [];
+        const regularInvoices = all.filter(inv => !isCompraSitioWebInvoice(inv));
+        setInvoices(regularInvoices);
+        setWebPurchasesCount(all.length - regularInvoices.length);
       }
     } catch (err) {
       console.error(err);
@@ -667,11 +672,21 @@ export default function FacturacionDashboard() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Facturación y Cobros</h1>
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
               Finanzas
             </span>
+            {webPurchasesCount > 0 && (
+              <Link
+                href="/admin/compra-en-sitio-web"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-colors"
+                title="Ver las facturas del rubro COMPRA EN SITIO WEB en su sección independiente"
+              >
+                <ShoppingBag size={12} />
+                <span>Compra en sitio web ({webPurchasesCount})</span>
+              </Link>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona las cuentas por cobrar, envía facturas y audita estados de ingresos.</p>
         </div>

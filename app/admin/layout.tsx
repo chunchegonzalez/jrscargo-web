@@ -20,6 +20,7 @@ function getAdminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/facturacion/nueva')) return 'Nueva Factura | Facturas a Clientes | Panel de JRS';
   if (pathname.startsWith('/admin/facturacion/') && pathname.endsWith('/editar')) return 'Editar Factura | Facturas a Clientes | Panel de JRS';
   if (pathname.startsWith('/admin/facturacion')) return 'Facturas a Clientes | Panel de JRS';
+  if (pathname.startsWith('/admin/compra-en-sitio-web')) return 'Compra en sitio web | Panel de JRS';
   if (pathname.startsWith('/admin/cuentas-por-cobrar/recibir')) return 'Recibir Pago | Cuentas por cobrar | Panel de JRS';
   if (pathname.startsWith('/admin/cuentas-por-cobrar/estado-cuenta')) return 'Estado de Cuenta | Cuentas por cobrar | Panel de JRS';
   if (pathname.startsWith('/admin/cuentas-por-cobrar')) return 'Cuentas por cobrar | Panel de JRS';
@@ -310,10 +311,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {openSections.contabilidad ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
           </button>
           
-          <div className={`overflow-hidden transition-all duration-200 ${openSections.contabilidad ? 'max-h-48 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+          <div className={`overflow-hidden transition-all duration-200 ${openSections.contabilidad ? 'max-h-60 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
             <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
               {[
                 { href: '/admin/facturacion', label: 'Facturas a Clientes', exact: true, adminOnly: false },
+                { href: '/admin/compra-en-sitio-web', label: 'Compra en sitio web', exact: false, adminOnly: false },
                 { href: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar', exact: false, adminOnly: false },
                 { href: '/admin/gastos', label: 'Gastos y Compras', exact: false, adminOnly: true },
                 { href: '/admin/contabilidad/pagos', label: 'Historial de Pagos', exact: false, adminOnly: false },

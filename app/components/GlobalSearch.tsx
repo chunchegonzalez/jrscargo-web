@@ -12,6 +12,7 @@ const MODULES = [
   { label: 'Acción Masiva', url: '/admin/bodega/masivo' },
   { label: 'Inventario CR', url: '/admin/inventario' },
   { label: 'Facturas a Clientes', url: '/admin/facturacion', adminOnly: true },
+  { label: 'Compra en sitio web', url: '/admin/compra-en-sitio-web', adminOnly: true },
   { label: 'Cuentas por cobrar', url: '/admin/cuentas-por-cobrar', adminOnly: true },
   { label: 'Gastos y Compras', url: '/admin/gastos', adminOnly: true },
   { label: 'Historial de Pagos', url: '/admin/contabilidad/pagos', adminOnly: true },

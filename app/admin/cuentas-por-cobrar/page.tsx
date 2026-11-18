@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { 
   Search, DollarSign, FileText, ArrowRight, Printer, 
   Link2, Copy, Check, ExternalLink, MessageCircle, X,
-  ShieldCheck
+  ShieldCheck, ShoppingBag, Filter
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getInvoiceStats } from '@/lib/billing';
+import { getInvoiceStats, isCompraSitioWebInvoice } from '@/lib/billing';
 
 type ClientBalance = {
   id: string;
@@ -18,12 +19,31 @@ type ClientBalance = {
   totalBalance: number;
 };
 
+type RawClient = {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+};
+
+type RawInvoice = {
+  id: string;
+  client_id?: string;
+  total?: number | string;
+  status?: string;
+  currency?: string;
+  invoice_payments?: { amount_applied: number | string }[];
+  invoice_items?: { service_name?: string | null }[];
+  items?: { service_name?: string | null }[];
+};
+
 export default function CuentasPorCobrarPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<ClientBalance[]>([]);
+  const [rawClients, setRawClients] = useState<RawClient[]>([]);
+  const [rawInvoices, setRawInvoices] = useState<RawInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [totalGeneral, setTotalGeneral] = useState(0);
+  const [excludeWebPurchases, setExcludeWebPurchases] = useState<boolean>(true);
   const [exchangeRate, setExchangeRate] = useState<number>(500);
 
   // State for sharing client link
@@ -36,7 +56,7 @@ export default function CuentasPorCobrarPage() {
       setLoading(true);
       const [clientsRes, invoicesRes, rateRes] = await Promise.all([
         fetch('/api/clients', { cache: 'no-store' }),
-        fetch('/api/invoices', { cache: 'no-store' }),
+        fetch('/api/invoices?includeItems=true', { cache: 'no-store' }),
         fetch('/api/exchange-rate', { cache: 'no-store' })
       ]);
 
@@ -54,43 +74,8 @@ export default function CuentasPorCobrarPage() {
         throw new Error('Failed to load data');
       }
 
-      // Procesar todas las facturas para calcular saldos
-      const allInvoices = invoicesData.data;
-      
-      const balancesMap: Record<string, ClientBalance> = {};
-
-      clientsData.data.forEach((c: Record<string, unknown>) => {
-        balancesMap[c.id as string] = {
-          id: c.id as string,
-          name: c.name as string,
-          email: (c.email as string) || '',
-          phone: (c.phone as string) || '',
-          pendingInvoicesCount: 0,
-          totalBalance: 0
-        };
-      });
-
-      let total = 0;
-
-      allInvoices.forEach((inv: Record<string, unknown>) => {
-        if (!inv.client_id || !balancesMap[inv.client_id as string]) return;
-        
-        const stats = getInvoiceStats(inv);
-        
-        if (stats.pending > 0) {
-          balancesMap[inv.client_id as string].totalBalance += stats.pending;
-          balancesMap[inv.client_id as string].pendingInvoicesCount += 1;
-          total += stats.pending;
-        }
-      });
-
-      // Filtrar solo los que tienen saldo
-      const clientsWithBalance = Object.values(balancesMap)
-        .filter(c => c.totalBalance > 0)
-        .sort((a, b) => b.totalBalance - a.totalBalance);
-
-      setClients(clientsWithBalance);
-      setTotalGeneral(total);
+      setRawClients(clientsData.data || []);
+      setRawInvoices(invoicesData.data || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -101,6 +86,57 @@ export default function CuentasPorCobrarPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Calcular saldos, totales y facturas excluidas de "COMPRA EN SITIO WEB" de forma reactiva
+  const { clients, totalGeneral, excludedWebCount, excludedWebBalance } = useMemo(() => {
+    const balancesMap: Record<string, ClientBalance> = {};
+
+    rawClients.forEach(c => {
+      balancesMap[c.id] = {
+        id: c.id,
+        name: c.name,
+        email: c.email || '',
+        phone: c.phone || '',
+        pendingInvoicesCount: 0,
+        totalBalance: 0
+      };
+    });
+
+    let total = 0;
+    let webCount = 0;
+    let webBalance = 0;
+
+    rawInvoices.forEach(inv => {
+      if (!inv.client_id || !balancesMap[inv.client_id]) return;
+
+      const stats = getInvoiceStats(inv);
+      if (stats.pending <= 0) return;
+
+      const isWebPurchase = isCompraSitioWebInvoice(inv);
+      if (isWebPurchase) {
+        webCount += 1;
+        webBalance += stats.pending;
+        if (excludeWebPurchases) {
+          return;
+        }
+      }
+
+      balancesMap[inv.client_id].totalBalance += stats.pending;
+      balancesMap[inv.client_id].pendingInvoicesCount += 1;
+      total += stats.pending;
+    });
+
+    const clientsWithBalance = Object.values(balancesMap)
+      .filter(c => c.totalBalance > 0)
+      .sort((a, b) => b.totalBalance - a.totalBalance);
+
+    return {
+      clients: clientsWithBalance,
+      totalGeneral: total,
+      excludedWebCount: webCount,
+      excludedWebBalance: webBalance,
+    };
+  }, [rawClients, rawInvoices, excludeWebPurchases]);
 
   const getClientPublicUrl = (clientId: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.jrscargocr.com';
@@ -133,7 +169,14 @@ export default function CuentasPorCobrarPage() {
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona los saldos pendientes y comparte enlaces públicos de pago sin contraseña para clientes.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href="/admin/compra-en-sitio-web"
+            className="h-9 px-3.5 rounded-lg border border-indigo-200/80 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
+          >
+            <ShoppingBag size={14} />
+            <span>Compra en sitio web</span>
+          </Link>
           <button
             type="button"
             onClick={() => router.push('/admin/contabilidad/pagos')}
@@ -221,7 +264,31 @@ export default function CuentasPorCobrarPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Filtro para excluir o volver a incluir "COMPRA EN SITIO WEB" */}
+            <button
+              type="button"
+              onClick={() => setExcludeWebPurchases(prev => !prev)}
+              aria-pressed={excludeWebPurchases}
+              className={`h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                excludeWebPurchases
+                  ? 'bg-[#0B2737] text-white border-[#0B2737] hover:bg-[#12435E]'
+                  : 'bg-white text-slate-700 border-slate-200/90 hover:bg-slate-50'
+              }`}
+              title={
+                excludeWebPurchases
+                  ? 'Actualmente excluye las facturas de COMPRA EN SITIO WEB de la lista y los totales. Haz clic para incluirlas.'
+                  : 'Actualmente incluye todas las facturas. Haz clic para excluir COMPRA EN SITIO WEB.'
+              }
+            >
+              <Filter size={13} className={excludeWebPurchases ? 'text-brand-yellow' : 'text-slate-400'} />
+              <span>
+                {excludeWebPurchases
+                  ? 'Excluyendo Compra en sitio web'
+                  : 'Incluir Compra en sitio web: Sí'}
+              </span>
+            </button>
+
             {searchTerm && (
               <button
                 type="button"
@@ -236,6 +303,37 @@ export default function CuentasPorCobrarPage() {
             </span>
           </div>
         </div>
+
+        {/* Aviso informativo cuando hay facturas de COMPRA EN SITIO WEB excluidas */}
+        {excludeWebPurchases && excludedWebCount > 0 && (
+          <div className="px-4 py-2.5 bg-indigo-50/70 border-b border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-900">
+            <div className="flex items-center gap-2">
+              <ShoppingBag size={14} className="text-indigo-600 shrink-0" />
+              <span>
+                Filtro activo: se excluyeron <strong>{excludedWebCount}</strong>{' '}
+                {excludedWebCount === 1 ? 'factura pendiente' : 'facturas pendientes'} de{' '}
+                <strong>COMPRA EN SITIO WEB</strong> (<strong>${excludedWebBalance.toFixed(2)} USD</strong>) de esta lista y de los totales. Sus datos siguen intactos.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setExcludeWebPurchases(false)}
+                className="text-indigo-700 hover:text-indigo-900 font-bold underline cursor-pointer"
+              >
+                Volver a incluirlas
+              </button>
+              <span className="text-indigo-300">|</span>
+              <Link
+                href="/admin/compra-en-sitio-web"
+                className="text-indigo-700 hover:text-indigo-900 font-bold inline-flex items-center gap-1"
+              >
+                <span>Ver sección independiente</span>
+                <ArrowRight size={12} />
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">

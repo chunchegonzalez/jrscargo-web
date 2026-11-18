@@ -59,6 +59,14 @@ export default function NuevaFacturaPage() {
     loadCatalogServices();
     loadNextInvoiceNumber();
     loadDailyExchangeRate();
+    if (typeof window !== 'undefined') {
+      const preselectedService = new URLSearchParams(window.location.search).get('service');
+      if (preselectedService) {
+        setItems(prev =>
+          prev.map((it, idx) => (idx === 0 && !it.service_name ? { ...it, service_name: preselectedService } : it))
+        );
+      }
+    }
   }, []);
 
   const loadDailyExchangeRate = async () => {

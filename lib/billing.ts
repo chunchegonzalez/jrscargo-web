@@ -511,3 +511,40 @@ export function formatClientAddress(data: {
   });
 }
 
+/**
+ * Determina si un nombre de servicio corresponde al rubro "COMPRA EN SITIO WEB".
+ */
+export function isCompraSitioWebService(serviceName?: string | null): boolean {
+  if (!serviceName) return false;
+  const normalized = String(serviceName)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+  return normalized.includes('COMPRA EN SITIO WEB');
+}
+
+/**
+ * Determina si una factura pertenece al rubro "COMPRA EN SITIO WEB"
+ * revisando sus ítems (`invoice_items` o `items`).
+ */
+export function isCompraSitioWebInvoice(
+  invoice:
+    | {
+        invoice_items?: Array<{ service_name?: string | null }>;
+        items?: Array<{ service_name?: string | null }>;
+      }
+    | null
+    | undefined
+): boolean {
+  if (!invoice) return false;
+  const list =
+    Array.isArray(invoice.invoice_items) && invoice.invoice_items.length > 0
+      ? invoice.invoice_items
+      : Array.isArray(invoice.items)
+      ? invoice.items
+      : [];
+  if (list.length === 0) return false;
+  return list.some(item => isCompraSitioWebService(item?.service_name));
+}
+
