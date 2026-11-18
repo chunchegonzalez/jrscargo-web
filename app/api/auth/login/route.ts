@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({ success: true, user: validUser }, { status: 200 });
       
-      // Create signed cookie with strict 24-hour expiration policy
+      // Create signed persistent cookie
       const cookie = await createSignedCookie(validUser, remember !== false);
       response.cookies.set({
         name: cookie.name,

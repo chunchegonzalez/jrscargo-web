@@ -175,7 +175,7 @@ export default function AdminLogin() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('expired') === '1') {
-        setError('Tu sesión ha expirado por seguridad (límite de 24 horas). Por favor, ingresa de nuevo.');
+        setError('Tu sesión ha finalizado. Por favor, ingresa de nuevo.');
       }
     }
 

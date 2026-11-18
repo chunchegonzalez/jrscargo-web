@@ -2,7 +2,7 @@
 // Compatible with Node.js and Next.js Edge Runtime (Web Crypto API)
 
 const AUTH_COOKIE_NAME = 'jrs_admin_auth';
-const SESSION_MAX_AGE = 24 * 60 * 60; // 24 hours in seconds (86,400s)
+const SESSION_MAX_AGE = 365 * 24 * 60 * 60; // Persistent session (365 days) until manual logout
 
 function getSecret(): string {
   return process.env.AUTH_SECRET || 'jrs-cargo-auth-secure-hmac-key-2026-production';
@@ -55,10 +55,10 @@ export interface AuthUser {
   exp?: number;
 }
 
-// Create a cryptographically signed cookie value with strict 24-hour expiration
+// Create a cryptographically signed persistent cookie value
 export async function createSignedCookie(user: AuthUser, _remember = true): Promise<{ name: string; value: string; options: Record<string, unknown> }> {
   const now = Math.floor(Date.now() / 1000);
-  const maxAge = SESSION_MAX_AGE; // Strict 24 hours (86,400s)
+  const maxAge = SESSION_MAX_AGE; // 365 days
   const payloadData: AuthUser = {
     username: user.username,
     role: user.role,
@@ -108,21 +108,10 @@ export async function verifySignedCookie(cookieValue: string | undefined | null)
 
     const now = Math.floor(Date.now() / 1000);
 
-    // 1. Strict 24-hour check from token issuance (iat)
-    if (user.iat && typeof user.iat === 'number') {
-      if (now - user.iat >= SESSION_MAX_AGE) {
-        return null; // Expired session: 24 hours reached
-      }
-    }
-
-    // 2. Check expiration timestamp
+    // Check expiration timestamp
     if (user.exp && typeof user.exp === 'number') {
       if (now >= user.exp) {
         return null; // Expired session
-      }
-      // 3. Immediately invalidate legacy cookies issued with old 30-day policy
-      if (user.exp - now > SESSION_MAX_AGE) {
-        return null;
       }
     }
 

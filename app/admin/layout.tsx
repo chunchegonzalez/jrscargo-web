@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             if (data.authenticated) {
               setCurrentUser(data.user);
             } else {
-              // Session expired (24h limit)
+              // Session invalid or logged out
               window.location.href = '/admin/login?expired=1';
             }
           } else if (res.status === 401) {
