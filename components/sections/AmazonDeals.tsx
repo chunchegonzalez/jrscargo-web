@@ -647,18 +647,6 @@ export default function AmazonDeals() {
                     className="group-hover:translate-x-0.5 transition-transform"
                   />
                 </a>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    quoteInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    setTimeout(() => quoteInputRef.current?.focus(), 350);
-                  }}
-                  className="inline-flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-400/35 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
-                >
-                  <MessageCircle size={16} className="text-emerald-400 shrink-0" />
-                  <span>{isEn ? 'Quote with a JRS Agent' : 'Cotizar con agente JRS'}</span>
-                </button>
               </div>
             </div>
 
