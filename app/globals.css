@@ -604,3 +604,30 @@
 @media (prefers-reduced-motion: reduce) {
   .rate-card-enter { animation: none; }
 }
+
+/* ===== Amazon Black Friday Tape & Kraft Texture ===== */
+.bf-kraft-bg {
+  background-color: #d79c68;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(92, 48, 16, 0.06) 0px,
+      rgba(92, 48, 16, 0.06) 3px,
+      transparent 3px,
+      transparent 9px,
+      rgba(255, 255, 255, 0.07) 9px,
+      rgba(255, 255, 255, 0.07) 11px
+    ),
+    linear-gradient(135deg, #deaa79 0%, #c88952 100%);
+}
+
+.animate-bf-tape {
+  will-change: transform;
+  animation: gpu-ticker 22s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-bf-tape {
+    animation: none;
+  }
+}
