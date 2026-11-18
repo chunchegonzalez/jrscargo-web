@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, MapPin } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function LocationMap() {
@@ -20,10 +20,6 @@ export default function LocationMap() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Encabezado compacto */}
         <div data-parallax-header className="text-center mb-8 sm:mb-10 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white shadow-2xs border border-slate-200/90 text-brand-blue font-bold text-xs sm:text-sm mb-4">
-            <MapPin size={15} className="text-brand-red" />
-            <span>{isEn ? 'Location' : 'Ubicación'}</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#0B2737] tracking-tight mb-2">
             {isEn ? (
               <>Where to <span className="text-brand-red">Find Us?</span></>
