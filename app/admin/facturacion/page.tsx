@@ -50,16 +50,28 @@ function getDaysSinceCreation(issueDateStr?: string, createdAtStr?: string): num
   return Math.floor((todayUtc - createdUtc) / (1000 * 60 * 60 * 24));
 }
 
+function getCurrentMonthRangeCR(): { start: string; end: string } {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const start = `${y}-${pad(m + 1)}-01`;
+  const lastDay = new Date(y, m + 1, 0).getDate();
+  const end = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
+  return { start, end };
+}
+
 export default function FacturacionDashboard() {
   const { showAlert } = useModal();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Filter States
+  // Filter States (por defecto filtrado al mes actual)
+  const initialMonthRange = useMemo(() => getCurrentMonthRangeCR(), []);
   const [filterStatus, setFilterStatus] = useState<string>('Todas');
-  const [filterStartDate, setFilterStartDate] = useState<string>('');
-  const [filterEndDate, setFilterEndDate] = useState<string>('');
-  const [dateRangePreset, setDateRangePreset] = useState<string>('todos');
+  const [filterStartDate, setFilterStartDate] = useState<string>(initialMonthRange.start);
+  const [filterEndDate, setFilterEndDate] = useState<string>(initialMonthRange.end);
+  const [dateRangePreset, setDateRangePreset] = useState<string>('este-mes');
   const [filterEmail, setFilterEmail] = useState<string>('Todos');
   const [searchTerm, setSearchTerm] = useState<string>('');
 
