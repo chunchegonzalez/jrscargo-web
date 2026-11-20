@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Play, CheckCircle2, XCircle, Loader2, ArrowLeft, PackageCheck, PackagePlus, User } from 'lucide-react';
+import { Layers, Play, CheckCircle2, XCircle, AlertTriangle, Loader2, ArrowLeft, PackageCheck, PackagePlus, User } from 'lucide-react';
 import Link from 'next/link';
+import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDateTime, extractCompanyAndClient } from '@/lib/billing';
 
 interface Result {
   tracking: string;
-  status: 'success' | 'error';
+  status: 'success' | 'warning' | 'error';
   message: string;
 }
 
 export default function BodegaMasivo() {
+  const { showAlert } = useModal();
   const [mode, setMode] = useState<'recepcion' | 'entrega'>('recepcion');
   const [text, setText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -56,7 +58,19 @@ export default function BodegaMasivo() {
     };
   };
 
+  const extractApiError = async (res: Response, fallback: string): Promise<string> => {
+    try {
+      const data = await res.json();
+      const detail = data?.error || data?.message;
+      if (detail) return `${fallback} (HTTP ${res.status}): ${String(detail)}`;
+    } catch {
+      // Ignore JSON parse error
+    }
+    return `${fallback} (HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''})`;
+  };
+
   const fetchWorldboxWithRetry = async (code: string) => {
+    let lastError = 'No encontrado en Worldbox';
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const res = await fetch(`/api/tracking?number=${encodeURIComponent(code)}`, { cache: 'no-store' });
@@ -65,18 +79,22 @@ export default function BodegaMasivo() {
           if (data?.status === 'SUCCESS' && data?.rawData?.package) {
             const w = formatWorldboxWeight(data.rawData.package.weight, data.rawData.package.weightUnit);
             if (w.numeric > 0 || attempt === 1) {
-              return data;
+              return { data, error: null as string | null };
             }
+          } else {
+            lastError = data?.message || data?.error || 'No encontrado en Worldbox';
           }
+        } else {
+          lastError = await extractApiError(res, 'Error al consultar Worldbox');
         }
-      } catch {
-        // Retry once on transient network error
+      } catch (err) {
+        lastError = `Error de red al consultar Worldbox: ${err instanceof Error ? err.message : 'Sin conexión'}`;
       }
       if (attempt === 0) {
         await new Promise(r => setTimeout(r, 350));
       }
     }
-    return null;
+    return { data: null, error: lastError };
   };
 
   const handleProcess = async () => {
@@ -102,16 +120,69 @@ export default function BodegaMasivo() {
 
         if (mode === 'recepcion') {
           // ==================== RECEPCIÓN MASIVA ====================
-          const wbData = await fetchWorldboxWithRetry(tracking);
+          // 1. Verificar primero si ya existe en inventario local para NO duplicar recepción
+          const preCheckRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, { cache: 'no-store' });
+          if (preCheckRes.ok) {
+            const preCheckJson = await preCheckRes.json();
+            const existingPkg = preCheckJson?.success ? preCheckJson.data : null;
+            if (existingPkg && existingPkg.status !== 'Eliminado') {
+              const isAlreadyDelivered = String(existingPkg.status || '').toLowerCase().includes('entregad');
+              newResults.push({
+                tracking: String(existingPkg.id || tracking),
+                status: 'warning',
+                message: isAlreadyDelivered
+                  ? 'Alerta: El paquete ya fue entregado anteriormente'
+                  : 'Alerta: El paquete ya se encuentra en Bodega CR',
+              });
+              setResults([...newResults]);
+              continue;
+            }
+          } else if (preCheckRes.status !== 404) {
+            newResults.push({
+              tracking,
+              status: 'error',
+              message: await extractApiError(preCheckRes, 'Error al verificar inventario local'),
+            });
+            setResults([...newResults]);
+            continue;
+          }
+
+          const { data: wbData, error: wbError } = await fetchWorldboxWithRetry(tracking);
 
           if (!wbData || wbData.status !== 'SUCCESS' || !wbData.rawData?.package) {
-            newResults.push({ tracking, status: 'error', message: 'No encontrado en Worldbox' });
+            newResults.push({
+              tracking,
+              status: 'error',
+              message: wbError || 'No encontrado en Worldbox',
+            });
             setResults([...newResults]);
             continue;
           }
 
           const pkg = wbData.rawData.package;
           const resolvedTracking = String(pkg.tracking || wbData.trackingNumber || tracking).trim();
+
+          // Verificar también por tracking normalizado de Worldbox (por si se escaneó con prefijo USPS)
+          if (resolvedTracking.toUpperCase() !== tracking.toUpperCase()) {
+            const existingRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`, { cache: 'no-store' });
+            if (existingRes.ok) {
+              const existingJson = await existingRes.json();
+              const oldPkg = existingJson?.success ? existingJson.data : null;
+              if (oldPkg && oldPkg.status !== 'Eliminado') {
+                const isAlreadyDelivered = String(oldPkg.status || '').toLowerCase().includes('entregad');
+                newResults.push({
+                  tracking: resolvedTracking,
+                  status: 'warning',
+                  message: isAlreadyDelivered
+                    ? 'Alerta: El paquete ya fue entregado anteriormente'
+                    : 'Alerta: El paquete ya se encuentra en Bodega CR',
+                });
+                setResults([...newResults]);
+                continue;
+              }
+            }
+          }
+
           const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
           const extracted = extractCompanyAndClient(
             pkg.consignatario || fullConsignee,
@@ -121,49 +192,7 @@ export default function BodegaMasivo() {
           );
           const company = pkg.company || extracted.company;
           const client = extracted.cleanClient;
-          const { formatted: weightStr, numeric: weightNum } = formatWorldboxWeight(pkg.weight, pkg.weightUnit);
-
-          // Verificar si el paquete ya existe en inventario local para actualizar su peso en lugar de fallar
-          const existingRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`, { cache: 'no-store' });
-          if (existingRes.ok) {
-            const existingJson = await existingRes.json();
-            if (existingJson?.success && existingJson.data) {
-              const oldPkg = existingJson.data;
-              const oldHistory = Array.isArray(oldPkg.history) ? oldPkg.history : [];
-              const patchPayload: Record<string, unknown> = {
-                client: client !== 'Desconocido' ? client : oldPkg.client,
-                company: company || oldPkg.company,
-                history: [
-                  {
-                    date: formattedDate,
-                    action: 'Paquete Verificado en Bodega Costa Rica (Recepción Masiva)',
-                    user: selectedAgent || 'Operador Bodega',
-                    transportType: 'Aéreo',
-                  },
-                  ...oldHistory,
-                ],
-              };
-              if (weightNum > 0) {
-                patchPayload.weight = weightStr;
-              }
-              const patchRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(patchPayload),
-              });
-              if (patchRes.ok) {
-                newResults.push({
-                  tracking: resolvedTracking,
-                  status: 'success',
-                  message: `Actualizado en Bodega CR · ${weightStr} (${company})`,
-                });
-              } else {
-                newResults.push({ tracking: resolvedTracking, status: 'error', message: 'Error al actualizar en Base de Datos' });
-              }
-              setResults([...newResults]);
-              continue;
-            }
-          }
+          const { formatted: weightStr } = formatWorldboxWeight(pkg.weight, pkg.weightUnit);
 
           const res = await fetch('/api/inventory', {
             method: 'POST',
@@ -190,17 +219,33 @@ export default function BodegaMasivo() {
               message: `Ingresado a Bodega CR · ${weightStr} (${company})`,
             });
           } else {
-            newResults.push({ tracking: resolvedTracking, status: 'error', message: 'Error al guardar en Base de Datos' });
+            newResults.push({
+              tracking: resolvedTracking,
+              status: 'error',
+              message: await extractApiError(res, 'Error al guardar en Base de Datos'),
+            });
           }
 
         } else {
           // ==================== ENTREGA MASIVA ====================
-          // 1. Intentar actualizar en inventario existente
+          // 1. Verificar en inventario local
           const invRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, { cache: 'no-store' });
           if (invRes.ok) {
             const invData = await invRes.json();
             const existingPkg = invData.data;
             const resolvedId = String(existingPkg?.id || tracking);
+
+            // Bloquear doble entrega si ya está en estado Entregado
+            if (String(existingPkg?.status || '').toLowerCase().includes('entregad')) {
+              newResults.push({
+                tracking: resolvedId,
+                status: 'warning',
+                message: 'Alerta: El paquete ya se encuentra marcado como Entregado',
+              });
+              setResults([...newResults]);
+              continue;
+            }
+
             const oldHistory = Array.isArray(existingPkg?.history) ? existingPkg.history : [];
             const newHistory = [
               {
@@ -220,7 +265,7 @@ export default function BodegaMasivo() {
             const existingWeightNum = parseFloat(String(existingPkg?.weight || '0').replace(/[^\d.]/g, '')) || 0;
             let refreshedWeightLabel = String(existingPkg?.weight || '').trim();
             if (existingWeightNum <= 0) {
-              const wbRefresh = await fetchWorldboxWithRetry(resolvedId);
+              const { data: wbRefresh } = await fetchWorldboxWithRetry(resolvedId);
               if (wbRefresh?.status === 'SUCCESS' && wbRefresh?.rawData?.package) {
                 const { formatted, numeric } = formatWorldboxWeight(
                   wbRefresh.rawData.package.weight,
@@ -248,15 +293,44 @@ export default function BodegaMasivo() {
                   : 'Marcado como Entregado',
               });
             } else {
-              newResults.push({ tracking: resolvedId, status: 'error', message: 'Error al actualizar estado en BD' });
+              newResults.push({
+                tracking: resolvedId,
+                status: 'error',
+                message: await extractApiError(patchRes, 'Error al actualizar estado en BD'),
+              });
             }
+          } else if (invRes.status !== 404) {
+            newResults.push({
+              tracking,
+              status: 'error',
+              message: await extractApiError(invRes, 'Error al consultar inventario local'),
+            });
           } else {
             // 2. Si no está en inventario local, buscar en Worldbox y registrar como Entregado
-            const wbData = await fetchWorldboxWithRetry(tracking);
+            const { data: wbData, error: wbError } = await fetchWorldboxWithRetry(tracking);
             
             if (wbData && wbData.status === 'SUCCESS' && wbData.rawData?.package) {
               const pkg = wbData.rawData.package;
               const resolvedTracking = String(pkg.tracking || wbData.trackingNumber || tracking).trim();
+
+              // Revisar también por tracking normalizado de Worldbox para no duplicar entrega
+              if (resolvedTracking.toUpperCase() !== tracking.toUpperCase()) {
+                const resolvedInvRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`, { cache: 'no-store' });
+                if (resolvedInvRes.ok) {
+                  const resolvedInvJson = await resolvedInvRes.json();
+                  const resolvedPkg = resolvedInvJson?.success ? resolvedInvJson.data : null;
+                  if (resolvedPkg && String(resolvedPkg.status || '').toLowerCase().includes('entregad')) {
+                    newResults.push({
+                      tracking: resolvedTracking,
+                      status: 'warning',
+                      message: 'Alerta: El paquete ya se encuentra marcado como Entregado',
+                    });
+                    setResults([...newResults]);
+                    continue;
+                  }
+                }
+              }
+
               const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
               const extracted = extractCompanyAndClient(
                 pkg.consignatario || fullConsignee,
@@ -291,15 +365,27 @@ export default function BodegaMasivo() {
                   message: `Registrado y Entregado · ${weightStr}`,
                 });
               } else {
-                newResults.push({ tracking: resolvedTracking, status: 'error', message: 'Error al registrar en BD' });
+                newResults.push({
+                  tracking: resolvedTracking,
+                  status: 'error',
+                  message: await extractApiError(createRes, 'Error al registrar entrega en BD'),
+                });
               }
             } else {
-              newResults.push({ tracking, status: 'error', message: 'No encontrado en inventario ni en Worldbox' });
+              newResults.push({
+                tracking,
+                status: 'error',
+                message: wbError || 'No encontrado en inventario local ni en Worldbox',
+              });
             }
           }
         }
-      } catch {
-        newResults.push({ tracking, status: 'error', message: 'Error de red o servidor' });
+      } catch (err) {
+        newResults.push({
+          tracking,
+          status: 'error',
+          message: `Error de red o servidor: ${err instanceof Error ? err.message : 'Fallo inesperado'}`,
+        });
       }
       
       setResults([...newResults]);
@@ -308,9 +394,29 @@ export default function BodegaMasivo() {
     setIsProcessing(false);
     setText('');
     textareaRef.current?.focus();
+
+    const warnings = newResults.filter(r => r.status === 'warning').length;
+    const errors = newResults.filter(r => r.status === 'error').length;
+    if (warnings > 0 || errors > 0) {
+      const parts: string[] = [];
+      if (warnings > 0) {
+        parts.push(
+          `${warnings} ${warnings === 1 ? 'paquete ya se encontraba' : 'paquetes ya se encontraban'} en ese estado (no se duplicó)`
+        );
+      }
+      if (errors > 0) {
+        parts.push(`${errors} ${errors === 1 ? 'paquete presentó error' : 'paquetes presentaron errores'}`);
+      }
+      await showAlert(
+        warnings > 0 && errors === 0 ? 'Paquetes ya registrados' : 'Proceso finalizado con alertas',
+        `${parts.join(' y ')}. Revisa el detalle en la tabla de resultados.`,
+        errors > 0 ? 'error' : 'warning'
+      );
+    }
   };
 
   const successCount = results.filter(r => r.status === 'success').length;
+  const warningCount = results.filter(r => r.status === 'warning').length;
   const errorCount = results.filter(r => r.status === 'error').length;
   const detectedCount = text.split('\n').filter(t => t.trim().length > 0).length;
 
@@ -470,11 +576,17 @@ TBA123456789000..."
               <Layers size={15} className="text-brand-blue" />
               Resultados del Proceso ({mode === 'recepcion' ? 'Recepción' : 'Entrega'})
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Exitosos: {successCount}
               </span>
+              {warningCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Alertas: {warningCount}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 Errores: {errorCount}
@@ -507,6 +619,11 @@ TBA123456789000..."
                           <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
                           Completado
                         </span>
+                      ) : res.status === 'warning' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
+                          <AlertTriangle size={12} className="text-amber-600 shrink-0" />
+                          Ya registrado
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
                           <XCircle size={12} className="text-red-600 shrink-0" />
@@ -516,7 +633,11 @@ TBA123456789000..."
                     </td>
                     <td
                       className={`py-2.5 px-3.5 text-right font-medium ${
-                        res.status === 'success' ? 'text-emerald-700' : 'text-red-600'
+                        res.status === 'success'
+                          ? 'text-emerald-700'
+                          : res.status === 'warning'
+                            ? 'text-amber-800'
+                            : 'text-red-600'
                       }`}
                     >
                       {res.message}

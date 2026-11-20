@@ -181,9 +181,47 @@ export default function BodegaScanner() {
   };
 
   const handleRegisterLocal = async () => {
+    if (localStatus) {
+      const isAlreadyDelivered = localStatus.toLowerCase().includes('entregad');
+      await showAlert(
+        'Paquete ya registrado',
+        isAlreadyDelivered
+          ? 'Este paquete ya se encuentra marcado como Entregado en el sistema y no puede recibirse nuevamente.'
+          : 'Este paquete ya se encuentra registrado en Bodega CR.',
+        'warning'
+      );
+      return;
+    }
+
     if (packageData?.isManual && !packageData.consignatario.trim()) {
       await showAlert('Dato requerido', 'Por favor ingresa el nombre del consignatario para el registro manual.', 'warning');
       return;
+    }
+
+    // Doble verificación contra la base de datos antes de insertar
+    if (packageData?.tracking) {
+      try {
+        const checkRes = await fetch(`/api/inventory/${encodeURIComponent(packageData.tracking)}`, { cache: 'no-store' });
+        if (checkRes.ok) {
+          const checkJson = await checkRes.json();
+          const existing = checkJson?.success ? checkJson.data : null;
+          if (existing && existing.status !== 'Eliminado') {
+            setLocalStatus(existing.status);
+            setHistory(existing.history || []);
+            const isDel = String(existing.status || '').toLowerCase().includes('entregad');
+            await showAlert(
+              'Paquete ya registrado',
+              isDel
+                ? 'Este paquete ya fue entregado anteriormente.'
+                : 'Este paquete ya se encuentra en Bodega CR.',
+              'warning'
+            );
+            return;
+          }
+        }
+      } catch {
+        // Continuar si la verificación rápida falla
+      }
     }
 
     const formattedDate = formatCostaRicaDateTime();
@@ -227,17 +265,33 @@ export default function BodegaScanner() {
         }),
       });
       if (!res.ok) {
-        await showAlert('Aviso', 'Error: No se pudo guardar el paquete en la base de datos.');
+        let detail = `HTTP ${res.status}`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.error || errJson?.message) detail += `: ${errJson.error || errJson.message}`;
+        } catch {
+          // ignore
+        }
+        await showAlert('Error al guardar', `No se pudo guardar el paquete en la base de datos (${detail}).`, 'error');
         setLocalStatus(null);
       }
     } catch (e) {
       console.error('Error guardando en BD', e);
-      await showAlert('Aviso', 'Error de conexión al guardar el paquete.');
+      await showAlert('Error de conexión', `No se pudo guardar el paquete: ${e instanceof Error ? e.message : 'Error de red'}.`, 'error');
       setLocalStatus(null);
     }
   };
 
   const handleDeliver = async () => {
+    if (localStatus && localStatus.toLowerCase().includes('entregad')) {
+      await showAlert(
+        'Paquete ya entregado',
+        'Este paquete ya se encuentra marcado como Entregado en el sistema.',
+        'warning'
+      );
+      return;
+    }
+
     const formattedDate = formatCostaRicaDateTime();
     const resolvedTransport: PackageTransportType =
       packageData?.transportType === 'Marítimo' || packageData?.weightUnit === 'ft³'
@@ -259,7 +313,7 @@ export default function BodegaScanner() {
     setHistory(newHistory);
 
     try {
-      await fetch(`/api/inventory/${encodeURIComponent(packageData?.tracking || '')}`, {
+      const res = await fetch(`/api/inventory/${encodeURIComponent(packageData?.tracking || '')}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -267,8 +321,21 @@ export default function BodegaScanner() {
           history: newHistory,
         }),
       });
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.error || errJson?.message) detail += `: ${errJson.error || errJson.message}`;
+        } catch {
+          // ignore
+        }
+        await showAlert('Error al entregar', `No se pudo marcar como entregado (${detail}).`, 'error');
+        setLocalStatus('En Bodega');
+      }
     } catch (e) {
       console.error('Error actualizando en BD', e);
+      await showAlert('Error de conexión', `No se pudo marcar como entregado: ${e instanceof Error ? e.message : 'Error de red'}.`, 'error');
+      setLocalStatus('En Bodega');
     }
   };
 

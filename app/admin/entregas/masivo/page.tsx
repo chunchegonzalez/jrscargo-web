@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Play, CheckCircle2, XCircle, Loader2, User } from 'lucide-react';
+import { Layers, Play, CheckCircle2, XCircle, AlertTriangle, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
+import { useModal } from '@/app/components/ModalProvider';
 import { formatCostaRicaDateTime } from '@/lib/billing';
 
 interface Result {
   tracking: string;
-  status: 'success' | 'error';
+  status: 'success' | 'warning' | 'error';
   message: string;
 }
 
 export default function EntregasMasivo() {
+  const { showAlert } = useModal();
   const [text, setText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
@@ -34,10 +36,14 @@ export default function EntregasMasivo() {
   }, []);
 
   const handleProcess = async () => {
-    const trackings = text
-      .split('\n')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+    const trackings = Array.from(
+      new Set(
+        text
+          .split('\n')
+          .map(t => t.replace(/[\x00-\x1F\x7F]+/g, '').trim())
+          .filter(t => t.length > 0)
+      )
+    );
 
     if (trackings.length === 0) return;
 
@@ -50,16 +56,41 @@ export default function EntregasMasivo() {
       try {
         const formattedDate = formatCostaRicaDateTime();
 
-        // Primero consultamos el paquete para conservar su historial previo intacto
+        // Primero consultamos el paquete para conservar su historial previo intacto y evitar doble entrega
         const getRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, { cache: 'no-store' });
         if (!getRes.ok) {
-          newResults.push({ tracking, status: 'error', message: 'Paquete no encontrado en Inventario CR' });
+          let detail = `HTTP ${getRes.status}`;
+          try {
+            const errJson = await getRes.json();
+            if (errJson?.error || errJson?.message) detail += `: ${errJson.error || errJson.message}`;
+          } catch {
+            // ignore
+          }
+          newResults.push({
+            tracking,
+            status: 'error',
+            message: getRes.status === 404
+              ? 'No encontrado en Inventario CR'
+              : `Error al consultar inventario (${detail})`,
+          });
           setResults([...newResults]);
           continue;
         }
 
         const getData = await getRes.json();
-        const currentHistory = getData.success && Array.isArray(getData.data?.history) ? getData.data.history : [];
+        const existingPkg = getData.success ? getData.data : null;
+
+        if (String(existingPkg?.status || '').toLowerCase().includes('entregad')) {
+          newResults.push({
+            tracking: String(existingPkg?.id || tracking),
+            status: 'warning',
+            message: 'Alerta: El paquete ya se encuentra marcado como Entregado',
+          });
+          setResults([...newResults]);
+          continue;
+        }
+
+        const currentHistory = Array.isArray(existingPkg?.history) ? existingPkg.history : [];
 
         const newHistory = [
           {
@@ -82,10 +113,21 @@ export default function EntregasMasivo() {
         if (patchRes.ok) {
           newResults.push({ tracking, status: 'success', message: 'Marcado como entregado' });
         } else {
-          newResults.push({ tracking, status: 'error', message: 'Error al actualizar base de datos' });
+          let detail = `HTTP ${patchRes.status}`;
+          try {
+            const errJson = await patchRes.json();
+            if (errJson?.error || errJson?.message) detail += `: ${errJson.error || errJson.message}`;
+          } catch {
+            // ignore
+          }
+          newResults.push({ tracking, status: 'error', message: `Error al actualizar BD (${detail})` });
         }
-      } catch {
-        newResults.push({ tracking, status: 'error', message: 'Error de red' });
+      } catch (err) {
+        newResults.push({
+          tracking,
+          status: 'error',
+          message: `Error de red o servidor: ${err instanceof Error ? err.message : 'Sin conexión'}`,
+        });
       }
       
       setResults([...newResults]);
@@ -94,9 +136,27 @@ export default function EntregasMasivo() {
     setIsProcessing(false);
     setText('');
     textareaRef.current?.focus();
+
+    const warnings = newResults.filter(r => r.status === 'warning').length;
+    const errors = newResults.filter(r => r.status === 'error').length;
+    if (warnings > 0 || errors > 0) {
+      const parts: string[] = [];
+      if (warnings > 0) {
+        parts.push(`${warnings} ${warnings === 1 ? 'paquete ya estaba entregado' : 'paquetes ya estaban entregados'}`);
+      }
+      if (errors > 0) {
+        parts.push(`${errors} ${errors === 1 ? 'paquete dio error' : 'paquetes dieron error'}`);
+      }
+      await showAlert(
+        warnings > 0 && errors === 0 ? 'Paquetes ya entregados' : 'Entrega finalizada con alertas',
+        `${parts.join(' y ')}. Revisa el detalle en la tabla.`,
+        errors > 0 ? 'error' : 'warning'
+      );
+    }
   };
 
   const successCount = results.filter(r => r.status === 'success').length;
+  const warningCount = results.filter(r => r.status === 'warning').length;
   const errorCount = results.filter(r => r.status === 'error').length;
 
   return (
@@ -189,11 +249,17 @@ export default function EntregasMasivo() {
               <Layers size={16} className="text-brand-blue" />
               Resultados de la Entrega
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Entregados: {successCount}
               </span>
+              {warningCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Alertas: {warningCount}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 Errores: {errorCount}
@@ -226,6 +292,11 @@ export default function EntregasMasivo() {
                           <CheckCircle2 className="text-emerald-600 shrink-0" size={12} />
                           Entregado
                         </span>
+                      ) : res.status === 'warning' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
+                          <AlertTriangle className="text-amber-600 shrink-0" size={12} />
+                          Ya entregado
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-red-50 text-red-700 border-red-200">
                           <XCircle className="text-red-600 shrink-0" size={12} />
@@ -235,7 +306,11 @@ export default function EntregasMasivo() {
                     </td>
                     <td
                       className={`py-2.5 px-3.5 text-right font-medium ${
-                        res.status === 'success' ? 'text-emerald-700' : 'text-red-700'
+                        res.status === 'success'
+                          ? 'text-emerald-700'
+                          : res.status === 'warning'
+                            ? 'text-amber-800'
+                            : 'text-red-700'
                       }`}
                     >
                       {res.message}
