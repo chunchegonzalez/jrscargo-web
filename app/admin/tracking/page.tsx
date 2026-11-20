@@ -766,7 +766,7 @@ function TrackingPageContent() {
               <div
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold border ${
                   transportMeta.transportType === 'Marítimo'
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    ? 'bg-[#0B2737]/10 text-[#0B2737] border-[#0B2737]/25'
                     : 'bg-sky-50 text-sky-700 border-sky-200'
                 }`}
               >

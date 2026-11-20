@@ -1443,7 +1443,7 @@ export default function BodegaInventario() {
                               <span
                                 className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                                   item.transportType === 'Marítimo'
-                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
+                                    ? 'bg-[#0B2737]/10 text-[#0B2737] border-[#0B2737]/25'
                                     : 'bg-sky-50 text-sky-700 border-sky-200/80'
                                 }`}
                               >
@@ -1833,7 +1833,7 @@ export default function BodegaInventario() {
                 <div className="p-3.5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2 text-slate-500 text-xs">
                     {selectedDetailItem.transportType === 'Marítimo' ? (
-                      <Anchor size={14} className="text-indigo-500" />
+                      <Anchor size={14} className="text-[#12435E]" />
                     ) : (
                       <Plane size={14} className="text-sky-500" />
                     )}
@@ -1842,7 +1842,7 @@ export default function BodegaInventario() {
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                       selectedDetailItem.transportType === 'Marítimo'
-                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        ? 'bg-[#0B2737]/10 text-[#0B2737] border-[#0B2737]/25'
                         : 'bg-sky-50 text-sky-700 border-sky-200'
                     }`}
                   >
@@ -2079,7 +2079,7 @@ export default function BodegaInventario() {
                     onClick={() => setEditingItem({ ...editingItem, transportType: 'Marítimo' })}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       editingItem.transportType === 'Marítimo'
-                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        ? 'bg-[#0B2737] text-white border-[#0B2737]'
                         : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                     }`}
                   >

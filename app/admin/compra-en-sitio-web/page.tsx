@@ -276,7 +276,7 @@ export default function CompraEnSitioWebPage() {
             <h1 className="text-xl font-bold tracking-tight text-slate-900">
               Compra en sitio web
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#0B2737]/10 text-[#0B2737] border border-[#0B2737]/20">
               <ShoppingBag size={12} />
               <span>Facturación Separada</span>
             </span>
@@ -329,7 +329,7 @@ export default function CompraEnSitioWebPage() {
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.03)]'
           }`}
         >
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-slate-100 text-[#0B2737] flex items-center justify-center shrink-0 group-hover:bg-[#0B2737] group-hover:text-white transition-colors">
             <DollarSign size={22} />
           </div>
           <div className="min-w-0 flex-1">
@@ -547,7 +547,7 @@ export default function CompraEnSitioWebPage() {
                       </td>
 
                       <td className="py-3 px-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-[#0B2737] border border-slate-200 text-[10px] font-bold uppercase">
                           <ShoppingBag size={10} />
                           COMPRA EN SITIO WEB
                         </span>

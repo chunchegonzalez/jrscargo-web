@@ -180,7 +180,7 @@ export default function CuentasPorCobrarPage() {
           </Link>
           <Link
             href="/admin/compra-en-sitio-web"
-            className="h-9 px-3.5 rounded-lg border border-indigo-200/80 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
+            className="h-9 px-3.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[#0B2737] shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
           >
             <ShoppingBag size={14} />
             <span>Compra en sitio web</span>
@@ -314,9 +314,9 @@ export default function CuentasPorCobrarPage() {
 
         {/* Aviso informativo cuando hay facturas de COMPRA EN SITIO WEB excluidas */}
         {excludeWebPurchases && excludedWebCount > 0 && (
-          <div className="px-4 py-2.5 bg-indigo-50/70 border-b border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-900">
+          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-800">
             <div className="flex items-center gap-2">
-              <ShoppingBag size={14} className="text-indigo-600 shrink-0" />
+              <ShoppingBag size={14} className="text-[#12435E] shrink-0" />
               <span>
                 Filtro activo: se excluyeron <strong>{excludedWebCount}</strong>{' '}
                 {excludedWebCount === 1 ? 'factura pendiente' : 'facturas pendientes'} de{' '}
@@ -327,14 +327,14 @@ export default function CuentasPorCobrarPage() {
               <button
                 type="button"
                 onClick={() => setExcludeWebPurchases(false)}
-                className="text-indigo-700 hover:text-indigo-900 font-bold underline cursor-pointer"
+                className="text-[#12435E] hover:text-[#0B2737] font-bold underline cursor-pointer"
               >
                 Volver a incluirlas
               </button>
-              <span className="text-indigo-300">|</span>
+              <span className="text-slate-300">|</span>
               <Link
                 href="/admin/compra-en-sitio-web"
-                className="text-indigo-700 hover:text-indigo-900 font-bold inline-flex items-center gap-1"
+                className="text-[#12435E] hover:text-[#0B2737] font-bold inline-flex items-center gap-1"
               >
                 <span>Ver sección independiente</span>
                 <ArrowRight size={12} />

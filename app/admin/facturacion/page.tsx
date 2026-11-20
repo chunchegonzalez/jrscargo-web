@@ -680,7 +680,7 @@ export default function FacturacionDashboard() {
             {webPurchasesCount > 0 && (
               <Link
                 href="/admin/compra-en-sitio-web"
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 hover:bg-slate-200/80 text-[#0B2737] border border-slate-200 transition-colors"
                 title="Ver las facturas del rubro COMPRA EN SITIO WEB en su sección independiente"
               >
                 <ShoppingBag size={12} />

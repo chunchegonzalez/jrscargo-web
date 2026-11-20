@@ -361,7 +361,7 @@ export default function ReporteMaritimoPage() {
             <h1 className="text-xl font-bold tracking-tight text-slate-900">
               Reporte de Productos Marítimos
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#0B2737]/10 text-[#0B2737] border border-[#0B2737]/20">
               <Anchor size={12} />
               <span>Período: {periodLabel}</span>
             </span>
@@ -393,7 +393,7 @@ export default function ReporteMaritimoPage() {
 
           <Link
             href="/admin/facturacion/nueva"
-            className="h-9 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shadow-2xs"
+            className="h-9 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shadow-2xs"
           >
             <Anchor size={14} />
             <span>Facturar Marítimo</span>
@@ -419,7 +419,7 @@ export default function ReporteMaritimoPage() {
                 onClick={() => setDatePreset(p.id)}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   datePreset === p.id
-                    ? 'bg-indigo-600 text-white shadow-2xs'
+                    ? 'bg-[#0B2737] text-white shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
                 }`}
               >
@@ -430,7 +430,7 @@ export default function ReporteMaritimoPage() {
 
           {datePreset === 'mes' && (
             <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
-              <Calendar size={13} className="text-indigo-600" />
+              <Calendar size={13} className="text-[#12435E]" />
               <input
                 type="month"
                 value={selectedMonth}
@@ -446,14 +446,14 @@ export default function ReporteMaritimoPage() {
                 type="date"
                 value={filterStartDate}
                 onChange={e => setFilterStartDate(e.target.value)}
-                className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-600"
+                className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#12435E]"
               />
               <span className="text-xs text-slate-400">a</span>
               <input
                 type="date"
                 value={filterEndDate}
                 onChange={e => setFilterEndDate(e.target.value)}
-                className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-600"
+                className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#12435E]"
               />
             </div>
           )}
@@ -467,7 +467,7 @@ export default function ReporteMaritimoPage() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Buscar cliente, tracking o factura..."
-              className="w-full h-8 pl-8 pr-7 bg-slate-50 focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-indigo-600"
+              className="w-full h-8 pl-8 pr-7 bg-slate-50 focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
             />
             {searchTerm && (
               <button
@@ -483,7 +483,7 @@ export default function ReporteMaritimoPage() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as 'Todas' | 'Pagada' | 'Pendiente')}
-            className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-600 cursor-pointer"
+            className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#12435E] cursor-pointer"
           >
             <option value="Todas">Estado: Todos</option>
             <option value="Pagada">Pagadas</option>
@@ -495,20 +495,20 @@ export default function ReporteMaritimoPage() {
       {/* 4 Tarjetas KPI del Reporte Marítimo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         {/* 1. Pies Cúbicos Facturados */}
-        <div className="bg-white rounded-xl p-4 border border-indigo-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex items-center justify-between">
+        <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-600">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Pies Cúbicos Facturados
             </p>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-indigo-700 tabular-nums">
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-[#0B2737] tabular-nums">
                 {totalCubicFeet.toFixed(2)}
               </span>
-              <span className="text-xs font-bold text-indigo-600">ft³</span>
+              <span className="text-xs font-bold text-[#F59E0B]">ft³</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Volumen total en {periodLabel}</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-slate-100 text-[#0B2737] flex items-center justify-center shrink-0">
             <Box size={19} />
           </div>
         </div>
@@ -590,7 +590,7 @@ export default function ReporteMaritimoPage() {
           </div>
           <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
             <span>
-              Total Volumen: <strong className="text-indigo-700">{totalCubicFeet.toFixed(2)} ft³</strong>
+              Total Volumen: <strong className="text-[#0B2737]">{totalCubicFeet.toFixed(2)} ft³</strong>
             </span>
             <span>&bull;</span>
             <span>
@@ -644,12 +644,12 @@ export default function ReporteMaritimoPage() {
                       {line.trackingNumber}
                     </td>
                     <td className="py-2.5 px-3.5">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-[#0B2737] border border-slate-200 text-xs font-semibold">
                         <Anchor size={11} />
                         <span>{line.serviceName}</span>
                       </span>
                     </td>
-                    <td className="py-2.5 px-3.5 text-right font-mono font-bold text-indigo-700 tabular-nums whitespace-nowrap">
+                    <td className="py-2.5 px-3.5 text-right font-mono font-bold text-[#0B2737] tabular-nums whitespace-nowrap">
                       {line.cubicFeet.toFixed(2)} ft³
                     </td>
                     <td className="py-2.5 px-3.5 text-right font-black text-slate-900 tabular-nums whitespace-nowrap">
@@ -712,7 +712,7 @@ export default function ReporteMaritimoPage() {
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-slate-900">{pkg.id}</span>
-                      <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/70 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-[#0B2737] border border-slate-200 text-[10px] font-bold">
                         🚢 Marítimo · {pkg.weight}
                       </span>
                     </div>

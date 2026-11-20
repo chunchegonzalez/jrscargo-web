@@ -418,7 +418,7 @@ export default function BodegaScanner() {
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                     packageData.transportType === 'Marítimo'
-                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      ? 'bg-[#0B2737]/10 text-[#0B2737] border-[#0B2737]/25'
                       : 'bg-sky-50 text-sky-700 border-sky-200'
                   }`}
                 >
@@ -486,7 +486,7 @@ export default function BodegaScanner() {
                         }
                         className={`h-10 px-3 rounded-lg border text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
                           packageData.transportType === 'Marítimo'
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                            ? 'bg-[#0B2737] text-white border-[#0B2737] shadow-2xs'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
@@ -602,7 +602,7 @@ export default function BodegaScanner() {
 
                 <div>
                   <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 flex items-center gap-1.5">
-                    <FileText size={13} className="text-indigo-600" />
+                    <FileText size={13} className="text-[#12435E]" />
                     <span>
                       {packageData.transportType === 'Marítimo'
                         ? 'Nota de Marítimo / Observaciones'

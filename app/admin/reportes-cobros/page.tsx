@@ -575,7 +575,7 @@ export default function ReportesCobrosControlPage() {
                           className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                             item.trigger === 'manual'
                               ? 'bg-sky-50 text-sky-700 border-sky-200'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : 'bg-slate-100 text-[#0B2737] border-slate-200'
                           }`}
                         >
                           {item.trigger === 'manual' ? 'Manual' : 'Automático Diario'}
