@@ -32,7 +32,6 @@ export default function BodegaScanner() {
   
   const [localStatus, setLocalStatus] = useState<string | null>(null);
   const [history, setHistory] = useState<InventoryHistoryEvent[]>([]);
-  const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,30 +40,15 @@ export default function BodegaScanner() {
     fetch('/api/users?namesOnly=true', { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : null))
       .then(d => {
-        if (d?.success && Array.isArray(d.data)) {
-          const names: string[] = d.data
-            .map((u: { username?: string }) => String(u.username || '').trim())
-            .filter(Boolean);
-          setRegisteredUsers(names);
-          const saved = typeof window !== 'undefined' ? localStorage.getItem('jrs_active_agent') : null;
-          if (saved && names.includes(saved)) {
-            setSelectedAgent(saved);
-          } else if (d.currentUser) {
-            setSelectedAgent(String(d.currentUser));
-          } else if (names.length > 0) {
-            setSelectedAgent(names[0]);
-          }
+        if (d?.currentUser) {
+          setSelectedAgent(String(d.currentUser).trim());
+        } else if (d?.success && Array.isArray(d.data) && d.data.length > 0) {
+          const first = String(d.data[0]?.username || '').trim();
+          if (first) setSelectedAgent(first);
         }
       })
       .catch(() => {});
   }, []);
-
-  const handleAgentChange = (val: string) => {
-    setSelectedAgent(val);
-    if (typeof window !== 'undefined' && val) {
-      localStorage.setItem('jrs_active_agent', val);
-    }
-  };
 
   // Auto-focus el input de escaneo para la pistola solo si el usuario no está escribiendo en otro buscador/input
   useEffect(() => {
@@ -347,21 +331,11 @@ export default function BodegaScanner() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {registeredUsers.length > 0 && (
-            <div className="h-9 px-3 rounded-lg bg-white border border-slate-200 inline-flex items-center gap-2 text-xs">
+          {selectedAgent && (
+            <div className="h-9 px-3 rounded-lg bg-slate-50 border border-slate-200 inline-flex items-center gap-2 text-xs">
               <User size={14} className="text-brand-blue shrink-0" />
               <span className="text-slate-500 font-medium">Agente:</span>
-              <select
-                value={selectedAgent}
-                onChange={e => handleAgentChange(e.target.value)}
-                className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
-              >
-                {registeredUsers.map(u => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
+              <span className="font-bold text-slate-800">{selectedAgent}</span>
             </div>
           )}
           {packageData && (
