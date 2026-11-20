@@ -11,9 +11,13 @@ type WorldboxPackageListItem = {
   clientName?: string;
   clientCode?: string;
   consignatario?: string;
+  weight?: number | string;
+  weightUnit?: string;
+  description?: string;
   originWarehouse?: string;
   originCountry?: string;
   origin?: string;
+  images?: Array<{ id?: number | string; url: string }>;
 };
 
 let cachedPackages: WorldboxPackageListItem[] = [];
@@ -380,6 +384,74 @@ export async function GET(request: Request) {
     }
     
     if (!res.ok) {
+      // Fallback 1.5: If Worldbox individual /tracking endpoint failed or rate-limited during bulk scan,
+      // check if the package exists in the Worldbox /packages list (which contains exact weight & metadata)
+      if (packagesList && packagesList.length > 0) {
+        const cleanSearch = trackingNumber.trim().toUpperCase();
+        const strippedSearch = cleanSearch
+          .replace(/^420(?:\d{9}|\d{5})(?=9\d{14,})/i, '')
+          .replace(/^420\d{5}/i, '');
+        const matchedFromList = packagesList.find(p => {
+          const pt = (p.trackingNumber || '').trim().toUpperCase();
+          if (!pt || pt.length < 6) return false;
+          return (
+            pt === cleanSearch ||
+            pt === strippedSearch ||
+            pt.endsWith(cleanSearch) ||
+            cleanSearch.endsWith(pt) ||
+            (strippedSearch.length >= 8 && (pt.endsWith(strippedSearch) || strippedSearch.endsWith(pt)))
+          );
+        });
+
+        if (matchedFromList) {
+          const resolvedTrk = (matchedFromList.trackingNumber || trackingNumber).trim();
+          const upperTenant = (matchedFromList.tenantName || '').toUpperCase();
+          const upperCode = (matchedFromList.clientCode || '').toUpperCase();
+          let resolvedComp = 'JRS CARGO';
+          if (upperTenant.includes('ATLANTIC') || upperCode.startsWith('AT-') || upperCode.includes('ATLANTIC')) {
+            resolvedComp = 'ATLANTIC IMPORTS';
+          } else if (upperTenant.includes('TRINITY') || upperCode.startsWith('TB-') || upperCode.startsWith('TRINITY') || upperCode.includes('TRINITY')) {
+            resolvedComp = 'TRINITY BOX';
+          } else if (upperTenant.includes('LOGISTICS') || upperTenant.includes('JR ') || upperCode.startsWith('JR-') || upperCode.startsWith('JRL-')) {
+            resolvedComp = 'JR LOGISTICS';
+          }
+
+          let listLocalItem = null;
+          try {
+            listLocalItem = await getInventoryItem(resolvedTrk);
+          } catch {
+            // ignore
+          }
+          const isRegCR = Boolean(listLocalItem && listLocalItem.status && listLocalItem.status !== 'Eliminado');
+          const isDelCR = Boolean(isRegCR && String(listLocalItem.status).toLowerCase().includes('entregad'));
+
+          return NextResponse.json({
+            trackingNumber: resolvedTrk,
+            status: 'SUCCESS',
+            localItem: listLocalItem || null,
+            rawData: {
+              package: {
+                tracking: resolvedTrk,
+                consignatario: matchedFromList.consignatario || matchedFromList.clientName || 'Desconocido',
+                clientName: matchedFromList.clientName,
+                clientCode: matchedFromList.clientCode,
+                tenantName: matchedFromList.tenantName,
+                company: resolvedComp,
+                provider: resolvedComp,
+                weight: matchedFromList.weight ?? 0,
+                weightUnit: matchedFromList.weightUnit || 'lbs',
+                description: matchedFromList.description || '',
+                origin: matchedFromList.originWarehouse || matchedFromList.origin || '',
+                originWarehouse: matchedFromList.originWarehouse || '',
+                fotos: Array.isArray(matchedFromList.images) ? matchedFromList.images : [],
+                statusLabel: isDelCR ? 'Entregado' : isRegCR ? 'Por Entregar' : 'En Bodega Miami',
+              },
+              timeline: [],
+            },
+          });
+        }
+      }
+
       // Fallback 2: Check if package already exists in local Supabase inventory
       try {
         const localFallback = await getInventoryItem(trackingNumber);
@@ -429,7 +501,7 @@ export async function GET(request: Request) {
 
     const data = await res.json();
     
-    // 2. Match package in Worldbox packages list to extract exact tenantName & clientCode
+    // 2. Match package in Worldbox packages list to extract exact tenantName, clientCode & authoritative weight
     if (data.package && packagesList && packagesList.length > 0) {
       const cleanSearch = trackingNumber.trim().toUpperCase();
       const matched = packagesList.find(p => {
@@ -441,6 +513,17 @@ export async function GET(request: Request) {
         data.package.tenantName = matched.tenantName;
         data.package.clientName = matched.clientName;
         data.package.clientCode = matched.clientCode;
+
+        // Respaldo y verificación de peso desde la lista oficial de Worldbox (/packages)
+        const currentWeightNum = parseFloat(String(data.package.weight ?? '0').replace(/[^\d.]/g, '')) || 0;
+        const matchedWeightNum = parseFloat(String(matched.weight ?? '0').replace(/[^\d.]/g, '')) || 0;
+        if (currentWeightNum <= 0 && matchedWeightNum > 0) {
+          data.package.weight = matched.weight;
+          data.package.weightUnit = matched.weightUnit || data.package.weightUnit || 'lbs';
+        } else if (!data.package.weightUnit && matched.weightUnit) {
+          data.package.weightUnit = matched.weightUnit;
+        }
+
         if (matched.originWarehouse) {
           data.package.originWarehouse = matched.originWarehouse;
           data.package.origin = matched.originWarehouse;

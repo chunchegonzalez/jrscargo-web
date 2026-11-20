@@ -53,11 +53,57 @@ export default function BodegaMasivo() {
     textareaRef.current?.focus();
   }, [mode]);
 
+  const formatWorldboxWeight = (rawWeight: unknown, rawUnit?: unknown): { formatted: string; numeric: number } => {
+    const str = String(rawWeight ?? '').trim();
+    const unitHint = String(rawUnit ?? '').trim().toLowerCase();
+    const numMatch = str.replace(/,/g, '.').match(/(\d+(?:\.\d+)?)/);
+    const numeric = numMatch ? parseFloat(numMatch[1]) : 0;
+
+    let unit = 'lbs';
+    if (unitHint.includes('ft') || unitHint.includes('pie') || str.toLowerCase().includes('ft')) {
+      unit = 'ft³';
+    } else if (unitHint.includes('kg') || str.toLowerCase().includes('kg')) {
+      unit = 'kg';
+    }
+
+    return {
+      formatted: `${numeric > 0 ? numeric : 0} ${unit}`,
+      numeric: numeric > 0 ? numeric : 0,
+    };
+  };
+
+  const fetchWorldboxWithRetry = async (code: string) => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(`/api/tracking?number=${encodeURIComponent(code)}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.status === 'SUCCESS' && data?.rawData?.package) {
+            const w = formatWorldboxWeight(data.rawData.package.weight, data.rawData.package.weightUnit);
+            if (w.numeric > 0 || attempt === 1) {
+              return data;
+            }
+          }
+        }
+      } catch {
+        // Retry once on transient network error
+      }
+      if (attempt === 0) {
+        await new Promise(r => setTimeout(r, 350));
+      }
+    }
+    return null;
+  };
+
   const handleProcess = async () => {
-    const trackings = text
-      .split('\n')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+    const trackings = Array.from(
+      new Set(
+        text
+          .split('\n')
+          .map(t => t.replace(/[\x00-\x1F\x7F]+/g, '').trim())
+          .filter(t => t.length > 0)
+      )
+    );
 
     if (trackings.length === 0) return;
 
@@ -72,38 +118,74 @@ export default function BodegaMasivo() {
 
         if (mode === 'recepcion') {
           // ==================== RECEPCIÓN MASIVA ====================
-          const wbRes = await fetch(`/api/tracking?number=${encodeURIComponent(tracking)}`);
-          const wbData = await wbRes.json();
-          
-          let client = 'Desconocido';
-          let company = 'JRS CARGO';
-          let weightStr = '0 lbs';
-          
-          if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
-            const pkg = wbData.rawData.package;
-            const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
-            const extracted = extractCompanyAndClient(
-              pkg.consignatario || fullConsignee,
-              pkg.tenantName || pkg.company,
-              pkg.clientCode,
-              pkg.clientName
-            );
-            company = pkg.company || extracted.company;
-            client = extracted.cleanClient;
-            weightStr = `${pkg.weight || '0'} ${pkg.weightUnit || 'lbs'}`;
-          }
+          const wbData = await fetchWorldboxWithRetry(tracking);
 
-          if (wbData.status !== 'SUCCESS' || !wbData.rawData?.package) {
+          if (!wbData || wbData.status !== 'SUCCESS' || !wbData.rawData?.package) {
             newResults.push({ tracking, status: 'error', message: 'No encontrado en Worldbox' });
             setResults([...newResults]);
             continue;
           }
-          
+
+          const pkg = wbData.rawData.package;
+          const resolvedTracking = String(pkg.tracking || wbData.trackingNumber || tracking).trim();
+          const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
+          const extracted = extractCompanyAndClient(
+            pkg.consignatario || fullConsignee,
+            pkg.tenantName || pkg.company,
+            pkg.clientCode,
+            pkg.clientName
+          );
+          const company = pkg.company || extracted.company;
+          const client = extracted.cleanClient;
+          const { formatted: weightStr, numeric: weightNum } = formatWorldboxWeight(pkg.weight, pkg.weightUnit);
+
+          // Verificar si el paquete ya existe en inventario local para actualizar su peso en lugar de fallar
+          const existingRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`, { cache: 'no-store' });
+          if (existingRes.ok) {
+            const existingJson = await existingRes.json();
+            if (existingJson?.success && existingJson.data) {
+              const oldPkg = existingJson.data;
+              const oldHistory = Array.isArray(oldPkg.history) ? oldPkg.history : [];
+              const patchPayload: Record<string, unknown> = {
+                client: client !== 'Desconocido' ? client : oldPkg.client,
+                company: company || oldPkg.company,
+                history: [
+                  {
+                    date: formattedDate,
+                    action: 'Paquete Verificado en Bodega Costa Rica (Recepción Masiva)',
+                    user: selectedAgent || 'Operador Bodega',
+                    transportType: 'Aéreo',
+                  },
+                  ...oldHistory,
+                ],
+              };
+              if (weightNum > 0) {
+                patchPayload.weight = weightStr;
+              }
+              const patchRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedTracking)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patchPayload),
+              });
+              if (patchRes.ok) {
+                newResults.push({
+                  tracking: resolvedTracking,
+                  status: 'success',
+                  message: `Actualizado en Bodega CR · ${weightStr} (${company})`,
+                });
+              } else {
+                newResults.push({ tracking: resolvedTracking, status: 'error', message: 'Error al actualizar en Base de Datos' });
+              }
+              setResults([...newResults]);
+              continue;
+            }
+          }
+
           const res = await fetch('/api/inventory', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              id: tracking,
+              id: resolvedTracking,
               client: client,
               company: company,
               weight: weightStr,
@@ -111,24 +193,30 @@ export default function BodegaMasivo() {
               history: [{
                 date: formattedDate,
                 action: 'Paquete Recibido en Bodega Costa Rica (Recepción Masiva)',
-                user: selectedAgent || 'Operador Bodega'
+                user: selectedAgent || 'Operador Bodega',
+                transportType: 'Aéreo',
               }]
             })
           });
 
           if (res.ok) {
-            newResults.push({ tracking, status: 'success', message: 'Ingresado a Bodega CR con éxito' });
+            newResults.push({
+              tracking: resolvedTracking,
+              status: 'success',
+              message: `Ingresado a Bodega CR · ${weightStr} (${company})`,
+            });
           } else {
-            newResults.push({ tracking, status: 'error', message: 'Error al guardar en Base de Datos' });
+            newResults.push({ tracking: resolvedTracking, status: 'error', message: 'Error al guardar en Base de Datos' });
           }
 
         } else {
           // ==================== ENTREGA MASIVA ====================
           // 1. Intentar actualizar en inventario existente
-          const invRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`);
+          const invRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, { cache: 'no-store' });
           if (invRes.ok) {
             const invData = await invRes.json();
             const existingPkg = invData.data;
+            const resolvedId = String(existingPkg?.id || tracking);
             const oldHistory = Array.isArray(existingPkg?.history) ? existingPkg.history : [];
             const newHistory = [
               {
@@ -139,27 +227,52 @@ export default function BodegaMasivo() {
               ...oldHistory
             ];
 
-            const patchRes = await fetch(`/api/inventory/${encodeURIComponent(tracking)}`, {
+            const patchBody: Record<string, unknown> = {
+              status: 'Entregado',
+              history: newHistory,
+            };
+
+            // Si el peso guardado estaba en 0 o vacío, recuperarlo automáticamente de Worldbox
+            const existingWeightNum = parseFloat(String(existingPkg?.weight || '0').replace(/[^\d.]/g, '')) || 0;
+            let refreshedWeightLabel = String(existingPkg?.weight || '').trim();
+            if (existingWeightNum <= 0) {
+              const wbRefresh = await fetchWorldboxWithRetry(resolvedId);
+              if (wbRefresh?.status === 'SUCCESS' && wbRefresh?.rawData?.package) {
+                const { formatted, numeric } = formatWorldboxWeight(
+                  wbRefresh.rawData.package.weight,
+                  wbRefresh.rawData.package.weightUnit
+                );
+                if (numeric > 0) {
+                  patchBody.weight = formatted;
+                  refreshedWeightLabel = formatted;
+                }
+              }
+            }
+
+            const patchRes = await fetch(`/api/inventory/${encodeURIComponent(resolvedId)}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                status: 'Entregado',
-                history: newHistory
-              })
+              body: JSON.stringify(patchBody)
             });
 
             if (patchRes.ok) {
-              newResults.push({ tracking, status: 'success', message: 'Marcado como Entregado' });
+              newResults.push({
+                tracking: resolvedId,
+                status: 'success',
+                message: refreshedWeightLabel
+                  ? `Marcado como Entregado · ${refreshedWeightLabel}`
+                  : 'Marcado como Entregado',
+              });
             } else {
-              newResults.push({ tracking, status: 'error', message: 'Error al actualizar estado en BD' });
+              newResults.push({ tracking: resolvedId, status: 'error', message: 'Error al actualizar estado en BD' });
             }
           } else {
             // 2. Si no está en inventario local, buscar en Worldbox y registrar como Entregado
-            const wbRes = await fetch(`/api/tracking?number=${encodeURIComponent(tracking)}`);
-            const wbData = await wbRes.json();
+            const wbData = await fetchWorldboxWithRetry(tracking);
             
-            if (wbData.status === 'SUCCESS' && wbData.rawData?.package) {
+            if (wbData && wbData.status === 'SUCCESS' && wbData.rawData?.package) {
               const pkg = wbData.rawData.package;
+              const resolvedTracking = String(pkg.tracking || wbData.trackingNumber || tracking).trim();
               const fullConsignee = pkg.consignatario || pkg.clientName || pkg.consignee || pkg.client || pkg.name || 'Desconocido';
               const extracted = extractCompanyAndClient(
                 pkg.consignatario || fullConsignee,
@@ -167,28 +280,34 @@ export default function BodegaMasivo() {
                 pkg.clientCode,
                 pkg.clientName
               );
+              const { formatted: weightStr } = formatWorldboxWeight(pkg.weight, pkg.weightUnit);
 
               const createRes = await fetch('/api/inventory', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  id: tracking,
+                  id: resolvedTracking,
                   client: extracted.cleanClient,
                   company: pkg.company || extracted.company,
-                  weight: `${pkg.weight || '0'} ${pkg.weightUnit || 'lbs'}`,
+                  weight: weightStr,
                   status: 'Entregado',
                   history: [{
                     date: formattedDate,
                     action: 'Paquete Entregado al Cliente (Entrega Masiva)',
-                    user: selectedAgent || 'Operador Bodega'
+                    user: selectedAgent || 'Operador Bodega',
+                    transportType: 'Aéreo',
                   }]
                 })
               });
 
               if (createRes.ok) {
-                newResults.push({ tracking, status: 'success', message: 'Registrado y Marcado como Entregado' });
+                newResults.push({
+                  tracking: resolvedTracking,
+                  status: 'success',
+                  message: `Registrado y Entregado · ${weightStr}`,
+                });
               } else {
-                newResults.push({ tracking, status: 'error', message: 'Error al registrar en BD' });
+                newResults.push({ tracking: resolvedTracking, status: 'error', message: 'Error al registrar en BD' });
               }
             } else {
               newResults.push({ tracking, status: 'error', message: 'No encontrado en inventario ni en Worldbox' });
