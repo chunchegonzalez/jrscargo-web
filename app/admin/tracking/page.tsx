@@ -26,9 +26,16 @@ import {
   ChevronDown,
   ChevronUp,
   Warehouse,
-  ShieldCheck
+  ShieldCheck,
+  Anchor
 } from 'lucide-react';
-import { formatPackageWeightAndRate, extractDeliveryAgentInfo, formatCostaRicaDateTime, InventoryHistoryEvent } from '@/lib/billing';
+import {
+  formatPackageWeightAndRate,
+  extractDeliveryAgentInfo,
+  extractPackageTransportAndNote,
+  formatCostaRicaDateTime,
+  InventoryHistoryEvent,
+} from '@/lib/billing';
 
 interface TrackingEvent {
   date: string;
@@ -330,14 +337,27 @@ function TrackingPageContent() {
       } else if (resolvedLocal) {
         // Respaldo resiliente: si Worldbox tarda o falla, mostramos los datos locales de inventario CR
         const isDel = String(resolvedLocal.status || '').toLowerCase().includes('entregad');
-        const numericWeight = parseFloat(String(resolvedLocal.weight ?? '').replace(/[^\d.]/g, ''));
+        const rawW = String(resolvedLocal.weight ?? '');
+        const numericWeight = parseFloat(rawW.replace(/[^\d.]/g, ''));
+        const localMeta = extractPackageTransportAndNote(resolvedLocal);
+        const unitDetected =
+          rawW.toLowerCase().includes('ft') || rawW.toLowerCase().includes('pie')
+            ? 'ft³'
+            : rawW.toLowerCase().includes('kg')
+            ? 'kg'
+            : 'lbs';
         setPkg({
           tracking: resolvedLocal.id || resolvedLocal.tracking_number || num,
           consignatario: resolvedLocal.client || resolvedLocal.client_name || 'Desconocido',
           weight: !isNaN(numericWeight) && numericWeight > 0 ? numericWeight : undefined,
-          weightUnit: String(resolvedLocal.weight ?? '').toLowerCase().includes('kg') ? 'kg' : 'lbs',
+          weightUnit: unitDetected,
           statusLabel: isDel ? 'Entregado' : 'Por Entregar',
-          description: 'Paquete registrado en inventario local de Costa Rica',
+          description:
+            localMeta.note ||
+            localMeta.description ||
+            (localMeta.transportType === 'Marítimo'
+              ? 'Paquete Marítimo registrado en inventario local de Costa Rica'
+              : 'Paquete registrado en inventario local de Costa Rica'),
         });
         const fallbackEvents: TrackingEvent[] = Array.isArray(resolvedLocal.history)
           ? resolvedLocal.history.map(h => ({
@@ -440,6 +460,7 @@ function TrackingPageContent() {
   const statusLabel = pkg?.statusLabel || localItem?.status || '';
   const statusStyle = statusLabel ? getStatusStyle(statusLabel) : null;
   const deliveryAgentInfo = useMemo(() => extractDeliveryAgentInfo(localItem), [localItem]);
+  const transportMeta = useMemo(() => extractPackageTransportAndNote(localItem), [localItem]);
 
   const invWeightInfo = matchedInvoice ? formatPackageWeightAndRate({
     weight: matchedInvoice.package_weight,
@@ -560,6 +581,13 @@ function TrackingPageContent() {
   }, [statusLabel, localItem, timeline, pkg, deliveryAgentInfo]);
 
   const formattedWeightDisplay = useMemo(() => {
+    const rawLocalW = String(localItem?.weight ?? '').trim();
+    const isCubicFeet =
+      (pkg?.weightUnit || '').toLowerCase().includes('ft') ||
+      (pkg?.weightUnit || '').toLowerCase().includes('pie') ||
+      rawLocalW.toLowerCase().includes('ft') ||
+      rawLocalW.toLowerCase().includes('pie');
+
     const effWeight =
       pkg?.weight ||
       localItem?.weight ||
@@ -568,6 +596,9 @@ function TrackingPageContent() {
         : invWeightInfo?.cleanNum);
     if (!effWeight) return null;
     const num = parseFloat(String(effWeight));
+    if (isCubicFeet) {
+      return isNaN(num) ? `${effWeight}` : `${num} ft³ (Pie cúbico)`;
+    }
     const unit = (pkg?.weightUnit || 'lbs').toLowerCase();
     if (isNaN(num)) return `${effWeight} ${unit}`;
     if (unit.includes('kg')) {
@@ -791,6 +822,26 @@ function TrackingPageContent() {
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold border ${
+                  transportMeta.transportType === 'Marítimo'
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    : 'bg-sky-50 text-sky-700 border-sky-200'
+                }`}
+              >
+                {transportMeta.transportType === 'Marítimo' ? (
+                  <>
+                    <Anchor className="w-4 h-4" />
+                    <span>Marítimo</span>
+                  </>
+                ) : (
+                  <>
+                    <Plane className="w-4 h-4" />
+                    <span>Aéreo</span>
+                  </>
+                )}
+              </div>
+
               {statusLabel && statusStyle && (
                 <div
                   className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-bold ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border}`}
@@ -947,6 +998,20 @@ function TrackingPageContent() {
                     </p>
                   </div>
                 </div>
+
+                {transportMeta.note && (
+                  <div className="p-3 rounded-lg bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5">
+                    <FileText className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                        {transportMeta.transportType === 'Marítimo' ? 'Nota de Marítimo' : 'Nota de Inventario'}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-800 mt-0.5 leading-relaxed break-words">
+                        {transportMeta.note}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {(pkg.dimensions || pkg.pieces || pkg.volumetricWeight || pkg.declaredValue || pkg.carrier) && (
                   <div className="pt-3 border-t border-slate-200/70 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-600">

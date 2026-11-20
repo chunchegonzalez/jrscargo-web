@@ -10,6 +10,9 @@ type HistoryEntry = {
   date?: string;
   action?: string;
   user?: string;
+  transportType?: string;
+  note?: string;
+  description?: string;
 };
 
 async function getCurrentAgentUsername(): Promise<string | null> {
@@ -46,34 +49,81 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     const incomingHistory = Array.isArray(body.history) ? (body.history as HistoryEntry[]) : null;
+    const incomingTransportType =
+      typeof body.transportType === 'string' ? body.transportType.trim() : undefined;
+    const incomingNote = typeof body.note === 'string' ? body.note.trim() : undefined;
 
-    if (incomingHistory && incomingHistory.length > 0 && agentUsername) {
-      // Estampar automáticamente el agente real autenticado en el evento más reciente
-      body.history = incomingHistory.map((ev, idx) =>
-        idx === 0 && isGenericAgentLabel(ev?.user) ? { ...ev, user: agentUsername } : ev
-      );
-    } else if (!incomingHistory && typeof body.status === 'string') {
-      // Si se cambia el estado desde Inventario CR u otro módulo sin enviar history,
-      // conservamos el historial existente y agregamos el evento con el agente real
+    // Eliminar campos virtuales para no enviar columnas inexistentes a PostgREST
+    delete body.transportType;
+    delete body.note;
+
+    if (incomingHistory && incomingHistory.length > 0) {
+      body.history = incomingHistory.map((ev, idx) => {
+        if (idx !== 0) return ev;
+        const nextEv: HistoryEntry = { ...ev };
+        if (agentUsername && isGenericAgentLabel(nextEv.user)) {
+          nextEv.user = agentUsername;
+        }
+        if (incomingTransportType) nextEv.transportType = incomingTransportType;
+        if (incomingNote !== undefined) nextEv.note = incomingNote;
+        return nextEv;
+      });
+    } else if (
+      typeof body.status === 'string' ||
+      incomingTransportType !== undefined ||
+      incomingNote !== undefined
+    ) {
+      // Si se cambia el estado, vía o nota desde Inventario CR sin enviar history,
+      // conservamos el historial existente y actualizamos metadatos + evento de estado
       try {
         const existing = await getInventoryItem(params.id);
         if (existing) {
-          const prevStatus = String(existing.status || '').toLowerCase();
-          const nextStatus = body.status.toLowerCase();
-          const wasDelivered = prevStatus.includes('entregad');
-          const willBeDelivered = nextStatus.includes('entregad');
+          let currentHistory: HistoryEntry[] = Array.isArray(existing.history)
+            ? [...existing.history]
+            : [];
 
-          if (wasDelivered !== willBeDelivered) {
-            const oldHistory: HistoryEntry[] = Array.isArray(existing.history) ? existing.history : [];
-            const newEvent: HistoryEntry = {
-              date: formatCostaRicaDateTime(),
-              action: willBeDelivered
-                ? 'Paquete Entregado al Cliente'
-                : 'Reversión: Paquete devuelto a Bodega',
-              user: agentUsername || 'Operador Bodega',
-            };
-            body.history = [newEvent, ...oldHistory];
+          if (typeof body.status === 'string') {
+            const prevStatus = String(existing.status || '').toLowerCase();
+            const nextStatus = body.status.toLowerCase();
+            const wasDelivered = prevStatus.includes('entregad');
+            const willBeDelivered = nextStatus.includes('entregad');
+
+            if (wasDelivered !== willBeDelivered) {
+              const newEvent: HistoryEntry = {
+                date: formatCostaRicaDateTime(),
+                action: willBeDelivered
+                  ? 'Paquete Entregado al Cliente'
+                  : 'Reversión: Paquete devuelto a Bodega',
+                user: agentUsername || 'Operador Bodega',
+              };
+              currentHistory = [newEvent, ...currentHistory];
+            }
           }
+
+          if (incomingTransportType !== undefined || incomingNote !== undefined) {
+            if (currentHistory.length === 0) {
+              currentHistory = [
+                {
+                  date: formatCostaRicaDateTime(),
+                  action:
+                    incomingTransportType === 'Marítimo'
+                      ? 'Paquete Marítimo Registrado en Bodega CR'
+                      : 'Paquete Aéreo Registrado en Bodega CR',
+                  user: agentUsername || 'Operador Bodega',
+                  ...(incomingTransportType ? { transportType: incomingTransportType } : {}),
+                  ...(incomingNote !== undefined ? { note: incomingNote } : {}),
+                },
+              ];
+            } else {
+              currentHistory = currentHistory.map((ev, idx) => ({
+                ...ev,
+                ...(incomingTransportType ? { transportType: incomingTransportType } : {}),
+                ...(idx === 0 && incomingNote !== undefined ? { note: incomingNote } : {}),
+              }));
+            }
+          }
+
+          body.history = currentHistory;
         }
       } catch {
         // Non-critical: continuar con la actualización principal

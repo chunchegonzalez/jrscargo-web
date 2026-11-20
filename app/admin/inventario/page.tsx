@@ -33,12 +33,21 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Plane,
+  Anchor
 } from 'lucide-react';
 import Link from 'next/link';
 import { generateInventoryReportXlsx } from '@/lib/excel-export';
 import { useModal } from '@/app/components/ModalProvider';
-import { formatCostaRicaDate, formatCostaRicaISO, extractCompanyAndClient } from '@/lib/billing';
+import {
+  formatCostaRicaDate,
+  formatCostaRicaISO,
+  extractCompanyAndClient,
+  extractPackageTransportAndNote,
+  PackageTransportType,
+  InventoryHistoryEvent,
+} from '@/lib/billing';
 
 interface InventoryItem {
   id: string;
@@ -51,6 +60,8 @@ interface InventoryItem {
   invoiceNumber?: string;
   invoiceId?: string;
   shelfCode?: string;
+  transportType: PackageTransportType;
+  note?: string;
 }
 
 type ColumnKey = 'client' | 'company' | 'weight' | 'invoice' | 'date' | 'status';
@@ -162,6 +173,7 @@ export default function BodegaInventario() {
   const [colTracking, setColTracking] = useState('');
   const [colClient, setColClient] = useState('');
   const [filterCompany, setFilterCompany] = useState('Todas');
+  const [filterTransport, setFilterTransport] = useState<'Todos' | 'Aéreo' | 'Marítimo'>('Todos');
   const [filterWeight, setFilterWeight] = useState('Todos');
   const [filterInvoice, setFilterInvoice] = useState('Todas');
   const [colInvoiceSearch, setColInvoiceSearch] = useState('');
@@ -193,6 +205,7 @@ export default function BodegaInventario() {
     colTracking.trim() !== '' ||
     colClient.trim() !== '' ||
     filterCompany !== 'Todas' ||
+    filterTransport !== 'Todos' ||
     filterWeight !== 'Todos' ||
     filterInvoice !== 'Todas' ||
     colInvoiceSearch.trim() !== '' ||
@@ -204,6 +217,7 @@ export default function BodegaInventario() {
     setColTracking('');
     setColClient('');
     setFilterCompany('Todas');
+    setFilterTransport('Todos');
     setFilterWeight('Todos');
     setFilterInvoice('Todas');
     setColInvoiceSearch('');
@@ -252,7 +266,15 @@ export default function BodegaInventario() {
 
         const formatted: InventoryItem[] = rawItems
           .filter((item: { status: string }) => item.status !== 'Eliminado')
-          .map((item: { id: string; client: string; weight: string; status: string; company?: string; created_at: string }) => {
+          .map((item: {
+            id: string;
+            client: string;
+            weight: string;
+            status: string;
+            company?: string;
+            created_at: string;
+            history?: InventoryHistoryEvent[];
+          }) => {
             let comp = item.company;
             if (!comp || comp === 'N/A' || comp === 'Independiente' || comp === 'OTRO') {
               const extracted = extractCompanyAndClient(item.client);
@@ -261,6 +283,7 @@ export default function BodegaInventario() {
             const cleanId = (item.id || '').trim().toUpperCase();
             const inv = invLookup(cleanId);
             const shelf = rawShelfMap[cleanId] || rawShelfMap[cleanId.replace(/[\s-]+/g, '')] || '';
+            const { transportType, note, description } = extractPackageTransportAndNote(item);
 
             return {
               id: item.id,
@@ -272,7 +295,9 @@ export default function BodegaInventario() {
               createdAt: item.created_at,
               invoiceNumber: inv?.number || '',
               invoiceId: inv?.id || '',
-              shelfCode: shelf
+              shelfCode: shelf,
+              transportType,
+              note: note || description || '',
             };
           });
 
@@ -301,6 +326,7 @@ export default function BodegaInventario() {
     colTracking,
     colClient,
     filterCompany,
+    filterTransport,
     filterWeight,
     filterInvoice,
     colInvoiceSearch,
@@ -323,11 +349,14 @@ export default function BodegaInventario() {
         (item.id || '').toLowerCase().includes(q) ||
         (item.client || '').toLowerCase().includes(q) ||
         (item.company || '').toLowerCase().includes(q) ||
+        (item.note || '').toLowerCase().includes(q) ||
+        (item.transportType || '').toLowerCase().includes(q) ||
         invNumber.includes(q);
 
       const matchesColTracking = !qTrack || (item.id || '').toLowerCase().includes(qTrack);
       const matchesColClient = !qClient || (item.client || '').toLowerCase().includes(qClient);
       const matchesCompany = filterCompany === 'Todas' || item.company === filterCompany;
+      const matchesTransport = filterTransport === 'Todos' || item.transportType === filterTransport;
 
       // Weight filter (in lbs)
       const numWeight = parseFloat(String(item.weight || '0')) || 0;
@@ -360,6 +389,7 @@ export default function BodegaInventario() {
         matchesColTracking &&
         matchesColClient &&
         matchesCompany &&
+        matchesTransport &&
         matchesWeight &&
         matchesInvoice &&
         matchesColInvoiceSearch &&
@@ -403,6 +433,7 @@ export default function BodegaInventario() {
     colTracking,
     colClient,
     filterCompany,
+    filterTransport,
     filterWeight,
     filterInvoice,
     colInvoiceSearch,
@@ -642,6 +673,21 @@ export default function BodegaInventario() {
                   <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
                   <option value="JR LOGISTICS">JR LOGISTICS</option>
                   <option value="TRINITY BOX">TRINITY BOX</option>
+                </select>
+
+                <select
+                  value={filterTransport}
+                  onChange={e => setFilterTransport(e.target.value as 'Todos' | 'Aéreo' | 'Marítimo')}
+                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
+                    filterTransport !== 'Todos'
+                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
+                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                  title="Filtrar por vía de envío (Aéreo / Marítimo)"
+                >
+                  <option value="Todos">Vía: Todas</option>
+                  <option value="Aéreo">✈️ Aéreo</option>
+                  <option value="Marítimo">🚢 Marítimo</option>
                 </select>
 
                 <select
@@ -905,6 +951,15 @@ export default function BodegaInventario() {
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
                   Empresa: {filterCompany}
                   <button type="button" onClick={() => setFilterCompany('Todas')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+
+              {filterTransport !== 'Todos' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs">
+                  Vía: {filterTransport}
+                  <button type="button" onClick={() => setFilterTransport('Todos')} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                     <X size={12} />
                   </button>
                 </span>
@@ -1350,7 +1405,7 @@ export default function BodegaInventario() {
                           </button>
 
                           <div className="min-w-0 flex flex-col">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-mono font-bold text-slate-900 group-hover:text-brand-blue transition-colors truncate">
                                 {item.id}
                               </span>
@@ -1366,14 +1421,44 @@ export default function BodegaInventario() {
                                   <Copy size={12} />
                                 )}
                               </button>
+                              <span
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                  item.transportType === 'Marítimo'
+                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
+                                    : 'bg-sky-50 text-sky-700 border-sky-200/80'
+                                }`}
+                              >
+                                {item.transportType === 'Marítimo' ? (
+                                  <>
+                                    <Anchor size={10} />
+                                    <span>Marítimo</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plane size={10} />
+                                    <span>Aéreo</span>
+                                  </>
+                                )}
+                              </span>
                             </div>
 
-                            {shelfCode && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 mt-0.5 rounded bg-[#0B1D2B] text-brand-yellow text-[10px] font-bold font-mono w-fit">
-                                <MapPin size={9} />
-                                {shelfCode}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                              {shelfCode && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0B1D2B] text-brand-yellow text-[10px] font-bold font-mono w-fit">
+                                  <MapPin size={9} />
+                                  {shelfCode}
+                                </span>
+                              )}
+                              {item.note && (
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/70 text-[10px] font-medium max-w-[230px] truncate"
+                                  title={`Nota: ${item.note}`}
+                                >
+                                  <FileText size={9} className="shrink-0 text-amber-600" />
+                                  <span className="truncate">Nota: {item.note}</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -1395,11 +1480,14 @@ export default function BodegaInventario() {
                       {visibleColumns.weight && (
                         <td className="py-2.5 px-3.5 text-slate-600 whitespace-nowrap tabular-nums">
                           <span className="font-medium text-slate-800">{item.weight}</span>
-                          {item.weight && !item.weight.includes('kg') && (
-                            <span className="text-slate-400 text-xs ml-1">
-                              / {(parseFloat(item.weight) * 0.453592).toFixed(2)} kg
-                            </span>
-                          )}
+                          {item.weight &&
+                            !item.weight.toLowerCase().includes('kg') &&
+                            !item.weight.toLowerCase().includes('ft') &&
+                            !item.weight.toLowerCase().includes('pie') && (
+                              <span className="text-slate-400 text-xs ml-1">
+                                / {(parseFloat(item.weight) * 0.453592).toFixed(2)} kg
+                              </span>
+                            )}
                         </td>
                       )}
 
@@ -1725,16 +1813,70 @@ export default function BodegaInventario() {
 
                 <div className="p-3.5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    {selectedDetailItem.transportType === 'Marítimo' ? (
+                      <Anchor size={14} className="text-indigo-500" />
+                    ) : (
+                      <Plane size={14} className="text-sky-500" />
+                    )}
+                    <span>Vía de Envío</span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                      selectedDetailItem.transportType === 'Marítimo'
+                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                        : 'bg-sky-50 text-sky-700 border-sky-200'
+                    }`}
+                  >
+                    {selectedDetailItem.transportType === 'Marítimo' ? (
+                      <>
+                        <Anchor size={11} />
+                        <span>Marítimo</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plane size={11} />
+                        <span>Aéreo</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                <div className="p-3.5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs">
                     <Scale size={14} className="text-slate-400" />
-                    <span>Peso Registrado</span>
+                    <span>
+                      {(selectedDetailItem.weight || '').toLowerCase().includes('ft') ||
+                      (selectedDetailItem.weight || '').toLowerCase().includes('pie')
+                        ? 'Volumen (Pie Cúbico)'
+                        : 'Peso Registrado'}
+                    </span>
                   </div>
                   <span className="text-xs font-semibold text-slate-900 tabular-nums">
                     {selectedDetailItem.weight}{' '}
-                    {selectedDetailItem.weight && !selectedDetailItem.weight.includes('kg')
+                    {selectedDetailItem.weight &&
+                    !selectedDetailItem.weight.toLowerCase().includes('kg') &&
+                    !selectedDetailItem.weight.toLowerCase().includes('ft') &&
+                    !selectedDetailItem.weight.toLowerCase().includes('pie')
                       ? `(${(parseFloat(selectedDetailItem.weight) * 0.453592).toFixed(2)} kg)`
                       : ''}
                   </span>
                 </div>
+
+                {selectedDetailItem.note && (
+                  <div className="p-3.5 space-y-1.5 bg-amber-50/40">
+                    <div className="flex items-center gap-1.5 text-amber-800 text-xs font-bold">
+                      <FileText size={13} className="text-amber-600" />
+                      <span>
+                        {selectedDetailItem.transportType === 'Marítimo'
+                          ? 'Nota de Marítimo'
+                          : 'Nota / Observaciones'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 leading-relaxed break-words">
+                      {selectedDetailItem.note}
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-3.5 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2 text-slate-500 text-xs">
@@ -1843,6 +1985,8 @@ export default function BodegaInventario() {
                   weight: editingItem.weight,
                   company: editingItem.company,
                   status: editingItem.status,
+                  transportType: editingItem.transportType,
+                  note: editingItem.note || '',
                   updated_at: new Date().toISOString()
                 };
 
@@ -1897,6 +2041,36 @@ export default function BodegaInventario() {
               )}
 
               <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vía de Envío</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, transportType: 'Aéreo' })}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      editingItem.transportType !== 'Marítimo'
+                        ? 'bg-sky-600 text-white border-sky-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Plane size={14} />
+                    <span>Aéreo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, transportType: 'Marítimo' })}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      editingItem.transportType === 'Marítimo'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Anchor size={14} />
+                    <span>Marítimo</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</label>
                 <input
                   type="text"
@@ -1922,11 +2096,14 @@ export default function BodegaInventario() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Peso</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    {editingItem.transportType === 'Marítimo' ? 'Peso / Pie Cúbico (ft³)' : 'Peso'}
+                  </label>
                   <input
                     type="text"
                     value={editingItem.weight}
                     onChange={e => setEditingItem({ ...editingItem, weight: e.target.value })}
+                    placeholder={editingItem.transportType === 'Marítimo' ? 'Ej. 2.5 ft³' : 'Ej. 3 lbs'}
                     className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm font-medium"
                   />
                 </div>
@@ -1941,6 +2118,19 @@ export default function BodegaInventario() {
                     <option value="Entregado">Entregado</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  {editingItem.transportType === 'Marítimo' ? 'Nota de Marítimo / Observaciones' : 'Nota / Observaciones'}
+                </label>
+                <textarea
+                  value={editingItem.note || ''}
+                  onChange={e => setEditingItem({ ...editingItem, note: e.target.value })}
+                  placeholder="Agrega o edita una nota para este paquete..."
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-0 text-sm"
+                  rows={2}
+                />
               </div>
 
               <div className="pt-4 mt-4 border-t border-gray-100 flex gap-3">

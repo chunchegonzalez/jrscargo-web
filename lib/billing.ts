@@ -548,10 +548,15 @@ export function isCompraSitioWebInvoice(
   return list.some(item => isCompraSitioWebService(item?.service_name));
 }
 
+export type PackageTransportType = 'Aéreo' | 'Marítimo';
+
 export type InventoryHistoryEvent = {
   date?: string;
   action?: string;
   user?: string;
+  transportType?: PackageTransportType | string;
+  note?: string;
+  description?: string;
 };
 
 export type DeliveryAgentInfo = {
@@ -654,5 +659,74 @@ export function extractDeliveryAgentInfo(
     receivedAt,
   };
 }
+
+/**
+ * Extrae el tipo de transporte ('Aéreo' o 'Marítimo') y la nota/descripción
+ * registrada en un paquete de `local_inventory`.
+ * Por regla de negocio: si viene de Worldbox (o no fue marcado como Marítimo), es automáticamente 'Aéreo'.
+ */
+export function extractPackageTransportAndNote(
+  localItem:
+    | {
+        weight?: string | number | null;
+        history?: InventoryHistoryEvent[] | null;
+      }
+    | null
+    | undefined
+): {
+  transportType: PackageTransportType;
+  note: string;
+  description: string;
+} {
+  if (!localItem) {
+    return { transportType: 'Aéreo', note: '', description: '' };
+  }
+
+  const history = Array.isArray(localItem.history) ? localItem.history : [];
+  const weightStr = String(localItem.weight ?? '').toLowerCase();
+
+  let transportType: PackageTransportType = 'Aéreo';
+
+  // Revisar si algún evento del historial especifica transportType o menciona Marítimo
+  const explicitEvent = history.find(ev => {
+    const t = String(ev?.transportType || '').toLowerCase();
+    return t.includes('mar') || t.includes('aer') || t.includes('aér');
+  });
+
+  if (explicitEvent) {
+    const t = String(explicitEvent.transportType || '').toLowerCase();
+    transportType = t.includes('mar') ? 'Marítimo' : 'Aéreo';
+  } else {
+    const mentionedInAction = history.some(ev => {
+      const act = String(ev?.action || '').toLowerCase();
+      return act.includes('marítimo') || act.includes('maritimo');
+    });
+    const isCubicFeet =
+      weightStr.includes('ft³') ||
+      weightStr.includes('ft3') ||
+      weightStr.includes('pie');
+    if (mentionedInAction || isCubicFeet) {
+      transportType = 'Marítimo';
+    }
+  }
+
+  let note = '';
+  let description = '';
+  for (const ev of history) {
+    if (!note && typeof ev?.note === 'string' && ev.note.trim()) {
+      note = ev.note.trim();
+    }
+    if (!description && typeof ev?.description === 'string' && ev.description.trim()) {
+      description = ev.description.trim();
+    }
+  }
+
+  return {
+    transportType,
+    note,
+    description,
+  };
+}
+
 
 

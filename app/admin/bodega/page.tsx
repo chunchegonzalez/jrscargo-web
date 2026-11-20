@@ -2,9 +2,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { ScanBarcode, Package, User, CheckCircle2, ArrowRight, Layers } from 'lucide-react';
+import { ScanBarcode, Package, User, CheckCircle2, ArrowRight, Layers, Plane, Anchor, FileText } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
-import { formatCostaRicaDateTime, extractCompanyAndClient } from '@/lib/billing';
+import {
+  formatCostaRicaDateTime,
+  extractCompanyAndClient,
+  extractPackageTransportAndNote,
+  PackageTransportType,
+  InventoryHistoryEvent,
+} from '@/lib/billing';
 
 interface PackageData {
   tracking: string;
@@ -13,6 +19,8 @@ interface PackageData {
   weightUnit: string;
   provider: string;
   description: string;
+  note?: string;
+  transportType?: PackageTransportType;
   isManual?: boolean;
 }
 
@@ -23,7 +31,7 @@ export default function BodegaScanner() {
   const [packageData, setPackageData] = useState<PackageData | null>(null);
   
   const [localStatus, setLocalStatus] = useState<string | null>(null);
-  const [history, setHistory] = useState<{date: string, action: string, user: string}[]>([]);
+  const [history, setHistory] = useState<InventoryHistoryEvent[]>([]);
   const [registeredUsers, setRegisteredUsers] = useState<string[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   
@@ -107,11 +115,24 @@ export default function BodegaScanner() {
           pkg.clientName
         );
 
-        const newPackageData = {
+        const localMeta = data.localItem ? extractPackageTransportAndNote(data.localItem) : null;
+        const resolvedTransport: PackageTransportType =
+          localMeta?.transportType === 'Marítimo' ? 'Marítimo' : 'Aéreo';
+        const rawWeightStr = String(pkg.weight ?? '').trim();
+        const detectedUnit =
+          rawWeightStr.toLowerCase().includes('ft') || rawWeightStr.toLowerCase().includes('pie')
+            ? 'ft³'
+            : pkg.weightUnit || 'lbs';
+
+        const newPackageData: PackageData = {
           ...pkg,
           tracking: resolvedTracking,
           consignatario: cleanClient,
-          provider: pkg.company || extractedCompany
+          provider: pkg.company || extractedCompany,
+          weightUnit: detectedUnit,
+          transportType: resolvedTransport,
+          note: localMeta?.note || '',
+          isManual: false,
         };
 
         setPackageData(newPackageData);
@@ -123,6 +144,16 @@ export default function BodegaScanner() {
           if (dbData.success && dbData.data) {
             setLocalStatus(dbData.data.status);
             setHistory(dbData.data.history || []);
+            const dbMeta = extractPackageTransportAndNote(dbData.data);
+            setPackageData(prev =>
+              prev
+                ? {
+                    ...prev,
+                    transportType: dbMeta.transportType === 'Marítimo' ? 'Marítimo' : 'Aéreo',
+                    note: dbMeta.note || prev.note || '',
+                  }
+                : prev
+            );
           } else {
             setLocalStatus(null);
           }
@@ -136,18 +167,20 @@ export default function BodegaScanner() {
       const errorMsg = err instanceof Error ? err.message : 'Error al buscar paquete';
       if (errorMsg === 'Paquete no encontrado en Worldbox' || errorMsg === 'No se encontraron datos del paquete') {
         const wantsManual = await showConfirm(
-          'Paquete no encontrado', 
-          'El paquete no existe en Worldbox. ¿Deseas ingresarlo manualmente a tu base local?'
+          'Paquete no encontrado en Worldbox',
+          'El tracking no existe en Worldbox (Aéreo). ¿Deseas registrarlo manualmente como Marítimo en tu base local?'
         );
         if (wantsManual) {
           setPackageData({
-            tracking: scannedCode,
+            tracking: cleanCode,
             consignatario: '',
             weight: '',
-            weightUnit: 'lbs',
+            weightUnit: 'ft³',
             provider: 'JRS CARGO',
             description: '',
-            isManual: true
+            note: '',
+            transportType: 'Marítimo',
+            isManual: true,
           });
           setLocalStatus(null);
           setIsLoading(false);
@@ -164,12 +197,31 @@ export default function BodegaScanner() {
   };
 
   const handleRegisterLocal = async () => {
+    if (packageData?.isManual && !packageData.consignatario.trim()) {
+      await showAlert('Dato requerido', 'Por favor ingresa el nombre del consignatario para el registro manual.', 'warning');
+      return;
+    }
+
     const formattedDate = formatCostaRicaDateTime();
-    
-    const newEvent = {
+    const resolvedTransport: PackageTransportType =
+      packageData?.transportType === 'Marítimo' || packageData?.weightUnit === 'ft³'
+        ? 'Marítimo'
+        : 'Aéreo';
+    const cleanNote = (packageData?.note || '').trim();
+    const cleanDesc = (packageData?.description || '').trim();
+    const resolvedUnit = packageData?.weightUnit || (resolvedTransport === 'Marítimo' ? 'ft³' : 'lbs');
+    const resolvedWeight = `${packageData?.weight || '0'} ${resolvedUnit}`;
+
+    const newEvent: InventoryHistoryEvent = {
       date: formattedDate,
-      action: 'Paquete Recibido en Bodega Costa Rica',
-      user: selectedAgent || 'Operador Bodega'
+      action:
+        resolvedTransport === 'Marítimo'
+          ? 'Paquete Marítimo Recibido en Bodega Costa Rica'
+          : 'Paquete Recibido en Bodega Costa Rica',
+      user: selectedAgent || 'Operador Bodega',
+      transportType: resolvedTransport,
+      ...(cleanNote ? { note: cleanNote } : {}),
+      ...(cleanDesc ? { description: cleanDesc } : {}),
     };
 
     const newHistory = [newEvent, ...history];
@@ -183,12 +235,12 @@ export default function BodegaScanner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: packageData?.tracking,
-          client: packageData?.consignatario || 'Desconocido',
-          company: packageData?.provider || 'N/A',
-          weight: `${packageData?.weight || '0'} ${packageData?.weightUnit || 'lbs'}`,
+          client: (packageData?.consignatario || '').trim() || 'Desconocido',
+          company: packageData?.provider || 'JRS CARGO',
+          weight: resolvedWeight,
           status: 'En Bodega',
-          history: newHistory
-        })
+          history: newHistory,
+        }),
       });
       if (!res.ok) {
         await showAlert('Aviso', 'Error: No se pudo guardar el paquete en la base de datos.');
@@ -203,11 +255,18 @@ export default function BodegaScanner() {
 
   const handleDeliver = async () => {
     const formattedDate = formatCostaRicaDateTime();
-    
-    const newEvent = {
+    const resolvedTransport: PackageTransportType =
+      packageData?.transportType === 'Marítimo' || packageData?.weightUnit === 'ft³'
+        ? 'Marítimo'
+        : 'Aéreo';
+    const cleanNote = (packageData?.note || '').trim();
+
+    const newEvent: InventoryHistoryEvent = {
       date: formattedDate,
       action: 'Paquete Entregado al Cliente',
-      user: selectedAgent || 'Operador Bodega'
+      user: selectedAgent || 'Operador Bodega',
+      transportType: resolvedTransport,
+      ...(cleanNote ? { note: cleanNote } : {}),
     };
 
     const newHistory = [newEvent, ...history];
@@ -216,13 +275,13 @@ export default function BodegaScanner() {
     setHistory(newHistory);
 
     try {
-      await fetch(`/api/inventory/${packageData?.tracking}`, {
+      await fetch(`/api/inventory/${encodeURIComponent(packageData?.tracking || '')}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'Entregado',
-          history: newHistory
-        })
+          history: newHistory,
+        }),
       });
     } catch (e) {
       console.error('Error actualizando en BD', e);
@@ -231,11 +290,18 @@ export default function BodegaScanner() {
 
   const handleRevertDeliver = async () => {
     const formattedDate = formatCostaRicaDateTime();
-    
-    const newEvent = {
+    const resolvedTransport: PackageTransportType =
+      packageData?.transportType === 'Marítimo' || packageData?.weightUnit === 'ft³'
+        ? 'Marítimo'
+        : 'Aéreo';
+    const cleanNote = (packageData?.note || '').trim();
+
+    const newEvent: InventoryHistoryEvent = {
       date: formattedDate,
       action: 'Reversión: Paquete devuelto a Bodega',
-      user: selectedAgent || 'Operador Bodega'
+      user: selectedAgent || 'Operador Bodega',
+      transportType: resolvedTransport,
+      ...(cleanNote ? { note: cleanNote } : {}),
     };
 
     const newHistory = [newEvent, ...history];
@@ -244,13 +310,13 @@ export default function BodegaScanner() {
     setHistory(newHistory);
 
     try {
-      await fetch(`/api/inventory/${packageData?.tracking}`, {
+      await fetch(`/api/inventory/${encodeURIComponent(packageData?.tracking || '')}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'En Bodega',
-          history: newHistory
-        })
+          history: newHistory,
+        }),
       });
     } catch (e) {
       console.error('Error actualizando en BD', e);
@@ -374,40 +440,107 @@ export default function BodegaScanner() {
                   </h3>
                 </div>
               </div>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                  localStatus?.toLowerCase().includes('entregad')
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : localStatus
-                    ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20'
-                    : packageData.isManual
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-sky-50 text-sky-700 border-sky-200'
-                }`}
-              >
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    localStatus?.toLowerCase().includes('entregad')
-                      ? 'bg-emerald-500'
-                      : localStatus
-                      ? 'bg-brand-blue'
-                      : packageData.isManual
-                      ? 'bg-amber-500'
-                      : 'bg-sky-500'
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    packageData.transportType === 'Marítimo'
+                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      : 'bg-sky-50 text-sky-700 border-sky-200'
                   }`}
-                />
-                {localStatus?.toLowerCase().includes('entregad')
-                  ? 'Entregado'
-                  : localStatus
-                  ? 'En Bodega'
-                  : packageData.isManual
-                  ? 'Registro Manual'
-                  : 'Encontrado en Worldbox'}
-              </span>
+                >
+                  {packageData.transportType === 'Marítimo' ? (
+                    <>
+                      <Anchor size={12} />
+                      <span>Marítimo</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plane size={12} />
+                      <span>Aéreo</span>
+                    </>
+                  )}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    localStatus?.toLowerCase().includes('entregad')
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : localStatus
+                      ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20'
+                      : packageData.isManual
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-sky-50 text-sky-700 border-sky-200'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      localStatus?.toLowerCase().includes('entregad')
+                        ? 'bg-emerald-500'
+                        : localStatus
+                        ? 'bg-brand-blue'
+                        : packageData.isManual
+                        ? 'bg-amber-500'
+                        : 'bg-sky-500'
+                    }`}
+                  />
+                  {localStatus?.toLowerCase().includes('entregad')
+                    ? 'Entregado'
+                    : localStatus
+                    ? 'En Bodega'
+                    : packageData.isManual
+                    ? 'Registro Manual (Marítimo)'
+                    : 'Encontrado en Worldbox (Aéreo)'}
+                </span>
+              </div>
             </div>
 
             <div className="p-5 sm:p-6 grid md:grid-cols-12 gap-6">
               <div className="md:col-span-7 space-y-4">
+                {packageData.isManual && (
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                      Vía de Envío
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPackageData({
+                            ...packageData,
+                            transportType: 'Marítimo',
+                            weightUnit: 'ft³',
+                          })
+                        }
+                        className={`h-10 px-3 rounded-lg border text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          packageData.transportType === 'Marítimo'
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Anchor size={15} />
+                        <span>Marítimo (Pie Cúbico)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPackageData({
+                            ...packageData,
+                            transportType: 'Aéreo',
+                            weightUnit: packageData.weightUnit === 'ft³' ? 'lbs' : packageData.weightUnit || 'lbs',
+                          })
+                        }
+                        className={`h-10 px-3 rounded-lg border text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          packageData.transportType !== 'Marítimo'
+                            ? 'bg-sky-600 text-white border-sky-600 shadow-2xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Plane size={15} />
+                        <span>Aéreo (Peso)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
                     Consignatario
@@ -418,6 +551,7 @@ export default function BodegaScanner() {
                       type="text"
                       value={packageData.consignatario || ''}
                       onChange={(e) => setPackageData({ ...packageData, consignatario: e.target.value })}
+                      placeholder={packageData.isManual ? 'Escribe el nombre del cliente...' : ''}
                       className="w-full h-10 pl-9 pr-3.5 rounded-lg border border-slate-200/90 bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm font-semibold text-slate-800 transition-all"
                     />
                   </div>
@@ -426,22 +560,31 @@ export default function BodegaScanner() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
-                      Peso
+                      {packageData.weightUnit === 'ft³' ? 'Peso / Volumen (Pie Cúbico)' : 'Peso'}
                     </label>
                     {packageData.isManual ? (
                       <div className="flex h-10 bg-white rounded-lg border border-slate-200/90 focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/10 transition-all overflow-hidden">
                         <input
                           type="number"
+                          step="0.01"
                           value={packageData.weight || ''}
                           onChange={(e) => setPackageData({ ...packageData, weight: e.target.value })}
                           className="w-full bg-transparent px-3 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none"
-                          placeholder="Ej. 1.5"
+                          placeholder={packageData.weightUnit === 'ft³' ? 'Ej. 2.5 ft³' : 'Ej. 1.5'}
                         />
                         <select
-                          value={packageData.weightUnit || 'lbs'}
-                          onChange={(e) => setPackageData({ ...packageData, weightUnit: e.target.value })}
+                          value={packageData.weightUnit || (packageData.transportType === 'Marítimo' ? 'ft³' : 'lbs')}
+                          onChange={(e) => {
+                            const nextUnit = e.target.value;
+                            setPackageData({
+                              ...packageData,
+                              weightUnit: nextUnit,
+                              transportType: nextUnit === 'ft³' ? 'Marítimo' : packageData.transportType,
+                            });
+                          }}
                           className="bg-slate-50 border-l border-slate-200/90 px-2.5 text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none cursor-pointer"
                         >
+                          <option value="ft³">Pie cúbico (ft³)</option>
                           <option value="lbs">lbs</option>
                           <option value="kgs">kgs</option>
                         </select>
@@ -452,6 +595,9 @@ export default function BodegaScanner() {
                           const num = parseFloat(String(packageData.weight));
                           const unit = (packageData.weightUnit || 'lbs').toLowerCase();
                           if (isNaN(num)) return `${packageData.weight} ${packageData.weightUnit || 'lbs'}`;
+                          if (unit.includes('ft') || unit.includes('pie')) {
+                            return `${num} ft³ (Pie cúbico)`;
+                          }
                           if (unit.includes('kg')) {
                             const lbs = (num * 2.20462).toFixed(2);
                             return `${num} kg (${lbs} lbs)`;
@@ -481,23 +627,37 @@ export default function BodegaScanner() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
-                    Descripción
+                  <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 flex items-center gap-1.5">
+                    <FileText size={13} className="text-indigo-600" />
+                    <span>
+                      {packageData.transportType === 'Marítimo'
+                        ? 'Nota de Marítimo / Observaciones'
+                        : 'Nota / Observaciones'}
+                    </span>
                   </label>
-                  {packageData.isManual ? (
-                    <textarea
-                      value={packageData.description || ''}
-                      onChange={(e) => setPackageData({ ...packageData, description: e.target.value })}
-                      className="w-full p-3 bg-white rounded-lg border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 transition-all"
-                      rows={2}
-                      placeholder="Agrega una descripción o contenido del paquete..."
-                    />
-                  ) : (
-                    <div className="min-h-[42px] px-3.5 py-2.5 rounded-lg border border-slate-200/80 bg-slate-50/70 text-xs sm:text-sm text-slate-700">
-                      {packageData.description || 'Sin descripción registrada'}
-                    </div>
-                  )}
+                  <textarea
+                    value={packageData.note || ''}
+                    onChange={(e) => setPackageData({ ...packageData, note: e.target.value })}
+                    className="w-full p-3 bg-white rounded-lg border border-slate-200/90 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 transition-all"
+                    rows={2}
+                    placeholder={
+                      packageData.transportType === 'Marítimo'
+                        ? 'Agrega una nota para este paquete marítimo (ej. Tarima, caja grande, contenido, referencia)...'
+                        : 'Agrega una nota opcional para inventario...'
+                    }
+                  />
                 </div>
+
+                {!packageData.isManual && packageData.description && (
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                      Descripción (Worldbox)
+                    </label>
+                    <div className="min-h-[38px] px-3.5 py-2 rounded-lg border border-slate-200/80 bg-slate-50/70 text-xs sm:text-sm text-slate-700">
+                      {packageData.description}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Acciones */}
