@@ -708,8 +708,8 @@ export default function AdminDashboard() {
     };
   }, [invoices, currentExchangeRate, filterStart, filterEnd]);
 
-  // Utilidad Neta Real: Ingresos Efectivamente Cobrados (sin compras en sitio web y sin montos pendientes por cobrar) - Gastos
-  const utilidadNetaUSD = cobradoPeriodoUSD - totalGastosUSD;
+  // Utilidad Neta: Facturado Operativo del período (sin compras en sitio web, incluyendo pendientes) - Gastos del período
+  const utilidadNetaUSD = totalFacturadoUSD - totalGastosUSD;
 
   // 5. Reporte de Productos Marítimos del Período Consultado
   const maritimeStatsPeriodo = useMemo(() => {
@@ -1077,7 +1077,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Card 3: Utilidad Neta Real (Solo ingresos cobrados sin compras web ni pendientes - Gastos) */}
+        {/* Card 3: Utilidad Neta (Facturado operativo sin compras web - Gastos) */}
         <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
@@ -1100,16 +1100,16 @@ export default function AdminDashboard() {
               ${utilidadNetaUSD.toFixed(2)}
             </div>
             <p className="text-[11px] font-medium text-slate-500 mt-0.5 tabular-nums">
-              Cobrado: <strong className="text-emerald-700">${cobradoPeriodoUSD.toFixed(2)}</strong> · Gastos:{' '}
+              Facturado: <strong className="text-slate-800">${totalFacturadoUSD.toFixed(2)}</strong> · Gastos:{' '}
               <strong className="text-red-600">-${totalGastosUSD.toFixed(2)}</strong>
             </p>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span
               className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold text-[10px]"
-              title="Calculada solo con ingresos cobrados. Excluye compras en sitio web y montos pendientes por cobrar."
+              title="Facturado operativo del período (incluyendo pendientes) menos gastos. Excluye compras en sitio web."
             >
-              Sin web ni por cobrar
+              Sin compras web
             </span>
             <Link href="/admin/gastos" className="text-brand-blue font-semibold hover:underline">
               Ver gastos →
@@ -1185,7 +1185,7 @@ export default function AdminDashboard() {
 
       {/* ==================== 2.5 DESGLOSE SEPARADO DE RUBROS (SIN MEZCLAR EN UTILIDAD) ==================== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        {/* Rubro 1: Desglose de Utilidad Real (Ingresos Cobrados vs Pendientes del Período) */}
+        {/* Rubro 1: Desglose de Utilidad (Facturado Operativo - Gastos, sin compras web) */}
         <div className="bg-white rounded-xl p-4 border border-emerald-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -1193,7 +1193,7 @@ export default function AdminDashboard() {
                 Cálculo de Utilidad ({periodLabel})
               </span>
               <h3 className="text-sm font-bold text-slate-900 mt-1.5">
-                Ingresos Cobrados vs Por Cobrar
+                Facturado Operativo vs Gastos
               </h3>
             </div>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -1203,16 +1203,18 @@ export default function AdminDashboard() {
 
           <div className="mt-3 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-600">Ingresos cobrados (sí entran a utilidad):</span>
-              <strong className="font-bold text-emerald-700 tabular-nums">${cobradoPeriodoUSD.toFixed(2)}</strong>
+              <span className="text-slate-600">Facturado operativo (sin web):</span>
+              <strong className="font-bold text-slate-900 tabular-nums">${totalFacturadoUSD.toFixed(2)}</strong>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-600">Gastos registrados del período:</span>
               <strong className="font-bold text-red-600 tabular-nums">-${totalGastosUSD.toFixed(2)}</strong>
             </div>
             <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-              <span className="text-slate-500">Por cobrar del período (separado):</span>
-              <strong className="font-bold text-amber-600 tabular-nums">${pendientePeriodoOperativoUSD.toFixed(2)}</strong>
+              <span className="text-slate-500">Cobrado / Pendiente del período:</span>
+              <strong className="font-bold text-emerald-700 tabular-nums">
+                ${cobradoPeriodoUSD.toFixed(2)} / <span className="text-amber-600">${pendientePeriodoOperativoUSD.toFixed(2)}</span>
+              </strong>
             </div>
           </div>
         </div>
@@ -1447,7 +1449,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={15} className="text-emerald-600" />
                   <div>
-                    <span className="text-xs font-medium text-emerald-900 block">Cobrado (Base Utilidad)</span>
+                    <span className="text-xs font-medium text-emerald-900 block">Cobrado del Período</span>
                     <span className="text-[10px] text-emerald-600/80">Por cobrar período: ${pendientePeriodoOperativoUSD.toFixed(2)}</span>
                   </div>
                 </div>
