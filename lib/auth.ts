@@ -129,4 +129,15 @@ export async function getAuthUserFromRequest(request: Request): Promise<AuthUser
   return await verifySignedCookie(decodeURIComponent(match[1]));
 }
 
+// Usuario Master único con control total del sistema (creación, eliminación y cambio de contraseñas de todos)
+export function isMasterUser(username?: string | null): boolean {
+  if (!username) return false;
+  const normalized = username
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+  return normalized === 'jose gonzalez';
+}
+
 export { AUTH_COOKIE_NAME, SESSION_MAX_AGE };

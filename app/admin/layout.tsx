@@ -673,16 +673,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                   {/* Quick actions */}
                   <div className="space-y-0.5 py-0.5">
-                    {currentUser?.role === 'admin' && (
-                      <Link
-                        href="/admin/ajustes"
-                        onClick={() => setIsProfileDropdownOpen(false)}
-                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:text-brand-blue hover:bg-slate-50 rounded-lg transition-colors"
-                      >
-                        <Settings size={14} className="text-slate-400" />
-                        <span>Ajustes del Sistema</span>
-                      </Link>
-                    )}
+                    <Link
+                      href="/admin/ajustes"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:text-brand-blue hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                      <Settings size={14} className="text-slate-400" />
+                      <span>{currentUser?.role === 'admin' ? 'Ajustes del Sistema' : 'Mi Contraseña'}</span>
+                    </Link>
                     <Link
                       href="/admin/inventario"
                       onClick={() => setIsProfileDropdownOpen(false)}

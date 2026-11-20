@@ -20,7 +20,17 @@ interface LeadItem {
 
 export default function AjustesPage() {
   const { showAlert, showConfirm } = useModal();
-  const [users, setUsers] = useState<{id: string, username: string, role: string, password?: string, isHashed?: boolean}[]>([]);
+  const [users, setUsers] = useState<{
+    id: string;
+    username: string;
+    role: string;
+    password?: string;
+    isHashed?: boolean;
+    isMasterAccount?: boolean;
+    canManagePassword?: boolean;
+  }[]>([]);
+  const [currentUsername, setCurrentUsername] = useState<string>('');
+  const [isMaster, setIsMaster] = useState<boolean>(false);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadSearch, setLeadSearch] = useState('');
@@ -56,7 +66,11 @@ export default function AjustesPage() {
         fetch('/api/bot-leads').then(res => res.json())
       ]);
       
-      if (resUsers.success) setUsers(resUsers.data || []);
+      if (resUsers.success) {
+        setUsers(resUsers.data || []);
+        setCurrentUsername(String(resUsers.currentUser || ''));
+        setIsMaster(Boolean(resUsers.isMaster));
+      }
       if (resLeads.success) setLeads(resLeads.data || []);
     } catch (err) {
       console.error('Error loading data', err);
@@ -96,9 +110,12 @@ export default function AjustesPage() {
       const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
       if (res.ok) {
         loadData();
+      } else {
+        const errData = await res.json().catch(() => null);
+        await showAlert('Aviso', errData?.error || 'Error eliminando usuario', 'error');
       }
     } catch {
-      await showAlert('Aviso', 'Error eliminando usuario');
+      await showAlert('Aviso', 'Error eliminando usuario', 'error');
     }
   };
 
@@ -115,10 +132,11 @@ export default function AjustesPage() {
         setEditPasswordValue('');
         loadData();
       } else {
-        await showAlert('Aviso', 'Error actualizando contraseña');
+        const errData = await res.json().catch(() => null);
+        await showAlert('Aviso', errData?.error || 'Error actualizando contraseña', 'error');
       }
     } catch {
-      await showAlert('Aviso', 'Error de red');
+      await showAlert('Aviso', 'Error de red', 'error');
     }
   };
 
@@ -359,91 +377,113 @@ export default function AjustesPage() {
             </span>
           </div>
 
-          <div className="p-4 border-b border-slate-200/80 bg-slate-50/30">
-            {/* Formulario nuevo usuario */}
-            <form onSubmit={handleCreateUser} className="space-y-3">
-              <h3 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                <Plus size={13} className="text-brand-blue" /> Crear Nuevo Usuario
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Usuario</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="Ej. OperadorBodega"
-                    autoComplete="off"
-                    value={newUsername}
-                    onChange={e => setNewUsername(e.target.value)}
-                    className="w-full h-9 px-3 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Contraseña</label>
-                  <div className="relative">
+          {isMaster && (
+            <div className="p-4 border-b border-slate-200/80 bg-slate-50/30">
+              {/* Formulario nuevo usuario (solo Master) */}
+              <form onSubmit={handleCreateUser} className="space-y-3">
+                <h3 className="font-bold text-slate-700 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                  <Plus size={13} className="text-brand-blue" /> Crear Nuevo Usuario
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Usuario</label>
                     <input
                       required
-                      type={showNewPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      autoComplete="new-password"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      className="w-full h-9 pl-3 pr-9 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                      type="text"
+                      placeholder="Ej. OperadorBodega"
+                      autoComplete="off"
+                      value={newUsername}
+                      onChange={e => setNewUsername(e.target.value)}
+                      className="w-full h-9 px-3 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                     />
-                    <button 
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                      title={showNewPassword ? "Ocultar" : "Mostrar"}
-                    >
-                      {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Contraseña</label>
+                    <div className="relative">
+                      <input
+                        required
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        className="w-full h-9 pl-3 pr-9 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                        title={showNewPassword ? "Ocultar" : "Mostrar"}
+                      >
+                        {showNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Rol</label>
-                  <select
-                    value={newRole}
-                    onChange={e => setNewRole(e.target.value)}
-                    className="w-full h-9 px-2.5 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Rol</label>
+                    <select
+                      value={newRole}
+                      onChange={e => setNewRole(e.target.value)}
+                      className="w-full h-9 px-2.5 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                    >
+                      <option value="user">Usuario Regular</option>
+                      <option value="admin">Administrador Principal</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="h-9 px-4 bg-brand-blue hover:bg-[#0e354b] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 text-xs shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
                   >
-                    <option value="user">Usuario Regular</option>
-                    <option value="admin">Administrador Principal</option>
-                  </select>
+                    <Plus size={14} />
+                    <span>{loading ? 'Creando...' : 'Crear Usuario'}</span>
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="h-9 px-4 bg-brand-blue hover:bg-[#0e354b] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 text-xs shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Plus size={14} />
-                  <span>{loading ? 'Creando...' : 'Crear Usuario'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
 
           {/* Lista de usuarios */}
           <div className="divide-y divide-slate-100 text-[13px]">
-            <div className="bg-slate-50/95 border-b border-slate-200/90 py-2 px-3.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
-              Usuarios Registrados
+            <div className="bg-slate-50/95 border-b border-slate-200/90 py-2 px-3.5 text-[11px] uppercase tracking-wider text-slate-500 font-semibold flex items-center justify-between">
+              <span>Usuarios Registrados</span>
+              {!isMaster && (
+                <span className="text-[10px] font-medium normal-case text-slate-400">
+                  Solo puedes ver y cambiar tu propia clave
+                </span>
+              )}
             </div>
-            {users.map(u => (
+            {users.map(u => {
+              const isSelf = u.username.trim().toLowerCase() === currentUsername.trim().toLowerCase();
+              const canManagePwd = isMaster || isSelf || Boolean(u.canManagePassword);
+              const isMasterRow = Boolean(u.isMasterAccount);
+
+              return (
               <div key={u.id} className="py-2.5 px-3.5 hover:bg-slate-50/90 transition-colors flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-slate-900">{u.username}</span>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                      u.role === 'admin'
-                        ? 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
-                        : 'bg-slate-100 text-slate-600 border-slate-200/80'
-                    }`}>
-                      {u.role === 'admin' ? 'Admin' : 'Regular'}
-                    </span>
+                    {isMasterRow ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#0B2737] text-[#F59E0B] border border-[#0B2737]">
+                        <Shield size={11} />
+                        Master
+                      </span>
+                    ) : (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                        u.role === 'admin'
+                          ? 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
+                          : 'bg-slate-100 text-slate-600 border-slate-200/80'
+                      }`}>
+                        {u.role === 'admin' ? 'Admin' : 'Regular'}
+                      </span>
+                    )}
+                    {isSelf && (
+                      <span className="text-[10px] font-semibold text-slate-400">(Tu cuenta)</span>
+                    )}
                   </div>
-                  {u.username !== 'AdminJRS' && (
+                  {isMaster && !isMasterRow && u.username !== 'AdminJRS' && (
                     <button
                       onClick={() => handleDeleteUser(u.id)}
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
@@ -455,6 +495,7 @@ export default function AjustesPage() {
                 </div>
                 
                 {/* Password Section */}
+                {canManagePwd ? (
                 <div className="bg-slate-50/80 border border-slate-200/70 px-3 py-2 rounded-lg flex items-center justify-between gap-2">
                   <div className="flex-1 flex items-center gap-2 min-w-0">
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Clave:</span>
@@ -547,8 +588,15 @@ export default function AjustesPage() {
                     )}
                   </div>
                 </div>
+                ) : (
+                  <div className="bg-slate-50/50 border border-slate-200/60 px-3 py-2 rounded-lg flex items-center justify-between text-xs text-slate-400">
+                    <span className="font-mono select-none">CLAVE: ••••••••</span>
+                    <span className="text-[11px] text-slate-400">Protegida · Solo Master</span>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
