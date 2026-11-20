@@ -2191,7 +2191,7 @@ export default function BodegaInventario() {
                 e.preventDefault();
                 setIsSaving(true);
                 try {
-                  if (currentUser?.role === 'admin') {
+                  if (currentUser?.role === 'admin' || currentUser?.role === 'admin_pro') {
                     // Soft-delete: mark as "Eliminado" using PATCH (more reliable with Supabase RLS)
                     const res = await fetch(`/api/inventory/${deletingItem.id}`, {
                       method: 'PATCH',
@@ -2238,11 +2238,11 @@ export default function BodegaInventario() {
               className="p-6 space-y-4"
             >
               <p className="text-sm text-gray-600">
-                {currentUser?.role === 'admin'
+                {(currentUser?.role === 'admin' || currentUser?.role === 'admin_pro')
                   ? `¿Estás seguro de que deseas eliminar permanentemente el paquete con tracking `
                   : `¿Estás seguro de solicitar la eliminación del paquete con tracking `}
                 <strong className="text-gray-900">{deletingItem.id}</strong>?
-                {currentUser?.role === 'admin'
+                {(currentUser?.role === 'admin' || currentUser?.role === 'admin_pro')
                   ? ' Esta acción no se puede deshacer.'
                   : ' El Administrador Principal deberá aprobar esta solicitud.'}
               </p>
@@ -2275,10 +2275,10 @@ export default function BodegaInventario() {
                   className="flex-1 py-3 font-bold bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors"
                 >
                   {isSaving
-                    ? currentUser?.role === 'admin'
+                    ? (currentUser?.role === 'admin' || currentUser?.role === 'admin_pro')
                       ? 'Eliminando...'
                       : 'Enviando...'
-                    : currentUser?.role === 'admin'
+                    : (currentUser?.role === 'admin' || currentUser?.role === 'admin_pro')
                     ? 'Eliminar Paquete'
                     : 'Solicitar Eliminación'}
                 </button>

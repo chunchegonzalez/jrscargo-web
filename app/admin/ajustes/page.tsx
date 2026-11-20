@@ -31,6 +31,7 @@ export default function AjustesPage() {
   }[]>([]);
   const [currentUsername, setCurrentUsername] = useState<string>('');
   const [isMaster, setIsMaster] = useState<boolean>(false);
+  const [isFullAccess, setIsFullAccess] = useState<boolean>(false);
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [leadSearch, setLeadSearch] = useState('');
@@ -70,6 +71,7 @@ export default function AjustesPage() {
         setUsers(resUsers.data || []);
         setCurrentUsername(String(resUsers.currentUser || ''));
         setIsMaster(Boolean(resUsers.isMaster));
+        setIsFullAccess(Boolean(resUsers.isFullAccess || resUsers.isMaster));
       }
       if (resLeads.success) setLeads(resLeads.data || []);
     } catch (err) {
@@ -140,6 +142,24 @@ export default function AjustesPage() {
     }
   };
 
+  const handleUpdateRole = async (id: string, role: string) => {
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        const errData = await res.json().catch(() => null);
+        await showAlert('Aviso', errData?.error || 'Error actualizando rol', 'error');
+      }
+    } catch {
+      await showAlert('Aviso', 'Error de red', 'error');
+    }
+  };
+
   const handleDeleteLead = async (id: string) => {
     if (!(await showConfirm('Confirmación', '¿Deseas eliminar este registro de contacto del bot?'))) return;
     try {
@@ -192,7 +212,8 @@ export default function AjustesPage() {
         </button>
       </div>
 
-      {/* KPI Summary Cards */}
+      {/* KPI Summary Cards (solo Master / Administrador Pro) */}
+      {isFullAccess && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 flex items-center justify-between">
           <div>
@@ -209,9 +230,9 @@ export default function AjustesPage() {
           <div>
             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Administradores</p>
             <p className="text-2xl font-black text-brand-blue tabular-nums mt-1">
-              {users.filter(u => u.role === 'admin').length}
+              {users.filter(u => u.role === 'admin' || u.role === 'admin_pro' || u.isMasterAccount).length}
             </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Permisos completos</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Admin y Admin Pro</p>
           </div>
           <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <Shield size={18} />
@@ -229,10 +250,12 @@ export default function AjustesPage() {
           </div>
         </div>
       </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <div className={`grid grid-cols-1 ${isFullAccess ? 'lg:grid-cols-2' : 'max-w-2xl'} gap-4 items-start`}>
         
-        {/* PANEL: Registros y Contactos del Bot (Leads de Clari) */}
+        {/* PANEL: Registros y Contactos del Bot (Leads de Clari - solo Master / Admin Pro) */}
+        {isFullAccess && (
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
           <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex flex-col gap-2.5">
             <div className="flex items-center justify-between">
@@ -359,6 +382,7 @@ export default function AjustesPage() {
             })}
           </div>
         </div>
+        )}
 
         {/* Panel de Gestión de Usuarios */}
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
@@ -428,8 +452,9 @@ export default function AjustesPage() {
                       onChange={e => setNewRole(e.target.value)}
                       className="w-full h-9 px-2.5 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                     >
-                      <option value="user">Usuario Regular</option>
-                      <option value="admin">Administrador Principal</option>
+                      <option value="user">Usuario Regular (Operaciones y Tracking)</option>
+                      <option value="admin">Administrador (Operaciones, Tracking y Contabilidad)</option>
+                      <option value="admin_pro">Administrador Pro (Acceso Total)</option>
                     </select>
                   </div>
                   <button
@@ -470,13 +495,26 @@ export default function AjustesPage() {
                         <Shield size={11} />
                         Master
                       </span>
+                    ) : isMaster ? (
+                      <select
+                        value={u.role === 'admin_pro' ? 'admin_pro' : u.role === 'admin' ? 'admin' : 'user'}
+                        onChange={(e) => handleUpdateRole(u.id, e.target.value)}
+                        aria-label={`Rol de ${u.username}`}
+                        className="h-6 px-2 rounded-full text-[11px] font-semibold bg-slate-100 text-[#0B2737] border border-slate-200/90 focus:outline-none focus:border-brand-blue cursor-pointer"
+                      >
+                        <option value="user">Regular</option>
+                        <option value="admin">Admin</option>
+                        <option value="admin_pro">Admin Pro</option>
+                      </select>
                     ) : (
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                        u.role === 'admin'
-                          ? 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
-                          : 'bg-slate-100 text-slate-600 border-slate-200/80'
+                        u.role === 'admin_pro'
+                          ? 'bg-[#0B2737] text-white border-[#0B2737]'
+                          : u.role === 'admin'
+                            ? 'bg-brand-blue/[0.08] text-brand-blue border-brand-blue/15'
+                            : 'bg-slate-100 text-slate-600 border-slate-200/80'
                       }`}>
-                        {u.role === 'admin' ? 'Admin' : 'Regular'}
+                        {u.role === 'admin_pro' ? 'Admin Pro' : u.role === 'admin' ? 'Admin' : 'Regular'}
                       </span>
                     )}
                     {isSelf && (

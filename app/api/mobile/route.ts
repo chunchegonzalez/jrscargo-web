@@ -177,7 +177,7 @@ export async function POST(request: Request) {
 
     // 1. CREAR ESTANTE (Solo Administrador)
     if (action === 'CREATE_SHELF') {
-      if (authUser.role !== 'admin') {
+      if (authUser.role !== 'admin' && authUser.role !== 'admin_pro') {
         return NextResponse.json(
           { success: false, error: 'Solo un Administrador puede crear nuevos estantes.' },
           { status: 403 }
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
 
     // 2. ACTIVAR / DESACTIVAR ESTANTE (Solo Administrador)
     if (action === 'TOGGLE_SHELF') {
-      if (authUser.role !== 'admin') {
+      if (authUser.role !== 'admin' && authUser.role !== 'admin_pro') {
         return NextResponse.json(
           { success: false, error: 'Solo un Administrador puede activar o desactivar estantes.' },
           { status: 403 }

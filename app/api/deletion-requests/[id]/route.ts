@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { updateDeletionRequest, deleteInventoryItem } from '@/lib/supabase';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { getAuthUserFromRequest, isAdminOrPro } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const authUser = await getAuthUserFromRequest(request);
-    if (!authUser || authUser.role !== 'admin') {
+    if (!authUser || !isAdminOrPro(authUser)) {
       return NextResponse.json({ success: false, error: 'Requiere permisos de administrador' }, { status: 403 });
     }
 

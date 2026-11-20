@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUsers, createUser } from '@/lib/supabase';
-import { getAuthUserFromRequest, isMasterUser } from '@/lib/auth';
+import { getAuthUserFromRequest, isFullAccessUser, isMasterUser } from '@/lib/auth';
 import { isHashed } from '@/lib/password';
 
 export const dynamic = 'force-dynamic';
@@ -37,11 +37,12 @@ export async function GET(request: Request) {
     }
 
     const authNorm = authUser.username.trim().toLowerCase();
+    const fullAccess = isFullAccessUser(authUser);
 
     // Master ve todos los usuarios y todas las contraseñas.
-    // Otros admins ven la lista pero solo su propia contraseña.
-    // Usuarios regulares solo ven su propia cuenta y su propia contraseña.
-    const visibleRows = master || authUser.role === 'admin'
+    // Admin Pro ve la lista de usuarios pero solo su propia contraseña.
+    // Administrador estándar y usuarios regulares solo ven su propia cuenta y su propia contraseña.
+    const visibleRows = fullAccess
       ? (data || [])
       : (data || []).filter((u: Record<string, unknown>) => String(u.username || '').trim().toLowerCase() === authNorm);
 
@@ -64,6 +65,7 @@ export async function GET(request: Request) {
         success: true,
         currentUser: authUser.username,
         isMaster: master,
+        isFullAccess: fullAccess,
         data: formatted,
       },
       { status: 200 }

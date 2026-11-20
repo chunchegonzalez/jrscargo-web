@@ -191,9 +191,25 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
 
   const q = query.toLowerCase().trim();
 
-  const filteredModules = MODULES.filter(m => 
-    (!m.adminOnly || role === 'admin') && m.label.toLowerCase().includes(q)
-  );
+  const filteredModules = MODULES.filter(m => {
+    if (!m.label.toLowerCase().includes(q)) return false;
+    if (role === 'admin_pro') return true;
+    if (role === 'admin') {
+      return (
+        m.url.startsWith('/admin/bodega') ||
+        m.url.startsWith('/admin/inventario') ||
+        m.url.startsWith('/admin/tracking') ||
+        m.url.startsWith('/admin/facturacion') ||
+        m.url.startsWith('/admin/compra-en-sitio-web') ||
+        m.url.startsWith('/admin/cuentas-por-cobrar')
+      );
+    }
+    return (
+      m.url.startsWith('/admin/bodega') ||
+      m.url.startsWith('/admin/inventario') ||
+      m.url.startsWith('/admin/tracking')
+    );
+  });
 
   const filteredClients = clients.filter(c => {
     const extra = parseClientAddress(c.address);

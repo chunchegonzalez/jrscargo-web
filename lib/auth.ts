@@ -140,4 +140,60 @@ export function isMasterUser(username?: string | null): boolean {
   return normalized === 'jose gonzalez';
 }
 
+// Master (Jose Gonzalez) o Administrador Pro: acceso total a toda la plataforma
+export function isFullAccessUser(user?: { username?: string | null; role?: string | null } | null): boolean {
+  if (!user) return false;
+  return isMasterUser(user.username) || user.role === 'admin_pro';
+}
+
+// Administrador estándar, Administrador Pro o Master
+export function isAdminOrPro(user?: { username?: string | null; role?: string | null } | null): boolean {
+  if (!user) return false;
+  return isFullAccessUser(user) || user.role === 'admin';
+}
+
+export function getRoleDisplayName(user?: { username?: string | null; role?: string | null } | null): string {
+  if (!user) return 'Usuario';
+  if (isMasterUser(user.username)) return 'Master';
+  if (user.role === 'admin_pro') return 'Administrador Pro';
+  if (user.role === 'admin') return 'Administrador';
+  return 'Usuario Regular';
+}
+
+// Control de rutas permitidas por rol dentro de /admin
+export function canAccessAdminPath(
+  pathname: string,
+  user?: { username?: string | null; role?: string | null } | null
+): boolean {
+  if (!user || !pathname) return true;
+  if (pathname === '/admin/login') return true;
+  if (isFullAccessUser(user)) return true;
+
+  // Todos pueden entrar a /admin/ajustes para ver y cambiar únicamente su propia contraseña
+  if (pathname.startsWith('/admin/ajustes')) return true;
+
+  // Operaciones y Tracking: permitidos para todos (Regular, Administrador, Admin Pro, Master)
+  if (
+    pathname.startsWith('/admin/bodega') ||
+    pathname.startsWith('/admin/inventario') ||
+    pathname.startsWith('/admin/entregas') ||
+    pathname.startsWith('/admin/tracking')
+  ) {
+    return true;
+  }
+
+  // Administrador (estándar): adicionalmente ve solo Compra en sitio web, Cuentas por cobrar y Facturas a Clientes
+  if (user.role === 'admin') {
+    if (
+      pathname.startsWith('/admin/compra-en-sitio-web') ||
+      pathname.startsWith('/admin/cuentas-por-cobrar') ||
+      pathname.startsWith('/admin/facturacion')
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export { AUTH_COOKIE_NAME, SESSION_MAX_AGE };
