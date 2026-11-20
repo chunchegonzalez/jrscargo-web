@@ -503,11 +503,15 @@ function TrackingPageContent() {
         },
         {
           key: 'reparto',
-          label: 'En reparto',
+          label: localItem
+            ? isDelivered
+              ? 'Disponible en bodega'
+              : 'Disponible para entrega en bodega'
+            : 'En reparto',
           sublabel: crDateStr || (activeStepIndex >= 2 ? 'Bodega CR' : 'Pendiente'),
           completed: activeStepIndex >= 2,
           current: activeStepIndex === 2,
-          icon: Truck
+          icon: localItem ? Warehouse : Truck
         },
         {
           key: 'entregado',
