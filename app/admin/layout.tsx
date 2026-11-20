@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, Mail, Bot, Bell, FileSpreadsheet } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, ShieldCheck, Package, Users, Bell, FileSpreadsheet, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
@@ -77,7 +77,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   const [openSections, setOpenSections] = useState({
     operaciones: false,
+    tracking: false,
     contabilidad: false,
+    reportes: false,
     clientes: false,
     ajustes: false,
     perfil: false
@@ -92,7 +94,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (isLoginPage) {
       setOpenSections({
         operaciones: false,
+        tracking: false,
         contabilidad: false,
+        reportes: false,
         clientes: false,
         ajustes: false,
         perfil: false
@@ -306,12 +310,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className={`overflow-hidden transition-all duration-200 ${openSections.operaciones ? 'max-h-72 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
             <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
               {[
-                { href: '/admin/bodega', label: 'Escanear Individual', exact: true },
-                { href: '/admin/bodega/masivo', label: 'Acción Masiva' },
+                { href: '/admin/bodega', label: 'Escanear individual', exact: true },
+                { href: '/admin/bodega/masivo', label: 'Acción masiva' },
                 { href: '/admin/inventario', label: 'Inventario CR' },
-                { href: '/admin/tracking', label: 'Tracking de Paquetes' },
               ].map(link => {
                 const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href);
+                return (
+                  <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${
+                    isActive
+                      ? 'text-brand-yellow font-semibold bg-brand-yellow/[0.12]'
+                      : 'text-slate-400/90 hover:text-slate-200 hover:bg-white/[0.04] font-normal'
+                  }`}>
+                    <span>{link.label}</span>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shrink-0" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Separador: Tracking (sección independiente) */}
+          <div className="pt-4 pb-1 px-3">
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">Tracking</p>
+          </div>
+
+          <button 
+            onClick={() => toggleSection('tracking')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${
+              openSections.tracking || pathname.startsWith('/admin/tracking')
+                ? 'text-slate-200 bg-white/[0.03]'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <MapPin size={16} className={openSections.tracking || pathname.startsWith('/admin/tracking') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
+              <span>Tracking</span>
+            </div>
+            {openSections.tracking ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-200 ${openSections.tracking ? 'max-h-32 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+            <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
+              {[
+                { href: '/admin/tracking', label: 'Tracking de paquetes' },
+              ].map(link => {
+                const isActive = pathname.startsWith(link.href);
                 return (
                   <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${
                     isActive
@@ -349,7 +392,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {[
                 { href: '/admin/facturacion', label: 'Facturas a Clientes', exact: true, adminOnly: false },
                 { href: '/admin/compra-en-sitio-web', label: 'Compra en sitio web', exact: false, adminOnly: false },
-                { href: '/admin/reporte-maritimo', label: 'Reporte Marítimo', exact: false, adminOnly: false },
                 { href: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar', exact: false, adminOnly: false },
                 { href: '/admin/gastos', label: 'Gastos y Compras', exact: false, adminOnly: true },
                 { href: '/admin/contabilidad/pagos', label: 'Historial de Pagos', exact: false, adminOnly: false },
@@ -369,14 +411,90 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
 
-          {/* Separador: Gestión */}
+          {/* Separador: Reportes */}
           <div className="pt-4 pb-1 px-3 flex items-center justify-between">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">Gestión</p>
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">Reportes</p>
             {botUnreadCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold">
                 {botUnreadCount} nueva{botUnreadCount > 1 ? 's' : ''}
               </span>
             )}
+          </div>
+
+          <button 
+            onClick={() => toggleSection('reportes')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${
+              openSections.reportes ||
+              pathname.startsWith('/admin/reportes-cobros') ||
+              pathname.startsWith('/admin/reporte-maritimo') ||
+              pathname.startsWith('/admin/monitor') ||
+              pathname.startsWith('/admin/chat-bot') ||
+              pathname.startsWith('/admin/correos')
+                ? 'text-slate-200 bg-white/[0.03]'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <FileSpreadsheet
+                size={16}
+                className={
+                  openSections.reportes ||
+                  pathname.startsWith('/admin/reportes-cobros') ||
+                  pathname.startsWith('/admin/reporte-maritimo') ||
+                  pathname.startsWith('/admin/monitor') ||
+                  pathname.startsWith('/admin/chat-bot') ||
+                  pathname.startsWith('/admin/correos')
+                    ? 'text-brand-yellow shrink-0'
+                    : 'text-slate-400 shrink-0'
+                }
+              />
+              <span>Reportes</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {botUnreadCount > 0 && !openSections.reportes && (
+                <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0">
+                  {botUnreadCount}
+                </span>
+              )}
+              {openSections.reportes ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
+            </div>
+          </button>
+
+          <div className={`overflow-hidden transition-all duration-200 ${openSections.reportes ? 'max-h-72 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+            <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
+              {[
+                { href: '/admin/reportes-cobros', label: 'Reporte diario de cobros', adminOnly: false, isBot: false },
+                { href: '/admin/reporte-maritimo', label: 'Reporte marítimo', adminOnly: false, isBot: false },
+                { href: '/admin/monitor', label: 'Monitoreo web', adminOnly: true, isBot: false },
+                { href: '/admin/chat-bot', label: 'Chat Bot (Clari)', adminOnly: false, isBot: true },
+                { href: '/admin/correos', label: 'Actividad de correos', adminOnly: false, isBot: false },
+              ].filter(link => !link.adminOnly || currentUser?.role === 'admin').map(link => {
+                const isActive = pathname.startsWith(link.href);
+                return (
+                  <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${
+                    isActive
+                      ? 'text-brand-yellow font-semibold bg-brand-yellow/[0.12]'
+                      : link.isBot && botUnreadCount > 0
+                        ? 'text-white bg-red-500/15 border border-red-500/30 font-semibold'
+                        : 'text-slate-400/90 hover:text-slate-200 hover:bg-white/[0.04] font-normal'
+                  }`}>
+                    <span className="truncate">{link.label}</span>
+                    {link.isBot && botUnreadCount > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0">
+                        {botUnreadCount}
+                      </span>
+                    ) : (
+                      isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shrink-0" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Separador: Gestión */}
+          <div className="pt-4 pb-1 px-3 flex items-center justify-between">
+            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">Gestión</p>
           </div>
 
           <Link href="/admin/clientes" className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
@@ -386,42 +504,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           }`}>
             <Building2 size={16} className={pathname.startsWith('/admin/clientes') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
             <span>Clientes</span>
-          </Link>
-
-          <Link href="/admin/chat-bot" className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-[13px] transition-all ${
-            pathname.startsWith('/admin/chat-bot')
-              ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-brand-yellow'
-              : botUnreadCount > 0
-                ? 'bg-red-500/15 text-white border border-red-500/30 font-semibold'
-                : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] font-medium'
-          }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Bot size={16} className={pathname.startsWith('/admin/chat-bot') ? 'text-brand-yellow shrink-0' : botUnreadCount > 0 ? 'text-red-400 shrink-0' : 'text-slate-400 shrink-0'} />
-              <span className="truncate">Chat Bot (Clari)</span>
-            </div>
-            {botUnreadCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold shrink-0">
-                {botUnreadCount}
-              </span>
-            )}
-          </Link>
-
-          <Link href="/admin/correos" className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
-            pathname.startsWith('/admin/correos')
-              ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-brand-yellow'
-              : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] font-medium'
-          }`}>
-            <Mail size={16} className={pathname.startsWith('/admin/correos') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
-            <span>Actividad de Correos</span>
-          </Link>
-
-          <Link href="/admin/reportes-cobros" className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
-            pathname.startsWith('/admin/reportes-cobros')
-              ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-brand-yellow'
-              : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] font-medium'
-          }`}>
-            <FileSpreadsheet size={16} className={pathname.startsWith('/admin/reportes-cobros') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
-            <span>Reporte Diario Cobros</span>
           </Link>
 
           <a 
@@ -442,15 +524,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* ADMIN-ONLY sections */}
           {currentUser?.role === 'admin' && (
             <>
-              <Link href="/admin/monitor" className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
-                pathname.startsWith('/admin/monitor')
-                  ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-brand-yellow'
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] font-medium'
-              }`}>
-                <Activity size={16} className={pathname.startsWith('/admin/monitor') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
-                <span>Monitoreo Web</span>
-              </Link>
-
               <button 
                 onClick={() => toggleSection('ajustes')}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${
