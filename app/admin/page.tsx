@@ -27,10 +27,20 @@ import {
   Calendar,
   ArrowRight,
   Scale,
-  QrCode
+  QrCode,
+  ShoppingBag,
+  Anchor,
+  Box
 } from 'lucide-react';
 import Link from 'next/link';
-import { parseLocalDate, getLocalTodayDate } from '@/lib/billing';
+import {
+  parseLocalDate,
+  getLocalTodayDate,
+  isCompraSitioWebInvoice,
+  isMaritimoService,
+  parseCubicFeetValue,
+  extractPackageTransportAndNote,
+} from '@/lib/billing';
 import { useModal } from '@/app/components/ModalProvider';
 
 interface UserData {
@@ -486,19 +496,27 @@ export default function AdminDashboard() {
     return false;
   }, [worldboxTrackingSet]);
 
-  // 1. Invoices in selected period
+  // 1. Invoices in selected period (separadas por rubro: Operativas vs Compra en Sitio Web)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(
       inv => inv.status !== 'Anulada' && isDateInRange(parseLocalDate(inv.issue_date))
     );
   }, [invoices, filterStart, filterEnd]);
 
+  const filteredOperationalInvoices = useMemo(() => {
+    return filteredInvoices.filter(inv => !isCompraSitioWebInvoice(inv));
+  }, [filteredInvoices]);
+
+  const filteredWebInvoices = useMemo(() => {
+    return filteredInvoices.filter(inv => isCompraSitioWebInvoice(inv));
+  }, [filteredInvoices]);
+
   const totalFacturadoUSD = useMemo(() => {
-    return filteredInvoices.reduce((s, inv) => {
+    return filteredOperationalInvoices.reduce((s, inv) => {
       const val = Number(inv.total) || 0;
       return s + (inv.currency === 'CRC' ? val / (inv.exchange_rate || currentExchangeRate) : val);
     }, 0);
-  }, [filteredInvoices, currentExchangeRate]);
+  }, [filteredOperationalInvoices, currentExchangeRate]);
 
   // 2. Packages Delivered & Received in selected period
   const paquetesEntregadosPeriodo = useMemo(() => {
@@ -601,7 +619,7 @@ export default function AdminDashboard() {
     });
   }, [inventory, isWebsitePurchase, hasWorldboxMatch]);
 
-  // 3. Expenses & Net Profit in selected period
+  // 3. Expenses in selected period
   const filteredExpenses = useMemo(() => {
     return expenses.filter(exp => isDateInRange(parseLocalDate(exp.date)));
   }, [expenses, filterStart, filterEnd]);
@@ -613,13 +631,28 @@ export default function AdminDashboard() {
     }, 0);
   }, [filteredExpenses, currentExchangeRate]);
 
-  const utilidadNetaUSD = totalFacturadoUSD - totalGastosUSD;
-
-  // 4. Global Accounts Receivable (Pending to collect)
-  const { totalReceivablesUSD, pendientesCount, cobradoPeriodoUSD } = useMemo(() => {
+  // 4. Rubros separados: Cuentas por Cobrar (sin web), Compras en Sitio Web y Cobros efectivos del período
+  const {
+    totalReceivablesUSD,
+    pendientesCount,
+    cobradoPeriodoUSD,
+    pendientePeriodoOperativoUSD,
+    webBilledPeriodoUSD,
+    webPaidPeriodoUSD,
+    webPendingPeriodoUSD,
+    webPendingGlobalUSD,
+    webPendingGlobalCount,
+  } = useMemo(() => {
     let recSum = 0;
     let pendCount = 0;
     let cobradoPeriodo = 0;
+    let pendientePeriodoOp = 0;
+
+    let webBilledPer = 0;
+    let webPaidPer = 0;
+    let webPendingPer = 0;
+    let webPendingAll = 0;
+    let webPendingAllCnt = 0;
 
     invoices.forEach(inv => {
       if (inv.status === 'Anulada') return;
@@ -631,25 +664,128 @@ export default function AdminDashboard() {
       const invTotal = Number(inv.total) || 0;
       const rate = inv.exchange_rate || currentExchangeRate;
       const totalUSD = inv.currency === 'CRC' ? invTotal / rate : invTotal;
-      const paidUSD = inv.currency === 'CRC' ? invPaid / rate : invPaid;
-      const pendingUSD = Math.max(0, totalUSD - paidUSD);
+      const paidUSD = inv.status === 'Pagada' ? totalUSD : (inv.currency === 'CRC' ? invPaid / rate : invPaid);
+      const pendingUSD = inv.status === 'Pagada' ? 0 : Math.max(0, totalUSD - paidUSD);
 
-      if (inv.status !== 'Pagada' && pendingUSD > 0.01) {
+      const isWeb = isCompraSitioWebInvoice(inv);
+      const inRange = isDateInRange(parseLocalDate(inv.issue_date));
+
+      if (isWeb) {
+        if (pendingUSD > 0.01) {
+          webPendingAll += pendingUSD;
+          webPendingAllCnt++;
+        }
+        if (inRange) {
+          webBilledPer += totalUSD;
+          webPaidPer += paidUSD;
+          webPendingPer += pendingUSD;
+        }
+        return;
+      }
+
+      // Facturas operativas (sin compras en sitio web)
+      if (pendingUSD > 0.01) {
         recSum += pendingUSD;
         pendCount++;
       }
 
-      if (isDateInRange(parseLocalDate(inv.issue_date))) {
-        cobradoPeriodo += inv.status === 'Pagada' ? totalUSD : paidUSD;
+      if (inRange) {
+        cobradoPeriodo += paidUSD;
+        pendientePeriodoOp += pendingUSD;
       }
     });
 
     return {
       totalReceivablesUSD: recSum,
       pendientesCount: pendCount,
-      cobradoPeriodoUSD: cobradoPeriodo
+      cobradoPeriodoUSD: cobradoPeriodo,
+      pendientePeriodoOperativoUSD: pendientePeriodoOp,
+      webBilledPeriodoUSD: webBilledPer,
+      webPaidPeriodoUSD: webPaidPer,
+      webPendingPeriodoUSD: webPendingPer,
+      webPendingGlobalUSD: webPendingAll,
+      webPendingGlobalCount: webPendingAllCnt,
     };
   }, [invoices, currentExchangeRate, filterStart, filterEnd]);
+
+  // Utilidad Neta Real: Ingresos Efectivamente Cobrados (sin compras en sitio web y sin montos pendientes por cobrar) - Gastos
+  const utilidadNetaUSD = cobradoPeriodoUSD - totalGastosUSD;
+
+  // 5. Reporte de Productos Marítimos del Período Consultado
+  const maritimeStatsPeriodo = useMemo(() => {
+    let totalCubicFeet = 0;
+    let shipmentsCount = 0;
+    let totalBilledUsd = 0;
+    let totalPaidUsd = 0;
+    let totalPendingUsd = 0;
+    const recentLines: Array<{
+      key: string;
+      invoiceId: string;
+      invoiceNumber: string;
+      clientName: string;
+      tracking: string;
+      cubicFeet: number;
+      amountUsd: number;
+      status: string;
+      issueDate: string;
+    }> = [];
+
+    filteredOperationalInvoices.forEach(inv => {
+      const items = Array.isArray(inv.invoice_items) ? inv.invoice_items : [];
+      const marItems = items.filter(it => isMaritimoService(it.service_name, it.weight));
+      if (marItems.length === 0) return;
+
+      const invTotal = Number(inv.total) || 0;
+      const rate = inv.exchange_rate || currentExchangeRate;
+      let invPaid = 0;
+      if (inv.invoice_payments && Array.isArray(inv.invoice_payments)) {
+        invPaid = inv.invoice_payments.reduce((a, p) => a + Number(p.amount_applied), 0);
+      }
+      const isPaid = inv.status === 'Pagada' || (invTotal > 0 && invTotal - invPaid <= 0.01);
+      const paidRatio = isPaid ? 1 : invTotal > 0 ? Math.min(1, invPaid / invTotal) : 0;
+
+      marItems.forEach((it, idx) => {
+        const ft3 = parseCubicFeetValue(it.weight);
+        const rawAmt = Number(it.amount) || 0;
+        const amtUsd = inv.currency === 'CRC' ? rawAmt / rate : rawAmt;
+        const linePaid = amtUsd * paidRatio;
+
+        totalCubicFeet += ft3;
+        shipmentsCount += 1;
+        totalBilledUsd += amtUsd;
+        totalPaidUsd += linePaid;
+        totalPendingUsd += Math.max(0, amtUsd - linePaid);
+
+        recentLines.push({
+          key: `${inv.id}-${idx}`,
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoice_number,
+          clientName: inv.clients?.name || 'Cliente',
+          tracking: String(it.tracking_number || '—'),
+          cubicFeet: ft3,
+          amountUsd: amtUsd,
+          status: isPaid ? 'Pagada' : inv.status || 'Pendiente',
+          issueDate: inv.issue_date,
+        });
+      });
+    });
+
+    const inventoryMaritimoCount = inventory.filter(p => {
+      if (!isDateInRange(getPackageReceivedDate(p))) return false;
+      const meta = extractPackageTransportAndNote(p);
+      return meta.transportType === 'Marítimo';
+    }).length;
+
+    return {
+      totalCubicFeet,
+      shipmentsCount,
+      totalBilledUsd,
+      totalPaidUsd,
+      totalPendingUsd,
+      inventoryMaritimoCount,
+      recentLines: recentLines.slice(0, 6),
+    };
+  }, [filteredOperationalInvoices, inventory, currentExchangeRate, filterStart, filterEnd]);
 
   // Chart Data (7 days or 6 months)
   const chartData = useMemo(() => {
@@ -659,7 +795,12 @@ export default function AdminDashboard() {
         const label = formatShortDay(d);
 
         const dayFacturado = invoices
-          .filter(inv => inv.status !== 'Anulada' && isSameDay(parseLocalDate(inv.issue_date), d))
+          .filter(
+            inv =>
+              inv.status !== 'Anulada' &&
+              !isCompraSitioWebInvoice(inv) &&
+              isSameDay(parseLocalDate(inv.issue_date), d)
+          )
           .reduce((s, inv) => {
             const val = Number(inv.total) || 0;
             return s + (inv.currency === 'CRC' ? val / (inv.exchange_rate || currentExchangeRate) : val);
@@ -695,7 +836,7 @@ export default function AdminDashboard() {
 
         const mFacturado = invoices
           .filter(inv => {
-            if (inv.status === 'Anulada') return false;
+            if (inv.status === 'Anulada' || isCompraSitioWebInvoice(inv)) return false;
             const d = parseLocalDate(inv.issue_date);
             return d.getFullYear() === y && d.getMonth() === m;
           })
@@ -874,7 +1015,7 @@ export default function AdminDashboard() {
 
       {/* ==================== 2. TARJETAS KPI PRINCIPALES ==================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-        {/* Card 1: Facturado en el Día / Período */}
+        {/* Card 1: Facturado Operativo en el Día / Período (sin compras web) */}
         <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
@@ -889,12 +1030,13 @@ export default function AdminDashboard() {
               ${totalFacturadoUSD.toFixed(2)}
             </div>
             <p className="text-[11px] font-medium text-slate-400 mt-0.5 tabular-nums">
-              ≈ ₡{Math.round(totalFacturadoUSD * currentExchangeRate).toLocaleString('es-CR')} CRC
+              ≈ ₡{Math.round(totalFacturadoUSD * currentExchangeRate).toLocaleString('es-CR')} CRC · Sin web
             </p>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span className="font-semibold text-slate-600">
-              {filteredInvoices.length} {filteredInvoices.length === 1 ? 'emitida' : 'emitidas'}
+              {filteredOperationalInvoices.length}{' '}
+              {filteredOperationalInvoices.length === 1 ? 'emitida' : 'emitidas'}
             </span>
             <span className="text-emerald-600 font-semibold tabular-nums">
               Cobrado: ${cobradoPeriodoUSD.toFixed(2)}
@@ -935,7 +1077,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Card 3: Utilidad & Gastos del Período */}
+        {/* Card 3: Utilidad Neta Real (Solo ingresos cobrados sin compras web ni pendientes - Gastos) */}
         <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
@@ -957,13 +1099,17 @@ export default function AdminDashboard() {
             >
               ${utilidadNetaUSD.toFixed(2)}
             </div>
-            <p className="text-[11px] font-medium text-red-500 mt-0.5 tabular-nums">
-              Gastos registrados: ${totalGastosUSD.toFixed(2)}
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5 tabular-nums">
+              Cobrado: <strong className="text-emerald-700">${cobradoPeriodoUSD.toFixed(2)}</strong> · Gastos:{' '}
+              <strong className="text-red-600">-${totalGastosUSD.toFixed(2)}</strong>
             </p>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500 font-medium">
-              {filteredExpenses.length} gastos en período
+            <span
+              className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold text-[10px]"
+              title="Calculada solo con ingresos cobrados. Excluye compras en sitio web y montos pendientes por cobrar."
+            >
+              Sin web ni por cobrar
             </span>
             <Link href="/admin/gastos" className="text-brand-blue font-semibold hover:underline">
               Ver gastos →
@@ -971,7 +1117,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Card 4: Cuentas por Cobrar */}
+        {/* Card 4: Cuentas por Cobrar Operativas (Sin compras web) */}
         <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
@@ -986,7 +1132,7 @@ export default function AdminDashboard() {
               ${totalReceivablesUSD.toFixed(2)}
             </div>
             <p className="text-[11px] font-medium text-slate-400 mt-0.5 tabular-nums">
-              ≈ ₡{Math.round(totalReceivablesUSD * currentExchangeRate).toLocaleString('es-CR')} CRC
+              ≈ ₡{Math.round(totalReceivablesUSD * currentExchangeRate).toLocaleString('es-CR')} CRC · Sin web
             </p>
           </div>
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
@@ -1033,6 +1179,119 @@ export default function AdminDashboard() {
             >
               Sin web
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================== 2.5 DESGLOSE SEPARADO DE RUBROS (SIN MEZCLAR EN UTILIDAD) ==================== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        {/* Rubro 1: Desglose de Utilidad Real (Ingresos Cobrados vs Pendientes del Período) */}
+        <div className="bg-white rounded-xl p-4 border border-emerald-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md">
+                Cálculo de Utilidad ({periodLabel})
+              </span>
+              <h3 className="text-sm font-bold text-slate-900 mt-1.5">
+                Ingresos Cobrados vs Por Cobrar
+              </h3>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Wallet size={16} />
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Ingresos cobrados (sí entran a utilidad):</span>
+              <strong className="font-bold text-emerald-700 tabular-nums">${cobradoPeriodoUSD.toFixed(2)}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Gastos registrados del período:</span>
+              <strong className="font-bold text-red-600 tabular-nums">-${totalGastosUSD.toFixed(2)}</strong>
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+              <span className="text-slate-500">Por cobrar del período (separado):</span>
+              <strong className="font-bold text-amber-600 tabular-nums">${pendientePeriodoOperativoUSD.toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Rubro 2: Compras en Sitio Web (Rubro Independiente) */}
+        <div className="bg-white rounded-xl p-4 border border-indigo-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
+                Rubro Independiente
+              </span>
+              <h3 className="text-sm font-bold text-slate-900 mt-1.5">
+                Compras en Sitio Web ({periodLabel})
+              </h3>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <ShoppingBag size={16} />
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Facturado Web ({filteredWebInvoices.length} fact.):</span>
+              <strong className="font-bold text-slate-900 tabular-nums">${webBilledPeriodoUSD.toFixed(2)}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Cobrado Web en período:</span>
+              <strong className="font-bold text-emerald-700 tabular-nums">${webPaidPeriodoUSD.toFixed(2)}</strong>
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+              <span className="text-slate-500">Saldo Web por cobrar ({webPendingGlobalCount} pend.):</span>
+              <Link
+                href="/admin/compra-en-sitio-web"
+                className="font-bold text-indigo-700 hover:underline tabular-nums"
+              >
+                ${webPendingGlobalUSD.toFixed(2)} →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Rubro 3: Productos y Servicios Marítimos del Período */}
+        <div className="bg-white rounded-xl p-4 border border-sky-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 border border-sky-200/70 px-2 py-0.5 rounded-md">
+                Reporte Marítimo ({periodLabel})
+              </span>
+              <h3 className="text-sm font-bold text-slate-900 mt-1.5">
+                Productos y Envíos Marítimos
+              </h3>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+              <Anchor size={16} />
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Pies cúbicos facturados:</span>
+              <strong className="font-bold text-indigo-700 font-mono tabular-nums">
+                {maritimeStatsPeriodo.totalCubicFeet.toFixed(2)} ft³
+              </strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Cantidad de envíos / paquetes:</span>
+              <strong className="font-bold text-slate-900 tabular-nums">
+                {maritimeStatsPeriodo.shipmentsCount} fact. ({maritimeStatsPeriodo.inventoryMaritimoCount} en bodega)
+              </strong>
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+              <span className="text-slate-500">Monto facturado marítimo:</span>
+              <Link
+                href="/admin/reporte-maritimo"
+                className="font-bold text-brand-blue hover:underline tabular-nums"
+              >
+                ${maritimeStatsPeriodo.totalBilledUsd.toFixed(2)} USD →
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -1176,7 +1435,10 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60">
                 <div className="flex items-center gap-2">
                   <FileText size={15} className="text-brand-blue" />
-                  <span className="text-xs font-medium text-slate-700">Total Facturado</span>
+                  <div>
+                    <span className="text-xs font-medium text-slate-700 block">Facturado Operativo</span>
+                    <span className="text-[10px] text-slate-400">Sin compras en sitio web</span>
+                  </div>
                 </div>
                 <span className="font-bold text-slate-900 text-xs tabular-nums">${totalFacturadoUSD.toFixed(2)}</span>
               </div>
@@ -1184,39 +1446,14 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-200/60">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={15} className="text-emerald-600" />
-                  <span className="text-xs font-medium text-emerald-900">Paquetes Entregados</span>
-                </div>
-                <span className="font-bold text-emerald-700 text-xs tabular-nums">
-                  {paquetesEntregadosPeriodo.length} paq.
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60">
-                <div className="flex items-center gap-2">
-                  <Package size={15} className="text-brand-blue" />
-                  <span className="text-xs font-medium text-slate-700">Paquetes Recibidos</span>
-                </div>
-                <span className="font-bold text-slate-900 text-xs tabular-nums">
-                  {paquetesRecibidosPeriodo.length} paq.
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-200/60">
-                <div className="flex items-center gap-2">
-                  <Scale size={15} className="text-indigo-600" />
                   <div>
-                    <span className="text-xs font-medium text-indigo-950 block">Kilos Recibidos</span>
-                    <span className="text-[10px] text-indigo-600/80 font-medium">Worldbox • Sin compras web</span>
+                    <span className="text-xs font-medium text-emerald-900 block">Cobrado (Base Utilidad)</span>
+                    <span className="text-[10px] text-emerald-600/80">Por cobrar período: ${pendientePeriodoOperativoUSD.toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="text-right tabular-nums">
-                  <span className="font-bold text-indigo-700 text-xs block">
-                    {kilosRecibidosWorldboxPeriodo.toFixed(2)} kg
-                  </span>
-                  <span className="text-[10px] font-medium text-slate-400">
-                    ≈ {librasRecibidasWorldboxPeriodo.toFixed(1)} lbs
-                  </span>
-                </div>
+                <span className="font-bold text-emerald-700 text-xs tabular-nums">
+                  ${cobradoPeriodoUSD.toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60">
@@ -1225,6 +1462,34 @@ export default function AdminDashboard() {
                   <span className="text-xs font-medium text-slate-700">Gastos del Período</span>
                 </div>
                 <span className="font-bold text-red-600 text-xs tabular-nums">-${totalGastosUSD.toFixed(2)}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-200/60">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag size={15} className="text-indigo-600" />
+                  <div>
+                    <span className="text-xs font-medium text-indigo-950 block">Compras en Sitio Web</span>
+                    <span className="text-[10px] text-indigo-600/80 font-medium">Rubro separado ({filteredWebInvoices.length} fact.)</span>
+                  </div>
+                </div>
+                <span className="font-bold text-indigo-700 text-xs tabular-nums">
+                  ${webBilledPeriodoUSD.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-sky-50/60 border border-sky-200/60">
+                <div className="flex items-center gap-2">
+                  <Anchor size={15} className="text-sky-600" />
+                  <div>
+                    <span className="text-xs font-medium text-sky-950 block">Productos Marítimos</span>
+                    <span className="text-[10px] text-sky-600/80 font-medium">
+                      {maritimeStatsPeriodo.totalCubicFeet.toFixed(2)} ft³ · {maritimeStatsPeriodo.shipmentsCount} envíos
+                    </span>
+                  </div>
+                </div>
+                <span className="font-bold text-sky-800 text-xs tabular-nums">
+                  ${maritimeStatsPeriodo.totalBilledUsd.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
@@ -1244,6 +1509,129 @@ export default function AdminDashboard() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* ==================== 3.5 REPORTE DE PRODUCTOS Y SERVICIOS MARÍTIMOS EN DASHBOARD ==================== */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+              <Anchor size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                  Reporte de Productos y Servicios Marítimos
+                </h2>
+                <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[11px] font-semibold border border-sky-200/70">
+                  Período: {periodLabel}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pies cúbicos (ft³) facturados, cantidad de envíos/paquetes marítimos y monto facturado en el período seleccionado.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/admin/reporte-maritimo"
+            className="h-9 px-3.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shrink-0 w-fit"
+          >
+            <span>Abrir Reporte Marítimo Completo</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {/* 4 indicadores clave de Marítimo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Pies Cúbicos Facturados
+            </span>
+            <div className="flex items-baseline gap-1 mt-1 tabular-nums">
+              <span className="text-2xl font-black text-indigo-700">
+                {maritimeStatsPeriodo.totalCubicFeet.toFixed(2)}
+              </span>
+              <span className="text-xs font-bold text-indigo-600">ft³</span>
+            </div>
+            <span className="text-[11px] text-slate-400 mt-0.5 block">Volumen total facturado</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Cantidad de Envíos / Paquetes
+            </span>
+            <div className="flex items-baseline gap-1.5 mt-1 tabular-nums">
+              <span className="text-2xl font-black text-slate-900">
+                {maritimeStatsPeriodo.shipmentsCount}
+              </span>
+              <span className="text-xs font-semibold text-slate-500">facturados</span>
+            </div>
+            <span className="text-[11px] text-slate-400 mt-0.5 block">
+              Ingresados en bodega CR: <strong className="text-slate-700">{maritimeStatsPeriodo.inventoryMaritimoCount}</strong>
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Monto Facturado Marítimo
+            </span>
+            <div className="flex items-baseline gap-1 mt-1 tabular-nums">
+              <span className="text-2xl font-black text-slate-900">
+                ${maritimeStatsPeriodo.totalBilledUsd.toFixed(2)}
+              </span>
+              <span className="text-xs font-semibold text-slate-400">USD</span>
+            </div>
+            <span className="text-[11px] text-slate-400 mt-0.5 block tabular-nums">
+              ≈ ₡{Math.round(maritimeStatsPeriodo.totalBilledUsd * currentExchangeRate).toLocaleString('es-CR')} CRC
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Período Consultado
+            </span>
+            <div className="text-base font-black text-brand-blue mt-1.5 truncate">
+              {periodLabel}
+            </div>
+            <span className="text-[11px] text-emerald-700 font-semibold mt-0.5 block tabular-nums">
+              Cobrado: ${maritimeStatsPeriodo.totalPaidUsd.toFixed(2)} · Pend.: ${maritimeStatsPeriodo.totalPendingUsd.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {maritimeStatsPeriodo.recentLines.length > 0 && (
+          <div className="mt-4 pt-3.5 border-t border-slate-100">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+              Envíos Marítimos en {periodLabel}
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {maritimeStatsPeriodo.recentLines.map(line => (
+                <Link
+                  key={line.key}
+                  href={`/admin/facturacion/${line.invoiceId}`}
+                  className="p-2.5 rounded-lg border border-slate-200/80 hover:border-brand-blue/40 hover:bg-slate-50/80 transition-all flex items-center justify-between gap-2 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-slate-900">#{line.invoiceNumber}</span>
+                      <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-mono font-bold text-[10px]">
+                        {line.cubicFeet.toFixed(2)} ft³
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                      {line.clientName} · {line.tracking}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0 tabular-nums">
+                    <span className="font-black text-slate-900 block">${line.amountUsd.toFixed(2)}</span>
+                    <span className="text-[10px] text-slate-400">{line.issueDate?.split('T')[0]}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ==================== CONTROL MENSUAL DE KILOS RECIBIDOS (WORLDBOX) ==================== */}
@@ -1351,13 +1739,13 @@ export default function AdminDashboard() {
 
       {/* ==================== 4. LISTAS DE ACTIVIDAD DEL PERÍODO ==================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Facturas del Período */}
+        {/* Facturas Operativas del Período */}
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
           <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText size={15} className="text-brand-blue" />
               <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
-                Facturas Emitidas ({periodLabel}: {filteredInvoices.length})
+                Facturas Emitidas ({periodLabel}: {filteredOperationalInvoices.length})
               </h3>
             </div>
             <Link href="/admin/facturacion" className="text-xs font-semibold text-brand-blue hover:underline">
@@ -1366,7 +1754,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="divide-y divide-slate-100">
-            {filteredInvoices.slice(0, 6).map(inv => (
+            {filteredOperationalInvoices.slice(0, 6).map(inv => (
               <Link
                 key={inv.id}
                 href={`/admin/facturacion/${inv.id}`}
@@ -1395,9 +1783,9 @@ export default function AdminDashboard() {
                 </div>
               </Link>
             ))}
-            {filteredInvoices.length === 0 && (
+            {filteredOperationalInvoices.length === 0 && (
               <p className="text-xs text-slate-400 py-8 text-center">
-                No hay facturas registradas en {periodLabel.toLowerCase()}.
+                No hay facturas operativas registradas en {periodLabel.toLowerCase()}.
               </p>
             )}
           </div>

@@ -21,6 +21,7 @@ function getAdminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/facturacion/') && pathname.endsWith('/editar')) return 'Editar Factura | Facturas a Clientes | Panel de JRS';
   if (pathname.startsWith('/admin/facturacion')) return 'Facturas a Clientes | Panel de JRS';
   if (pathname.startsWith('/admin/compra-en-sitio-web')) return 'Compra en sitio web | Panel de JRS';
+  if (pathname.startsWith('/admin/reporte-maritimo')) return 'Reporte de Productos Marítimos | Panel de JRS';
   if (pathname.startsWith('/admin/cuentas-por-cobrar/recibir')) return 'Recibir Pago | Cuentas por cobrar | Panel de JRS';
   if (pathname.startsWith('/admin/cuentas-por-cobrar/estado-cuenta')) return 'Estado de Cuenta | Cuentas por cobrar | Panel de JRS';
   if (pathname.startsWith('/admin/cuentas-por-cobrar')) return 'Cuentas por cobrar | Panel de JRS';
@@ -75,9 +76,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [isDesktopSidebarOpen, mounted]);
   
   const [openSections, setOpenSections] = useState({
-    operaciones: true,
-    contabilidad: true,
-    clientes: true,
+    operaciones: false,
+    contabilidad: false,
+    clientes: false,
     ajustes: false,
     perfil: false
   });
@@ -85,6 +86,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
+  // Al iniciar sesión (transición desde /admin/login), mostrar los títulos de sección visibles y los subtítulos ocultos
+  useEffect(() => {
+    if (isLoginPage) {
+      setOpenSections({
+        operaciones: false,
+        contabilidad: false,
+        clientes: false,
+        ajustes: false,
+        perfil: false
+      });
+    }
+  }, [isLoginPage]);
 
   // Close mobile menu on route change and set dynamic tab title based on active menu section
   useEffect(() => {
@@ -330,11 +344,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {openSections.contabilidad ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
           </button>
           
-          <div className={`overflow-hidden transition-all duration-200 ${openSections.contabilidad ? 'max-h-60 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+          <div className={`overflow-hidden transition-all duration-200 ${openSections.contabilidad ? 'max-h-72 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
             <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
               {[
                 { href: '/admin/facturacion', label: 'Facturas a Clientes', exact: true, adminOnly: false },
                 { href: '/admin/compra-en-sitio-web', label: 'Compra en sitio web', exact: false, adminOnly: false },
+                { href: '/admin/reporte-maritimo', label: 'Reporte Marítimo', exact: false, adminOnly: false },
                 { href: '/admin/cuentas-por-cobrar', label: 'Cuentas por cobrar', exact: false, adminOnly: false },
                 { href: '/admin/gastos', label: 'Gastos y Compras', exact: false, adminOnly: true },
                 { href: '/admin/contabilidad/pagos', label: 'Historial de Pagos', exact: false, adminOnly: false },

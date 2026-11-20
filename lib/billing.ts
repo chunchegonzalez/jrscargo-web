@@ -548,6 +548,58 @@ export function isCompraSitioWebInvoice(
   return list.some(item => isCompraSitioWebService(item?.service_name));
 }
 
+/**
+ * Determina si un nombre de servicio o peso corresponde al rubro MARÍTIMO.
+ */
+export function isMaritimoService(serviceName?: string | null, weightStr?: string | number | null): boolean {
+  const normService = String(serviceName || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+
+  if (
+    normService.includes('MARITIMO') ||
+    normService.includes('PIE CUBICO') ||
+    normService.includes('FT3') ||
+    normService.includes('FT³')
+  ) {
+    return true;
+  }
+
+  const normWeight = String(weightStr ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+
+  if (normWeight.includes('FT3') || normWeight.includes('FT³') || normWeight.includes('PIE')) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Extrae el valor numérico de pies cúbicos (ft³) a partir de un campo weight.
+ */
+export function parseCubicFeetValue(rawWeight: string | number | undefined | null): number {
+  if (rawWeight === undefined || rawWeight === null) return 0;
+  let clean = String(rawWeight).trim().replace(/[^\d.,]/g, '');
+  if (!clean) return 0;
+  if (clean.includes(',') && clean.includes('.')) {
+    if (clean.indexOf(',') < clean.indexOf('.')) {
+      clean = clean.replace(/,/g, '');
+    } else {
+      clean = clean.replace(/\./g, '').replace(',', '.');
+    }
+  } else if (clean.includes(',')) {
+    clean = clean.replace(',', '.');
+  }
+  const num = parseFloat(clean);
+  return isNaN(num) || num < 0 ? 0 : num;
+}
+
 export type PackageTransportType = 'Aéreo' | 'Marítimo';
 
 export type InventoryHistoryEvent = {
