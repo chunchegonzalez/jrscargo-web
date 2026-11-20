@@ -12,7 +12,6 @@ import {
   Legend
 } from 'recharts';
 import {
-  Package,
   DollarSign,
   CheckCircle2,
   AlertCircle,
@@ -20,17 +19,12 @@ import {
   Coins,
   Save,
   RefreshCw,
-  Truck,
-  FileText,
   Wallet,
-  Receipt,
   Calendar,
   ArrowRight,
   Scale,
-  QrCode,
   ShoppingBag,
-  Anchor,
-  Box
+  Anchor
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -1288,63 +1282,63 @@ export default function AdminDashboard() {
 
       {/* ==================== 3. GRÁFICO Y RESUMEN DEL PERÍODO ==================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left: Single Clean Chart (8 cols) */}
-        <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-1 bg-slate-100/90 border border-slate-200/60 p-0.5 rounded-lg w-fit flex-wrap">
+        {/* Left: Dynamic JRS Telemetry Chart (8 cols) */}
+        <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5 flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3.5 border-b border-slate-100">
+            <div className="inline-flex items-center gap-1 bg-slate-100/90 p-1 rounded-lg w-fit">
               <button
                 type="button"
                 onClick={() => setChartMetric('facturacion')}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   chartMetric === 'facturacion'
-                    ? 'bg-white text-brand-blue shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-[#0B2737] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <DollarSign size={13} /> Facturación ($)
+                Facturación
               </button>
               <button
                 type="button"
                 onClick={() => setChartMetric('paquetes')}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   chartMetric === 'paquetes'
-                    ? 'bg-white text-brand-blue shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-[#0B2737] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Truck size={13} /> Paquetes Entregados vs Recibidos
+                Paquetes
               </button>
               <button
                 type="button"
                 onClick={() => setChartMetric('kilos')}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   chartMetric === 'kilos'
-                    ? 'bg-white text-indigo-600 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800'
+                    ? 'bg-[#0B2737] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Scale size={13} /> Kilos Recibidos (kg)
+                Kilos (kg)
               </button>
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100/90 border border-slate-200/60 rounded-lg p-0.5 text-xs font-semibold w-fit">
+            <div className="inline-flex items-center gap-1 bg-slate-100/90 rounded-lg p-1 text-xs font-semibold w-fit">
               <button
                 type="button"
                 onClick={() => setChartRange('7d')}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                  chartRange === '7d' ? 'bg-brand-blue text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
+                  chartRange === '7d' ? 'bg-white text-[#0B2737] shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                Últimos 7 Días
+                7 días
               </button>
               <button
                 type="button"
                 onClick={() => setChartRange('6m')}
-                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                  chartRange === '6m' ? 'bg-brand-blue text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap ${
+                  chartRange === '6m' ? 'bg-white text-[#0B2737] shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                Por Mes (6M)
+                6 meses
               </button>
             </div>
           </div>
@@ -1352,148 +1346,200 @@ export default function AdminDashboard() {
           <div className="h-64 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               {chartMetric === 'facturacion' ? (
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <BarChart data={chartData} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="jrsBarNavy" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1C6289" />
+                      <stop offset="100%" stopColor="#0B2737" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={v => `$${v}`} />
                   <RechartsTooltip
-                    formatter={(val: number) => [`$${val.toFixed(2)} USD`, 'Facturado']}
+                    cursor={{ fill: 'rgba(18, 67, 94, 0.06)', radius: 6 }}
+                    formatter={(val: number) => [
+                      `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`,
+                      'Facturado'
+                    ]}
                     contentStyle={{
+                      backgroundColor: '#0B2737',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
                       borderRadius: '10px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 4px 12px rgba(15,23,42,0.08)',
+                      color: '#ffffff',
+                      boxShadow: '0 10px 25px rgba(11, 39, 55, 0.22)',
                       fontSize: '12px'
                     }}
+                    labelStyle={{ color: '#F59E0B', fontWeight: 700, marginBottom: '2px' }}
+                    itemStyle={{ color: '#ffffff', fontWeight: 600 }}
                   />
-                  <Bar dataKey="Facturado" name="Facturado ($ USD)" fill="#12435E" radius={[5, 5, 0, 0]} maxBarSize={34} />
+                  <Bar dataKey="Facturado" name="Facturado ($ USD)" fill="url(#jrsBarNavy)" radius={[6, 6, 0, 0]} maxBarSize={32} />
                 </BarChart>
               ) : chartMetric === 'paquetes' ? (
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <BarChart data={chartData} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} allowDecimals={false} />
                   <RechartsTooltip
+                    cursor={{ fill: 'rgba(18, 67, 94, 0.06)', radius: 6 }}
                     contentStyle={{
+                      backgroundColor: '#0B2737',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
                       borderRadius: '10px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 4px 12px rgba(15,23,42,0.08)',
+                      color: '#ffffff',
+                      boxShadow: '0 10px 25px rgba(11, 39, 55, 0.22)',
                       fontSize: '12px'
                     }}
+                    labelStyle={{ color: '#F59E0B', fontWeight: 700, marginBottom: '2px' }}
+                    itemStyle={{ color: '#ffffff', fontWeight: 600 }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
-                  <Bar dataKey="Entregados" name="Entregados" fill="#10B981" radius={[5, 5, 0, 0]} maxBarSize={26} />
-                  <Bar dataKey="Recibidos" name="Recibidos en Bodega" fill="#12435E" radius={[5, 5, 0, 0]} maxBarSize={26} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11.5px', paddingTop: '8px' }} />
+                  <Bar dataKey="Recibidos" name="Recibidos" fill="#12435E" radius={[6, 6, 0, 0]} maxBarSize={24} />
+                  <Bar dataKey="Entregados" name="Entregados" fill="#F59E0B" radius={[6, 6, 0, 0]} maxBarSize={24} />
                 </BarChart>
               ) : (
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <BarChart data={chartData} margin={{ top: 10, right: 8, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="jrsBarGold" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" />
+                      <stop offset="100%" stopColor="#12435E" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={v => `${v} kg`} />
                   <RechartsTooltip
+                    cursor={{ fill: 'rgba(18, 67, 94, 0.06)', radius: 6 }}
                     formatter={(val: number) => [
-                      `${val.toFixed(2)} kg (≈ ${(val * 2.20462).toFixed(1)} lbs)`,
-                      'Kilos Recibidos (Worldbox)'
+                      `${val.toFixed(2)} kg (${(val * 2.20462).toFixed(1)} lbs)`,
+                      'Kilos Worldbox'
                     ]}
                     contentStyle={{
+                      backgroundColor: '#0B2737',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
                       borderRadius: '10px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 4px 12px rgba(15,23,42,0.08)',
+                      color: '#ffffff',
+                      boxShadow: '0 10px 25px rgba(11, 39, 55, 0.22)',
                       fontSize: '12px'
                     }}
+                    labelStyle={{ color: '#F59E0B', fontWeight: 700, marginBottom: '2px' }}
+                    itemStyle={{ color: '#ffffff', fontWeight: 600 }}
                   />
-                  <Bar dataKey="Kilos" name="Kilos Recibidos (Worldbox)" fill="#4F46E5" radius={[5, 5, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="Kilos" name="Kilos Worldbox" fill="url(#jrsBarGold)" radius={[6, 6, 0, 0]} maxBarSize={30} />
                 </BarChart>
               )}
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Right: Clean Summary Box for Selected Period (4 cols) */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5 flex flex-col justify-between">
+        {/* Right: Clean JRS Financial Summary Panel (4 cols) */}
+        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="px-5 py-3.5 bg-[#0B2737] text-white flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Resumen del Período</h3>
-                <p className="text-[11px] text-slate-400">Datos filtrados por: {periodLabel}</p>
+                <h3 className="font-semibold text-[13px] tracking-tight">Resumen del período</h3>
+                <p className="text-[11px] text-slate-300 mt-0.5">{periodLabel}</p>
               </div>
-              <span className="px-2 py-0.5 bg-brand-blue/10 text-brand-blue border border-brand-blue/15 text-[11px] font-semibold rounded-md">
-                {periodLabel}
-              </span>
+              <span className="h-2 w-2 rounded-full bg-[#F59E0B]" />
             </div>
 
-            <div className="mt-3.5 space-y-2">
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60">
-                <div className="flex items-center gap-2">
-                  <FileText size={15} className="text-brand-blue" />
-                  <div>
-                    <span className="text-xs font-medium text-slate-700 block">Facturado Operativo</span>
-                    <span className="text-[10px] text-slate-400">Sin compras en sitio web</span>
-                  </div>
-                </div>
-                <span className="font-bold text-slate-900 text-xs tabular-nums">${totalFacturadoUSD.toFixed(2)}</span>
+            {/* Dynamic collection ratio bar */}
+            <div className="px-5 pt-3.5 pb-2 border-b border-slate-100">
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span className="text-slate-500">Cobranza operativa</span>
+                <span className="font-semibold text-[#0B2737] tabular-nums">
+                  {totalFacturadoUSD > 0 ? Math.min(100, Math.round((cobradoPeriodoUSD / totalFacturadoUSD) * 100)) : 0}%
+                </span>
               </div>
+              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#12435E] to-[#F59E0B] transition-all duration-500"
+                  style={{
+                    width: `${totalFacturadoUSD > 0 ? Math.min(100, Math.round((cobradoPeriodoUSD / totalFacturadoUSD) * 100)) : 0}%`
+                  }}
+                />
+              </div>
+            </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-200/60">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={15} className="text-emerald-600" />
-                  <div>
-                    <span className="text-xs font-medium text-emerald-900 block">Cobrado del Período</span>
-                    <span className="text-[10px] text-emerald-600/80">Por cobrar período: ${pendientePeriodoOperativoUSD.toFixed(2)}</span>
+            <div className="px-5 divide-y divide-slate-100 text-xs">
+              <div className="py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-1 h-5 rounded-full bg-[#12435E] shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-800 block truncate">Facturado operativo</span>
+                    <span className="text-[10.5px] text-slate-400">Sin compras web</span>
                   </div>
                 </div>
-                <span className="font-bold text-emerald-700 text-xs tabular-nums">
-                  ${cobradoPeriodoUSD.toFixed(2)}
+                <span className="font-semibold text-slate-900 tabular-nums shrink-0">
+                  ${totalFacturadoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/80 border border-slate-200/60">
-                <div className="flex items-center gap-2">
-                  <Receipt size={15} className="text-red-500" />
-                  <span className="text-xs font-medium text-slate-700">Gastos del Período</span>
-                </div>
-                <span className="font-bold text-red-600 text-xs tabular-nums">-${totalGastosUSD.toFixed(2)}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-200/60">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag size={15} className="text-indigo-600" />
-                  <div>
-                    <span className="text-xs font-medium text-indigo-950 block">Compras en Sitio Web</span>
-                    <span className="text-[10px] text-indigo-600/80 font-medium">Rubro separado ({filteredWebInvoices.length} fact.)</span>
+              <div className="py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-1 h-5 rounded-full bg-[#F59E0B] shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-800 block truncate">Cobrado del período</span>
+                    <span className="text-[10.5px] text-slate-400 tabular-nums">
+                      Pendiente: ${pendientePeriodoOperativoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
-                <span className="font-bold text-indigo-700 text-xs tabular-nums">
-                  ${webBilledPeriodoUSD.toFixed(2)}
+                <span className="font-semibold text-[#12435E] tabular-nums shrink-0">
+                  ${cobradoPeriodoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-sky-50/60 border border-sky-200/60">
-                <div className="flex items-center gap-2">
-                  <Anchor size={15} className="text-sky-600" />
-                  <div>
-                    <span className="text-xs font-medium text-sky-950 block">Productos Marítimos</span>
-                    <span className="text-[10px] text-sky-600/80 font-medium">
+              <div className="py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-1 h-5 rounded-full bg-[#EF4444] shrink-0" />
+                  <span className="font-medium text-slate-800 truncate">Gastos del período</span>
+                </div>
+                <span className="font-semibold text-[#EF4444] tabular-nums shrink-0">
+                  -${totalGastosUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-1 h-5 rounded-full bg-slate-300 shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-800 block truncate">Compras en sitio web</span>
+                    <span className="text-[10.5px] text-slate-400">{filteredWebInvoices.length} fact. · separado</span>
+                  </div>
+                </div>
+                <span className="font-semibold text-slate-900 tabular-nums shrink-0">
+                  ${webBilledPeriodoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="py-3 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-1 h-5 rounded-full bg-[#1C6289] shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-800 block truncate">Envíos marítimos</span>
+                    <span className="text-[10.5px] text-slate-400 tabular-nums">
                       {maritimeStatsPeriodo.totalCubicFeet.toFixed(2)} ft³ · {maritimeStatsPeriodo.shipmentsCount} envíos
                     </span>
                   </div>
                 </div>
-                <span className="font-bold text-sky-800 text-xs tabular-nums">
-                  ${maritimeStatsPeriodo.totalBilledUsd.toFixed(2)}
+                <span className="font-semibold text-slate-900 tabular-nums shrink-0">
+                  ${maritimeStatsPeriodo.totalBilledUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mt-4 pt-3.5 border-t border-slate-100">
+          <div className="grid grid-cols-2 gap-2 px-5 py-3.5 bg-slate-50/70 border-t border-slate-100">
             <Link
               href="/admin/facturacion"
-              className="h-9 bg-slate-100 hover:bg-slate-200/70 text-slate-700 font-semibold rounded-lg text-center text-xs transition-colors flex items-center justify-center gap-1"
+              className="h-9 bg-white border border-slate-200 hover:border-[#12435E] text-slate-700 hover:text-[#0B2737] font-semibold rounded-lg text-center text-xs transition-colors flex items-center justify-center gap-1"
             >
-              Ver Facturas <ArrowRight size={13} />
+              Facturas <ArrowRight size={13} />
             </Link>
             <Link
               href="/admin/inventario"
-              className="h-9 bg-brand-blue text-white hover:bg-[#0e354b] font-semibold rounded-lg text-center text-xs transition-colors flex items-center justify-center gap-1"
+              className="h-9 bg-[#0B2737] text-white hover:bg-[#12435E] font-semibold rounded-lg text-center text-xs transition-colors flex items-center justify-center gap-1"
             >
               Inventario <ArrowRight size={13} />
             </Link>
@@ -1501,111 +1547,100 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ==================== 3.5 REPORTE DE PRODUCTOS Y SERVICIOS MARÍTIMOS EN DASHBOARD ==================== */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-              <Anchor size={20} />
-            </div>
-            <div>
+      {/* ==================== 3.5 REPORTE DE PRODUCTOS Y SERVICIOS MARÍTIMOS ==================== */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
+        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-1 h-7 rounded-full bg-gradient-to-b from-[#12435E] to-[#F59E0B] shrink-0" />
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                  Reporte de Productos y Servicios Marítimos
+                <h2 className="text-sm font-semibold text-slate-900 tracking-tight">
+                  Reporte de productos y servicios marítimos
                 </h2>
-                <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 text-[11px] font-semibold border border-sky-200/70">
-                  Período: {periodLabel}
-                </span>
+                <span className="text-[11px] font-medium text-slate-400">· {periodLabel}</span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Pies cúbicos (ft³) facturados, cantidad de envíos/paquetes marítimos y monto facturado en el período seleccionado.
+              <p className="text-xs text-slate-500 mt-0.5 truncate">
+                Volumen en pies cúbicos (ft³), cantidad de envíos y facturación marítima.
               </p>
             </div>
           </div>
 
           <Link
             href="/admin/reporte-maritimo"
-            className="h-9 px-3.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-all shrink-0 w-fit"
+            className="h-8 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors shrink-0 w-fit"
           >
-            <span>Abrir Reporte Marítimo Completo</span>
-            <ArrowRight size={14} />
+            <span>Reporte completo</span>
+            <ArrowRight size={13} />
           </Link>
         </div>
 
-        {/* 4 indicadores clave de Marítimo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Pies Cúbicos Facturados
-            </span>
+        {/* 4 indicadores clave en barra continua */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          <div className="p-4">
+            <span className="text-[11px] font-medium text-slate-500 block">Pies cúbicos facturados</span>
             <div className="flex items-baseline gap-1 mt-1 tabular-nums">
-              <span className="text-2xl font-black text-indigo-700">
+              <span className="text-2xl font-semibold text-[#0B2737]">
                 {maritimeStatsPeriodo.totalCubicFeet.toFixed(2)}
               </span>
-              <span className="text-xs font-bold text-indigo-600">ft³</span>
+              <span className="text-xs font-semibold text-[#F59E0B]">ft³</span>
             </div>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">Volumen total facturado</span>
+            <span className="text-[11px] text-slate-400 mt-0.5 block">Volumen del período</span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Cantidad de Envíos / Paquetes
-            </span>
+          <div className="p-4">
+            <span className="text-[11px] font-medium text-slate-500 block">Envíos / paquetes</span>
             <div className="flex items-baseline gap-1.5 mt-1 tabular-nums">
-              <span className="text-2xl font-black text-slate-900">
+              <span className="text-2xl font-semibold text-slate-900">
                 {maritimeStatsPeriodo.shipmentsCount}
               </span>
-              <span className="text-xs font-semibold text-slate-500">facturados</span>
+              <span className="text-xs text-slate-500">facturados</span>
             </div>
             <span className="text-[11px] text-slate-400 mt-0.5 block">
-              Ingresados en bodega CR: <strong className="text-slate-700">{maritimeStatsPeriodo.inventoryMaritimoCount}</strong>
+              En bodega CR: <strong className="font-semibold text-slate-700">{maritimeStatsPeriodo.inventoryMaritimoCount}</strong>
             </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Monto Facturado Marítimo
-            </span>
+          <div className="p-4">
+            <span className="text-[11px] font-medium text-slate-500 block">Monto facturado</span>
             <div className="flex items-baseline gap-1 mt-1 tabular-nums">
-              <span className="text-2xl font-black text-slate-900">
-                ${maritimeStatsPeriodo.totalBilledUsd.toFixed(2)}
+              <span className="text-2xl font-semibold text-slate-900">
+                ${maritimeStatsPeriodo.totalBilledUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-xs font-semibold text-slate-400">USD</span>
+              <span className="text-xs text-slate-400">USD</span>
             </div>
             <span className="text-[11px] text-slate-400 mt-0.5 block tabular-nums">
-              ≈ ₡{Math.round(maritimeStatsPeriodo.totalBilledUsd * currentExchangeRate).toLocaleString('es-CR')} CRC
+              ≈ ₡{Math.round(maritimeStatsPeriodo.totalBilledUsd * currentExchangeRate).toLocaleString('es-CR')}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/70">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-              Período Consultado
-            </span>
-            <div className="text-base font-black text-brand-blue mt-1.5 truncate">
+          <div className="p-4">
+            <span className="text-[11px] font-medium text-slate-500 block">Estado de cobro</span>
+            <div className="text-base font-semibold text-[#12435E] mt-1.5 truncate">
               {periodLabel}
             </div>
-            <span className="text-[11px] text-emerald-700 font-semibold mt-0.5 block tabular-nums">
-              Cobrado: ${maritimeStatsPeriodo.totalPaidUsd.toFixed(2)} · Pend.: ${maritimeStatsPeriodo.totalPendingUsd.toFixed(2)}
+            <span className="text-[11px] text-slate-500 mt-0.5 block tabular-nums">
+              Cobrado <strong className="text-[#12435E]">${maritimeStatsPeriodo.totalPaidUsd.toFixed(2)}</strong> · Pend.{' '}
+              <strong className="text-[#B45309]">${maritimeStatsPeriodo.totalPendingUsd.toFixed(2)}</strong>
             </span>
           </div>
         </div>
 
         {maritimeStatsPeriodo.recentLines.length > 0 && (
-          <div className="mt-4 pt-3.5 border-t border-slate-100">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Envíos Marítimos en {periodLabel}
+          <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50/40">
+            <p className="text-[11px] font-semibold text-slate-500 mb-2.5">
+              Envíos marítimos recientes · {periodLabel}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {maritimeStatsPeriodo.recentLines.map(line => (
                 <Link
                   key={line.key}
                   href={`/admin/facturacion/${line.invoiceId}`}
-                  className="p-2.5 rounded-lg border border-slate-200/80 hover:border-brand-blue/40 hover:bg-slate-50/80 transition-all flex items-center justify-between gap-2 text-xs"
+                  className="px-3 py-2.5 rounded-lg bg-white border border-slate-200/80 hover:border-[#12435E] transition-all flex items-center justify-between gap-2 text-xs"
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-bold text-slate-900">#{line.invoiceNumber}</span>
-                      <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-mono font-bold text-[10px]">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold text-[#0B2737]">#{line.invoiceNumber}</span>
+                      <span className="text-[11px] font-mono font-semibold text-[#B45309]">
                         {line.cubicFeet.toFixed(2)} ft³
                       </span>
                     </div>
@@ -1614,7 +1649,9 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <div className="text-right shrink-0 tabular-nums">
-                    <span className="font-black text-slate-900 block">${line.amountUsd.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-900 block">
+                      ${line.amountUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                     <span className="text-[10px] text-slate-400">{line.issueDate?.split('T')[0]}</span>
                   </div>
                 </Link>
@@ -1625,105 +1662,115 @@ export default function AdminDashboard() {
       </div>
 
       {/* ==================== CONTROL MENSUAL DE KILOS RECIBIDOS (WORLDBOX) ==================== */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <Scale size={20} />
-            </div>
-            <div>
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
+        <div className="px-5 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-1 h-7 rounded-full bg-gradient-to-b from-[#0B2737] to-[#EF4444] shrink-0" />
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-slate-900 tracking-tight">
-                  Kilos Recibidos por Mes
+                <h2 className="text-sm font-semibold text-slate-900 tracking-tight">
+                  Kilos recibidos por mes
                 </h2>
-                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-semibold border border-indigo-200/60">
-                  Coincidencia Worldbox
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-medium">
-                  Sin compras web
-                </span>
+                <span className="text-[11px] text-slate-400">· Worldbox · Sin compras web</span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Total de kilogramos recibidos en bodega correspondientes a paquetes registrados en Worldbox.
+                Seguimiento mensual de peso ingresado en bodega CR ({worldboxPackages.length > 0 ? `${worldboxPackages.length} paq. indexados` : 'sincronizado'}).
               </p>
             </div>
           </div>
 
-          {/* Month Metric Pill */}
-          <div className="flex items-center gap-4 bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2.5 shrink-0">
+          {/* Sleek JRS Navy total pill */}
+          <div className="flex items-center gap-4 bg-[#0B2737] text-white rounded-xl px-4 py-2.5 shrink-0 w-fit">
             <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                Total {kilosRecibidosMesSeleccionado.monthLabel}
+              <span className="text-[10px] font-medium text-slate-300 uppercase tracking-wider block">
+                {kilosRecibidosMesSeleccionado.monthLabel}
               </span>
               <div className="flex items-baseline gap-1 mt-0.5 tabular-nums">
-                <span className="text-xl font-black text-indigo-700">
+                <span className="text-xl font-semibold text-white">
                   {kilosRecibidosMesSeleccionado.totalKg.toFixed(2)}
                 </span>
-                <span className="text-xs font-bold text-indigo-700">kg</span>
-                <span className="text-[11px] font-medium text-slate-400 ml-1">
-                  (≈ {kilosRecibidosMesSeleccionado.totalLbs.toFixed(1)} lbs)
+                <span className="text-xs font-semibold text-[#F59E0B]">kg</span>
+                <span className="text-[11px] text-slate-300 ml-1">
+                  ({kilosRecibidosMesSeleccionado.totalLbs.toFixed(1)} lbs)
                 </span>
               </div>
             </div>
-            <div className="pl-3.5 border-l border-slate-200 text-right tabular-nums">
-              <span className="text-sm font-black text-slate-900 block">
+            <div className="pl-3.5 border-l border-white/15 text-right tabular-nums">
+              <span className="text-base font-semibold text-white block leading-tight">
                 {kilosRecibidosMesSeleccionado.count}
               </span>
-              <span className="text-[10px] text-slate-400 font-semibold block">
-                paquetes
-              </span>
+              <span className="text-[10px] text-slate-300 block">paquetes</span>
             </div>
           </div>
         </div>
 
-        {/* 6-Month History Breakdown */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Historial de Kilos por Mes (Últimos 6 Meses)
-            </span>
-            <span className="text-[11px] font-medium text-slate-400">
-              {worldboxPackages.length > 0 ? `${worldboxPackages.length} paquetes indexados en Worldbox` : 'Modo inteligente activo'}
-            </span>
-          </div>
+        {/* Dynamic 6-Month Visual Trend Grid */}
+        <div className="p-5">
+          {(() => {
+            const maxKg = Math.max(...historialMensualKilos.map(item => item.kilos), 1);
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                {historialMensualKilos.map((m, idx) => {
+                  const isCurrent = idx === historialMensualKilos.length - 1;
+                  const pct = Math.max(4, Math.round((m.kilos / maxKg) * 100));
+                  return (
+                    <div
+                      key={m.name}
+                      className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+                        isCurrent
+                          ? 'bg-[#0B2737] border-[#0B2737] text-white shadow-sm'
+                          : 'bg-white border-slate-200/80 hover:border-[#12435E]/60 text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs mb-2">
+                        <span className={isCurrent ? 'font-semibold text-white' : 'font-medium text-slate-600'}>
+                          {m.name}
+                        </span>
+                        {isCurrent && (
+                          <span className="text-[10px] font-semibold text-[#F59E0B] uppercase tracking-wider">
+                            Actual
+                          </span>
+                        )}
+                      </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-            {historialMensualKilos.map((m, idx) => {
-              const isCurrent = idx === historialMensualKilos.length - 1;
-              return (
-                <div
-                  key={m.name}
-                  className={`p-3 rounded-xl border transition-all ${
-                    isCurrent
-                      ? 'bg-indigo-50/50 border-indigo-200/90'
-                      : 'bg-slate-50/60 border-slate-200/60 hover:bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-xs font-semibold mb-1">
-                    <span className={isCurrent ? 'text-indigo-950 font-bold' : 'text-slate-600'}>
-                      {m.name}
-                    </span>
-                    {isCurrent && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-indigo-700 font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                        Actual
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-lg font-black text-slate-900 tabular-nums">
-                    {m.kilos.toFixed(1)} <span className="text-xs font-bold text-indigo-600">kg</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-medium tabular-nums">
-                    ≈ {m.libras.toFixed(1)} lbs
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                    <span>{m.paquetes} paq.</span>
-                    <span className="text-indigo-600 font-semibold">Worldbox</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      <div>
+                        <div className="text-lg font-semibold tabular-nums leading-tight">
+                          {m.kilos.toFixed(1)}{' '}
+                          <span className={`text-xs font-medium ${isCurrent ? 'text-[#F59E0B]' : 'text-[#12435E]'}`}>
+                            kg
+                          </span>
+                        </div>
+                        <div className={`text-[11px] tabular-nums mt-0.5 ${isCurrent ? 'text-slate-300' : 'text-slate-400'}`}>
+                          {m.libras.toFixed(1)} lbs
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className={`h-1 w-full rounded-full overflow-hidden ${isCurrent ? 'bg-white/15' : 'bg-slate-100'}`}>
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isCurrent ? 'bg-[#F59E0B]' : 'bg-[#12435E]'
+                            }`}
+                            style={{ width: `${m.kilos > 0 ? pct : 0}%` }}
+                          />
+                        </div>
+                        <div
+                          className={`mt-2 flex items-center justify-between text-[10.5px] tabular-nums ${
+                            isCurrent ? 'text-slate-300' : 'text-slate-400'
+                          }`}
+                        >
+                          <span>{m.paquetes} paq.</span>
+                          <span className={isCurrent ? 'text-white/80 font-medium' : 'text-slate-500 font-medium'}>
+                            {m.kilos > 0 ? `${pct}%` : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -1731,14 +1778,17 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Facturas Operativas del Período */}
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText size={15} className="text-brand-blue" />
-              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
-                Facturas Emitidas ({periodLabel}: {filteredOperationalInvoices.length})
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-1 h-4 rounded-full bg-[#12435E]" />
+              <h3 className="font-semibold text-slate-900 text-[13px]">
+                Facturas emitidas
               </h3>
+              <span className="text-[11px] font-medium text-slate-400 tabular-nums">
+                {periodLabel} · {filteredOperationalInvoices.length}
+              </span>
             </div>
-            <Link href="/admin/facturacion" className="text-xs font-semibold text-brand-blue hover:underline">
+            <Link href="/admin/facturacion" className="text-xs font-medium text-[#12435E] hover:underline">
               Ver todas →
             </Link>
           </div>
@@ -1748,27 +1798,29 @@ export default function AdminDashboard() {
               <Link
                 key={inv.id}
                 href={`/admin/facturacion/${inv.id}`}
-                className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50/90 transition-colors"
+                className="px-5 py-3 flex items-center justify-between hover:bg-slate-50/90 transition-colors"
               >
-                <div>
-                  <div className="font-bold text-slate-900 text-xs font-mono">#{inv.invoice_number}</div>
-                  <div className="text-[11px] text-slate-500">
-                    {inv.clients?.name || 'Cliente'} &bull; {inv.issue_date?.split('T')[0]}
+                <div className="min-w-0 pr-3">
+                  <div className="font-semibold text-[#0B2737] text-xs font-mono">#{inv.invoice_number}</div>
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {inv.clients?.name || 'Cliente'} · {inv.issue_date?.split('T')[0]}
                   </div>
                 </div>
-                <div className="text-right flex items-center gap-2.5">
+                <div className="text-right flex items-center gap-3 shrink-0">
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                      inv.status === 'Pagada'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
-                        : 'bg-amber-50 text-amber-700 border-amber-200/80'
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
+                      inv.status === 'Pagada' ? 'text-[#12435E]' : 'text-[#B45309]'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${inv.status === 'Pagada' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        inv.status === 'Pagada' ? 'bg-[#12435E]' : 'bg-[#F59E0B]'
+                      }`}
+                    />
                     {inv.status}
                   </span>
-                  <div className="font-bold text-slate-900 text-xs tabular-nums min-w-[64px]">
-                    ${Number(inv.total).toFixed(2)}
+                  <div className="font-semibold text-slate-900 text-xs tabular-nums min-w-[68px]">
+                    ${Number(inv.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
               </Link>
@@ -1783,31 +1835,34 @@ export default function AdminDashboard() {
 
         {/* Paquetes Entregados en el Período */}
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package size={15} className="text-emerald-600" />
-              <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
-                Paquetes Entregados ({periodLabel}: {paquetesEntregadosPeriodo.length})
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-1 h-4 rounded-full bg-[#F59E0B]" />
+              <h3 className="font-semibold text-slate-900 text-[13px]">
+                Paquetes entregados
               </h3>
+              <span className="text-[11px] font-medium text-slate-400 tabular-nums">
+                {periodLabel} · {paquetesEntregadosPeriodo.length}
+              </span>
             </div>
-            <Link href="/admin/inventario" className="text-xs font-semibold text-brand-blue hover:underline">
+            <Link href="/admin/inventario" className="text-xs font-medium text-[#12435E] hover:underline">
               Ver inventario →
             </Link>
           </div>
 
           <div className="divide-y divide-slate-100">
             {paquetesEntregadosPeriodo.slice(0, 6).map(pkg => (
-              <div key={pkg.id} className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50/90 transition-colors">
+              <div key={pkg.id} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50/90 transition-colors">
                 <div className="min-w-0 pr-3">
-                  <div className="font-bold font-mono text-slate-900 text-xs truncate">
+                  <div className="font-semibold font-mono text-[#0B2737] text-xs truncate">
                     {pkg.tracking_number || pkg.id}
                   </div>
-                  <div className="text-[11px] text-slate-500 truncate">
-                    {pkg.client_name || pkg.client || 'Sin cliente'} &bull; {pkg.weight || '0'}
+                  <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {pkg.client_name || pkg.client || 'Sin cliente'} · {pkg.weight || '0'}
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#12435E] shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#12435E]" />
                   Entregado
                 </span>
               </div>
