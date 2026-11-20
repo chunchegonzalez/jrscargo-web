@@ -28,6 +28,7 @@ import {
 } from '@/lib/billing';
 import { generateIncomeReportXlsx } from '@/lib/excel-export';
 import { useModal } from '@/app/components/ModalProvider';
+import DateRangeFilter from '@/app/components/DateRangeFilter';
 
 type InvoiceItem = {
   service_name?: string;
@@ -127,6 +128,13 @@ export default function CompraEnSitioWebPage() {
     } else if (preset === 'mes-anterior') {
       setFilterStartDate(formatYMD(new Date(now.getFullYear(), now.getMonth() - 1, 1)));
       setFilterEndDate(formatYMD(new Date(now.getFullYear(), now.getMonth(), 0)));
+    } else if (preset === 'hoy') {
+      const today = formatYMD(now);
+      setFilterStartDate(today);
+      setFilterEndDate(today);
+    } else if (preset === '7dias') {
+      setFilterStartDate(formatYMD(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)));
+      setFilterEndDate(formatYMD(now));
     } else if (preset === 'todos') {
       setFilterStartDate('');
       setFilterEndDate('');
@@ -447,44 +455,30 @@ export default function CompraEnSitioWebPage() {
         </div>
 
         {/* Fila de fechas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Período</label>
-            <select
-              value={datePreset}
-              onChange={e => applyDatePreset(e.target.value)}
-              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue cursor-pointer"
-            >
-              <option value="todos">Todo el historial</option>
-              <option value="este-mes">Este Mes</option>
-              <option value="mes-anterior">Mes Anterior</option>
-              <option value="personalizado">Rango personalizado</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha desde</label>
-            <input
-              type="date"
-              value={filterStartDate}
-              onChange={e => {
-                setFilterStartDate(e.target.value);
-                setDatePreset('personalizado');
-              }}
-              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Fecha hasta</label>
-            <input
-              type="date"
-              value={filterEndDate}
-              onChange={e => {
-                setFilterEndDate(e.target.value);
-                setDatePreset('personalizado');
-              }}
-              className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-blue"
-            />
-          </div>
+        <div className="pt-1">
+          <DateRangeFilter
+            className="w-full sm:max-w-xs"
+            start={filterStartDate}
+            end={filterEndDate}
+            activePreset={datePreset}
+            onStartChange={value => {
+              setFilterStartDate(value);
+              setDatePreset('personalizado');
+            }}
+            onEndChange={value => {
+              setFilterEndDate(value);
+              setDatePreset('personalizado');
+            }}
+            onClear={() => applyDatePreset('todos')}
+            onPresetSelect={applyDatePreset}
+            presets={[
+              { id: 'hoy', label: 'Hoy' },
+              { id: '7dias', label: '7 días' },
+              { id: 'este-mes', label: 'Este mes' },
+              { id: 'mes-anterior', label: 'Mes anterior' },
+              { id: 'todos', label: 'Todo' },
+            ]}
+          />
         </div>
       </div>
 
