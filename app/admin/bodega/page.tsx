@@ -430,10 +430,6 @@ export default function BodegaScanner() {
               <ScanBarcode size={14} className="text-brand-blue" />
               Lectura de Código de Barras / Tracking
             </label>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200/80">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Lector Activo
-            </span>
           </div>
           <form onSubmit={handleScan} className="relative flex flex-col sm:flex-row gap-2.5">
             <div className="relative flex-1">
