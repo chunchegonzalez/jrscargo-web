@@ -499,17 +499,17 @@ export default function BodegaInventario() {
   if (!mounted) return null;
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full flex flex-col gap-3 lg:h-[calc(100vh-5.75rem)] lg:overflow-hidden">
       {/* 1. Encabezado compacto y elegante */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventario Local</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Inventario Local</h1>
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
               Bodega CR
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500">
             Gestión de paquetes físicos en la bodega de Costa Rica.
           </p>
         </div>
@@ -518,51 +518,50 @@ export default function BodegaInventario() {
           <button
             onClick={handleExportExcel}
             disabled={filteredInventory.length === 0}
-            className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs inline-flex items-center gap-1.5 font-medium text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            className="h-8 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs inline-flex items-center gap-1.5 font-medium text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             title="Exportar inventario actual a Microsoft Excel (.xlsx)"
           >
-            <Download size={14} className="text-emerald-600" />
+            <Download size={13} className="text-emerald-600" />
             <span>Exportar Excel</span>
           </button>
 
           <button
             onClick={() => loadInventory()}
             disabled={isRefreshing}
-            className="h-9 px-3.5 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+            className="h-8 px-3 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
             title="Actualizar inventario sin recargar la página"
           >
-            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
             <span>{isRefreshing ? 'Actualizando...' : 'Actualizar'}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Indicadores (3 tarjetas KPI uniformes) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      {/* 2. Indicadores (3 tarjetas KPI compactas) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 shrink-0">
         {/* KPI 1: Total de paquetes */}
         <button
           type="button"
           onClick={() => setFilterStatus('Todos')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all cursor-pointer flex items-center justify-between group ${
+          className={`text-left bg-white rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer flex items-center justify-between group ${
             filterStatus === 'Todos'
               ? 'border-brand-blue/40 ring-2 ring-brand-blue/10 shadow-xs'
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
           }`}
         >
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total de paquetes</p>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 tabular-nums">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total de paquetes</p>
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 tabular-nums">
                 {filteredInventory.length}
               </span>
               {filteredInventory.length !== inventory.length && (
-                <span className="text-xs font-medium text-slate-400 tabular-nums">de {inventory.length}</span>
+                <span className="text-[11px] font-medium text-slate-400 tabular-nums">de {inventory.length}</span>
               )}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Registros activos en consulta</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-slate-100 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
-            <Package size={19} />
+          <div className="w-9 h-9 rounded-lg bg-slate-100 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
+            <Package size={17} />
           </div>
         </button>
 
@@ -570,7 +569,7 @@ export default function BodegaInventario() {
         <button
           type="button"
           onClick={() => setFilterStatus(filterStatus === 'En Bodega' ? 'Todos' : 'En Bodega')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all cursor-pointer flex items-center justify-between group ${
+          className={`text-left bg-white rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer flex items-center justify-between group ${
             filterStatus === 'En Bodega'
               ? 'border-brand-blue ring-2 ring-brand-blue/15 shadow-xs'
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
@@ -579,20 +578,19 @@ export default function BodegaInventario() {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-brand-yellow"></span>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">En bodega</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">En bodega</p>
             </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-brand-blue tabular-nums">
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-brand-blue tabular-nums">
                 {activePackages}
               </span>
               <span className="text-[11px] font-semibold text-brand-blue/70">
                 {filteredInventory.length > 0 ? `${Math.round((activePackages / filteredInventory.length) * 100)}%` : '0%'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Almacenados disponibles</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue group-hover:text-white transition-colors">
-            <Clock size={19} />
+          <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue group-hover:text-white transition-colors">
+            <Clock size={17} />
           </div>
         </button>
 
@@ -600,7 +598,7 @@ export default function BodegaInventario() {
         <button
           type="button"
           onClick={() => setFilterStatus(filterStatus === 'Entregado' ? 'Todos' : 'Entregado')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all cursor-pointer flex items-center justify-between group ${
+          className={`text-left bg-white rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer flex items-center justify-between group ${
             filterStatus === 'Entregado'
               ? 'border-emerald-600 ring-2 ring-emerald-500/15 shadow-xs'
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
@@ -609,35 +607,34 @@ export default function BodegaInventario() {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Entregados</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Entregados</p>
             </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-700 tabular-nums">
+            <div className="flex items-baseline gap-2 mt-0.5">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-emerald-700 tabular-nums">
                 {deliveredPackages}
               </span>
               <span className="text-[11px] font-semibold text-emerald-600/80">
                 {filteredInventory.length > 0 ? `${Math.round((deliveredPackages / filteredInventory.length) * 100)}%` : '0%'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Despachados a cliente final</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-            <CheckCircle2 size={19} />
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <CheckCircle2 size={17} />
           </div>
         </button>
       </div>
 
-      {/* Contenedor Principal: Barra de filtros + Tabla de inventario */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        {/* 3. Barra de filtros unificada, limpia y ordenada */}
-        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 space-y-2.5">
-          <div className="flex flex-col xl:flex-row gap-2.5 items-stretch xl:items-center justify-between">
-            {/* Búsqueda principal amplia */}
-            <div className="relative flex-1 min-w-0 xl:max-w-sm">
+      {/* Contenedor Principal: Barra de filtros Pro + Tabla de inventario con scroll interno */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex-1 min-h-0 flex flex-col">
+        {/* 3. Barra de filtros Pro de 2 filas bien espaciadas */}
+        <div className="px-3.5 py-2.5 border-b border-slate-200/80 bg-gradient-to-b from-slate-50/90 to-white space-y-2 shrink-0">
+          {/* Fila 1: Búsqueda amplia + Selector Segmentado de Vía + Herramientas */}
+          <div className="flex flex-col lg:flex-row gap-2 items-stretch lg:items-center justify-between">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
               <input
                 type="text"
-                placeholder="Buscar por tracking, cliente o factura..."
+                placeholder="Buscar por tracking, cliente, nota o número de factura..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full h-9 pl-9 pr-8 bg-white rounded-lg border border-slate-200/90 shadow-2xs focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 focus:outline-none text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 transition-all"
@@ -654,199 +651,221 @@ export default function BodegaInventario() {
               )}
             </div>
 
-            {/* Controles de filtrado agrupados y alineados */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Grupo 1: Selectores rápidos principales */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <select
-                  value={filterCompany}
-                  onChange={e => setFilterCompany(e.target.value)}
-                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    filterCompany !== 'Todas'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                  title="Filtrar por empresa"
-                >
-                  <option value="Todas">Empresa: Todas</option>
-                  <option value="JRS CARGO">JRS CARGO</option>
-                  <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
-                  <option value="JR LOGISTICS">JR LOGISTICS</option>
-                  <option value="TRINITY BOX">TRINITY BOX</option>
-                </select>
-
-                <select
-                  value={filterTransport}
-                  onChange={e => setFilterTransport(e.target.value as 'Todos' | 'Aéreo' | 'Marítimo')}
-                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    filterTransport !== 'Todos'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                  title="Filtrar por vía de envío (Aéreo / Marítimo)"
-                >
-                  <option value="Todos">Vía: Todas</option>
-                  <option value="Aéreo">✈️ Aéreo</option>
-                  <option value="Marítimo">🚢 Marítimo</option>
-                </select>
-
-                <select
-                  value={filterStatus}
-                  onChange={e => setFilterStatus(e.target.value)}
-                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    filterStatus !== 'Todos'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                  title="Filtrar por estado interno"
-                >
-                  <option value="Todos">Estado: Todos</option>
-                  <option value="En Bodega">En Bodega</option>
-                  <option value="Entregado">Entregados</option>
-                </select>
-
-                <select
-                  value={filterInvoice}
-                  onChange={e => setFilterInvoice(e.target.value)}
-                  className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                    filterInvoice !== 'Todas'
-                      ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                      : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-                  }`}
-                  title="Filtrar por estado de facturación"
-                >
-                  <option value="Todas">Factura: Todas</option>
-                  <option value="Facturado">Con Factura</option>
-                  <option value="Sin Factura">Sin Factura</option>
-                </select>
-
-                <div className="relative inline-flex items-center">
-                  <input
-                    type="date"
-                    value={filterDate}
-                    onChange={e => setFilterDate(e.target.value)}
-                    className={`h-9 px-2.5 bg-white border rounded-lg font-medium text-xs shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                      filterDate
-                        ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold pr-7'
-                        : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Control segmentado Pro para Vía (Todas / Aéreo / Marítimo) */}
+              <div className="inline-flex items-center bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/80">
+                {(
+                  [
+                    { id: 'Todos', label: 'Todas' },
+                    { id: 'Aéreo', label: '✈️ Aéreo' },
+                    { id: 'Marítimo', label: '🚢 Marítimo' },
+                  ] as const
+                ).map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setFilterTransport(opt.id)}
+                    className={`h-7 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      filterTransport === opt.id
+                        ? 'bg-[#0B2737] text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
                     }`}
-                    title="Filtrar por fecha de ingreso"
-                  />
-                  {filterDate && (
-                    <button
-                      type="button"
-                      onClick={() => setFilterDate('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      title="Quitar fecha"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="h-5 w-px bg-slate-200/90 hidden sm:block mx-0.5" />
+              <div className="h-5 w-px bg-slate-200 hidden sm:block" />
 
-              {/* Grupo 2: Herramientas de vista y filtros avanzados */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMoreFilters(prev => !prev);
+                  setShowColumnsMenu(false);
+                }}
+                className={`h-8 px-2.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
+                  showMoreFilters || secondaryFilterCount > 0
+                    ? 'bg-brand-blue text-white border-brand-blue'
+                    : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <SlidersHorizontal size={13} />
+                <span>Avanzado</span>
+                {secondaryFilterCount > 0 && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      showMoreFilters || secondaryFilterCount > 0
+                        ? 'bg-white/20 text-white'
+                        : 'bg-brand-blue text-white'
+                    }`}
+                  >
+                    {secondaryFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Selector de Columnas Visibles */}
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowMoreFilters(prev => !prev);
-                    setShowColumnsMenu(false);
+                    setShowColumnsMenu(prev => !prev);
+                    setShowMoreFilters(false);
                   }}
-                  className={`h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
-                    showMoreFilters || secondaryFilterCount > 0
-                      ? 'bg-brand-blue text-white border-brand-blue'
+                  className={`h-8 px-2.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
+                    showColumnsMenu
+                      ? 'bg-slate-100 border-slate-300 text-slate-900'
                       : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
                   }`}
+                  title="Personalizar columnas visibles"
                 >
-                  <SlidersHorizontal size={13} />
-                  <span>Avanzado</span>
-                  {secondaryFilterCount > 0 && (
-                    <span
-                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                        showMoreFilters || secondaryFilterCount > 0
-                          ? 'bg-white/20 text-white'
-                          : 'bg-brand-blue text-white'
-                      }`}
-                    >
-                      {secondaryFilterCount}
-                    </span>
-                  )}
+                  <Columns size={13} className="text-slate-500" />
+                  <span className="hidden sm:inline">Columnas</span>
                 </button>
 
-                {/* Selector de Columnas Visibles */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowColumnsMenu(prev => !prev);
-                      setShowMoreFilters(false);
-                    }}
-                    className={`h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer ${
-                      showColumnsMenu
-                        ? 'bg-slate-100 border-slate-300 text-slate-900'
-                        : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
-                    }`}
-                    title="Personalizar columnas visibles"
+                {showColumnsMenu && (
+                  <div
+                    className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl border border-slate-200 shadow-lg p-2.5 z-30 space-y-1"
+                    onClick={e => e.stopPropagation()}
                   >
-                    <Columns size={13} className="text-slate-500" />
-                    <span className="hidden sm:inline">Columnas</span>
-                  </button>
-
-                  {showColumnsMenu && (
-                    <div
-                      className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl border border-slate-200 shadow-lg p-2.5 z-30 space-y-1"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Columnas de la tabla
-                      </div>
-                      {(
-                        [
-                          { key: 'client', label: 'Cliente' },
-                          { key: 'company', label: 'Empresa' },
-                          { key: 'weight', label: 'Peso' },
-                          { key: 'invoice', label: 'Factura' },
-                          { key: 'date', label: 'Fecha de Ingreso' },
-                          { key: 'status', label: 'Estado Interno' }
-                        ] as { key: ColumnKey; label: string }[]
-                      ).map(col => (
-                        <label
-                          key={col.key}
-                          className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 text-xs text-slate-700 font-medium cursor-pointer"
-                        >
-                          <span>{col.label}</span>
-                          <input
-                            type="checkbox"
-                            checked={visibleColumns[col.key]}
-                            onChange={() => toggleColumn(col.key)}
-                            className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
-                          />
-                        </label>
-                      ))}
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Columnas de la tabla
                     </div>
-                  )}
-                </div>
-
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={clearAllFilters}
-                    className="h-9 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
-                    title="Restablecer todos los filtros"
-                  >
-                    <X size={13} />
-                    <span>Limpiar</span>
-                  </button>
+                    {(
+                      [
+                        { key: 'client', label: 'Cliente' },
+                        { key: 'company', label: 'Empresa' },
+                        { key: 'weight', label: 'Peso' },
+                        { key: 'invoice', label: 'Factura' },
+                        { key: 'date', label: 'Fecha de Ingreso' },
+                        { key: 'status', label: 'Estado Interno' }
+                      ] as { key: ColumnKey; label: string }[]
+                    ).map(col => (
+                      <label
+                        key={col.key}
+                        className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 text-xs text-slate-700 font-medium cursor-pointer"
+                      >
+                        <span>{col.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns[col.key]}
+                          onChange={() => toggleColumn(col.key)}
+                          className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
+                        />
+                      </label>
+                    ))}
+                  </div>
                 )}
-
-                {/* Contador compacto */}
-                <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
-                  {filteredInventory.length} {filteredInventory.length === 1 ? 'registro' : 'registros'}
-                </span>
               </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="h-8 px-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Restablecer todos los filtros"
+                >
+                  <X size={13} />
+                  <span>Limpiar</span>
+                </button>
+              )}
+
+              <span className="h-8 px-2.5 bg-slate-100/80 border border-slate-200/80 text-slate-700 text-xs font-bold rounded-lg inline-flex items-center tabular-nums">
+                {filteredInventory.length} {filteredInventory.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </div>
+          </div>
+
+          {/* Fila 2: Barra de selectores limpios con etiquetas claras */}
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            <div
+              className={`h-8 px-2.5 rounded-lg border inline-flex items-center gap-1.5 text-xs transition-colors ${
+                filterCompany !== 'Todas'
+                  ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue'
+                  : 'border-slate-200/90 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <Building2 size={12} className="text-slate-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-400">Empresa:</span>
+              <select
+                value={filterCompany}
+                onChange={e => setFilterCompany(e.target.value)}
+                className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="Todas">Todas</option>
+                <option value="JRS CARGO">JRS CARGO</option>
+                <option value="ATLANTIC IMPORTS">ATLANTIC IMPORTS</option>
+                <option value="JR LOGISTICS">JR LOGISTICS</option>
+                <option value="TRINITY BOX">TRINITY BOX</option>
+              </select>
+            </div>
+
+            <div
+              className={`h-8 px-2.5 rounded-lg border inline-flex items-center gap-1.5 text-xs transition-colors ${
+                filterStatus !== 'Todos'
+                  ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue'
+                  : 'border-slate-200/90 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <Clock size={12} className="text-slate-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-400">Estado:</span>
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="Todos">Todos</option>
+                <option value="En Bodega">En Bodega</option>
+                <option value="Entregado">Entregados</option>
+              </select>
+            </div>
+
+            <div
+              className={`h-8 px-2.5 rounded-lg border inline-flex items-center gap-1.5 text-xs transition-colors ${
+                filterInvoice !== 'Todas'
+                  ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue'
+                  : 'border-slate-200/90 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <FileText size={12} className="text-slate-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-400">Factura:</span>
+              <select
+                value={filterInvoice}
+                onChange={e => setFilterInvoice(e.target.value)}
+                className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="Todas">Todas</option>
+                <option value="Facturado">Con Factura</option>
+                <option value="Sin Factura">Sin Factura</option>
+              </select>
+            </div>
+
+            <div
+              className={`h-8 px-2.5 rounded-lg border inline-flex items-center gap-1.5 text-xs transition-colors ${
+                filterDate
+                  ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue'
+                  : 'border-slate-200/90 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              <Calendar size={12} className="text-slate-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-400">Fecha:</span>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer text-xs"
+              />
+              {filterDate && (
+                <button
+                  type="button"
+                  onClick={() => setFilterDate('')}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                  title="Quitar fecha"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -1031,8 +1050,8 @@ export default function BodegaInventario() {
           )}
         </div>
 
-        {/* 4. Tabla de inventario con encabezado sticky y filas compactas */}
-        <div className="overflow-x-auto max-h-[calc(100vh-280px)] min-h-[420px] overflow-y-auto">
+        {/* 4. Tabla de inventario con encabezado sticky y scroll interno en una sola pantalla */}
+        <div className="flex-1 min-h-0 overflow-auto">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200/90">
               <tr className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold select-none">
@@ -1572,7 +1591,7 @@ export default function BodegaInventario() {
         </div>
 
         {/* Footer Tabla con Paginación de Alto Rendimiento */}
-        <div className="px-5 py-3.5 bg-slate-50/90 border-t border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+        <div className="px-4 py-2.5 bg-slate-50/90 border-t border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-slate-600 shrink-0">
           <div className="flex items-center gap-3 flex-wrap">
             <span>
               Mostrando{' '}

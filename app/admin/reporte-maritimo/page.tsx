@@ -353,12 +353,12 @@ export default function ReporteMaritimoPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
+    <div className="max-w-7xl w-full mx-auto flex flex-col gap-3 lg:h-[calc(100vh-5.75rem)] lg:overflow-hidden animate-fade-in">
       {/* Cabecera */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
               Reporte de Productos Marítimos
             </h1>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -402,7 +402,7 @@ export default function ReporteMaritimoPage() {
       </div>
 
       {/* Barra de Filtro por Fecha y Período Consultado */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 shrink-0">
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex flex-wrap bg-slate-100/90 border border-slate-200/60 rounded-lg p-0.5 gap-0.5">
             {[
@@ -493,7 +493,7 @@ export default function ReporteMaritimoPage() {
       </div>
 
       {/* 4 Tarjetas KPI del Reporte Marítimo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         {/* 1. Pies Cúbicos Facturados */}
         <div className="bg-white rounded-xl p-4 border border-indigo-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex items-center justify-between">
           <div>
@@ -578,8 +578,8 @@ export default function ReporteMaritimoPage() {
       </div>
 
       {/* Tabla Detallada de Envíos Marítimos Facturados */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-        <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex-1 min-h-0 flex flex-col">
+        <div className="px-4 py-2.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
           <div>
             <h2 className="text-sm font-bold text-slate-900">
               Desglose de Envíos y Productos Marítimos Facturados ({maritimeLines.length})
@@ -599,9 +599,9 @@ export default function ReporteMaritimoPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="flex-1 min-h-0 overflow-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/95 border-b border-slate-200/80 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200/80 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
               <tr>
                 <th className="py-2.5 px-4">Factura</th>
                 <th className="py-2.5 px-3.5">Fecha</th>

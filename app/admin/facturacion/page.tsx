@@ -668,12 +668,12 @@ export default function FacturacionDashboard() {
   }, [filterStartDate, filterEndDate]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
+    <div className="max-w-7xl w-full mx-auto flex flex-col gap-3 lg:h-[calc(100vh-5.75rem)] lg:overflow-hidden">
       {/* Cabecera */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Facturación y Cobros</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Facturación y Cobros</h1>
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
               Finanzas
             </span>
@@ -719,23 +719,23 @@ export default function FacturacionDashboard() {
         </div>
       </div>
 
-      {/* Tarjetas de Resumen Dinámicas (se recalculan con cualquier filtro) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Tarjetas de Resumen Dinámicas (compactas en una sola vista) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 shrink-0">
         <button
           type="button"
           onClick={() => setFilterStatus('Todas')}
-          className={`text-left bg-white rounded-xl p-4 sm:p-5 border transition-all cursor-pointer flex items-center gap-4 group ${
+          className={`text-left bg-white rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer flex items-center gap-3 group ${
             filterStatus === 'Todas'
               ? 'border-brand-blue/40 ring-2 ring-brand-blue/10 shadow-xs'
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.03)]'
           }`}
         >
-          <div className="w-12 h-12 rounded-xl bg-slate-100/90 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
-            <DollarSign size={22} />
+          <div className="w-10 h-10 rounded-lg bg-slate-100/90 text-brand-blue flex items-center justify-center shrink-0 group-hover:bg-brand-blue/10 transition-colors">
+            <DollarSign size={19} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">Total Facturado</p>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 tabular-nums mt-0.5 truncate">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 truncate">Total Facturado</p>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 tabular-nums mt-0.5 truncate">
               {formatCurrency(totalFacturadoUSD, 'USD')}
             </h2>
             <p className="text-xs text-slate-500 mt-1 truncate">
@@ -793,7 +793,7 @@ export default function FacturacionDashboard() {
       </div>
 
       {/* Sección de Filtros Organizada */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 sm:p-5 space-y-4">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-3 sm:p-3.5 space-y-2.5 shrink-0">
         {/* Fila 1: Buscador principal + Pestañas rápidas de estado */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="relative flex-1 min-w-0 lg:max-w-md">
@@ -1266,7 +1266,7 @@ export default function FacturacionDashboard() {
       </div>
 
       {/* Tabla de Facturas */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex-1 min-h-0 flex flex-col">
         {/* Vista Móvil: Tarjetas individuales táctiles (sin scroll horizontal) */}
         <div className="md:hidden divide-y divide-slate-100">
           {loading ? (
@@ -1399,10 +1399,10 @@ export default function FacturacionDashboard() {
           )}
         </div>
 
-        {/* Vista Escritorio: Tabla completa con ordenamiento y legibilidad mejorada */}
-        <div className="hidden md:block overflow-x-auto">
+        {/* Vista Escritorio: Tabla completa con ordenamiento y scroll interno */}
+        <div className="hidden md:block flex-1 min-h-0 overflow-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/90 border-b border-slate-200/90">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200/90">
               <tr className="text-xs text-slate-600 font-bold select-none">
                 <th
                   className="py-3.5 px-4 pl-6 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap"

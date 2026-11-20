@@ -185,12 +185,12 @@ export default function ClientesPage() {
   }).length;
 
   return (
-    <div className="space-y-5">
+    <div className="w-full flex flex-col gap-3 lg:h-[calc(100vh-5.75rem)] lg:overflow-hidden">
       {/* Cabecera */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Directorio de Clientes</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Directorio de Clientes</h1>
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15 tabular-nums">
               {clients.length} registrados
             </span>
@@ -212,7 +212,7 @@ export default function ClientesPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
         <button
           type="button"
           onClick={() => setStatusFilter('todos')}
@@ -291,9 +291,9 @@ export default function ClientesPage() {
       </div>
 
       {/* Lista de Clientes */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex-1 min-h-0 flex flex-col">
         {/* Toolbar de búsqueda y filtros */}
-        <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 space-y-2.5">
+        <div className="px-4 py-2.5 border-b border-slate-200/80 bg-gradient-to-b from-slate-50/90 to-white space-y-2 shrink-0">
           <div className="flex flex-col xl:flex-row gap-2.5 items-stretch xl:items-center justify-between">
             <div className="relative flex-1 min-w-0 xl:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
@@ -377,9 +377,9 @@ export default function ClientesPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="flex-1 min-h-0 overflow-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/95 border-b border-slate-200/90">
+            <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200/90">
               <tr className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold select-none">
                 <th className="py-2.5 px-3.5 pl-5">Cliente</th>
                 <th className="py-2.5 px-3.5">Contacto</th>
