@@ -663,9 +663,8 @@ export default function AmazonDeals() {
                     <span>{countdownLabel}</span>
                   </div>
                   {countdown.phase !== 'pre' && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shrink-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      {isEn ? 'LIVE' : 'ACTIVO'}
+                    <span className="inline-flex items-center text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-[#FACC15] text-[#0B1D2B] shrink-0">
+                      {isEn ? 'ON NOW' : 'VIGENTE HOY'}
                     </span>
                   )}
                 </div>
@@ -813,39 +812,32 @@ export default function AmazonDeals() {
         {/* ================================================================= */}
         {/* SECCIÓN DINÁMICA: CONTACTAR AGENTE JRS PARA AYUDA CON COTIZACIÓN  */}
         {/* ================================================================= */}
-        <div className="relative rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-[#0B2538] via-[#0E2E42] to-[#0B2832] p-5 sm:p-6 shadow-xl overflow-hidden">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-emerald-500/15 blur-3xl"
-          />
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            <div className="flex items-start gap-3.5 max-w-xl">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/35 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                <MessageCircle size={22} />
+        <div className="rounded-2xl border border-white/10 bg-[#0D2234] p-5 sm:p-6 lg:p-7 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center">
+            <div className="lg:col-span-6 flex items-start gap-3.5 min-w-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/[0.06] border border-white/10 text-[#FACC15] flex items-center justify-center shrink-0 mt-0.5">
+                <MessageCircle size={20} />
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {isEn ? 'JRS Advisor Available' : 'Agente JRS en línea'}
-                  </span>
-                </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1">
+                  {isEn ? 'Direct Support · JRS Cargo WhatsApp' : 'Atención directa · WhatsApp JRS Cargo'}
+                </p>
                 <h3 className="text-base sm:text-lg font-extrabold text-white leading-snug">
                   {isEn
                     ? 'Need help quoting your Black Friday purchase?'
                     : '¿Necesitas ayuda para cotizar tus compras de Black Friday?'}
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 mt-0.5 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
                   {isEn
-                    ? 'Paste your Amazon product link or tell us what you want to bring — a JRS Cargo agent will calculate your air or ocean shipping to Costa Rica right away.'
-                    : 'Pega el enlace de Amazon o escríbenos qué deseas traer y un agente de JRS Cargo te cotiza al instante envío aéreo o marítimo hasta Costa Rica.'}
+                    ? 'Paste your Amazon link or tell us what you want to bring and we will quote air or ocean shipping to Costa Rica.'
+                    : 'Pega el enlace de Amazon o escríbenos qué deseas traer y te cotizamos envío aéreo o marítimo hasta Costa Rica.'}
                 </p>
               </div>
             </div>
 
             <form
               onSubmit={handleOpenWhatsAppQuote}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto lg:min-w-[400px]"
+              className="lg:col-span-6 w-full flex flex-col sm:flex-row items-stretch gap-2.5"
             >
               <input
                 ref={quoteInputRef}
@@ -854,18 +846,18 @@ export default function AmazonDeals() {
                 onChange={(e) => setQuoteText(e.target.value)}
                 placeholder={
                   isEn
-                    ? 'Paste Amazon link or item name...'
+                    ? 'Paste Amazon link or product name...'
                     : 'Pega el link de Amazon o producto...'
                 }
                 aria-label={isEn ? 'Amazon product or link to quote' : 'Enlace o producto de Amazon a cotizar'}
-                className="flex-1 h-11 px-3.5 rounded-xl bg-[#071724]/90 border border-white/15 focus:border-emerald-400/70 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-400 transition-colors"
+                className="flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-xl bg-[#071622] border border-white/15 focus:border-emerald-400 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-400 transition-colors"
               />
               <button
                 type="submit"
-                className="h-11 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#051B14] font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 shrink-0 cursor-pointer"
+                className="h-11 sm:h-12 px-5 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition-colors shrink-0 whitespace-nowrap cursor-pointer"
               >
                 <Send size={15} />
-                <span>{isEn ? 'Ask JRS Agent' : 'Cotizar por WhatsApp'}</span>
+                <span>{isEn ? 'Quote on WhatsApp' : 'Cotizar por WhatsApp'}</span>
               </button>
             </form>
           </div>
