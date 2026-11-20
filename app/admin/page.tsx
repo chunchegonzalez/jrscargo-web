@@ -1013,286 +1013,274 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ==================== 2. TARJETAS KPI PRINCIPALES ==================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
-        {/* Card 1: Facturado Operativo en el Día / Período (sin compras web) */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-              Facturado ({periodLabel})
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
-              <DollarSign size={16} />
+      {/* ==================== 2. INDICADORES PRINCIPALES ==================== */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          {/* 1. Facturado Operativo */}
+          <div className="p-4 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-500 truncate">
+                  Facturado · {periodLabel}
+                </span>
+                <DollarSign size={14} className="text-slate-400 shrink-0" />
+              </div>
+              <div className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                ${totalFacturadoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums truncate">
+                ≈ ₡{Math.round(totalFacturadoUSD * currentExchangeRate).toLocaleString('es-CR')} · sin web
+              </p>
             </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="text-2xl font-black tracking-tight text-slate-900 tabular-nums">
-              ${totalFacturadoUSD.toFixed(2)}
-            </div>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5 tabular-nums">
-              ≈ ₡{Math.round(totalFacturadoUSD * currentExchangeRate).toLocaleString('es-CR')} CRC · Sin web
-            </p>
-          </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="font-semibold text-slate-600">
-              {filteredOperationalInvoices.length}{' '}
-              {filteredOperationalInvoices.length === 1 ? 'emitida' : 'emitidas'}
-            </span>
-            <span className="text-emerald-600 font-semibold tabular-nums">
-              Cobrado: ${cobradoPeriodoUSD.toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Paquetes Entregados en el Día / Período */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-              Paquetes Entregados
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={16} />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black tracking-tight text-emerald-700 tabular-nums">
-                {paquetesEntregadosPeriodo.length}
+            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>
+                {filteredOperationalInvoices.length}{' '}
+                {filteredOperationalInvoices.length === 1 ? 'factura' : 'facturas'}
               </span>
-              <span className="text-[11px] font-medium text-slate-400">
-                paq. ({periodLabel})
+              <span className="font-medium text-emerald-700 tabular-nums">
+                Cobrado ${cobradoPeriodoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5 tabular-nums">
-              Peso entregado: {pesoEntregadoLbs.toFixed(1)} lbs
-            </p>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="font-medium text-slate-500">
-              Recibidos: <strong className="text-slate-800 font-semibold">{paquetesRecibidosPeriodo.length}</strong>
-            </span>
-            <Link href="/admin/inventario" className="text-brand-blue font-semibold hover:underline">
-              En bodega: {paquetesEnBodegaActual} →
-            </Link>
-          </div>
-        </div>
 
-        {/* Card 3: Utilidad Neta (Facturado operativo sin compras web - Gastos) */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-              Utilidad Neta ({periodLabel})
-            </span>
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                utilidadNetaUSD >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-              }`}
-            >
-              <Wallet size={16} />
+          {/* 2. Paquetes Entregados */}
+          <div className="p-4 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-500 truncate">
+                  Entregados · {periodLabel}
+                </span>
+                <CheckCircle2 size={14} className="text-slate-400 shrink-0" />
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                <span className="text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                  {paquetesEntregadosPeriodo.length}
+                </span>
+                <span className="text-xs text-slate-400">paquetes</span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums truncate">
+                Peso entregado: {pesoEntregadoLbs.toFixed(1)} lbs
+              </p>
             </div>
-          </div>
-          <div className="mt-2.5">
-            <div
-              className={`text-2xl font-black tracking-tight tabular-nums ${
-                utilidadNetaUSD >= 0 ? 'text-slate-900' : 'text-red-600'
-              }`}
-            >
-              ${utilidadNetaUSD.toFixed(2)}
-            </div>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5 tabular-nums">
-              Facturado: <strong className="text-slate-800">${totalFacturadoUSD.toFixed(2)}</strong> · Gastos:{' '}
-              <strong className="text-red-600">-${totalGastosUSD.toFixed(2)}</strong>
-            </p>
-          </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span
-              className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold text-[10px]"
-              title="Facturado operativo del período (incluyendo pendientes) menos gastos. Excluye compras en sitio web."
-            >
-              Sin compras web
-            </span>
-            <Link href="/admin/gastos" className="text-brand-blue font-semibold hover:underline">
-              Ver gastos →
-            </Link>
-          </div>
-        </div>
-
-        {/* Card 4: Cuentas por Cobrar Operativas (Sin compras web) */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-              Pendiente por Cobrar
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <AlertCircle size={16} />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="text-2xl font-black tracking-tight text-amber-600 tabular-nums">
-              ${totalReceivablesUSD.toFixed(2)}
-            </div>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5 tabular-nums">
-              ≈ ₡{Math.round(totalReceivablesUSD * currentExchangeRate).toLocaleString('es-CR')} CRC · Sin web
-            </p>
-          </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200/60 font-semibold">
-              {pendientesCount} pendientes
-            </span>
-            <Link href="/admin/cuentas-por-cobrar" className="text-brand-blue font-semibold hover:underline">
-              Cobrar →
-            </Link>
-          </div>
-        </div>
-
-        {/* Card 5: Kilos Recibidos (Worldbox / Mes) */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate">
-              Kilos Recibidos ({dateFilter === 'mes' ? 'Mes' : periodLabel})
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <Scale size={16} />
-            </div>
-          </div>
-          <div className="mt-2.5">
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black tracking-tight text-indigo-700 tabular-nums">
-                {(dateFilter === 'mes' ? kilosRecibidosMesSeleccionado.totalKg : kilosRecibidosWorldboxPeriodo).toFixed(1)}
+            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>
+                Recibidos: <strong className="font-semibold text-slate-700">{paquetesRecibidosPeriodo.length}</strong>
               </span>
-              <span className="text-xs font-bold text-indigo-600">kg</span>
-              <span className="text-[11px] font-medium text-slate-400 ml-1 tabular-nums">
-                (≈ {((dateFilter === 'mes' ? kilosRecibidosMesSeleccionado.totalKg : kilosRecibidosWorldboxPeriodo) * 2.20462).toFixed(1)} lbs)
+              <Link href="/admin/inventario" className="font-medium text-brand-blue hover:underline">
+                En bodega: {paquetesEnBodegaActual} →
+              </Link>
+            </div>
+          </div>
+
+          {/* 3. Utilidad Neta */}
+          <div className="p-4 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-500 truncate">
+                  Utilidad neta · {periodLabel}
+                </span>
+                <Wallet size={14} className="text-slate-400 shrink-0" />
+              </div>
+              <div
+                className={`mt-1.5 text-2xl font-semibold tracking-tight tabular-nums ${
+                  utilidadNetaUSD >= 0 ? 'text-slate-900' : 'text-red-600'
+                }`}
+              >
+                ${utilidadNetaUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums truncate">
+                Gastos:{' '}
+                <span className="text-red-600 font-medium">
+                  -${totalGastosUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </p>
+            </div>
+            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span title="Facturado operativo del período (incluyendo pendientes) menos gastos. Excluye compras en sitio web.">
+                Operativo (sin web)
+              </span>
+              <Link href="/admin/gastos" className="font-medium text-brand-blue hover:underline">
+                Ver gastos →
+              </Link>
+            </div>
+          </div>
+
+          {/* 4. Pendiente por Cobrar */}
+          <div className="p-4 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-500 truncate">
+                  Por cobrar (operativo)
+                </span>
+                <AlertCircle size={14} className="text-slate-400 shrink-0" />
+              </div>
+              <div className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                ${totalReceivablesUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums truncate">
+                ≈ ₡{Math.round(totalReceivablesUSD * currentExchangeRate).toLocaleString('es-CR')} · sin web
+              </p>
+            </div>
+            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span className="font-medium text-amber-700">
+                {pendientesCount} pendientes
+              </span>
+              <Link href="/admin/cuentas-por-cobrar" className="font-medium text-brand-blue hover:underline">
+                Cobrar →
+              </Link>
+            </div>
+          </div>
+
+          {/* 5. Kilos Recibidos */}
+          <div className="p-4 flex flex-col justify-between gap-3">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-500 truncate">
+                  Kilos recibidos · {dateFilter === 'mes' ? 'Mes' : periodLabel}
+                </span>
+                <Scale size={14} className="text-slate-400 shrink-0" />
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-1">
+                <span className="text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                  {(dateFilter === 'mes' ? kilosRecibidosMesSeleccionado.totalKg : kilosRecibidosWorldboxPeriodo).toFixed(1)}
+                </span>
+                <span className="text-xs font-medium text-slate-500">kg</span>
+                <span className="text-[11px] text-slate-400 ml-1 tabular-nums">
+                  ({((dateFilter === 'mes' ? kilosRecibidosMesSeleccionado.totalKg : kilosRecibidosWorldboxPeriodo) * 2.20462).toFixed(1)} lbs)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 tabular-nums truncate">
+                Mes actual: {kilosRecibidosMesSeleccionado.totalKg.toFixed(1)} kg ({kilosRecibidosMesSeleccionado.count} paq.)
+              </p>
+            </div>
+            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+              <span>
+                {dateFilter === 'mes' ? kilosRecibidosMesSeleccionado.count : paquetesRecibidosWorldboxPeriodo.length} paq. Worldbox
+              </span>
+              <span className="text-slate-400" title="Solo contempla productos con coincidencia en Worldbox. Compras por sitio web no tomadas en cuenta.">
+                Sin web
               </span>
             </div>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5 tabular-nums">
-              Mes actual: <strong className="text-slate-800 font-semibold">{kilosRecibidosMesSeleccionado.totalKg.toFixed(1)} kg</strong> ({kilosRecibidosMesSeleccionado.count} paq.)
-            </p>
-          </div>
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="font-medium text-slate-600">
-              {dateFilter === 'mes' ? kilosRecibidosMesSeleccionado.count : paquetesRecibidosWorldboxPeriodo.length} paq. Worldbox
-            </span>
-            <span
-              className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold text-[10px] border border-indigo-200/60"
-              title="Solo contempla productos con coincidencia en Worldbox. Compras por sitio web no tomadas en cuenta."
-            >
-              Sin web
-            </span>
           </div>
         </div>
       </div>
 
-      {/* ==================== 2.5 DESGLOSE SEPARADO DE RUBROS (SIN MEZCLAR EN UTILIDAD) ==================== */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        {/* Rubro 1: Desglose de Utilidad (Facturado Operativo - Gastos, sin compras web) */}
-        <div className="bg-white rounded-xl p-4 border border-emerald-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md">
-                Cálculo de Utilidad ({periodLabel})
-              </span>
-              <h3 className="text-sm font-bold text-slate-900 mt-1.5">
-                Facturado Operativo vs Gastos
+      {/* ==================== 2.5 DESGLOSE POR RUBRO ==================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Rubro 1: Balance Operativo */}
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Wallet size={14} className="text-slate-400 shrink-0" />
+              <h3 className="text-[13px] font-semibold text-slate-900 truncate">
+                Balance operativo
               </h3>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <Wallet size={16} />
-            </div>
+            <span className="text-[11px] text-slate-400 shrink-0">{periodLabel}</span>
           </div>
 
-          <div className="mt-3 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Facturado operativo (sin web):</span>
-              <strong className="font-bold text-slate-900 tabular-nums">${totalFacturadoUSD.toFixed(2)}</strong>
+          <div className="px-4 py-1 divide-y divide-slate-100 text-xs flex-1">
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-600">Facturado operativo (sin web)</span>
+              <span className="font-semibold text-slate-900 tabular-nums">
+                ${totalFacturadoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Gastos registrados del período:</span>
-              <strong className="font-bold text-red-600 tabular-nums">-${totalGastosUSD.toFixed(2)}</strong>
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-600">Gastos registrados</span>
+              <span className="font-semibold text-red-600 tabular-nums">
+                -${totalGastosUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
-            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-              <span className="text-slate-500">Cobrado / Pendiente del período:</span>
-              <strong className="font-bold text-emerald-700 tabular-nums">
-                ${cobradoPeriodoUSD.toFixed(2)} / <span className="text-amber-600">${pendientePeriodoOperativoUSD.toFixed(2)}</span>
-              </strong>
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-500">Cobrado / pendiente</span>
+              <span className="font-semibold tabular-nums">
+                <span className="text-emerald-700">
+                  ${cobradoPeriodoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-slate-300 mx-1">/</span>
+                <span className="text-amber-700">
+                  ${pendientePeriodoOperativoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Rubro 2: Compras en Sitio Web (Rubro Independiente) */}
-        <div className="bg-white rounded-xl p-4 border border-indigo-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
-                Rubro Independiente
-              </span>
-              <h3 className="text-sm font-bold text-slate-900 mt-1.5">
-                Compras en Sitio Web ({periodLabel})
+        {/* Rubro 2: Compras en Sitio Web */}
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShoppingBag size={14} className="text-slate-400 shrink-0" />
+              <h3 className="text-[13px] font-semibold text-slate-900 truncate">
+                Compras en sitio web
               </h3>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <ShoppingBag size={16} />
-            </div>
+            <Link
+              href="/admin/compra-en-sitio-web"
+              className="text-[11px] font-medium text-brand-blue hover:underline shrink-0"
+            >
+              Ver detalle →
+            </Link>
           </div>
 
-          <div className="mt-3 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Facturado Web ({filteredWebInvoices.length} fact.):</span>
-              <strong className="font-bold text-slate-900 tabular-nums">${webBilledPeriodoUSD.toFixed(2)}</strong>
+          <div className="px-4 py-1 divide-y divide-slate-100 text-xs flex-1">
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-600">Facturado ({filteredWebInvoices.length} fact.)</span>
+              <span className="font-semibold text-slate-900 tabular-nums">
+                ${webBilledPeriodoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Cobrado Web en período:</span>
-              <strong className="font-bold text-emerald-700 tabular-nums">${webPaidPeriodoUSD.toFixed(2)}</strong>
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-600">Cobrado en el período</span>
+              <span className="font-semibold text-emerald-700 tabular-nums">
+                ${webPaidPeriodoUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
-            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-              <span className="text-slate-500">Saldo Web por cobrar ({webPendingGlobalCount} pend.):</span>
-              <Link
-                href="/admin/compra-en-sitio-web"
-                className="font-bold text-indigo-700 hover:underline tabular-nums"
-              >
-                ${webPendingGlobalUSD.toFixed(2)} →
-              </Link>
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-500">Saldo por cobrar ({webPendingGlobalCount} pend.)</span>
+              <span className="font-semibold text-slate-900 tabular-nums">
+                ${webPendingGlobalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Rubro 3: Productos y Servicios Marítimos del Período */}
-        <div className="bg-white rounded-xl p-4 border border-sky-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col justify-between">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 border border-sky-200/70 px-2 py-0.5 rounded-md">
-                Reporte Marítimo ({periodLabel})
-              </span>
-              <h3 className="text-sm font-bold text-slate-900 mt-1.5">
-                Productos y Envíos Marítimos
+        {/* Rubro 3: Envíos Marítimos */}
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Anchor size={14} className="text-slate-400 shrink-0" />
+              <h3 className="text-[13px] font-semibold text-slate-900 truncate">
+                Envíos marítimos
               </h3>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-              <Anchor size={16} />
-            </div>
+            <Link
+              href="/admin/reporte-maritimo"
+              className="text-[11px] font-medium text-brand-blue hover:underline shrink-0"
+            >
+              Ver reporte →
+            </Link>
           </div>
 
-          <div className="mt-3 space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Pies cúbicos facturados:</span>
-              <strong className="font-bold text-indigo-700 font-mono tabular-nums">
+          <div className="px-4 py-1 divide-y divide-slate-100 text-xs flex-1">
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-600">Pies cúbicos facturados</span>
+              <span className="font-semibold text-slate-900 tabular-nums">
                 {maritimeStatsPeriodo.totalCubicFeet.toFixed(2)} ft³
-              </strong>
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Cantidad de envíos / paquetes:</span>
-              <strong className="font-bold text-slate-900 tabular-nums">
-                {maritimeStatsPeriodo.shipmentsCount} fact. ({maritimeStatsPeriodo.inventoryMaritimoCount} en bodega)
-              </strong>
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-600">Envíos / paquetes</span>
+              <span className="font-semibold text-slate-900 tabular-nums">
+                {maritimeStatsPeriodo.shipmentsCount} fact. · {maritimeStatsPeriodo.inventoryMaritimoCount} en bodega
+              </span>
             </div>
-            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-              <span className="text-slate-500">Monto facturado marítimo:</span>
-              <Link
-                href="/admin/reporte-maritimo"
-                className="font-bold text-brand-blue hover:underline tabular-nums"
-              >
-                ${maritimeStatsPeriodo.totalBilledUsd.toFixed(2)} USD →
-              </Link>
+            <div className="py-2.5 flex items-center justify-between gap-2">
+              <span className="text-slate-500">Monto facturado</span>
+              <span className="font-semibold text-slate-900 tabular-nums">
+                ${maritimeStatsPeriodo.totalBilledUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </span>
             </div>
           </div>
         </div>
