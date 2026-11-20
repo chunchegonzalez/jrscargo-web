@@ -339,38 +339,49 @@ export function extractCompanyAndClient(
   const tenant = (tenantName || '').toUpperCase();
   const code = (clientCode || '').toUpperCase();
   const clName = (rawClientName || '').trim();
-  
+  const combinedRaw = `${text} ${clName}`;
+  const combinedNormalized = combinedRaw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const isTrinityBoxMatch =
+    tenant.includes('TRINITY') ||
+    /\bBOX\b/i.test(tenant) ||
+    code.startsWith('TB-') ||
+    code.startsWith('TRINITY') ||
+    code.includes('TRINITY') ||
+    /TRINITY\s*BOX|TRINITYBOX|\bTRINITY\b|\bTB[-\s]*\d+\b|\bBOX\b/i.test(combinedNormalized) ||
+    /\bNAYELI\s+(?:DEL\s+CARMEN\s+)?BARQUERO(?:\s+MARIN)?\b/i.test(combinedNormalized);
+
   let company: 'JRS CARGO' | 'ATLANTIC IMPORTS' | 'JR LOGISTICS' | 'TRINITY BOX' = 'JRS CARGO';
 
-  // 0. Explicit tenantName or clientCode check from Worldbox
-  if (tenant.includes('ATLANTIC') || code.startsWith('AT-') || code.includes('ATLANTIC')) {
-    company = 'ATLANTIC IMPORTS';
-  } else if (tenant.includes('TRINITY') || code.startsWith('TB-') || code.startsWith('TRINITY') || code.includes('TRINITY')) {
+  // 0. Priority: Trinity Box (even if Worldbox tenant says JRS, e.g. "Trinitybox Jrs Cargo", "Box", or "Nayeli Del Carmen Barquero Marin")
+  if (isTrinityBoxMatch) {
     company = 'TRINITY BOX';
+  }
+  // 1. Explicit tenantName or clientCode check from Worldbox
+  else if (tenant.includes('ATLANTIC') || code.startsWith('AT-') || code.includes('ATLANTIC')) {
+    company = 'ATLANTIC IMPORTS';
   } else if (tenant.includes('LOGISTICS') || tenant.includes('JR ') || code.startsWith('JR-') || code.startsWith('JRL-')) {
     company = 'JR LOGISTICS';
   } else if (tenant.includes('JRS') || code.startsWith('JRS-')) {
     company = 'JRS CARGO';
   }
-  // 1. Check for Trinity Box signatures in consignee text
-  else if (/\b(TRINITY(\s*BOX)?|TB[-\s]*\d+)\b/i.test(text + ' ' + clName)) {
-    company = 'TRINITY BOX';
-  }
   // 2. Check for JR Logistics signatures in consignee text
-  else if (/\b(JR(\s*LOGISTICS?)|JRL[-\s]*\d+|JR[-\s]*\d+)\b/i.test(text + ' ' + clName)) {
+  else if (/\b(JR(\s*LOGISTICS?)|JRL[-\s]*\d+|JR[-\s]*\d+)\b/i.test(combinedRaw)) {
     company = 'JR LOGISTICS';
   }
   // 3. Check for Atlantic Imports signatures (AT-, ATLANTIC, or 1900-2999 locker codes)
   else if (
-    /\b(AT(\s*IMPORTS?)?|ATLANTIC(\s*IMPORTS?)?)\b/i.test(text + ' ' + clName) ||
-    /\bAT[-\s]*\d+/i.test(text + ' ' + clName) ||
-    /-\s*(19\d{2}|2\d{3})\b/.test(text + ' ' + clName) ||
-    /\b(19\d{2}|2\d{3})\b/.test(text + ' ' + clName)
+    /\b(AT(\s*IMPORTS?)?|ATLANTIC(\s*IMPORTS?)?)\b/i.test(combinedRaw) ||
+    /\bAT[-\s]*\d+/i.test(combinedRaw) ||
+    /-\s*(19\d{2}|2\d{3})\b/.test(combinedRaw) ||
+    /\b(19\d{2}|2\d{3})\b/.test(combinedRaw)
   ) {
     company = 'ATLANTIC IMPORTS';
   }
   // 4. JRS Cargo signatures (JRS, JRS-XXXX, or 1000-1899 locker numbers)
-  else if (/\bJRS(\s*CARGO)?\b/i.test(text + ' ' + clName) || /\bJRS[-\s]*\d+/i.test(text + ' ' + clName) || /\b1[0-8]\d{2}\b/.test(text + ' ' + clName)) {
+  else if (/\bJRS(\s*CARGO)?\b/i.test(combinedRaw) || /\bJRS[-\s]*\d+/i.test(combinedRaw) || /\b1[0-8]\d{2}\b/.test(combinedRaw)) {
     company = 'JRS CARGO';
   }
 
@@ -378,8 +389,8 @@ export function extractCompanyAndClient(
   const cleanStr = (str: string): string => {
     return str
       // Remove full company names (case insensitive)
-      .replace(/\b(JRS\s*CARGO(\s*S\.?A\.?)?|ATLANTIC\s*IMPORTS?(\s*S\.?A\.?)?|JR\s*LOGISTICS?(\s*S\.?A\.?)?|TRINITY\s*BOX(\s*S\.?A\.?)?)\b/gi, ' ')
-      .replace(/\b(JRS|ATLANTIC|IMPORTS?|LOGISTICS?|JRL|TRINITY|TRINITY\s*BOX|TB)\b/gi, ' ')
+      .replace(/\b(JRS\s*CARGO(\s*S\.?A\.?)?|ATLANTIC\s*IMPORTS?(\s*S\.?A\.?)?|JR\s*LOGISTICS?(\s*S\.?A\.?)?|TRINITY\s*BOX(\s*S\.?A\.?)?|TRINITYBOX)\b/gi, ' ')
+      .replace(/\b(JRS|ATLANTIC|IMPORTS?|LOGISTICS?|JRL|TRINITY|TRINITY\s*BOX|TRINITYBOX|BOX|TB)\b/gi, ' ')
       // Remove prefix codes like AT-1947, JR-1020, JRS-1001, TB-101, At--2011
       .replace(/\b(AT|JR|JRL|JRS|TB)[-_\s]*\d+\b/gi, ' ')
       .replace(/\b(AT|TB)\b/gi, ' ')

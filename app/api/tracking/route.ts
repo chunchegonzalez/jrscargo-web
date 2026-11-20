@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getInventoryItem } from '@/lib/supabase';
-import { extractDeliveryAgentInfo, InventoryHistoryEvent } from '@/lib/billing';
+import { extractCompanyAndClient, extractDeliveryAgentInfo, InventoryHistoryEvent } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
@@ -405,16 +405,12 @@ export async function GET(request: Request) {
 
         if (matchedFromList) {
           const resolvedTrk = (matchedFromList.trackingNumber || trackingNumber).trim();
-          const upperTenant = (matchedFromList.tenantName || '').toUpperCase();
-          const upperCode = (matchedFromList.clientCode || '').toUpperCase();
-          let resolvedComp = 'JRS CARGO';
-          if (upperTenant.includes('ATLANTIC') || upperCode.startsWith('AT-') || upperCode.includes('ATLANTIC')) {
-            resolvedComp = 'ATLANTIC IMPORTS';
-          } else if (upperTenant.includes('TRINITY') || upperCode.startsWith('TB-') || upperCode.startsWith('TRINITY') || upperCode.includes('TRINITY')) {
-            resolvedComp = 'TRINITY BOX';
-          } else if (upperTenant.includes('LOGISTICS') || upperTenant.includes('JR ') || upperCode.startsWith('JR-') || upperCode.startsWith('JRL-')) {
-            resolvedComp = 'JR LOGISTICS';
-          }
+          const { company: resolvedComp } = extractCompanyAndClient(
+            matchedFromList.consignatario || matchedFromList.clientName,
+            matchedFromList.tenantName,
+            matchedFromList.clientCode,
+            matchedFromList.clientName
+          );
 
           let listLocalItem = null;
           try {
@@ -531,22 +527,14 @@ export async function GET(request: Request) {
           data.package.origin = matched.origin;
         }
         
-        const upperTenant = (matched.tenantName || '').toUpperCase();
-        const upperCode = (matched.clientCode || '').toUpperCase();
-        
-        if (upperTenant.includes('ATLANTIC') || upperCode.startsWith('AT-') || upperCode.includes('ATLANTIC')) {
-          data.package.provider = 'ATLANTIC IMPORTS';
-          data.package.company = 'ATLANTIC IMPORTS';
-        } else if (upperTenant.includes('TRINITY') || upperCode.startsWith('TB-') || upperCode.startsWith('TRINITY') || upperCode.includes('TRINITY')) {
-          data.package.provider = 'TRINITY BOX';
-          data.package.company = 'TRINITY BOX';
-        } else if (upperTenant.includes('LOGISTICS') || upperTenant.includes('JR ') || upperCode.startsWith('JR-') || upperCode.startsWith('JRL-')) {
-          data.package.provider = 'JR LOGISTICS';
-          data.package.company = 'JR LOGISTICS';
-        } else {
-          data.package.provider = 'JRS CARGO';
-          data.package.company = 'JRS CARGO';
-        }
+        const { company: resolvedCompany } = extractCompanyAndClient(
+          data.package.consignatario || matched.consignatario || matched.clientName,
+          matched.tenantName,
+          matched.clientCode,
+          matched.clientName
+        );
+        data.package.provider = resolvedCompany;
+        data.package.company = resolvedCompany;
 
         const genericCompanies = ['JRS CARGO', 'ATLANTIC IMPORTS', 'JR LOGISTICS', 'TRINITY BOX'];
         const isGenericClientName = genericCompanies.includes((matched.clientName || '').trim().toUpperCase());
