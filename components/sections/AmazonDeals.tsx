@@ -812,9 +812,9 @@ export default function AmazonDeals() {
         {/* ================================================================= */}
         {/* SECCIÓN DINÁMICA: CONTACTAR AGENTE JRS PARA AYUDA CON COTIZACIÓN  */}
         {/* ================================================================= */}
-        <div className="rounded-2xl border border-white/10 bg-[#0D2234] p-5 sm:p-6 lg:p-7 shadow-lg">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center">
-            <div className="lg:col-span-6 flex items-start gap-3.5 min-w-0">
+        <div className="rounded-2xl border border-white/10 bg-[#0D2234] p-4 sm:p-6 lg:p-7 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 lg:gap-7 items-center">
+            <div className="lg:col-span-5 flex items-start gap-3.5 min-w-0">
               <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/[0.06] border border-white/10 text-[#FACC15] flex items-center justify-center shrink-0 mt-0.5">
                 <MessageCircle size={20} />
               </div>
@@ -837,20 +837,16 @@ export default function AmazonDeals() {
 
             <form
               onSubmit={handleOpenWhatsAppQuote}
-              className="lg:col-span-6 w-full flex flex-col sm:flex-row items-stretch gap-2.5"
+              className="lg:col-span-7 w-full flex flex-col sm:flex-row items-stretch gap-2.5"
             >
               <input
                 ref={quoteInputRef}
                 type="text"
                 value={quoteText}
                 onChange={(e) => setQuoteText(e.target.value)}
-                placeholder={
-                  isEn
-                    ? 'Paste Amazon link or product name...'
-                    : 'Pega el link de Amazon o producto...'
-                }
-                aria-label={isEn ? 'Amazon product or link to quote' : 'Enlace o producto de Amazon a cotizar'}
-                className="flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-xl bg-[#071622] border border-white/15 focus:border-emerald-400 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-400 transition-colors"
+                placeholder={isEn ? 'Paste Amazon link' : 'Pega link de Amazon'}
+                aria-label={isEn ? 'Paste Amazon link' : 'Pega link de Amazon'}
+                className="w-full flex-1 min-w-0 h-11 sm:h-12 px-4 rounded-xl bg-[#071622] border border-white/15 focus:border-emerald-400 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-400 transition-colors"
               />
               <button
                 type="submit"
