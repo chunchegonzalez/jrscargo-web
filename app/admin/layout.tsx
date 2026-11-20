@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, Mail, Bot, Bell } from 'lucide-react';
+import { LogOut, Settings, Menu, X, ChevronDown, ChevronRight, Briefcase, Calculator, Building2, Home, Activity, ShieldCheck, Package, Users, Mail, Bot, Bell, FileSpreadsheet } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ModalProvider } from '../components/ModalProvider';
@@ -30,6 +30,7 @@ function getAdminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/clientes')) return 'Clientes | Panel de JRS';
   if (pathname.startsWith('/admin/chat-bot')) return 'Chat Bot (Clari) | Panel de JRS';
   if (pathname.startsWith('/admin/correos')) return 'Actividad de Correos | Panel de JRS';
+  if (pathname.startsWith('/admin/reportes-cobros')) return 'Reporte Diario de Cobros | Panel de JRS';
   if (pathname.startsWith('/admin/monitor')) return 'Monitoreo Web | Panel de JRS';
   if (pathname.startsWith('/admin/ajustes')) return 'Ajustes de Sistema | Panel de JRS';
   if (pathname.startsWith('/admin/servicios')) return 'Servicios y Tarifas | Panel de JRS';
@@ -180,6 +181,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const interval = setInterval(checkBotAlerts, 6000);
     return () => clearInterval(interval);
   }, [isLoginPage, pathname]);
+
+  // Verificación silenciosa del Reporte Diario Automático de Cuentas por Cobrar
+  useEffect(() => {
+    if (isLoginPage || !currentUser) return;
+    const triggerDailyReportCheck = () => {
+      fetch('/api/reports/accounts-receivable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'auto_check' }),
+      }).catch(() => {});
+    };
+    const initialTimer = setTimeout(triggerDailyReportCheck, 3500);
+    const periodicTimer = setInterval(triggerDailyReportCheck, 30 * 60 * 1000);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(periodicTimer);
+    };
+  }, [isLoginPage, currentUser]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -379,6 +398,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           }`}>
             <Mail size={16} className={pathname.startsWith('/admin/correos') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
             <span>Actividad de Correos</span>
+          </Link>
+
+          <Link href="/admin/reportes-cobros" className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all ${
+            pathname.startsWith('/admin/reportes-cobros')
+              ? 'bg-white/[0.08] text-white font-semibold border-l-2 border-brand-yellow'
+              : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] font-medium'
+          }`}>
+            <FileSpreadsheet size={16} className={pathname.startsWith('/admin/reportes-cobros') ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
+            <span>Reporte Diario Cobros</span>
           </Link>
 
           <a 

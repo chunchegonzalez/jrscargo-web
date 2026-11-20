@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/reports/accounts-receivable?cron=1",
+      "schedule": "0 13 * * *"
+    }
+  ]
+}

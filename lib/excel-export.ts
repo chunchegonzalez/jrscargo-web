@@ -42,7 +42,7 @@ function computeCRC32(bytes: Uint8Array): number {
 }
 
 // Creador de archivos ZIP estándar (Método 0: Stored - sin compresión, estándar OpenXML)
-function createZip(files: Array<{ name: string; data: Uint8Array }>): Uint8Array {
+export function createZip(files: Array<{ name: string; data: Uint8Array }>): Uint8Array {
   const encoder = new TextEncoder();
   const localParts: Uint8Array[] = [];
   const cdParts: Uint8Array[] = [];
@@ -137,6 +137,8 @@ function escapeXml(val: string | number | undefined | null): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 }
+
+export { escapeXml, getColLetter };
 
 function getColLetter(colIdx: number): string {
   let col = '';

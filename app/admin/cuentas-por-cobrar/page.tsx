@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { 
   Search, DollarSign, FileText, ArrowRight, Printer, 
   Link2, Copy, Check, ExternalLink, MessageCircle, X,
-  ShieldCheck, ShoppingBag, Filter
+  ShieldCheck, ShoppingBag, Filter, Mail, FileSpreadsheet
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getInvoiceStats, isCompraSitioWebInvoice } from '@/lib/billing';
@@ -170,6 +170,14 @@ export default function CuentasPorCobrarPage() {
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona los saldos pendientes y comparte enlaces públicos de pago sin contraseña para clientes.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href="/admin/reportes-cobros"
+            className="h-9 px-3.5 rounded-lg border border-emerald-200/90 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-800 shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
+            title="Configurar y enviar el reporte diario en Excel y PDF por correo"
+          >
+            <Mail size={14} className="text-emerald-600" />
+            <span>Reporte Diario (Excel + PDF)</span>
+          </Link>
           <Link
             href="/admin/compra-en-sitio-web"
             className="h-9 px-3.5 rounded-lg border border-indigo-200/80 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
