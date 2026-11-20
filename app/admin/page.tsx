@@ -15,7 +15,6 @@ import {
   DollarSign,
   CheckCircle2,
   AlertCircle,
-  Plus,
   Coins,
   Save,
   RefreshCw,
@@ -213,14 +212,19 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Default to 'hoy' so daily billing & delivered packages are immediately visible
-  const [dateFilter, setDateFilter] = useState<'hoy' | 'ayer' | 'semana' | 'mes' | 'fecha' | 'todos'>('hoy');
+  const [dateFilter, setDateFilter] = useState<'hoy' | 'ayer' | 'semana' | 'mes' | 'fecha' | 'periodo'>('hoy');
 
-  // Editable month ("YYYY-MM") and custom date ("YYYY-MM-DD")
+  // Editable month ("YYYY-MM"), custom date ("YYYY-MM-DD"), and custom range ("YYYY-MM-DD")
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [selectedDate, setSelectedDate] = useState<string>(() => getLocalTodayDate());
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => getLocalTodayDate());
 
   // Simple chart toggle ('facturacion' | 'paquetes' | 'kilos')
   const [chartMetric, setChartMetric] = useState<'facturacion' | 'paquetes' | 'kilos'>('facturacion');
@@ -371,14 +375,27 @@ export default function AdminDashboard() {
           periodLabel: selectedDate.split('-').reverse().join('/')
         };
       }
+      case 'periodo': {
+        const rawStart = parseLocalDate(customStartDate);
+        const rawEnd = parseLocalDate(customEndDate);
+        const start = rawStart <= rawEnd ? rawStart : rawEnd;
+        const end = rawStart <= rawEnd ? rawEnd : rawStart;
+        const startStr = (rawStart <= rawEnd ? customStartDate : customEndDate).split('-').reverse().join('/');
+        const endStr = (rawStart <= rawEnd ? customEndDate : customStartDate).split('-').reverse().join('/');
+        return {
+          filterStart: startOfDay(start),
+          filterEnd: endOfDay(end),
+          periodLabel: `${startStr} – ${endStr}`
+        };
+      }
       default:
         return {
-          filterStart: new Date(2000, 0, 1),
+          filterStart: startOfDay(now),
           filterEnd: endOfDay(now),
-          periodLabel: 'Histórico Total'
+          periodLabel: 'Hoy'
         };
     }
-  }, [dateFilter, selectedMonth, selectedDate]);
+  }, [dateFilter, selectedMonth, selectedDate, customStartDate, customEndDate]);
 
   const isDateInRange = (d: Date) => d >= filterStart && d <= filterEnd;
 
@@ -879,118 +896,37 @@ export default function AdminDashboard() {
 
   return (
     <div className="w-full space-y-5 animate-fade-in text-sm pb-8">
-      {/* ==================== 1. ENCABEZADO COMPACTO Y BARRA DE CONTROL ==================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* ==================== 1. ENCABEZADO COMPACTO + TIPO DE CAMBIO ==================== */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              {greeting}, <span className="text-brand-blue">{currentUser?.username || 'Equipo JRS'}</span>
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-brand-blue/10 text-brand-blue border border-brand-blue/15 text-[11px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-blue" />
-              Viendo: {periodLabel}
-            </span>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            {greeting}, <span className="text-[#12435E]">{currentUser?.username || 'Equipo JRS'}</span>
+          </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Resumen directo de facturación, paquetes entregados y estado operativo.
           </p>
         </div>
 
-        {/* Acciones rápidas alineadas a la derecha */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            href="/admin/bodega"
-            className="h-9 px-3.5 rounded-lg border border-brand-yellow/40 bg-brand-yellow hover:bg-brand-yellow/90 text-[#0B1D2B] shadow-2xs inline-flex items-center gap-1.5 font-bold text-xs transition-all active:scale-[0.98]"
-          >
-            <Plus size={14} />
-            <span>Escanear</span>
-          </Link>
-
-          <Link
-            href="/admin/facturacion/nueva"
-            className="h-9 px-3.5 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98]"
-          >
-            <Plus size={14} />
-            <span>Facturar</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Barra unificada: Selector de Período + Tipo de Cambio Oficial */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        {/* Selector de Período */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex flex-wrap bg-slate-100/90 border border-slate-200/60 rounded-lg p-0.5 gap-0.5">
-            {[
-              { id: 'hoy' as const, label: 'Hoy' },
-              { id: 'ayer' as const, label: 'Ayer' },
-              { id: 'semana' as const, label: 'Semana' },
-              { id: 'mes' as const, label: 'Mes' },
-              { id: 'fecha' as const, label: 'Día específico' },
-              { id: 'todos' as const, label: 'Histórico' }
-            ].map(f => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setDateFilter(f.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  dateFilter === f.id
-                    ? 'bg-brand-blue text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {dateFilter === 'mes' && (
-            <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
-              <Calendar size={13} className="text-brand-blue" />
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
-              />
-            </div>
-          )}
-
-          {dateFilter === 'fecha' && (
-            <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
-              <Calendar size={13} className="text-brand-blue" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Tipo de Cambio Oficial compacto */}
-        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-2.5 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-amber-50 border border-amber-200/60 text-amber-600 flex items-center justify-center shrink-0">
-              <Coins size={14} />
-            </div>
-            <span className="text-xs font-medium text-slate-600">Tipo de Cambio:</span>
-            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-md border border-emerald-200/80 tabular-nums">
-              ₡{currentExchangeRate} = $1 USD
+        {/* Tipo de Cambio Oficial en la parte superior derecha */}
+        <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] rounded-xl px-3 py-2 w-fit">
+          <div className="flex items-center gap-2 pr-2 border-r border-slate-100">
+            <Coins size={14} className="text-[#F59E0B] shrink-0" />
+            <span className="text-xs font-medium text-slate-500">T.C.</span>
+            <span className="text-xs font-bold text-[#0B2737] tabular-nums">
+              ₡{currentExchangeRate} = $1
             </span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <div className="flex items-center h-8 bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 focus-within:border-brand-blue focus-within:bg-white transition-all">
-              <span className="text-xs font-bold text-amber-600 mr-1">₡</span>
+            <div className="flex items-center h-8 bg-slate-50 border border-slate-200/90 rounded-lg px-2.5 focus-within:border-[#12435E] focus-within:bg-white transition-all">
+              <span className="text-xs font-bold text-[#F59E0B] mr-1">₡</span>
               <input
                 type="number"
                 min="1"
                 step="1"
                 value={exchangeRateInput}
                 onChange={e => setExchangeRateInput(e.target.value)}
-                className="w-14 bg-transparent font-bold text-slate-800 text-xs focus:outline-none tabular-nums"
+                className="w-14 bg-transparent font-semibold text-slate-800 text-xs focus:outline-none tabular-nums"
                 placeholder="500"
               />
             </div>
@@ -998,13 +934,87 @@ export default function AdminDashboard() {
               type="button"
               onClick={handleSaveExchangeRate}
               disabled={isSavingExchangeRate || !exchangeRateInput}
-              className="h-8 px-3 bg-brand-blue hover:bg-[#0e354b] text-white rounded-lg text-xs font-semibold transition-all disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+              className="h-8 px-3 bg-[#0B2737] hover:bg-[#12435E] text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
             >
               {isSavingExchangeRate ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
               <span>Guardar T.C.</span>
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Barra de Selector de Período */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] p-2.5 flex flex-wrap items-center gap-2">
+        <div className="inline-flex flex-wrap bg-slate-100/90 border border-slate-200/60 rounded-lg p-0.5 gap-0.5">
+          {[
+            { id: 'hoy' as const, label: 'Hoy' },
+            { id: 'ayer' as const, label: 'Ayer' },
+            { id: 'semana' as const, label: 'Semana' },
+            { id: 'mes' as const, label: 'Mes' },
+            { id: 'fecha' as const, label: 'Día específico' },
+            { id: 'periodo' as const, label: 'Período' }
+          ].map(f => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setDateFilter(f.id)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                dateFilter === f.id
+                  ? 'bg-[#0B2737] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {dateFilter === 'mes' && (
+          <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
+            <Calendar size={13} className="text-[#12435E]" />
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+            />
+          </div>
+        )}
+
+        {dateFilter === 'fecha' && (
+          <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
+            <Calendar size={13} className="text-[#12435E]" />
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+            />
+          </div>
+        )}
+
+        {dateFilter === 'periodo' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
+              <span className="text-[11px] font-medium text-slate-500">Desde</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={e => setCustomStartDate(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+              />
+            </div>
+            <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
+              <span className="text-[11px] font-medium text-slate-500">Hasta</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={e => setCustomEndDate(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ==================== 2. INDICADORES PRINCIPALES ==================== */}
