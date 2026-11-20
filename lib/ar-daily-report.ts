@@ -268,7 +268,7 @@ export async function buildAccountsReceivableSnapshot(opts?: {
       paidUsd: stats.paid,
       pendingUsd: stats.pending,
       pendingCrc: Math.round(stats.pending * exchangeRate),
-      status: stats.derivedStatus,
+      status: stats.displayStatus,
       isWebPurchase: isWeb,
     };
 
