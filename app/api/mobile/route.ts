@@ -17,7 +17,7 @@ type MobileRole = 'admin' | 'operator' | 'viewer';
 
 function resolveMobileRole(rawRole?: string): MobileRole {
   const r = (rawRole || '').toLowerCase().trim();
-  if (r === 'admin' || r === 'administrador') return 'admin';
+  if (r === 'admin' || r === 'admin_pro' || r === 'administrador') return 'admin';
   if (r === 'viewer' || r === 'consulta' || r === 'lectura') return 'viewer';
   return 'operator';
 }
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
 
     // 1. CREAR ESTANTE (Solo Administrador)
     if (action === 'CREATE_SHELF') {
-      if (authUser.role !== 'admin' && authUser.role !== 'admin_pro') {
+      if (authUser.role !== 'admin') {
         return NextResponse.json(
           { success: false, error: 'Solo un Administrador puede crear nuevos estantes.' },
           { status: 403 }
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
 
     // 2. ACTIVAR / DESACTIVAR ESTANTE (Solo Administrador)
     if (action === 'TOGGLE_SHELF') {
-      if (authUser.role !== 'admin' && authUser.role !== 'admin_pro') {
+      if (authUser.role !== 'admin') {
         return NextResponse.json(
           { success: false, error: 'Solo un Administrador puede activar o desactivar estantes.' },
           { status: 403 }
