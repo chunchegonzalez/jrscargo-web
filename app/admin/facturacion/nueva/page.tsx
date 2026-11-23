@@ -342,9 +342,9 @@ export default function NuevaFacturaPage() {
     }));
   };
 
-  const subtotal = items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-  const discountAmount = (subtotal * discountPercent) / 100;
-  const total = subtotal - discountAmount;
+  const subtotal = Math.round((items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0) + Number.EPSILON) * 100) / 100;
+  const discountAmount = Math.round(((subtotal * discountPercent / 100) + Number.EPSILON) * 100) / 100;
+  const total = Math.round(((subtotal - discountAmount) + Number.EPSILON) * 100) / 100;
 
   const handleSaveInvoice = async () => {
     if (!selectedClientId) {

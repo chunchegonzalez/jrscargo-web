@@ -74,7 +74,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             if (targetInvId) {
               const matched = processedInvs.find((i: Record<string, unknown>) => i.id === targetInvId);
               if (matched) {
-                const bal = matched.pendingBalance as number;
+                const bal = Math.round(((matched.pendingBalance as number) + Number.EPSILON) * 100) / 100;
                 setApplications({ [targetInvId]: bal });
                 setTotalPaymentAmount(bal.toFixed(2));
                 setAmountToApply(bal);
@@ -82,7 +82,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             } else if (processedInvs.length === 1) {
               // If only 1 invoice exists, pre-select it
               const single = processedInvs[0];
-              const bal = single.pendingBalance as number;
+              const bal = Math.round(((single.pendingBalance as number) + Number.EPSILON) * 100) / 100;
               setApplications({ [String(single.id)]: bal });
               setTotalPaymentAmount(bal.toFixed(2));
               setAmountToApply(bal);
@@ -170,7 +170,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       if (next[invId]) {
         delete next[invId];
       } else {
-        next[invId] = pendingBalance;
+        next[invId] = Math.round((pendingBalance + Number.EPSILON) * 100) / 100;
       }
       const newApplied = Number(Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0).toFixed(2));
       const extraCredit = Math.max(0, parseFloat(creditInputStr) || 0);
@@ -591,7 +591,11 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     const invoiceNumber = inv.invoice_number as string;
 
                     const isChecked = !!applications[invId];
-                    const appAmount = applications[invId] !== undefined ? applications[invId] : '';
+                    const appAmount = applications[invId] !== undefined
+                      ? (typeof applications[invId] === 'number'
+                          ? Math.round((applications[invId] + Number.EPSILON) * 100) / 100
+                          : applications[invId])
+                      : '';
                     
                     const dueDate = parseLocalDate(issueDate);
                     dueDate.setDate(dueDate.getDate() + 30);
