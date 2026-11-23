@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Search, Receipt, FileText, X, Download, Eye, Pencil, Save, Loader2, ExternalLink, Calendar, RotateCcw } from 'lucide-react';
 import { formatCurrency, formatDisplayDate, getLocalTodayDate } from '@/lib/billing';
 import {
   ExpenseAttachment,
@@ -68,6 +68,12 @@ export default function GastosPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
+  const [periodMode, setPeriodMode] = useState<'mes' | 'hoy' | '7dias' | 'rango' | 'all'>('mes');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [filterCurrency, setFilterCurrency] = useState<'ALL' | 'USD' | 'CRC'>('ALL');
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [filterAttachment, setFilterAttachment] = useState<'ALL' | 'WITH' | 'WITHOUT'>('ALL');
   const [selectedReceipt, setSelectedReceipt] = useState<SelectedReceiptModal | null>(null);
   const [activePdfBlobUrl, setActivePdfBlobUrl] = useState<string | null>(null);
   const receiptCacheRef = useRef<Record<string, ExpenseMetadata>>({});
@@ -275,9 +281,19 @@ export default function GastosPage() {
     }
   };
 
+  const MONTH_NAMES = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+
+  const getExpenseYMD = (dateStr: string): string => {
+    if (!dateStr) return '';
+    return String(dateStr).split('T')[0];
+  };
+
   const getExpenseMonth = (dateStr: string): string => {
     if (!dateStr) return '';
-    const clean = String(dateStr).split('T')[0];
+    const clean = getExpenseYMD(dateStr);
     const parts = clean.split('-');
     if (parts.length >= 2) {
       const monthNum = parseInt(parts[1], 10) - 1;
@@ -287,7 +303,20 @@ export default function GastosPage() {
     return !isNaN(d.getTime()) ? d.getMonth().toString() : '';
   };
 
-  const filteredExpenses = expenses.filter(exp => {
+  const expenseHasAttachment = (exp: Expense): boolean => {
+    if (typeof exp.attachment_count === 'number') return exp.attachment_count > 0;
+    return Boolean(exp.has_receipt || exp.receipt_image || exp.receipt_url);
+  };
+
+  const todayYMD = useMemo(() => getLocalTodayDate(), []);
+  const sevenDaysAgoYMD = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }, []);
+
+  const matchesPeriodAndSearch = (exp: Expense): boolean => {
     const q = searchTerm.toLowerCase().trim();
     const docNum = (exp.document_number || '').toLowerCase();
     const matchesSearch =
@@ -295,10 +324,78 @@ export default function GastosPage() {
       exp.provider_name.toLowerCase().includes(q) ||
       exp.category.toLowerCase().includes(q) ||
       docNum.includes(q);
-    const expMonth = getExpenseMonth(exp.date);
-    const matchesMonth = selectedMonth === 'all' || expMonth === selectedMonth;
-    return matchesSearch && matchesMonth;
+    if (!matchesSearch) return false;
+
+    const ymd = getExpenseYMD(exp.date);
+    if (periodMode === 'hoy') {
+      return ymd === todayYMD;
+    }
+    if (periodMode === '7dias') {
+      return ymd >= sevenDaysAgoYMD && ymd <= todayYMD;
+    }
+    if (periodMode === 'rango') {
+      if (filterStartDate && ymd < filterStartDate) return false;
+      if (filterEndDate && ymd > filterEndDate) return false;
+      return true;
+    }
+    if (periodMode === 'mes') {
+      if (selectedMonth === 'all') return true;
+      return getExpenseMonth(exp.date) === selectedMonth;
+    }
+    return true;
+  };
+
+  // Base filtrada por período y búsqueda (para calcular conteos dinámicos de moneda y categorías)
+  const periodFilteredExpenses = expenses.filter(matchesPeriodAndSearch);
+
+  const currencyCounts = useMemo(() => {
+    let usd = 0;
+    let crc = 0;
+    for (const exp of periodFilteredExpenses) {
+      if (exp.currency === 'CRC') crc++;
+      else usd++;
+    }
+    return { all: periodFilteredExpenses.length, usd, crc };
+  }, [periodFilteredExpenses]);
+
+  const availableCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const exp of periodFilteredExpenses) {
+      const cat = (exp.category || 'Otros').trim();
+      counts.set(cat, (counts.get(cat) || 0) + 1);
+    }
+    for (const opt of CATEGORY_OPTIONS) {
+      if (!counts.has(opt)) counts.set(opt, 0);
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [periodFilteredExpenses]);
+
+  const filteredExpenses = periodFilteredExpenses.filter(exp => {
+    if (filterCurrency === 'USD' && exp.currency === 'CRC') return false;
+    if (filterCurrency === 'CRC' && exp.currency !== 'CRC') return false;
+    if (filterCategory !== 'ALL' && exp.category !== filterCategory) return false;
+    if (filterAttachment === 'WITH' && !expenseHasAttachment(exp)) return false;
+    if (filterAttachment === 'WITHOUT' && expenseHasAttachment(exp)) return false;
+    return true;
   });
+
+  const hasActiveFilters =
+    Boolean(searchTerm.trim()) ||
+    periodMode !== 'all' ||
+    filterCurrency !== 'ALL' ||
+    filterCategory !== 'ALL' ||
+    filterAttachment !== 'ALL';
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setPeriodMode('all');
+    setSelectedMonth('all');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setFilterCurrency('ALL');
+    setFilterCategory('ALL');
+    setFilterAttachment('ALL');
+  };
 
   const totalAmountUSD = filteredExpenses.filter(e => e.currency !== 'CRC').reduce((acc, exp) => acc + Number(exp.amount), 0);
   const totalAmountCRC = filteredExpenses.filter(e => e.currency === 'CRC').reduce((acc, exp) => acc + Number(exp.amount), 0);
@@ -376,65 +473,236 @@ export default function GastosPage() {
 
       {/* Contenedor Principal: Barra de filtros + Tabla */}
       <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex-1 min-h-0 flex flex-col">
-        <div className="px-4 py-2.5 border-b border-slate-200/80 bg-gradient-to-b from-slate-50/90 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
-          <div className="relative flex-1 min-w-0 sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
-            <input 
-              type="text" 
-              placeholder="Buscar proveedor, N° documento o categoría..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 bg-white border border-slate-200/90 rounded-lg shadow-2xs text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            )}
+        {/* Barra de Filtros Dinámica y Ejecutiva */}
+        <div className="px-4 py-3 border-b border-slate-200/80 bg-white space-y-2.5 shrink-0">
+          {/* Fila 1: Buscador + Selector de Moneda con conteo en vivo + Contador total */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+            <div className="relative flex-1 min-w-0 lg:max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
+              <input
+                type="text"
+                placeholder="Buscar proveedor, N° documento o categoría..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-9 pl-9 pr-8 bg-slate-50/70 focus:bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#12435E] focus:ring-2 focus:ring-[#12435E]/10 transition-all"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+              {/* Pestañas dinámicas de Moneda */}
+              <div className="inline-flex items-center bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/70">
+                {[
+                  { id: 'ALL' as const, label: 'Todas', count: currencyCounts.all, dot: '' },
+                  { id: 'USD' as const, label: 'USD ($)', count: currencyCounts.usd, dot: 'bg-[#12435E]' },
+                  { id: 'CRC' as const, label: 'CRC (₡)', count: currencyCounts.crc, dot: 'bg-[#F59E0B]' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setFilterCurrency(tab.id)}
+                    className={`h-8 px-3 rounded-md text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer ${
+                      filterCurrency === tab.id
+                        ? 'bg-[#0B2737] text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    {tab.dot && <span className={`w-1.5 h-1.5 rounded-full ${tab.dot} shrink-0`} />}
+                    <span>{tab.label}</span>
+                    <span className={`tabular-nums text-[11px] ${filterCurrency === tab.id ? 'text-slate-300' : 'text-slate-400'}`}>
+                      ({tab.count})
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <span className="h-9 px-3 bg-[#0B2737] text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 tabular-nums shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                {filteredExpenses.length} {filteredExpenses.length === 1 ? 'registro' : 'registros'}
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <select 
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className={`h-9 px-3 bg-white border rounded-lg text-xs font-medium shadow-2xs focus:outline-none focus:border-brand-blue transition-colors cursor-pointer ${
-                selectedMonth !== 'all'
-                  ? 'border-brand-blue/40 bg-brand-blue/[0.04] text-brand-blue font-semibold'
-                  : 'border-slate-200/90 text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <option value="all">Mes: Todos los meses</option>
-              <option value="0">Enero</option>
-              <option value="1">Febrero</option>
-              <option value="2">Marzo</option>
-              <option value="3">Abril</option>
-              <option value="4">Mayo</option>
-              <option value="5">Junio</option>
-              <option value="6">Julio</option>
-              <option value="7">Agosto</option>
-              <option value="8">Septiembre</option>
-              <option value="9">Octubre</option>
-              <option value="10">Noviembre</option>
-              <option value="11">Diciembre</option>
-            </select>
+          {/* Fila 2: Períodos rápidos + Selector de Mes / Rango + Categoría + Adjunto */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Botones rápidos de período */}
+              <div className="inline-flex flex-wrap items-center bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/70 gap-0.5">
+                {[
+                  {
+                    id: 'este-mes',
+                    label: 'Este mes',
+                    active: periodMode === 'mes' && selectedMonth === new Date().getMonth().toString(),
+                    onClick: () => {
+                      setPeriodMode('mes');
+                      setSelectedMonth(new Date().getMonth().toString());
+                    },
+                  },
+                  {
+                    id: 'mes-ant',
+                    label: 'Mes anterior',
+                    active:
+                      periodMode === 'mes' &&
+                      selectedMonth === ((new Date().getMonth() + 11) % 12).toString(),
+                    onClick: () => {
+                      setPeriodMode('mes');
+                      setSelectedMonth(((new Date().getMonth() + 11) % 12).toString());
+                    },
+                  },
+                  {
+                    id: '7dias',
+                    label: '7 días',
+                    active: periodMode === '7dias',
+                    onClick: () => setPeriodMode('7dias'),
+                  },
+                  {
+                    id: 'hoy',
+                    label: 'Hoy',
+                    active: periodMode === 'hoy',
+                    onClick: () => setPeriodMode('hoy'),
+                  },
+                  {
+                    id: 'rango',
+                    label: 'Período',
+                    active: periodMode === 'rango',
+                    onClick: () => setPeriodMode('rango'),
+                  },
+                  {
+                    id: 'all',
+                    label: 'Todos',
+                    active: periodMode === 'all' || (periodMode === 'mes' && selectedMonth === 'all'),
+                    onClick: () => {
+                      setPeriodMode('all');
+                      setSelectedMonth('all');
+                    },
+                  },
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={p.onClick}
+                    className={`h-7 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      p.active
+                        ? 'bg-white text-[#0B2737] shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
 
-            {(searchTerm || selectedMonth !== 'all') && (
-              <button
-                type="button"
-                onClick={() => { setSearchTerm(''); setSelectedMonth('all'); }}
-                className="h-9 px-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200/60 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+              {/* Selector de mes específico */}
+              <div className="relative inline-flex items-center">
+                <Calendar size={13} className="absolute left-2.5 text-[#12435E] pointer-events-none" />
+                <select
+                  value={periodMode === 'mes' ? selectedMonth : 'all'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'all') {
+                      setPeriodMode('all');
+                      setSelectedMonth('all');
+                    } else {
+                      setPeriodMode('mes');
+                      setSelectedMonth(val);
+                    }
+                  }}
+                  aria-label="Seleccionar mes"
+                  className={`h-8 pl-7 pr-7 rounded-lg border text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:border-[#12435E] ${
+                    periodMode === 'mes' && selectedMonth !== 'all'
+                      ? 'bg-[#0B2737]/[0.05] border-[#0B2737]/25 text-[#0B2737]'
+                      : 'bg-white border-slate-200/90 text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <option value="all">Mes: Todos</option>
+                  {MONTH_NAMES.map((mName, idx) => (
+                    <option key={mName} value={String(idx)}>
+                      {mName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rango de fechas personalizado cuando Período está activo */}
+              {periodMode === 'rango' && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
+                    <span className="text-[11px] font-medium text-slate-500">Desde</span>
+                    <input
+                      type="date"
+                      value={filterStartDate}
+                      onChange={e => setFilterStartDate(e.target.value)}
+                      className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5">
+                    <span className="text-[11px] font-medium text-slate-500">Hasta</span>
+                    <input
+                      type="date"
+                      value={filterEndDate}
+                      onChange={e => setFilterEndDate(e.target.value)}
+                      className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Filtros de Categoría, Comprobante y botón Limpiar */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <select
+                value={filterCategory}
+                onChange={e => setFilterCategory(e.target.value)}
+                aria-label="Filtrar por categoría"
+                className={`h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:border-[#12435E] ${
+                  filterCategory !== 'ALL'
+                    ? 'bg-[#0B2737]/[0.05] border-[#0B2737]/25 text-[#0B2737]'
+                    : 'bg-white border-slate-200/90 text-slate-700 hover:border-slate-300'
+                }`}
               >
-                <X size={13} /> Limpiar
-              </button>
-            )}
+                <option value="ALL">Categoría: Todas</option>
+                {availableCategories.map(([cat, count]) => (
+                  <option key={cat} value={cat}>
+                    {cat} ({count})
+                  </option>
+                ))}
+              </select>
 
-            <span className="h-9 px-3 bg-white border border-slate-200/80 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs inline-flex items-center tabular-nums">
-              {filteredExpenses.length} {filteredExpenses.length === 1 ? 'registro' : 'registros'}
-            </span>
+              <select
+                value={filterAttachment}
+                onChange={e => setFilterAttachment(e.target.value as 'ALL' | 'WITH' | 'WITHOUT')}
+                aria-label="Filtrar por comprobante adjunto"
+                className={`h-8 px-2.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus:border-[#12435E] ${
+                  filterAttachment !== 'ALL'
+                    ? 'bg-[#0B2737]/[0.05] border-[#0B2737]/25 text-[#0B2737]'
+                    : 'bg-white border-slate-200/90 text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <option value="ALL">Archivo: Todos</option>
+                <option value="WITH">Con comprobante</option>
+                <option value="WITHOUT">Sin adjunto</option>
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetAllFilters}
+                  className="h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Restablecer todos los filtros"
+                >
+                  <RotateCcw size={12} />
+                  <span>Ver todo</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
