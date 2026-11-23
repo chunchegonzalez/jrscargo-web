@@ -61,22 +61,21 @@ export function isInvalidClientEmail(email?: string | null): boolean {
   );
 }
 
+const CR_OFFSET_MS = 6 * 60 * 60 * 1000; // Costa Rica is fixed UTC-6 (no DST)
+
 /**
- * Calcula los días calendario (en zona horaria de Costa Rica) transcurridos
+ * Calcula los días calendario (en zona horaria de Costa Rica, UTC-6 fijo) transcurridos
  * desde que se envió el primer correo (`email_sent_at`) hasta hoy.
  */
 export function getDaysSinceFirstEmail(emailSentAt?: string | null): number {
   if (!emailSentAt) return -1;
-  const sentDate = new Date(emailSentAt);
-  if (Number.isNaN(sentDate.getTime())) return -1;
+  const sentMs = Date.parse(emailSentAt);
+  if (Number.isNaN(sentMs)) return -1;
 
-  const sentCR = new Date(sentDate.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-  const nowCR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  const sentCrDay = Math.floor((sentMs - CR_OFFSET_MS) / 86_400_000);
+  const todayCrDay = Math.floor((Date.now() - CR_OFFSET_MS) / 86_400_000);
 
-  const sentDayUtc = Date.UTC(sentCR.getFullYear(), sentCR.getMonth(), sentCR.getDate());
-  const todayUtc = Date.UTC(nowCR.getFullYear(), nowCR.getMonth(), nowCR.getDate());
-
-  return Math.floor((todayUtc - sentDayUtc) / (1000 * 60 * 60 * 24));
+  return todayCrDay - sentCrDay;
 }
 
 export function getScheduledReminderDateStr(
@@ -84,13 +83,12 @@ export function getScheduledReminderDateStr(
   daysAfter: number = DEFAULT_REMINDER_DAYS
 ): string {
   if (!emailSentAt) return '-';
-  const sentDate = new Date(emailSentAt);
-  if (Number.isNaN(sentDate.getTime())) return '-';
-  const sentCR = new Date(sentDate.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-  sentCR.setDate(sentCR.getDate() + daysAfter);
-  const dd = String(sentCR.getDate()).padStart(2, '0');
-  const mm = String(sentCR.getMonth() + 1).padStart(2, '0');
-  const yyyy = sentCR.getFullYear();
+  const sentMs = Date.parse(emailSentAt);
+  if (Number.isNaN(sentMs)) return '-';
+  const targetCr = new Date(sentMs - CR_OFFSET_MS + daysAfter * 86_400_000);
+  const dd = String(targetCr.getUTCDate()).padStart(2, '0');
+  const mm = String(targetCr.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = targetCr.getUTCFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
 
@@ -625,4 +623,117 @@ export async function runDuePaymentReminders(opts: {
     eligibleCount: eligible.length,
     state: nextState,
   };
+}
+
+/**
+ * Envía un correo de prueba con el diseño exacto del recordatorio de pago
+ * a la dirección indicada, sin modificar el estado ni el historial de ninguna factura real.
+ */
+export async function sendTestPaymentReminderEmail(toEmail: string): Promise<{
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}> {
+  const cleanTo = String(toEmail || '').trim();
+  if (isInvalidClientEmail(cleanTo)) {
+    return { success: false, error: 'Ingresa un correo electrónico válido para la prueba.' };
+  }
+
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASSWORD;
+  if (!smtpUser || !smtpPass) {
+    return { success: false, error: 'Credenciales SMTP no configuradas en el servidor.' };
+  }
+
+  const now = new Date();
+  const fourDaysAgo = new Date(now.getTime() - 4 * 86_400_000);
+  const issueDateDisplay = fourDaysAgo.toLocaleDateString('es-CR', {
+    timeZone: 'America/Costa_Rica',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const sampleInvoiceNumber = 'F-PRUEBA';
+  const sampleClientName = 'José González';
+  const sampleBalanceUsd = 48.72;
+  const sampleExchangeRate = 530;
+  const sampleBalanceCrc = Number(sampleBalanceUsd * sampleExchangeRate).toLocaleString('es-CR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const whatsappHelpUrl =
+    'https://wa.me/50672601238?text=' +
+    encodeURIComponent(
+      `Hola JRS Cargo, te comparto mi comprobante de pago / consulta sobre la factura ${sampleInvoiceNumber} (${sampleClientName}).`
+    );
+
+  const htmlContent = [
+    '<!DOCTYPE html>',
+    '<html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="color-scheme" content="light"/><meta name="supported-color-schemes" content="light"/></head>',
+    '<body style="margin:0;padding:24px 12px;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">',
+    '  <table role="presentation" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;border-collapse:separate;">',
+    '    <tr><td style="padding:24px 30px;background-color:#0B2737;background-image:linear-gradient(135deg,#0B2737 0%,#12435E 100%);border-bottom:3px solid #F59E0B;color:#ffffff;">',
+    '      <table role="presentation" style="width:100%;border-collapse:collapse;">',
+    '        <tr>',
+    '          <td style="vertical-align:middle;">',
+    '            <div style="display:inline-block;background-color:#ffffff;padding:7px 12px;border-radius:10px;">',
+    '              <img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:34px;width:auto;display:block;" />',
+    '            </div>',
+    '          </td>',
+    '          <td style="text-align:right;vertical-align:middle;">',
+    '            <p style="margin:0;font-size:10.5px;font-weight:700;color:#FACC15;text-transform:uppercase;letter-spacing:1px;">Recordatorio de Pago (Prueba)</p>',
+    '            <p style="margin:4px 0 0;font-size:21px;font-weight:800;color:#ffffff;">' + sampleInvoiceNumber + '</p>',
+    '            <p style="margin:2px 0 0;font-size:12px;color:#cbd5e1;">Emitido el ' + escapeHtml(issueDateDisplay) + '</p>',
+    '          </td>',
+    '        </tr>',
+    '      </table>',
+    '    </td></tr>',
+    '    <tr><td style="padding:28px 30px;background-color:#ffffff;">',
+    '      <div style="display:inline-block;padding:5px 12px;border-radius:999px;background-color:#fffbeb;border:1px solid #fde68a;color:#b45309;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;">Aviso de saldo pendiente</div>',
+    '      <p style="font-size:17px;font-weight:700;color:#0f172a;line-height:1.35;margin:0 0 8px;">Hola José,</p>',
+    '      <p style="font-size:14px;color:#475569;line-height:1.65;margin:0 0 22px;">' + escapeHtml(DEFAULT_REMINDER_MESSAGE) + '</p>',
+    '      <div style="padding:18px 20px;background-color:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #F59E0B;border-radius:12px;margin-bottom:20px;">',
+    '        <table role="presentation" style="width:100%;border-collapse:collapse;">',
+    '          <tr><td style="padding:6px 0;font-size:12.5px;color:#64748b;">Cliente</td><td style="padding:6px 0;font-size:13.5px;font-weight:700;color:#0f172a;text-align:right;">' + sampleClientName + '</td></tr>',
+    '          <tr><td style="padding:8px 0;border-top:1px solid #e2e8f0;font-size:12.5px;color:#64748b;">Comprobante</td><td style="padding:8px 0;border-top:1px solid #e2e8f0;font-size:13px;font-weight:700;color:#0B2737;text-align:right;">' + sampleInvoiceNumber + '</td></tr>',
+    '          <tr><td style="padding:8px 0;border-top:1px solid #e2e8f0;font-size:12.5px;color:#64748b;">Primer aviso enviado</td><td style="padding:8px 0;border-top:1px solid #e2e8f0;font-size:13px;font-weight:600;color:#334155;text-align:right;">' + escapeHtml(issueDateDisplay) + '</td></tr>',
+    '          <tr><td style="padding:12px 0 4px;border-top:2px solid #0B2737;font-size:14.5px;font-weight:700;color:#0B2737;">Saldo pendiente (USD)</td><td style="padding:12px 0 4px;border-top:2px solid #0B2737;font-size:21px;font-weight:800;color:#0B2737;text-align:right;">' + formatUsd(sampleBalanceUsd) + '</td></tr>',
+    '          <tr><td style="padding:2px 0;font-size:12px;color:#64748b;">Equivalente en colones (T.C. &#8353;' + sampleExchangeRate + ')</td><td style="padding:2px 0;font-size:13.5px;font-weight:700;color:#12435E;text-align:right;">&#8353;' + sampleBalanceCrc + ' CRC</td></tr>',
+    '        </table>',
+    '      </div>',
+    '      <div style="margin-top:24px;padding:24px 22px;background-color:#ffffff;border:1px solid #cbd5e1;border-top:3px solid #0B2737;border-radius:12px;text-align:center;">',
+    '        <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#12435E;text-transform:uppercase;letter-spacing:0.9px;">Estado de cuenta en línea</p>',
+    '        <p style="margin:0 auto 20px;max-width:440px;font-size:14px;color:#334155;line-height:1.6;">Consulta el detalle actualizado de tus comprobantes, abonos registrados y saldo pendiente en tu portal personal.</p>',
+    '        <table role="presentation" style="margin:0 auto;border-collapse:collapse;"><tr><td align="center" style="border-radius:10px;background-color:#0B2737;"><a href="https://www.jrscargocr.com" target="_blank" style="display:inline-block;background-color:#0B2737;color:#ffffff;font-size:14.5px;font-weight:700;line-height:20px;text-decoration:none;padding:14px 28px;border-radius:10px;">Ver mi estado de cuenta en línea</a></td></tr></table>',
+    '      </div>',
+    '      <div style="margin-top:22px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;">',
+    '        <p style="margin:0 0 8px;font-size:12px;color:#b45309;font-weight:600;">Este es un correo de prueba enviado desde Actividad de Correos de JRS Cargo.</p>',
+    '        <p style="margin:0;font-size:12.5px;color:#475569;line-height:1.5;">¿Ya realizaste tu pago o necesitas ayuda?<br/><a href="' + whatsappHelpUrl + '" target="_blank" style="color:#12435E;font-weight:700;text-decoration:underline;">Envíanos tu comprobante por WhatsApp (+506 7260-1238)</a></p>',
+    '      </div>',
+    '    </td></tr>',
+    '    <tr><td style="padding:20px 24px;background-color:#ffffff;border-top:1px solid #e2e8f0;text-align:center;">',
+    '      <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#0B2737;">JRS CARGO S.A.</p>',
+    '      <p style="margin:0;font-size:11.5px;color:#64748b;line-height:1.65;">San Pablo de Heredia, Costa Rica &nbsp;&middot;&nbsp; +506 7260-1238<br/>info@jrscargocr.com &nbsp;&middot;&nbsp; www.jrscargocr.com</p>',
+    '    </td></tr>',
+    '  </table>',
+    '</body></html>',
+  ].join('\n');
+
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+
+  const info = await transporter.sendMail({
+    from: '"JRS CARGO" <' + smtpUser + '>',
+    to: cleanTo,
+    subject: '[PRUEBA] Recordatorio de Pago - Comprobante #' + sampleInvoiceNumber + ' - JRS CARGO',
+    html: htmlContent,
+  });
+
+  return { success: true, messageId: info.messageId };
 }

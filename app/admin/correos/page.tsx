@@ -89,26 +89,26 @@ type TabFilter =
 const DEFAULT_REMINDER_MESSAGE =
   'Te recordamos amablemente que el comprobante detallado a continuación se encuentra pendiente de pago. Si ya realizaste el pago recientemente, por favor omite este aviso o compártenos tu comprobante por WhatsApp para aplicarlo de inmediato.';
 
+const CR_OFFSET_MS = 6 * 60 * 60 * 1000; // Costa Rica UTC-6 fijo (sin horario de verano)
+const CORREOS_CACHE_KEY = 'jrs_correos_cache_v1';
+
 function getDaysSinceFirstEmail(emailSentAt?: string | null): number {
   if (!emailSentAt) return -1;
-  const sentDate = new Date(emailSentAt);
-  if (Number.isNaN(sentDate.getTime())) return -1;
-  const sentCR = new Date(sentDate.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-  const nowCR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-  const sentDayUtc = Date.UTC(sentCR.getFullYear(), sentCR.getMonth(), sentCR.getDate());
-  const todayUtc = Date.UTC(nowCR.getFullYear(), nowCR.getMonth(), nowCR.getDate());
-  return Math.floor((todayUtc - sentDayUtc) / (1000 * 60 * 60 * 24));
+  const sentMs = Date.parse(emailSentAt);
+  if (Number.isNaN(sentMs)) return -1;
+  const sentCrDay = Math.floor((sentMs - CR_OFFSET_MS) / 86_400_000);
+  const todayCrDay = Math.floor((Date.now() - CR_OFFSET_MS) / 86_400_000);
+  return todayCrDay - sentCrDay;
 }
 
 function getScheduledReminderDateStr(emailSentAt?: string | null, daysAfter = 4): string {
   if (!emailSentAt) return '-';
-  const sentDate = new Date(emailSentAt);
-  if (Number.isNaN(sentDate.getTime())) return '-';
-  const sentCR = new Date(sentDate.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-  sentCR.setDate(sentCR.getDate() + daysAfter);
-  const dd = String(sentCR.getDate()).padStart(2, '0');
-  const mm = String(sentCR.getMonth() + 1).padStart(2, '0');
-  const yyyy = sentCR.getFullYear();
+  const sentMs = Date.parse(emailSentAt);
+  if (Number.isNaN(sentMs)) return '-';
+  const targetCr = new Date(sentMs - CR_OFFSET_MS + daysAfter * 86_400_000);
+  const dd = String(targetCr.getUTCDate()).padStart(2, '0');
+  const mm = String(targetCr.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = targetCr.getUTCFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
 
@@ -131,12 +131,9 @@ function getDaysSinceCreation(issueDateStr?: string, createdAtStr?: string): num
   const parts = rawDate.split('-').map(Number);
   if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return 0;
   const [y, m, d] = parts;
-  const createdUtc = Date.UTC(y, m - 1, d);
-
-  const nowCR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-  const todayUtc = Date.UTC(nowCR.getFullYear(), nowCR.getMonth(), nowCR.getDate());
-
-  return Math.floor((todayUtc - createdUtc) / (1000 * 60 * 60 * 24));
+  const createdDay = Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
+  const todayCrDay = Math.floor((Date.now() - CR_OFFSET_MS) / 86_400_000);
+  return todayCrDay - createdDay;
 }
 
 function getScheduledSendDateStr(issueDateStr?: string, createdAtStr?: string): string {
@@ -167,6 +164,11 @@ export default function ActividadCorreosPage() {
   const [showReminderHistory, setShowReminderHistory] = useState(false);
   const [sendingReminderIds, setSendingReminderIds] = useState<Record<string, boolean>>({});
   const [isBatchSendingReminders, setIsBatchSendingReminders] = useState(false);
+
+  // Test email modal state
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testEmailTo, setTestEmailTo] = useState('josegon2000@hotmail.com');
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   // Sending states
   const [sendingIds, setSendingIds] = useState<Record<string, boolean>>({});
@@ -231,23 +233,31 @@ export default function ActividadCorreosPage() {
     ]);
   }, []);
 
-  const loadInvoices = useCallback(async () => {
+  const loadInvoices = useCallback(async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
-      const [invRes, remRes] = await Promise.all([
-        fetch('/api/invoices', { cache: 'no-store' }),
-        fetch('/api/invoices/reminders', { cache: 'no-store' })
-      ]);
-      const data = await invRes.json();
-      if (data.success) {
-        setInvoices((data.data || []).filter((inv: Invoice) => inv.status !== 'Anulada'));
-      }
-      if (remRes.ok) {
-        const remData = await remRes.json();
-        if (remData.success && remData.data) {
-          setRemindersAutoEnabled(remData.data.enabled !== false);
-          setRemindersMap(remData.data.reminders || {});
-          setReminderHistory(Array.isArray(remData.data.history) ? remData.data.history : []);
+      if (!opts?.silent) setLoading(true);
+      const res = await fetch('/api/invoices/reminders?includeInvoices=1', { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const invList: Invoice[] = Array.isArray(data.invoices) ? data.invoices : [];
+        const remState = data.data || {};
+        setInvoices(invList);
+        setRemindersAutoEnabled(remState.enabled !== false);
+        setRemindersMap(remState.reminders || {});
+        setReminderHistory(Array.isArray(remState.history) ? remState.history : []);
+        try {
+          sessionStorage.setItem(
+            CORREOS_CACHE_KEY,
+            JSON.stringify({
+              ts: Date.now(),
+              invoices: invList,
+              remindersAutoEnabled: remState.enabled !== false,
+              remindersMap: remState.reminders || {},
+              reminderHistory: Array.isArray(remState.history) ? remState.history : []
+            })
+          );
+        } catch {
+          // Ignore storage quota errors
         }
       }
     } catch (err) {
@@ -258,8 +268,53 @@ export default function ActividadCorreosPage() {
   }, []);
 
   useEffect(() => {
-    loadInvoices();
+    let hadCache = false;
+    try {
+      const raw = sessionStorage.getItem(CORREOS_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (Array.isArray(cached.invoices)) {
+          setInvoices(cached.invoices);
+          setRemindersAutoEnabled(cached.remindersAutoEnabled !== false);
+          setRemindersMap(cached.remindersMap || {});
+          setReminderHistory(Array.isArray(cached.reminderHistory) ? cached.reminderHistory : []);
+          setLoading(false);
+          hadCache = true;
+        }
+      }
+    } catch {
+      // Ignore cache parse error
+    }
+    loadInvoices({ silent: hadCache });
   }, [loadInvoices]);
+
+  const handleSendTestEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = testEmailTo.trim();
+    if (!target || !target.includes('@')) {
+      showAlert('Correo inválido', 'Ingresa un correo válido para enviar la prueba.', 'error');
+      return;
+    }
+    setIsSendingTest(true);
+    try {
+      const res = await fetch('/api/invoices/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_test', to: target })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestModalOpen(false);
+        showAlert('Correo de prueba enviado', `Se envió un recordatorio de pago de prueba a ${target}.`, 'success');
+      } else {
+        showAlert('Error', data.error || 'No se pudo enviar el correo de prueba.', 'error');
+      }
+    } catch {
+      showAlert('Error', 'Error de red al enviar el correo de prueba.', 'error');
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   // Classify invoices by initial email status AND 4-day payment reminder status
   const classified = useMemo(() => {
@@ -802,21 +857,17 @@ export default function ActividadCorreosPage() {
   }, [activeTab, classified, invoices, searchTerm]);
 
   const formatEmailDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return (
-      d.toLocaleDateString('es-CR', {
-        timeZone: 'America/Costa_Rica',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      }) +
-      ' ' +
-      d.toLocaleTimeString('es-CR', {
-        timeZone: 'America/Costa_Rica',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    );
+    const ms = Date.parse(dateStr);
+    if (Number.isNaN(ms)) return '-';
+    const cr = new Date(ms - CR_OFFSET_MS);
+    const dd = String(cr.getUTCDate()).padStart(2, '0');
+    const mm = String(cr.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = cr.getUTCFullYear();
+    const h24 = cr.getUTCHours();
+    const ampm = h24 >= 12 ? 'p. m.' : 'a. m.';
+    const h12 = String(h24 % 12 || 12).padStart(2, '0');
+    const min = String(cr.getUTCMinutes()).padStart(2, '0');
+    return `${dd}/${mm}/${yyyy} ${h12}:${min} ${ampm}`;
   };
 
   return (
@@ -921,9 +972,20 @@ export default function ActividadCorreosPage() {
             <span>Bitácora ({reminderHistory.length})</span>
           </button>
 
+          {/* Test Reminder Email Button */}
           <button
             type="button"
-            onClick={loadInvoices}
+            onClick={() => setTestModalOpen(true)}
+            className="h-9 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200/90 text-amber-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Enviar un recordatorio de pago de prueba sin afectar ninguna factura"
+          >
+            <Mail size={14} className="text-amber-600" />
+            <span>Correo de prueba</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => loadInvoices()}
             className="h-9 px-3.5 rounded-lg bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             title="Actualizar lista"
           >
@@ -1744,6 +1806,77 @@ export default function ActividadCorreosPage() {
                 {isSendingModal ? 'Enviando...' : 'Confirmar y Enviar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Correo de Prueba de Recordatorio de Pago */}
+      {testModalOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setTestModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl border border-slate-200/90 shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <BellRing size={16} className="text-amber-600" />
+                Enviar Recordatorio de Prueba
+              </h3>
+              <button
+                type="button"
+                onClick={() => setTestModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSendTestEmail} className="p-5 space-y-4">
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Envía una muestra del correo de <strong>Recordatorio de Pago (+4 días)</strong> con el diseño oficial de JRS Cargo. No modifica ni marca ninguna factura real.
+              </p>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Correo de destino
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={testEmailTo}
+                  onChange={e => setTestEmailTo(e.target.value)}
+                  placeholder="correo@ejemplo.com"
+                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTestModalOpen(false)}
+                  className="h-9 px-4 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 text-xs transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingTest}
+                  className="h-9 px-5 rounded-lg font-semibold bg-[#0B2737] text-white hover:bg-[#12435E] text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isSendingTest ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin" />
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={13} />
+                      <span>Enviar Prueba</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { getInvoiceById } from '@/lib/supabase';
+import { getInvoiceById, getInvoices } from '@/lib/supabase';
 import { formatCostaRicaDateTime } from '@/lib/billing';
 import {
   DEFAULT_REMINDER_DAYS,
@@ -8,6 +8,7 @@ import {
   runDuePaymentReminders,
   savePaymentRemindersState,
   sendPaymentReminderForInvoice,
+  sendTestPaymentReminderEmail,
   PaymentReminderHistoryEntry,
   PaymentReminderRecord,
 } from '@/lib/payment-reminders';
@@ -53,6 +54,24 @@ export async function GET(request: Request) {
       );
     }
 
+    const url = new URL(request.url);
+    const includeInvoices = url.searchParams.get('includeInvoices') === '1';
+
+    if (includeInvoices) {
+      const [state, rawInvoices] = await Promise.all([
+        loadPaymentRemindersState(),
+        getInvoices({ includeItems: false }),
+      ]);
+      const invoices = (rawInvoices || []).filter(
+        (inv: { status?: string }) => inv.status !== 'Anulada'
+      );
+      return NextResponse.json({
+        success: true,
+        data: state,
+        invoices,
+      });
+    }
+
     const state = await loadPaymentRemindersState();
     return NextResponse.json({
       success: true,
@@ -79,6 +98,23 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const action = String(body.action || 'send_one');
+
+    // Action 0: Send test payment reminder email (does not touch any real invoice)
+    if (action === 'send_test') {
+      const toEmail = String(body.to || '').trim();
+      const result = await sendTestPaymentReminderEmail(toEmail);
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error || 'No se pudo enviar el correo de prueba.' },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        messageId: result.messageId,
+        to: toEmail,
+      });
+    }
 
     // Action 1: Toggle automatic 4-day payment reminders
     if (action === 'toggle_enabled') {
