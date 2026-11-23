@@ -26,6 +26,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/billing';
+import { StatementLoader, StatementLoadError, type NameState } from './StatementLoader';
 
 function getItemUnit(serviceName?: string, weight?: string | number): string {
   const wStr = String(weight || '').toLowerCase();
@@ -195,15 +196,15 @@ export default function PublicEstadoCuentaPage() {
 
   const [data, setData] = useState<StatementData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
 
-  // Welcome Splash Screen state (executes on every new entry to the portal)
+  // Pantalla de carga: nombre del cliente (consulta ligera), hitos reales de progreso y desvanecimiento final
+  const [previewName, setPreviewName] = useState<string | null>(null);
+  const [nameState, setNameState] = useState<NameState>('pending');
+  const [loadMilestone, setLoadMilestone] = useState(0);
   const [showSplash, setShowSplash] = useState(true);
-  const [splashLogoReady, setSplashLogoReady] = useState(false);
-  const [splashTextReady, setSplashTextReady] = useState(false);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
-  const [minSplashTimeElapsed, setMinSplashTimeElapsed] = useState(false);
-  const [progressPercent, setProgressPercent] = useState(12);
+  const [loaderRun, setLoaderRun] = useState(0);
 
   // Navigation & filter states
   const [activeTab, setActiveTab] = useState<'pendientes' | 'pagadas' | 'todas' | 'pagos' | 'paquetes'>('pendientes');
@@ -228,42 +229,16 @@ export default function PublicEstadoCuentaPage() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
-  // Choreographed Welcome Splash Screen sequence
-  useEffect(() => {
-    const frame1 = requestAnimationFrame(() => {
-      setSplashLogoReady(true);
-      setProgressPercent(42);
-    });
-
-    const textTimer = setTimeout(() => {
-      setSplashTextReady(true);
-      setProgressPercent(74);
-    }, 180);
-
-    const minTimer = setTimeout(() => {
-      setMinSplashTimeElapsed(true);
-    }, 1500);
-
-    return () => {
-      cancelAnimationFrame(frame1);
-      clearTimeout(textTimer);
-      clearTimeout(minTimer);
-    };
+  // Al terminar la barra (100 % real), se desvanece la pantalla y se abre el estado de cuenta
+  const handleLoaderComplete = useCallback(() => {
+    setSplashFadingOut(true);
+    setTimeout(() => setShowSplash(false), 520);
   }, []);
 
-  // Coordinate real loading completion with welcome screen fade-out
+  // Si ocurre un error, se cierra la pantalla de carga para mostrar el mensaje con la opción de reintentar
   useEffect(() => {
-    if (!loading) {
-      setProgressPercent(100);
-    }
-    if (!loading && minSplashTimeElapsed && showSplash && !splashFadingOut) {
-      setSplashFadingOut(true);
-      const hideTimer = setTimeout(() => {
-        setShowSplash(false);
-      }, 450);
-      return () => clearTimeout(hideTimer);
-    }
-  }, [loading, minSplashTimeElapsed, showSplash, splashFadingOut]);
+    if (error) setShowSplash(false);
+  }, [error]);
 
   // Close modal with Escape key for keyboard accessibility
   useEffect(() => {
@@ -337,20 +312,67 @@ export default function PublicEstadoCuentaPage() {
 
   const loadStatement = useCallback(async () => {
     if (!clientId) return;
+
+    // Hitos reales de progreso: solo avanzan (nunca retroceden)
+    const bump = (value: number) => setLoadMilestone(prev => Math.max(prev, value));
+
+    setLoading(true);
+    setError(null);
+    bump(5);
+
+    // Etapa 1: validar el enlace y obtener el nombre del cliente (consulta ligera, en paralelo)
+    fetch(`/api/estado-cuenta/${encodeURIComponent(clientId)}/preview`, { cache: 'no-store' })
+      .then(async res => {
+        const json = await res.json().catch(() => null);
+        if (res.ok && json?.success) {
+          const clientName = String(json.name || '').trim();
+          if (clientName) {
+            setPreviewName(clientName);
+            setNameState('ready');
+          } else {
+            setNameState('unavailable');
+          }
+          bump(25);
+        } else {
+          setNameState('unavailable');
+        }
+      })
+      .catch(() => setNameState('unavailable'));
+
     try {
-      setLoading(true);
-      setError(null);
+      // Etapa 2: solicitar el estado de cuenta completo
       const res = await fetch(`/api/estado-cuenta/${encodeURIComponent(clientId)}`, {
         cache: 'no-store'
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.error || 'No se pudo cargar el estado de cuenta');
+      bump(65);
+
+      // Etapa 3: recibir y procesar la respuesta
+      const json = await res.json().catch(() => null);
+      bump(88);
+
+      if (res.status === 404) {
+        setError({
+          title: 'No encontramos este estado de cuenta',
+          message:
+            'El enlace no corresponde a un estado de cuenta activo. Verifica que lo hayas copiado completo o contáctanos para ayudarte.'
+        });
+        return;
+      }
+      if (!res.ok || !json?.success) {
+        console.error('Estado de cuenta: respuesta inválida', res.status, json?.error);
+        setError({
+          title: 'No pudimos cargar tu estado de cuenta',
+          message: 'Ocurrió un problema al preparar tu información. Inténtalo de nuevo en unos segundos.'
+        });
+        return;
       }
       setData(json);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Error al consultar la cuenta');
+      setError({
+        title: 'Sin conexión',
+        message: 'No pudimos conectarnos con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.'
+      });
     } finally {
       setLoading(false);
     }
@@ -359,6 +381,14 @@ export default function PublicEstadoCuentaPage() {
   useEffect(() => {
     loadStatement();
   }, [loadStatement]);
+
+  const handleRetry = () => {
+    setSplashFadingOut(false);
+    setShowSplash(true);
+    setLoadMilestone(0);
+    setLoaderRun(prev => prev + 1);
+    loadStatement();
+  };
 
   const copySinpeNumber = () => {
     navigator.clipboard.writeText('72601238');
@@ -422,129 +452,38 @@ export default function PublicEstadoCuentaPage() {
     }
   };
 
-  // ==================== 2. PANTALLA DE BIENVENIDA CON ANIMACIÓN DEL LOGO ====================
+  // ==================== 2. PANTALLA DE CARGA PERSONALIZADA ====================
   const splashOverlay = showSplash ? (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label="Bienvenido a JRS Cargo, cargando estado de cuenta"
-      className={`fixed inset-0 z-[100] bg-[#0B2737] flex flex-col items-center justify-center p-6 select-none print:hidden overflow-hidden transition-all duration-500 ease-out motion-reduce:transition-none ${
-        splashFadingOut ? 'opacity-0 scale-[1.015] pointer-events-none' : 'opacity-100 scale-100'
-      }`}
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 50% 42%, rgba(20, 68, 93, 0.65) 0%, rgba(11, 39, 55, 0.98) 65%, #071924 100%)'
-      }}
-    >
-      {/* Halo ambiental sutil detrás del emblema */}
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#14445D]/35 blur-3xl transition-all duration-700 ease-out motion-reduce:transition-none ${
-          splashLogoReady ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
-        }`}
-      />
-
-      <div className="relative z-10 flex flex-col items-center text-center max-w-sm w-full">
-        {/* Tarjeta del Logo Oficial con revelación suave y destello de luz sutil */}
-        <div
-          className={`relative group transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:scale-100 motion-reduce:translate-y-0 ${
-            splashLogoReady ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-[0.94] translate-y-2.5'
-          }`}
-        >
-          {/* Borde exterior translúcido de precisión */}
-          <div className="p-1.5 rounded-[26px] bg-gradient-to-b from-white/15 to-white/5 shadow-[0_24px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/10">
-            <div className="relative overflow-hidden bg-white rounded-[20px] px-9 py-7 sm:px-11 sm:py-8 flex items-center justify-center shadow-inner">
-              {/* Efecto de barrido de luz sutil sobre la tarjeta */}
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-slate-100/70 to-transparent skew-x-[-20deg] transition-transform duration-1000 ease-out motion-reduce:hidden ${
-                  splashTextReady ? 'translate-x-[200%]' : '-translate-x-full'
-                }`}
-              />
-              <Image
-                src="/logo.png"
-                alt="JRS Cargo S.A."
-                width={200}
-                height={120}
-                className="relative z-10 w-auto h-20 sm:h-24 object-contain"
-                priority
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Texto de bienvenida con entrada escalonada */}
-        <div
-          className={`mt-7 transition-all duration-500 ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${
-            splashTextReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-          }`}
-        >
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#FFC44D] mb-2.5">
-            Portal Oficial de Clientes
-          </span>
-          <h1 className="text-white text-lg sm:text-xl font-bold tracking-tight">
-            Bienvenido a JRS Cargo
-          </h1>
-          <p className="text-slate-300/80 text-xs sm:text-[13px] mt-1 font-normal">
-            {loading ? 'Verificando tu estado de cuenta en tiempo real...' : 'Estado de cuenta sincronizado'}
-          </p>
-        </div>
-
-        {/* Indicador de progreso elegante sincronizado con la carga real */}
-        <div
-          className={`w-52 sm:w-56 mt-6 transition-all duration-500 delay-75 ease-out motion-reduce:transition-none ${
-            splashTextReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1.5'
-          }`}
-        >
-          <div className="h-1.5 w-full bg-[#14445D]/70 rounded-full overflow-hidden p-[1px] ring-1 ring-white/10">
-            <div
-              className="h-full bg-gradient-to-r from-[#FFC44D] to-[#ffd782] rounded-full transition-all duration-300 ease-out motion-reduce:transition-none shadow-[0_0_10px_rgba(255,196,77,0.5)]"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium mt-2 px-0.5 tabular-nums">
-            <span>JRS Cargo S.A.</span>
-            <span>{progressPercent}%</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <StatementLoader
+      key={loaderRun}
+      name={previewName}
+      nameState={nameState}
+      milestone={loadMilestone}
+      ready={!loading && !error && Boolean(data)}
+      fading={splashFadingOut}
+      onComplete={handleLoaderComplete}
+    />
   ) : null;
 
   if (loading && !data) {
     return (
       <>
         {splashOverlay}
-        <div className="min-h-screen bg-[#F8FAFC]" />
+        <div className="min-h-screen bg-white" />
       </>
     );
   }
 
   if (error || !data) {
     return (
-      <>
-        {splashOverlay}
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 text-[#1E293B]">
-          <div className="max-w-md w-full bg-white rounded-xl p-6 sm:p-8 border border-slate-200 shadow-xs text-center">
-            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-lg flex items-center justify-center mx-auto mb-4 border border-red-100">
-              <AlertCircle size={24} />
-            </div>
-            <h2 className="text-lg font-bold text-[#0B2737] mb-1.5">Estado de cuenta no disponible</h2>
-            <p className="text-xs sm:text-sm text-slate-500 mb-6 leading-relaxed">
-              {error || 'El enlace consultado no es válido o no se encuentra disponible en este momento. Contáctanos para asistirte.'}
-            </p>
-            <a
-              href="https://wa.me/50672601238"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full h-10 bg-[#0B2737] hover:bg-[#14445D] text-white font-semibold text-xs sm:text-sm rounded-lg inline-flex items-center justify-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14445D] focus-visible:ring-offset-2"
-            >
-              <MessageCircle size={16} />
-              <span>Contactar a Soporte JRS Cargo</span>
-            </a>
-          </div>
-        </div>
-      </>
+      <StatementLoadError
+        title={error?.title || 'Estado de cuenta no disponible'}
+        message={
+          error?.message ||
+          'El enlace consultado no es válido o no se encuentra disponible en este momento. Contáctanos para asistirte.'
+        }
+        onRetry={handleRetry}
+      />
     );
   }
 

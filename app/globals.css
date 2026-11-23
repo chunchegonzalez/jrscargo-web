@@ -651,3 +651,38 @@
     animation: none;
   }
 }
+
+/* ===== Pantalla de carga del estado de cuenta (animaciones livianas, solo transform/opacity) ===== */
+@keyframes jrs-loader-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes jrs-loader-sheen {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
+.jrs-loader-float {
+  animation: jrs-loader-float 3.2s ease-in-out infinite;
+}
+
+.jrs-loader-bar {
+  overflow: hidden;
+}
+.jrs-loader-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: jrs-loader-sheen 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jrs-loader-float,
+  .jrs-loader-bar::after {
+    animation: none;
+  }
+}
