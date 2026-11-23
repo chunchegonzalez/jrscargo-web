@@ -590,8 +590,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       } print:ml-0 print:block print:h-auto print:min-h-0`}>
         
         {/* Top Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 h-16 flex items-center px-4 md:px-6 justify-between gap-3 sticky top-0 z-30 print:hidden">
-          <div className="flex items-center gap-2.5 shrink-0">
+        <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 h-16 flex items-center px-3 sm:px-4 md:px-6 justify-between gap-2 sm:gap-3 sticky top-0 z-30 print:hidden">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Sidebar Toggle (Mobile & Desktop) */}
             <button 
               onClick={() => {
@@ -615,15 +615,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           
-          <div className="flex-1 max-w-xl px-1 sm:px-3">
+          <div className="flex-1 max-w-xl px-0.5 sm:px-3">
             <GlobalSearch role={fullAccess ? 'admin_pro' : currentUser?.role} />
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Live Bot Alert Pill in Top Header */}
             <Link
               href="/admin/chat-bot"
-              className={`relative h-9 px-2.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+              className={`relative h-9 px-2 sm:px-2.5 rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
                 botUnreadCount > 0
                   ? 'bg-red-50 border-red-200 text-red-600 shadow-2xs animate-pulse'
                   : 'bg-white border-slate-200/80 text-slate-500 hover:text-brand-blue hover:bg-slate-50'
@@ -632,9 +632,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <Bell size={15} />
               {botUnreadCount > 0 && (
-                <span className="text-[11px] font-bold">
-                  {botUnreadCount} {botUnreadCount === 1 ? 'Consulta' : 'Consultas'}
-                </span>
+                <>
+                  <span className="text-[11px] font-bold hidden sm:inline">
+                    {botUnreadCount} {botUnreadCount === 1 ? 'Consulta' : 'Consultas'}
+                  </span>
+                  <span className="sm:hidden text-[10px] font-bold bg-red-600 text-white rounded-full px-1.5 py-0.5 leading-none">
+                    {botUnreadCount}
+                  </span>
+                </>
               )}
             </Link>
 
