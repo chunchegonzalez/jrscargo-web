@@ -1007,12 +1007,12 @@ export default function NuevoGastoPage() {
                     </div>
                   )}
 
-                  {/* Cuerpo editable de la ficha (2 filas limpias sin cortar ningún campo) */}
+                  {/* Cuerpo editable de la ficha: campos amplios y monto destacado abajo sin recortes */}
                   {!row.collapsed && (
-                    <div className="p-4 space-y-3">
-                      {/* Primera fila: N.º de documento, Proveedor / negocio y Fecha */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
-                        <div className="lg:col-span-4">
+                    <div className="p-4 space-y-3.5">
+                      {/* Fila 1: N.º de documento y Proveedor / negocio */}
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className="md:col-span-5">
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             N.º de documento
                           </label>
@@ -1026,7 +1026,7 @@ export default function NuevoGastoPage() {
                           />
                         </div>
 
-                        <div className="lg:col-span-5">
+                        <div className="md:col-span-7">
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             Proveedor / negocio
                           </label>
@@ -1043,8 +1043,11 @@ export default function NuevoGastoPage() {
                             }`}
                           />
                         </div>
+                      </div>
 
-                        <div className="sm:col-span-2 lg:col-span-3">
+                      {/* Fila 2: Fecha y Categoría */}
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className="md:col-span-4">
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             Fecha
                           </label>
@@ -1060,11 +1063,8 @@ export default function NuevoGastoPage() {
                             }`}
                           />
                         </div>
-                      </div>
 
-                      {/* Segunda fila: Categoría, Moneda, Monto y Confirmar monto */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-                        <div className="lg:col-span-4">
+                        <div className="md:col-span-8">
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             Categoría
                           </label>
@@ -1081,8 +1081,11 @@ export default function NuevoGastoPage() {
                             ))}
                           </select>
                         </div>
+                      </div>
 
-                        <div className="lg:col-span-2">
+                      {/* Fila 3: Moneda + Recuadro amplio de Monto + Confirmar monto */}
+                      <div className="pt-2.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                        <div className="sm:col-span-3 lg:col-span-2">
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             Moneda
                           </label>
@@ -1094,51 +1097,64 @@ export default function NuevoGastoPage() {
                                 currency: e.target.value === 'CRC' ? 'CRC' : 'USD',
                               })
                             }
-                            className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 cursor-pointer"
+                            className={`w-full h-11 px-3 border rounded-lg text-sm font-bold focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 cursor-pointer ${
+                              row.currency === 'CRC'
+                                ? 'bg-amber-50/70 border-amber-300 text-amber-900'
+                                : 'bg-[#0B2737]/[0.05] border-[#0B2737]/25 text-[#0B2737]'
+                            }`}
                           >
-                            <option value="CRC">CRC</option>
-                            <option value="USD">USD</option>
+                            <option value="CRC">CRC (₡)</option>
+                            <option value="USD">USD ($)</option>
                           </select>
                         </div>
 
-                        <div className="lg:col-span-4">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
-                            Monto
+                        <div className="sm:col-span-9 lg:col-span-7">
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Monto total del comprobante
                           </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            disabled={isSaved || isSaving}
-                            value={row.amount}
-                            onChange={e =>
-                              updateRow(row.id, {
-                                amount: e.target.value,
-                              })
-                            }
-                            placeholder="0.00"
-                            className={`w-full h-9 px-3 bg-white border rounded-lg text-sm font-bold text-[#0B2737] text-right tabular-nums placeholder:text-slate-300 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 ${
-                              invalid && !hasValidAmount
-                                ? 'border-red-400 ring-1 ring-red-200'
-                                : row.needsConfirmation
-                                ? 'border-amber-300 bg-amber-50/20'
-                                : 'border-slate-200/90'
-                            }`}
-                          />
+                          <div className="relative">
+                            <span
+                              className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-extrabold pointer-events-none ${
+                                row.currency === 'CRC' ? 'text-[#D97706]' : 'text-[#0B2737]'
+                              }`}
+                            >
+                              {row.currency === 'CRC' ? '₡' : '$'}
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              disabled={isSaved || isSaving}
+                              value={row.amount}
+                              onChange={e =>
+                                updateRow(row.id, {
+                                  amount: e.target.value,
+                                })
+                              }
+                              placeholder="0.00"
+                              className={`w-full h-11 pl-9 pr-4 bg-white border rounded-lg text-lg font-extrabold text-[#0B2737] text-right tabular-nums placeholder:text-slate-300 focus:outline-none focus:border-[#12435E] focus:ring-2 focus:ring-[#12435E]/10 disabled:bg-slate-50 ${
+                                invalid && !hasValidAmount
+                                  ? 'border-red-400 ring-1 ring-red-200'
+                                  : row.needsConfirmation
+                                  ? 'border-amber-400 bg-amber-50/20'
+                                  : 'border-slate-300'
+                              }`}
+                            />
+                          </div>
                         </div>
 
-                        <div className="sm:col-span-2 lg:col-span-2">
+                        <div className="sm:col-span-12 lg:col-span-3">
                           <button
                             type="button"
                             disabled={isSaved || isSaving || !hasValidAmount}
                             onClick={() => handleConfirmRowAmount(row.id)}
-                            className={`w-full h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 ${
+                            className={`w-full h-11 px-4 rounded-lg border text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 ${
                               row.needsConfirmation
                                 ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
                                 : 'bg-emerald-50/70 text-emerald-700 border-emerald-200'
                             }`}
                           >
-                            {!row.needsConfirmation && <Check size={13} />}
-                            <span>{row.needsConfirmation ? 'Confirmar monto' : 'Confirmado'}</span>
+                            {!row.needsConfirmation && <Check size={15} />}
+                            <span>{row.needsConfirmation ? 'Confirmar monto' : 'Monto confirmado'}</span>
                           </button>
                         </div>
                       </div>
