@@ -74,7 +74,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             if (targetInvId) {
               const matched = processedInvs.find((i: Record<string, unknown>) => i.id === targetInvId);
               if (matched) {
-                const bal = matched.pendingBalance as number;
+                const bal = Math.round(((matched.pendingBalance as number) + Number.EPSILON) * 100) / 100;
                 setApplications({ [targetInvId]: bal });
                 setTotalPaymentAmount(bal.toFixed(2));
                 setAmountToApply(bal);
@@ -82,7 +82,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             } else if (processedInvs.length === 1) {
               // If only 1 invoice exists, pre-select it
               const single = processedInvs[0];
-              const bal = single.pendingBalance as number;
+              const bal = Math.round(((single.pendingBalance as number) + Number.EPSILON) * 100) / 100;
               setApplications({ [String(single.id)]: bal });
               setTotalPaymentAmount(bal.toFixed(2));
               setAmountToApply(bal);
@@ -170,7 +170,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       if (next[invId]) {
         delete next[invId];
       } else {
-        next[invId] = pendingBalance;
+        next[invId] = Math.round((pendingBalance + Number.EPSILON) * 100) / 100;
       }
       const newApplied = Number(Object.values(next).reduce((a, b) => a + (Number(b) || 0), 0).toFixed(2));
       const extraCredit = Math.max(0, parseFloat(creditInputStr) || 0);
@@ -366,25 +366,25 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
       
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
           <Link
             href="/admin/cuentas-por-cobrar"
-            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors"
+            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors shrink-0 mt-0.5 sm:mt-0"
             title="Volver a Cuentas por Cobrar"
           >
             <ArrowLeft size={16} />
           </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Recibir Pago</h1>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Recibir Pago</h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15 truncate max-w-[220px]">
                 {clientName}
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Aplica cobros a facturas pendientes o genera saldo a favor.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Aplica cobros a facturas pendientes o genera saldo a favor.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2">
           <button
             onClick={() => window.print()}
             className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-2xs inline-flex items-center gap-1.5 font-semibold text-xs transition-all cursor-pointer"
@@ -420,8 +420,8 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
         {/* Top Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-8 bg-white rounded-xl p-5 border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="lg:col-span-8 bg-white rounded-xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Cliente</label>
                 <div className="w-full h-9 px-3.5 bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm font-bold text-slate-800 flex items-center truncate">
@@ -436,14 +436,14 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Fecha de Pago</label>
                 <input 
                   type="date" 
                   value={paymentDate}
                   onChange={e => setPaymentDate(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                  className="w-full h-9 px-2.5 sm:px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 />
               </div>
               <div>
@@ -451,7 +451,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 <select 
                   value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                  className="w-full h-9 px-2.5 sm:px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-medium focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 >
                   <option value="">Seleccionar...</option>
                   <option value="SINPE">SINPE Móvil</option>
@@ -462,7 +462,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Moneda</label>
-                <div className="w-full h-9 px-3 bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 flex items-center">
+                <div className="w-full h-9 px-2.5 sm:px-3 bg-slate-50 border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 flex items-center">
                   Dólares (USD)
                 </div>
               </div>
@@ -473,47 +473,56 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                   placeholder="Comprobante..."
                   value={reference}
                   onChange={e => setReference(e.target.value)}
-                  className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
+                  className="w-full h-9 px-2.5 sm:px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                 />
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-4 bg-white p-5 rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] flex flex-col items-end text-right justify-center">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Importe Recibido</p>
-            <div className="flex items-center justify-end gap-1.5 mb-1.5 w-full">
-              <span className="text-2xl font-bold text-slate-400 shrink-0">{currency === 'CRC' ? '₡' : '$'}</span>
+          <div className="lg:col-span-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] flex flex-col justify-center">
+            <div className="flex items-center justify-between sm:justify-end gap-2 mb-1">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Importe Recibido</span>
+              <span className="text-[10px] font-bold text-brand-blue bg-brand-blue/10 px-1.5 py-0.5 rounded">USD</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-1.5 bg-slate-50/90 hover:bg-slate-100/70 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-blue/20 focus-within:border-brand-blue border border-slate-200/90 rounded-xl px-3 py-2 my-1 transition-all">
+              <span className="text-2xl sm:text-3xl font-black text-slate-400 select-none">
+                {currency === 'CRC' ? '₡' : '$'}
+              </span>
               <input 
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={totalPaymentAmount}
                 onChange={e => handleGlobalAmountChange(e.target.value)}
-                className="w-full max-w-[200px] bg-transparent text-3xl sm:text-4xl font-black text-slate-900 focus:outline-none text-right placeholder-slate-300 print:text-black print:border-none tracking-tight tabular-nums"
+                className="w-full sm:w-40 bg-transparent text-2xl sm:text-3xl font-black text-slate-900 focus:outline-none text-right placeholder-slate-300 print:text-black print:border-none tracking-tight tabular-nums"
               />
             </div>
-            {parseFloat(totalPaymentAmount || '0') > 0 && (
-              <p className="text-xs font-bold text-brand-blue mb-2 bg-brand-blue/[0.08] px-2 py-0.5 rounded-md border border-brand-blue/15 tabular-nums">
-                ≈ ₡{Math.round(parseFloat(totalPaymentAmount || '0') * exchangeRate).toLocaleString('es-CR')} CRC
+
+            <div className="flex flex-col items-end text-right mt-1.5 space-y-1">
+              {parseFloat(totalPaymentAmount || '0') > 0 && (
+                <p className="text-xs font-bold text-brand-blue bg-brand-blue/[0.08] px-2 py-0.5 rounded-md border border-brand-blue/15 tabular-nums">
+                  ≈ ₡{Math.round(parseFloat(totalPaymentAmount || '0') * exchangeRate).toLocaleString('es-CR')} CRC
+                </p>
+              )}
+              <p className="text-xs font-medium text-slate-500">
+                Saldo Pendiente: <span className="text-slate-900 font-bold tabular-nums">{formatCurrency(currentBalance, currency)}</span>
               </p>
-            )}
-            <p className="text-xs font-medium text-slate-500">
-              Saldo Pendiente: <span className="text-slate-900 font-bold tabular-nums">{formatCurrency(currentBalance, currency)}</span>
-            </p>
-            <p className="text-xs font-medium text-slate-500 mt-0.5">
-              Saldo en Colones: <span className="text-brand-blue font-bold tabular-nums">₡{Math.round(currentBalance * exchangeRate).toLocaleString('es-CR')} CRC</span>
-            </p>
-            {availableCredit > 0 && (
-              <div className="mt-2.5 pt-2.5 border-t border-slate-200/80 w-full flex flex-col items-end">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-md tabular-nums">
-                  <Wallet size={12} />
-                  Saldo a Favor: +{formatCurrency(availableCredit, currency)}
-                </span>
-                <span className="text-[11px] font-semibold text-emerald-600 mt-0.5 tabular-nums">
-                  ≈ ₡{Math.round(availableCredit * exchangeRate).toLocaleString('es-CR')} CRC
-                </span>
-              </div>
-            )}
+              <p className="text-xs font-medium text-slate-500">
+                Saldo en Colones: <span className="text-brand-blue font-bold tabular-nums">₡{Math.round(currentBalance * exchangeRate).toLocaleString('es-CR')} CRC</span>
+              </p>
+              {availableCredit > 0 && (
+                <div className="mt-2 pt-2 border-t border-slate-200/80 w-full flex flex-col items-end">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-md tabular-nums">
+                    <Wallet size={12} />
+                    Saldo a Favor: +{formatCurrency(availableCredit, currency)}
+                  </span>
+                  <span className="text-[11px] font-semibold text-emerald-600 mt-0.5 tabular-nums">
+                    ≈ ₡{Math.round(availableCredit * exchangeRate).toLocaleString('es-CR')} CRC
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -554,7 +563,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           </div>
         )}
 
-        {/* Transactions Table */}
+        {/* Transactions Section */}
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
           <div className="p-3.5 border-b border-slate-200/80 bg-slate-50/60 flex items-center justify-between">
             <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -563,7 +572,95 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
             </h3>
           </div>
           
-          <div className="overflow-x-auto">
+          {/* Mobile Touch Cards View (sm:hidden) */}
+          <div className="sm:hidden divide-y divide-slate-100">
+            {visibleInvoices.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 text-xs">
+                No hay facturas pendientes en {currency}. Puedes registrar un anticipo o saldo a favor abajo.
+              </div>
+            ) : (
+              visibleInvoices.map(inv => {
+                const invId = inv.id as string;
+                const pendingBalance = inv.pendingBalance as number;
+                const issueDate = inv.issue_date as string;
+                const invoiceNumber = inv.invoice_number as string;
+                const isChecked = !!applications[invId];
+                const appAmount = applications[invId] !== undefined
+                  ? (typeof applications[invId] === 'number'
+                      ? Math.round((applications[invId] + Number.EPSILON) * 100) / 100
+                      : applications[invId])
+                  : '';
+                const colonesEquivalent = Math.round(pendingBalance * (Number(inv.exchange_rate) || exchangeRate));
+
+                return (
+                  <div
+                    key={invId}
+                    className={`p-3.5 transition-colors ${
+                      isChecked ? 'bg-emerald-50/40' : 'bg-white'
+                    }`}
+                  >
+                    {/* Header: Checkbox + Factura + Saldo */}
+                    <div className="flex items-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleInvoice(invId, pendingBalance)}
+                        className={`w-6 h-6 mt-0.5 rounded-md flex items-center justify-center shrink-0 transition-all ${
+                          isChecked
+                            ? 'bg-emerald-600 text-white shadow-2xs ring-2 ring-emerald-400/30'
+                            : 'bg-white border-2 border-slate-300 hover:border-brand-blue'
+                        }`}
+                      >
+                        {isChecked && <Check size={14} strokeWidth={3} />}
+                      </button>
+                      <div className="flex-1 min-w-0" onClick={() => toggleInvoice(invId, pendingBalance)}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-bold text-slate-900 text-sm">
+                            Factura #{invoiceNumber}
+                          </span>
+                          <span className="text-sm font-black text-slate-900 tabular-nums">
+                            {formatCurrency(pendingBalance, currency)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <span className="text-[11px] text-slate-400">
+                            Emitida: {formatDisplayDate(issueDate)}
+                          </span>
+                          <span className="text-[11px] font-semibold text-emerald-600 tabular-nums">
+                            ≈ ₡{colonesEquivalent.toLocaleString('es-CR')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment Input Row */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-500">Monto a pagar:</span>
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border transition-all ${
+                        isChecked
+                          ? 'bg-white border-emerald-400 ring-2 ring-emerald-400/10'
+                          : 'bg-slate-50 border-slate-200 text-slate-400'
+                      }`}>
+                        <span className="font-bold text-xs text-slate-500">
+                          {currency === 'CRC' ? '₡' : '$'}
+                        </span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={appAmount}
+                          onChange={(e) => handleManualAmountChange(invId, e.target.value, pendingBalance)}
+                          placeholder="0.00"
+                          className="w-24 bg-transparent text-right font-bold text-sm text-slate-900 focus:outline-none tabular-nums"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table View (hidden sm:block) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
@@ -591,7 +688,11 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                     const invoiceNumber = inv.invoice_number as string;
 
                     const isChecked = !!applications[invId];
-                    const appAmount = applications[invId] !== undefined ? applications[invId] : '';
+                    const appAmount = applications[invId] !== undefined
+                      ? (typeof applications[invId] === 'number'
+                          ? Math.round((applications[invId] + Number.EPSILON) * 100) / 100
+                          : applications[invId])
+                      : '';
                     
                     const dueDate = parseLocalDate(issueDate);
                     dueDate.setDate(dueDate.getDate() + 30);
@@ -648,14 +749,14 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                 <button
                   type="button"
                   onClick={() => setShowCreditBox(true)}
-                  className="h-9 px-3.5 inline-flex items-center gap-2 rounded-lg bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 text-xs font-semibold transition-all cursor-pointer"
+                  className="w-full sm:w-auto h-9 px-3.5 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 text-xs font-semibold transition-all cursor-pointer"
                 >
                   <Plus size={14} className="text-emerald-600" />
                   <Wallet size={14} className="text-emerald-600" />
                   <span>Generar Saldo a Favor (Pago de más / Anticipo)</span>
                 </button>
               ) : (
-                <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-4 relative">
+                <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3.5 sm:p-4 relative">
                   <button
                     type="button"
                     onClick={() => {
@@ -663,21 +764,21 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                       setShowCreditBox(false);
                     }}
                     title="Ocultar saldo a favor"
-                    className="absolute top-3 right-3 p-1 rounded-lg text-emerald-700/60 hover:text-emerald-900 hover:bg-emerald-100/70 transition-colors"
+                    className="absolute top-2.5 right-2.5 p-1 rounded-lg text-emerald-700/60 hover:text-emerald-900 hover:bg-emerald-100/70 transition-colors"
                   >
                     <X size={14} />
                   </button>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pr-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pr-5">
                     <div>
                       <label className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                         <Wallet size={14} className="text-emerald-600" />
-                        Generar Saldo a Favor (Pago de más / Anticipo)
+                        Generar Saldo a Favor
                       </label>
                       <p className="text-xs text-emerald-700/90 mt-1 leading-relaxed">
-                        Si el cliente pagó de más, ingresa el total recibido arriba o escribe aquí el monto excedente en USD para guardarlo como saldo a favor.
+                        Si el cliente pagó de más, escribe aquí el monto excedente en USD para guardarlo como saldo a favor.
                       </p>
                     </div>
-                    <div className="shrink-0 flex flex-col items-end">
+                    <div className="shrink-0 flex items-center sm:flex-col sm:items-end gap-2 sm:gap-0 justify-between">
                       <div className="inline-flex items-center gap-1.5 bg-white border border-emerald-300 focus-within:border-emerald-600 px-3 h-9 rounded-lg shadow-2xs">
                         <span className="text-xs font-bold text-emerald-700">+$</span>
                         <input
@@ -701,23 +802,29 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
               )}
             </div>
 
-            <div className="md:col-span-5 flex flex-col items-end justify-end space-y-1.5">
-              <p className="text-xs font-medium text-slate-500">
-                Monto a Aplicar a Facturas: <span className="text-sm font-bold text-slate-900 ml-2 tabular-nums">{formatCurrency(amountToApply, currency)}</span>
-              </p>
+            <div className="md:col-span-5 flex flex-col items-end justify-end space-y-1.5 w-full">
+              <div className="w-full flex items-center justify-between sm:justify-end gap-2 text-xs font-medium text-slate-500">
+                <span>Monto a Facturas:</span>
+                <span className="text-sm font-bold text-slate-900 tabular-nums">{formatCurrency(amountToApply, currency)}</span>
+              </div>
               {creditToGenerate > 0 && (
-                <p className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/80 tabular-nums">
-                  Saldo a Favor a Generar: <span className="font-bold ml-1">+{formatCurrency(creditToGenerate, currency)}</span>
-                </p>
+                <div className="w-full flex items-center justify-between sm:justify-end gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/80 tabular-nums">
+                  <span>Saldo a Favor a Generar:</span>
+                  <span className="font-bold">+{formatCurrency(creditToGenerate, currency)}</span>
+                </div>
               )}
               <div className="pt-2 border-t border-slate-200/80 w-full flex flex-col items-end">
-                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Total Pago Recibido: <span className="text-lg font-black text-emerald-600 ml-2 tabular-nums">{formatCurrency(Number((amountToApply + creditToGenerate).toFixed(2)), currency)}</span>
-                </p>
-                <p className="text-xs font-medium text-slate-500 mt-0.5 tabular-nums">
-                  Total en Colones: <span className="text-sm font-bold text-brand-blue ml-1">₡{Math.round((amountToApply + creditToGenerate) * exchangeRate).toLocaleString('es-CR')} CRC</span>
-                  <span className="text-[10px] text-slate-400 ml-1.5">(T.C. ₡{exchangeRate})</span>
-                </p>
+                <div className="w-full flex items-center justify-between sm:justify-end gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  <span>Total Pago Recibido:</span>
+                  <span className="text-lg font-black text-emerald-600 tabular-nums">{formatCurrency(Number((amountToApply + creditToGenerate).toFixed(2)), currency)}</span>
+                </div>
+                <div className="w-full flex items-center justify-between sm:justify-end gap-1 text-xs font-medium text-slate-500 mt-0.5 tabular-nums">
+                  <span>Total en Colones:</span>
+                  <div>
+                    <span className="text-sm font-bold text-brand-blue">₡{Math.round((amountToApply + creditToGenerate) * exchangeRate).toLocaleString('es-CR')} CRC</span>
+                    <span className="text-[10px] text-slate-400 ml-1.5">(T.C. ₡{exchangeRate})</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -733,15 +840,15 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[550px]">
               <thead>
                 <tr className="bg-slate-50/95 border-b border-slate-200/90 text-[11px] uppercase tracking-wider text-slate-500 font-semibold print:bg-transparent print:border-gray-800">
-                  <th className="py-2.5 px-3.5 pl-5">Fecha</th>
+                  <th className="py-2.5 px-3.5 pl-4 sm:pl-5">Fecha</th>
                   <th className="py-2.5 px-3.5">Método</th>
                   <th className="py-2.5 px-3.5">Referencia</th>
                   <th className="py-2.5 px-3.5">Facturas Aplicadas / Saldo</th>
                   <th className="py-2.5 px-3.5 text-right">Monto</th>
-                  <th className="py-2.5 px-3.5 pr-5 text-center print:hidden">Acción</th>
+                  <th className="py-2.5 px-3.5 pr-4 sm:pr-5 text-center print:hidden">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-[13px]">
@@ -756,7 +863,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
                     return (
                       <tr key={pay.id as string} className="hover:bg-slate-50/90 transition-colors print:hover:bg-transparent">
-                        <td className="py-2.5 px-3.5 pl-5 text-xs text-slate-500 tabular-nums">{pay.payment_date as string}</td>
+                        <td className="py-2.5 px-3.5 pl-4 sm:pl-5 text-xs text-slate-500 tabular-nums">{pay.payment_date as string}</td>
                         <td className="py-2.5 px-3.5">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
                             {(pay.payment_method as string) || '-'}
@@ -781,7 +888,7 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
                           )}
                         </td>
                         <td className="py-2.5 px-3.5 font-bold text-emerald-700 text-right tabular-nums">+{formatCurrency(payAmt, (pay.currency as string) || 'USD')}</td>
-                        <td className="py-2.5 px-3.5 pr-5 text-center print:hidden">
+                        <td className="py-2.5 px-3.5 pr-4 sm:pr-5 text-center print:hidden">
                           <button 
                             onClick={() => handleDeletePayment(pay.id as string)}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors inline-flex cursor-pointer" 
@@ -801,33 +908,55 @@ export default function RecibirPagoPage({ params }: { params: { id: string } }) 
 
       </div>
 
-      {/* Footer Actions */}
-      <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xs border-t border-slate-200/80 px-6 py-3 flex items-center justify-between z-40 print:hidden">
-        <button onClick={() => router.push('/admin/cuentas-por-cobrar')} className="h-9 px-4 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+      {/* Solid Non-Transparent Mobile/Desktop Action Bar */}
+      <div className="fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.08)] border-t border-slate-200 px-3 sm:px-6 py-2.5 sm:py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-2 z-40 print:hidden">
+        <button 
+          onClick={() => router.push('/admin/cuentas-por-cobrar')} 
+          className="h-10 px-3 sm:px-4 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+        >
           Cancelar
         </button>
-        <div className="flex items-center gap-2">
-          <button onClick={() => window.print()} className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer">
-            Imprimir Reporte
+        <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
+          <button 
+            onClick={() => window.print()} 
+            className="h-10 px-3 sm:px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
+            title="Imprimir Recibo"
+          >
+            <Printer size={15} className="text-slate-500" />
+            <span className="hidden sm:inline">Imprimir Reporte</span>
           </button>
           <button 
             onClick={handleSave} 
             disabled={isSaving || (amountToApply + creditToGenerate) <= 0}
-            className="h-9 px-5 bg-brand-blue text-white rounded-lg text-xs font-semibold hover:bg-[#0e354b] transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 cursor-pointer"
+            className="flex-1 sm:flex-initial h-10 px-3.5 sm:px-5 bg-brand-blue text-white rounded-lg text-xs font-bold hover:bg-[#0e354b] transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5 text-center truncate cursor-pointer"
           >
-            {isSaving
-              ? 'Guardando...'
-              : creditToGenerate > 0 && amountToApply > 0
-                ? `Guardar Pago y Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
-                : creditToGenerate > 0
-                  ? `Registrar Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
-                  : 'Guardar Pago'}
+            {isSaving ? (
+              'Guardando...'
+            ) : (
+              <>
+                <Check size={14} strokeWidth={2.5} className="shrink-0" />
+                <span className="sm:hidden truncate">
+                  {creditToGenerate > 0 && amountToApply > 0
+                    ? `Guardar (+$${creditToGenerate.toFixed(2)})`
+                    : creditToGenerate > 0
+                      ? `Guardar Saldo (+$${creditToGenerate.toFixed(2)})`
+                      : 'Guardar Pago'}
+                </span>
+                <span className="hidden sm:inline">
+                  {creditToGenerate > 0 && amountToApply > 0
+                    ? `Guardar Pago y Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+                    : creditToGenerate > 0
+                      ? `Registrar Saldo a Favor (+$${creditToGenerate.toFixed(2)})`
+                      : 'Guardar Pago'}
+                </span>
+              </>
+            )}
           </button>
         </div>
       </div>
       
       {/* Spacer for fixed footer */}
-      <div className="h-20 print:hidden"></div>
+      <div className="h-28 sm:h-24 print:hidden"></div>
 
       {/* Alert Modal */}
       {alertModal?.isOpen && (

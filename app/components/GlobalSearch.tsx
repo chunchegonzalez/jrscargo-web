@@ -285,10 +285,10 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
           onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleInputKeyDown}
-          placeholder="Buscar tracking, clientes, facturas o módulos..." 
-          className="w-full h-9 bg-slate-50/90 border border-slate-200/80 hover:bg-white hover:border-slate-300 focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 rounded-lg px-3.5 pl-9 pr-14 text-xs sm:text-[13px] font-medium text-slate-800 transition-all outline-none placeholder-slate-400"
+          placeholder="Buscar tracking, cliente..." 
+          className="w-full h-9 bg-slate-50/90 border border-slate-200/80 hover:bg-white hover:border-slate-300 focus:bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 rounded-lg px-3 pl-8 sm:px-3.5 sm:pl-9 sm:pr-14 text-xs sm:text-[13px] font-medium text-slate-800 transition-all outline-none placeholder:text-slate-400 placeholder:truncate"
         />
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors" size={15} />
+        <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors" size={14} />
         <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-slate-200/60 text-slate-500 text-[10px] font-semibold absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
           Enter
         </span>

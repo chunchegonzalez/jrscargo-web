@@ -28,13 +28,15 @@ export function calculatePackageCost(weight: number, isIndependent: boolean = fa
 }
 
 export function getInvoiceStats(invoice: Record<string, unknown>) {
-  const total = Number(invoice.total) || 0;
+  const rawTotal = Number(invoice.total) || 0;
+  const total = Math.round((rawTotal + Number.EPSILON) * 100) / 100;
   const currency = String(invoice.currency || 'USD'); // Default to USD
   let paid = 0;
   
   if (invoice.invoice_payments && Array.isArray(invoice.invoice_payments)) {
     paid = invoice.invoice_payments.reduce((sum: number, p: Record<string, unknown>) => sum + (Number(p.amount_applied) || 0), 0);
   }
+  paid = Math.round((paid + Number.EPSILON) * 100) / 100;
   
   const invoiceStatus = String(invoice.status || 'Pendiente');
   
@@ -53,7 +55,8 @@ export function getInvoiceStats(invoice: Record<string, unknown>) {
     baseResult.pending = 0;
     baseResult.isPagada = invoiceStatus === 'Pagada';
   } else {
-    const pending = total - paid;
+    const rawPending = total - paid;
+    const pending = Math.round((rawPending + Number.EPSILON) * 100) / 100;
     baseResult.pending = pending > 0 ? pending : 0;
     baseResult.isPagada = pending <= 0.01;
     baseResult.displayStatus = baseResult.isPagada ? 'Pagada' : invoiceStatus;
