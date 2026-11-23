@@ -216,23 +216,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => clearInterval(interval);
   }, [isLoginPage, pathname, fullAccess]);
 
-  // Verificación silenciosa del Reporte Diario Automático de Cuentas por Cobrar
+  // Verificación silenciosa del Reporte Diario Automático y Recordatorios de Pago (4 días)
   useEffect(() => {
     if (isLoginPage || !currentUser || !fullAccess) return;
-    const triggerDailyReportCheck = () => {
+    const triggerAutoChecks = () => {
       fetch('/api/reports/accounts-receivable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'auto_check' }),
       }).catch(() => {});
+      fetch('/api/invoices/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'auto_check' }),
+      }).catch(() => {});
     };
-    const initialTimer = setTimeout(triggerDailyReportCheck, 3500);
-    const periodicTimer = setInterval(triggerDailyReportCheck, 30 * 60 * 1000);
+    const initialTimer = setTimeout(triggerAutoChecks, 3500);
+    const periodicTimer = setInterval(triggerAutoChecks, 30 * 60 * 1000);
     return () => {
       clearTimeout(initialTimer);
       clearInterval(periodicTimer);
     };
-  }, [isLoginPage, currentUser]);
+  }, [isLoginPage, currentUser, fullAccess]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

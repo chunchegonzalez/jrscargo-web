@@ -43,7 +43,7 @@ async function fetchAllRows<T = any>(endpointUrl: string, throwOnError = true): 
 export async function getInventory() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   return fetchAllRows(
-    `${url}/rest/v1/local_inventory?id=neq.__JRS_MOBILE_SHELVES_STATE__&id=neq.__JRS_AR_DAILY_REPORT_STATE__&order=created_at.desc`
+    `${url}/rest/v1/local_inventory?id=neq.__JRS_MOBILE_SHELVES_STATE__&id=neq.__JRS_AR_DAILY_REPORT_STATE__&id=neq.__JRS_PAYMENT_REMINDERS_STATE__&order=created_at.desc`
   );
 }
 

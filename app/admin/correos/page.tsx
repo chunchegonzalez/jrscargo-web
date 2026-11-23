@@ -20,6 +20,8 @@ import {
   Calendar,
   FileText,
   Sparkles,
+  BellRing,
+  History,
   X
 } from 'lucide-react';
 import { getInvoiceStats, formatCurrency, formatDisplayDate, parseClientAddress } from '@/lib/billing';
@@ -39,17 +41,76 @@ type Invoice = {
   invoice_payments?: { amount_applied: number | string }[];
 };
 
+type PaymentReminderRecord = {
+  invoiceId: string;
+  invoiceNumber: string;
+  clientName: string;
+  email: string;
+  firstEmailSentAt: string;
+  reminderSentAt: string;
+  trigger: 'auto' | 'manual' | 'cron' | 'omitted';
+  messageId?: string;
+};
+
+type PaymentReminderHistoryEntry = {
+  id: string;
+  timestampIso: string;
+  timestampDisplay: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  clientName: string;
+  email: string;
+  trigger: 'auto' | 'manual' | 'cron' | 'omitted';
+  status: 'sent' | 'omitted' | 'error';
+  detail: string;
+};
+
 type ActivityLogItem = {
   id: string;
   timestamp: string;
   invoiceNumber: string;
   clientName: string;
   email: string;
-  type: 'auto_sent' | 'manual_sent' | 'skipped' | 'email_updated' | 'error';
+  type: 'auto_sent' | 'manual_sent' | 'reminder_sent' | 'skipped' | 'email_updated' | 'error';
   detail: string;
 };
 
-type TabFilter = 'cola' | 'listos_4d' | 'programados' | 'retenidos' | 'enviados' | 'todos';
+type TabFilter =
+  | 'rec_listos'
+  | 'rec_programados'
+  | 'rec_enviados'
+  | 'cola'
+  | 'listos_4d'
+  | 'programados'
+  | 'retenidos'
+  | 'enviados'
+  | 'todos';
+
+const DEFAULT_REMINDER_MESSAGE =
+  'Te recordamos amablemente que el comprobante detallado a continuación se encuentra pendiente de pago. Si ya realizaste el pago recientemente, por favor omite este aviso o compártenos tu comprobante por WhatsApp para aplicarlo de inmediato.';
+
+function getDaysSinceFirstEmail(emailSentAt?: string | null): number {
+  if (!emailSentAt) return -1;
+  const sentDate = new Date(emailSentAt);
+  if (Number.isNaN(sentDate.getTime())) return -1;
+  const sentCR = new Date(sentDate.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  const nowCR = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  const sentDayUtc = Date.UTC(sentCR.getFullYear(), sentCR.getMonth(), sentCR.getDate());
+  const todayUtc = Date.UTC(nowCR.getFullYear(), nowCR.getMonth(), nowCR.getDate());
+  return Math.floor((todayUtc - sentDayUtc) / (1000 * 60 * 60 * 24));
+}
+
+function getScheduledReminderDateStr(emailSentAt?: string | null, daysAfter = 4): string {
+  if (!emailSentAt) return '-';
+  const sentDate = new Date(emailSentAt);
+  if (Number.isNaN(sentDate.getTime())) return '-';
+  const sentCR = new Date(sentDate.toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
+  sentCR.setDate(sentCR.getDate() + daysAfter);
+  const dd = String(sentCR.getDate()).padStart(2, '0');
+  const mm = String(sentCR.getMonth() + 1).padStart(2, '0');
+  const yyyy = sentCR.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
 
 function isPendingClientEmail(email?: string | null): boolean {
   if (!email) return true;
@@ -95,17 +156,26 @@ export default function ActividadCorreosPage() {
   const { showAlert } = useModal();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabFilter>('cola');
+  const [activeTab, setActiveTab] = useState<TabFilter>('rec_listos');
   const [searchTerm, setSearchTerm] = useState('');
-  const [autoSendEnabled, setAutoSendEnabled] = useState<boolean>(true);
+
+  // Payment reminders (4 days after 1st email) state
+  const [remindersAutoEnabled, setRemindersAutoEnabled] = useState<boolean>(true);
+  const [togglingReminders, setTogglingReminders] = useState(false);
+  const [remindersMap, setRemindersMap] = useState<Record<string, PaymentReminderRecord>>({});
+  const [reminderHistory, setReminderHistory] = useState<PaymentReminderHistoryEntry[]>([]);
+  const [showReminderHistory, setShowReminderHistory] = useState(false);
+  const [sendingReminderIds, setSendingReminderIds] = useState<Record<string, boolean>>({});
+  const [isBatchSendingReminders, setIsBatchSendingReminders] = useState(false);
 
   // Sending states
   const [sendingIds, setSendingIds] = useState<Record<string, boolean>>({});
   const [isBatchSending, setIsBatchSending] = useState(false);
   const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([]);
 
-  // Custom Email Modal
+  // Custom Email Modal (supports both 1st invoice email and payment reminder)
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalMode, setEmailModalMode] = useState<'invoice' | 'reminder'>('invoice');
   const [emailInvoice, setEmailInvoice] = useState<Invoice | null>(null);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
@@ -123,19 +193,25 @@ export default function ActividadCorreosPage() {
   const [newClientEmail, setNewClientEmail] = useState('');
   const [isSavingClientEmail, setIsSavingClientEmail] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('jrs_auto_email_4days_enabled');
-    if (saved !== null) {
-      setAutoSendEnabled(saved === 'true');
+  const toggleRemindersAutoEnabled = async () => {
+    if (togglingReminders) return;
+    setTogglingReminders(true);
+    try {
+      const next = !remindersAutoEnabled;
+      const res = await fetch('/api/invoices/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle_enabled', enabled: next })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRemindersAutoEnabled(Boolean(data.data?.enabled));
+      }
+    } catch {
+      showAlert('Error', 'No se pudo actualizar la configuración de recordatorios.', 'error');
+    } finally {
+      setTogglingReminders(false);
     }
-  }, []);
-
-  const toggleAutoSendEnabled = () => {
-    setAutoSendEnabled(prev => {
-      const next = !prev;
-      localStorage.setItem('jrs_auto_email_4days_enabled', String(next));
-      return next;
-    });
   };
 
   const addLog = useCallback((item: Omit<ActivityLogItem, 'id' | 'timestamp'>) => {
@@ -158,10 +234,21 @@ export default function ActividadCorreosPage() {
   const loadInvoices = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/invoices', { cache: 'no-store' });
-      const data = await res.json();
+      const [invRes, remRes] = await Promise.all([
+        fetch('/api/invoices', { cache: 'no-store' }),
+        fetch('/api/invoices/reminders', { cache: 'no-store' })
+      ]);
+      const data = await invRes.json();
       if (data.success) {
         setInvoices((data.data || []).filter((inv: Invoice) => inv.status !== 'Anulada'));
+      }
+      if (remRes.ok) {
+        const remData = await remRes.json();
+        if (remData.success && remData.data) {
+          setRemindersAutoEnabled(remData.data.enabled !== false);
+          setRemindersMap(remData.data.reminders || {});
+          setReminderHistory(Array.isArray(remData.data.history) ? remData.data.history : []);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -174,22 +261,43 @@ export default function ActividadCorreosPage() {
     loadInvoices();
   }, [loadInvoices]);
 
-  // Classify invoices by email status
+  // Classify invoices by initial email status AND 4-day payment reminder status
   const classified = useMemo(() => {
     const ready4Days: Invoice[] = [];
     const scheduledUnder4Days: Invoice[] = [];
     const blockedPendingEmail: Invoice[] = [];
     const sentHistory: Invoice[] = [];
 
+    const remindersReady4Days: Invoice[] = [];
+    const remindersScheduled: Invoice[] = [];
+    const remindersSent: Invoice[] = [];
+
     invoices.forEach(inv => {
+      const stats = getInvoiceStats(inv);
+      const isPaid = inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.balance <= 0.009;
+      const reminderRecord = remindersMap[inv.id];
+
+      if (reminderRecord) {
+        remindersSent.push(inv);
+      }
+
       if (inv.email_sent_at) {
         sentHistory.push(inv);
+
+        // Recordatorio de pago: aplica a facturas con 1er correo enviado, aún pendientes y sin recordatorio previo
+        if (!isPaid && !reminderRecord && !isPendingClientEmail(inv.clients?.email)) {
+          const daysSinceFirst = getDaysSinceFirstEmail(inv.email_sent_at);
+          if (daysSinceFirst >= 4) {
+            remindersReady4Days.push(inv);
+          } else {
+            remindersScheduled.push(inv);
+          }
+        }
         return;
       }
 
       // Si ya está Pagada, no se envía correo automático
-      const stats = getInvoiceStats(inv);
-      if (inv.status === 'Pagada' || stats.displayStatus === 'Pagada') {
+      if (isPaid) {
         return;
       }
 
@@ -213,13 +321,182 @@ export default function ActividadCorreosPage() {
       return tb - ta;
     });
 
+    // Sort remindersReady4Days oldest first-email first (most urgent first)
+    remindersReady4Days.sort((a, b) => {
+      const ta = new Date(a.email_sent_at || 0).getTime();
+      const tb = new Date(b.email_sent_at || 0).getTime();
+      return ta - tb;
+    });
+
+    // Sort remindersScheduled soonest first
+    remindersScheduled.sort((a, b) => {
+      const ta = new Date(a.email_sent_at || 0).getTime();
+      const tb = new Date(b.email_sent_at || 0).getTime();
+      return ta - tb;
+    });
+
+    // Sort remindersSent by reminderSentAt desc
+    remindersSent.sort((a, b) => {
+      const ta = new Date(remindersMap[a.id]?.reminderSentAt || 0).getTime();
+      const tb = new Date(remindersMap[b.id]?.reminderSentAt || 0).getTime();
+      return tb - ta;
+    });
+
     return {
       ready4Days,
       scheduledUnder4Days,
       blockedPendingEmail,
-      sentHistory
+      sentHistory,
+      remindersReady4Days,
+      remindersScheduled,
+      remindersSent
     };
-  }, [invoices]);
+  }, [invoices, remindersMap]);
+
+  // Send single 4-day payment reminder quickly
+  const sendSingleReminder = useCallback(
+    async (inv: Invoice) => {
+      if (isPendingClientEmail(inv.clients?.email)) {
+        showAlert(
+          'Correo Pendiente',
+          'El cliente tiene correo "pendiente@pendiente". Actualiza su correo antes de enviar el recordatorio.',
+          'error'
+        );
+        return false;
+      }
+
+      setSendingReminderIds(prev => ({ ...prev, [inv.id]: true }));
+      try {
+        const extra = parseClientAddress(inv.clients?.address);
+        const cc = inv.clients?.secondary_email || extra.secondary_email || '';
+        const res = await fetch('/api/invoices/reminders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'send_one',
+            invoiceId: inv.id,
+            invoiceNumber: inv.invoice_number,
+            clientName: inv.clients?.name || 'Cliente',
+            email: inv.clients?.email || '',
+            cc
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.data) {
+            setRemindersMap(data.data.reminders || {});
+            setReminderHistory(Array.isArray(data.data.history) ? data.data.history : []);
+          }
+          addLog({
+            invoiceNumber: inv.invoice_number,
+            clientName: inv.clients?.name || 'Cliente',
+            email: inv.clients?.email || '',
+            type: 'reminder_sent',
+            detail: 'Recordatorio de pago enviado'
+          });
+          return true;
+        } else {
+          if (data.data?.history) {
+            setReminderHistory(data.data.history);
+          }
+          addLog({
+            invoiceNumber: inv.invoice_number,
+            clientName: inv.clients?.name || 'Cliente',
+            email: inv.clients?.email || '',
+            type: 'error',
+            detail: data.error || 'Error enviando recordatorio de pago'
+          });
+          showAlert('Error', data.error || 'No se pudo enviar el recordatorio de pago.', 'error');
+          return false;
+        }
+      } catch {
+        addLog({
+          invoiceNumber: inv.invoice_number,
+          clientName: inv.clients?.name || 'Cliente',
+          email: inv.clients?.email || '',
+          type: 'error',
+          detail: 'Error de red enviando recordatorio de pago'
+        });
+        return false;
+      } finally {
+        setSendingReminderIds(prev => {
+          const next = { ...prev };
+          delete next[inv.id];
+          return next;
+        });
+      }
+    },
+    [addLog, showAlert]
+  );
+
+  // Batch send all ready 4-day payment reminders
+  const handleSendAllReadyReminders = useCallback(async () => {
+    if (classified.remindersReady4Days.length === 0 || isBatchSendingReminders) return;
+    setIsBatchSendingReminders(true);
+    try {
+      const res = await fetch('/api/invoices/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_batch' })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.data) {
+          setRemindersMap(data.data.reminders || {});
+          setReminderHistory(Array.isArray(data.data.history) ? data.data.history : []);
+        }
+        showAlert(
+          'Recordatorios Enviados',
+          `Se enviaron ${data.sentCount || 0} recordatorio(s) de pago${data.errorCount ? ` (${data.errorCount} con error)` : ''}.`,
+          data.errorCount ? 'error' : 'success'
+        );
+      } else {
+        showAlert('Error', data.error || 'No se pudo procesar el lote de recordatorios.', 'error');
+      }
+    } catch {
+      showAlert('Error', 'Error de red al enviar el lote de recordatorios.', 'error');
+    } finally {
+      setIsBatchSendingReminders(false);
+    }
+  }, [classified.remindersReady4Days.length, isBatchSendingReminders, showAlert]);
+
+  // Mark payment reminder as omitted
+  const handleOmitReminder = async (inv: Invoice) => {
+    setSendingReminderIds(prev => ({ ...prev, [inv.id]: true }));
+    try {
+      const res = await fetch('/api/invoices/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'mark_omitted',
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoice_number,
+          clientName: inv.clients?.name || 'Cliente',
+          email: inv.clients?.email || ''
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        setRemindersMap(data.data.reminders || {});
+        setReminderHistory(Array.isArray(data.data.history) ? data.data.history : []);
+        addLog({
+          invoiceNumber: inv.invoice_number,
+          clientName: inv.clients?.name || 'Cliente',
+          email: inv.clients?.email || '-',
+          type: 'skipped',
+          detail: 'Recordatorio de pago omitido manualmente'
+        });
+      }
+    } catch {
+      showAlert('Error', 'No se pudo omitir el recordatorio.', 'error');
+    } finally {
+      setSendingReminderIds(prev => {
+        const next = { ...prev };
+        delete next[inv.id];
+        return next;
+      });
+    }
+  };
 
   // Send single invoice email quickly
   const sendSingleInvoice = useCallback(
@@ -391,8 +668,8 @@ export default function ActividadCorreosPage() {
     }
   };
 
-  // Open custom email modal
-  const openCustomEmailModal = (inv: Invoice) => {
+  // Open custom email modal (1st invoice email or payment reminder)
+  const openCustomEmailModal = (inv: Invoice, mode: 'invoice' | 'reminder' = 'invoice') => {
     if (isPendingClientEmail(inv.clients?.email)) {
       const cId = inv.clients?.id || inv.client_id;
       setEditClientModal({
@@ -405,13 +682,19 @@ export default function ActividadCorreosPage() {
       setNewClientEmail('');
       return;
     }
+    setEmailModalMode(mode);
     setEmailInvoice(inv);
     const extra = parseClientAddress(inv.clients?.address);
     setEmailCc(inv.clients?.secondary_email || extra.secondary_email || '');
-    setEmailSubject('Comprobante de Compra #' + inv.invoice_number + ' - JRS CARGO');
-    setEmailMessage(
-      '¡Gracias por confiar tus envíos a JRS Cargo! Aquí tienes el resumen detallado de tu comprobante reciente y los paquetes procesados para ti.'
-    );
+    if (mode === 'reminder') {
+      setEmailSubject('Recordatorio de Pago - Comprobante #' + inv.invoice_number + ' - JRS CARGO');
+      setEmailMessage(DEFAULT_REMINDER_MESSAGE);
+    } else {
+      setEmailSubject('Comprobante de Compra #' + inv.invoice_number + ' - JRS CARGO');
+      setEmailMessage(
+        '¡Gracias por confiar tus envíos a JRS Cargo! Aquí tienes el resumen detallado de tu comprobante reciente y los paquetes procesados para ti.'
+      );
+    }
     setEmailModalOpen(true);
   };
 
@@ -419,28 +702,63 @@ export default function ActividadCorreosPage() {
     if (!emailInvoice) return;
     setIsSendingModal(true);
     try {
-      const res = await fetch('/api/invoices/' + emailInvoice.id + '/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject: emailSubject, message: emailMessage, cc: emailCc })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const sentAt = data.email_sent_at || new Date().toISOString();
-        setInvoices(prev =>
-          prev.map(inv => (inv.id === emailInvoice.id ? { ...inv, email_sent_at: sentAt } : inv))
-        );
-        addLog({
-          invoiceNumber: emailInvoice.invoice_number,
-          clientName: emailInvoice.clients?.name || 'Cliente',
-          email: emailInvoice.clients?.email || '',
-          type: 'manual_sent',
-          detail: 'Enviado manualmente desde modal'
+      if (emailModalMode === 'reminder') {
+        const res = await fetch('/api/invoices/reminders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'send_one',
+            invoiceId: emailInvoice.id,
+            invoiceNumber: emailInvoice.invoice_number,
+            clientName: emailInvoice.clients?.name || 'Cliente',
+            email: emailInvoice.clients?.email || '',
+            subject: emailSubject,
+            message: emailMessage,
+            cc: emailCc
+          })
         });
-        setEmailModalOpen(false);
-        showAlert('Éxito', '¡Correo enviado con éxito!', 'success');
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.data) {
+            setRemindersMap(data.data.reminders || {});
+            setReminderHistory(Array.isArray(data.data.history) ? data.data.history : []);
+          }
+          addLog({
+            invoiceNumber: emailInvoice.invoice_number,
+            clientName: emailInvoice.clients?.name || 'Cliente',
+            email: emailInvoice.clients?.email || '',
+            type: 'reminder_sent',
+            detail: 'Recordatorio de pago enviado manualmente desde modal'
+          });
+          setEmailModalOpen(false);
+          showAlert('Éxito', '¡Recordatorio de pago enviado con éxito!', 'success');
+        } else {
+          showAlert('Error', 'Error al enviar recordatorio: ' + (data.error || 'Error'), 'error');
+        }
       } else {
-        showAlert('Error', 'Error al enviar correo: ' + (data.error || 'Error'), 'error');
+        const res = await fetch('/api/invoices/' + emailInvoice.id + '/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject: emailSubject, message: emailMessage, cc: emailCc })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          const sentAt = data.email_sent_at || new Date().toISOString();
+          setInvoices(prev =>
+            prev.map(inv => (inv.id === emailInvoice.id ? { ...inv, email_sent_at: sentAt } : inv))
+          );
+          addLog({
+            invoiceNumber: emailInvoice.invoice_number,
+            clientName: emailInvoice.clients?.name || 'Cliente',
+            email: emailInvoice.clients?.email || '',
+            type: 'manual_sent',
+            detail: 'Enviado manualmente desde modal'
+          });
+          setEmailModalOpen(false);
+          showAlert('Éxito', '¡Correo enviado con éxito!', 'success');
+        } else {
+          showAlert('Error', 'Error al enviar correo: ' + (data.error || 'Error'), 'error');
+        }
       }
     } catch {
       showAlert('Error', 'Error de red al enviar el correo.', 'error');
@@ -452,7 +770,13 @@ export default function ActividadCorreosPage() {
   // Filtered list according to active tab and search
   const visibleInvoices = useMemo(() => {
     let baseList: Invoice[] = [];
-    if (activeTab === 'cola') {
+    if (activeTab === 'rec_listos') {
+      baseList = classified.remindersReady4Days;
+    } else if (activeTab === 'rec_programados') {
+      baseList = classified.remindersScheduled;
+    } else if (activeTab === 'rec_enviados') {
+      baseList = classified.remindersSent;
+    } else if (activeTab === 'cola') {
       baseList = [...classified.ready4Days, ...classified.scheduledUnder4Days];
     } else if (activeTab === 'listos_4d') {
       baseList = classified.ready4Days;
@@ -500,63 +824,102 @@ export default function ActividadCorreosPage() {
       {/* Cabecera */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Actividad de Correos</h1>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
-              Regla 4 Días
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/80">
+              <BellRing size={11} />
+              Recordatorio Pago: +4 días del 1er correo
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Monitorea qué comprobantes se enviarán automáticamente a los 4 días de creación, cuáles están retenidos por{' '}
-            <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-semibold text-xs">pendiente@pendiente</code> y el historial de envíos.
+            Lleva el seguimiento del primer envío de comprobantes y del correo automático de{' '}
+            <strong className="text-slate-700">recordatorio de pago 4 días después</strong> para facturas pendientes.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Toggle Auto-Send */}
+          {/* Toggle Recordatorio Automático 4 días (Persistido en BD) */}
           <button
             type="button"
-            onClick={toggleAutoSendEnabled}
-            className={`h-9 px-3.5 rounded-lg text-xs font-semibold border transition-all inline-flex items-center gap-1.5 cursor-pointer ${
-              autoSendEnabled
+            disabled={togglingReminders}
+            onClick={toggleRemindersAutoEnabled}
+            className={`h-9 px-3.5 rounded-lg text-xs font-semibold border transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 ${
+              remindersAutoEnabled
                 ? 'bg-emerald-50 border-emerald-200/80 text-emerald-800 hover:bg-emerald-100'
                 : 'bg-white border-slate-200/90 text-slate-600 hover:bg-slate-50'
             }`}
+            title="Activar o pausar el envío automático de recordatorios de pago 4 días después del primer correo"
           >
-            {autoSendEnabled ? (
+            {remindersAutoEnabled ? (
               <>
                 <Play size={13} className="text-emerald-600 fill-emerald-600" />
-                <span>Envío Automático (4 días): Activo</span>
+                <span>Recordatorios Auto (+4d): Activo</span>
               </>
             ) : (
               <>
                 <Pause size={13} className="text-slate-500" />
-                <span>Envío Automático: Pausado</span>
+                <span>Recordatorios Auto: Pausado</span>
               </>
             )}
           </button>
 
-          {/* Send All Ready Button */}
+          {/* Send All Ready Payment Reminders Button */}
+          {classified.remindersReady4Days.length > 0 && (
+            <button
+              type="button"
+              onClick={handleSendAllReadyReminders}
+              disabled={isBatchSendingReminders}
+              className="h-9 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              {isBatchSendingReminders ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Enviando recordatorios...</span>
+                </>
+              ) : (
+                <>
+                  <BellRing size={14} className="text-amber-400" />
+                  <span>Enviar {classified.remindersReady4Days.length} Recordatorios (+4d)</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Send All Ready 1st Emails Button */}
           {classified.ready4Days.length > 0 && (
             <button
               type="button"
               onClick={handleSendAllReady}
               disabled={isBatchSending}
-              className="h-9 px-3.5 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              className="h-9 px-3.5 rounded-lg bg-white border border-brand-blue/30 hover:bg-brand-blue/5 text-brand-blue text-xs font-semibold shadow-2xs transition-all inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
               {isBatchSending ? (
                 <>
                   <RefreshCw size={14} className="animate-spin" />
-                  <span>Enviando lote...</span>
+                  <span>Enviando 1er correo...</span>
                 </>
               ) : (
                 <>
                   <Send size={14} />
-                  <span>Enviar {classified.ready4Days.length} Listos Ahora (4+ días)</span>
+                  <span>Enviar {classified.ready4Days.length} 1er Correo</span>
                 </>
               )}
             </button>
           )}
+
+          {/* Persistent Reminder History Button */}
+          <button
+            type="button"
+            onClick={() => setShowReminderHistory(prev => !prev)}
+            className={`h-9 px-3 rounded-lg text-xs font-semibold border transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+              showReminderHistory
+                ? 'bg-[#0B2737] text-white border-[#0B2737]'
+                : 'bg-white border-slate-200/90 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <History size={14} />
+            <span>Bitácora ({reminderHistory.length})</span>
+          </button>
 
           <button
             type="button"
@@ -570,43 +933,83 @@ export default function ActividadCorreosPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* KPI Cards: Seguimiento de Recordatorios de Pago (+4 días) y Estado General */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <button
           type="button"
-          onClick={() => setActiveTab('listos_4d')}
+          onClick={() => setActiveTab('rec_listos')}
           className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
-            activeTab === 'listos_4d'
+            activeTab === 'rec_listos'
               ? 'border-amber-400 ring-2 ring-amber-400/15 shadow-xs'
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
           }`}
         >
           <div>
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Listos para Envío Auto</p>
-            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">{classified.ready4Days.length}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">4+ días y correo válido</p>
+            <p className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Recordatorios Listos</p>
+            <p className="text-2xl font-black text-amber-600 tabular-nums mt-1">{classified.remindersReady4Days.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">4+ días del 1er correo</p>
           </div>
           <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <Sparkles size={18} />
+            <BellRing size={18} />
           </div>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab('programados')}
+          onClick={() => setActiveTab('rec_programados')}
           className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
-            activeTab === 'programados'
+            activeTab === 'rec_programados'
+              ? 'border-[#12435E] ring-2 ring-[#12435E]/15 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
+          }`}
+        >
+          <div>
+            <p className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Recordatorios en Espera</p>
+            <p className="text-2xl font-black text-[#12435E] tabular-nums mt-1">{classified.remindersScheduled.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Programados (&lt; 4 días)</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-[#0B2737]/10 text-[#0B2737] flex items-center justify-center shrink-0">
+            <Clock size={18} />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('rec_enviados')}
+          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
+            activeTab === 'rec_enviados'
+              ? 'border-emerald-400 ring-2 ring-emerald-400/15 shadow-xs'
+              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
+          }`}
+        >
+          <div>
+            <p className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Recordatorios Enviados</p>
+            <p className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{classified.remindersSent.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Avisos de pago gestionados</p>
+          </div>
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <MailCheck size={18} />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('cola')}
+          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
+            activeTab === 'cola' || activeTab === 'listos_4d' || activeTab === 'programados'
               ? 'border-brand-blue ring-2 ring-brand-blue/15 shadow-xs'
               : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
           }`}
         >
           <div>
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Programados Próximos</p>
-            <p className="text-2xl font-black text-brand-blue tabular-nums mt-1">{classified.scheduledUnder4Days.length}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">En espera (&lt; 4 días)</p>
+            <p className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Cola 1er Correo</p>
+            <p className="text-2xl font-black text-slate-900 tabular-nums mt-1">
+              {classified.ready4Days.length + classified.scheduledUnder4Days.length}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sin envío inicial aún</p>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
-            <Clock size={18} />
+          <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+            <Sparkles size={18} />
           </div>
         </button>
 
@@ -620,7 +1023,7 @@ export default function ActividadCorreosPage() {
           }`}
         >
           <div>
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Retenidos (pendiente@)</p>
+            <p className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wider">Retenidos (pendiente@)</p>
             <p className="text-2xl font-black text-red-600 tabular-nums mt-1">{classified.blockedPendingEmail.length}</p>
             <p className="text-[11px] text-slate-400 mt-0.5">Sin correo válido</p>
           </div>
@@ -628,26 +1031,56 @@ export default function ActividadCorreosPage() {
             <AlertTriangle size={18} />
           </div>
         </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('enviados')}
-          className={`text-left bg-white rounded-xl p-4 border transition-all flex items-center justify-between group cursor-pointer ${
-            activeTab === 'enviados'
-              ? 'border-emerald-400 ring-2 ring-emerald-400/15 shadow-xs'
-              : 'border-slate-200/80 hover:border-slate-300 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
-          }`}
-        >
-          <div>
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Correos Enviados</p>
-            <p className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{classified.sentHistory.length}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Comprobantes entregados</p>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <MailCheck size={18} />
-          </div>
-        </button>
       </div>
+
+      {/* Bitácora Persistente de Recordatorios de Pago */}
+      {showReminderHistory && (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-200/80 bg-[#0B2737] text-white flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History size={15} className="text-amber-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider">
+                Bitácora de Recordatorios de Pago ({reminderHistory.length})
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowReminderHistory(false)}
+              className="text-slate-300 hover:text-white p-1 cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          </div>
+          {reminderHistory.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-400">
+              Aún no se han registrado envíos de recordatorios de pago.
+            </div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+              {reminderHistory.map(item => (
+                <div key={item.id} className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs hover:bg-slate-50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {item.status === 'error' ? (
+                      <XCircle size={14} className="text-red-500 shrink-0" />
+                    ) : item.status === 'omitted' ? (
+                      <Check size={14} className="text-slate-400 shrink-0" />
+                    ) : (
+                      <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                    )}
+                    <span className="font-mono font-bold text-[#0B2737] shrink-0">#{item.invoiceNumber}</span>
+                    <span className="font-semibold text-slate-800 truncate">{item.clientName}</span>
+                    <span className="text-slate-400 truncate">({item.email})</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span className="text-slate-600">{item.detail}</span>
+                    <span className="text-[11px] font-mono text-slate-400 tabular-nums">{item.timestampDisplay}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Activity Log (Session Live Log) */}
       {activityLog.length > 0 && (
@@ -698,28 +1131,33 @@ export default function ActividadCorreosPage() {
           <div className="inline-flex flex-wrap items-center bg-white border border-slate-200/90 rounded-lg p-0.5 gap-0.5 shadow-2xs">
             {[
               {
+                id: 'rec_listos' as TabFilter,
+                label: 'Recordatorios Listos (+4d)',
+                count: classified.remindersReady4Days.length
+              },
+              {
+                id: 'rec_programados' as TabFilter,
+                label: 'Recordatorios Programados',
+                count: classified.remindersScheduled.length
+              },
+              {
+                id: 'rec_enviados' as TabFilter,
+                label: 'Recordatorios Enviados',
+                count: classified.remindersSent.length
+              },
+              {
                 id: 'cola' as TabFilter,
-                label: 'Cola de Envío',
+                label: 'Cola 1er Correo',
                 count: classified.ready4Days.length + classified.scheduledUnder4Days.length
               },
               {
-                id: 'listos_4d' as TabFilter,
-                label: 'Listos (4+ días)',
-                count: classified.ready4Days.length
-              },
-              {
-                id: 'programados' as TabFilter,
-                label: 'En Espera (< 4 días)',
-                count: classified.scheduledUnder4Days.length
-              },
-              {
                 id: 'retenidos' as TabFilter,
-                label: 'Retenidos (pendiente@)',
+                label: 'Retenidos',
                 count: classified.blockedPendingEmail.length
               },
               {
                 id: 'enviados' as TabFilter,
-                label: 'Historial Enviados',
+                label: '1er Correo Enviado',
                 count: classified.sentHistory.length
               },
               {
@@ -805,11 +1243,17 @@ export default function ActividadCorreosPage() {
               ) : (
                 visibleInvoices.map(inv => {
                   const stats = getInvoiceStats(inv);
+                  const isPaid = inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.balance <= 0.009;
                   const daysElapsed = getDaysSinceCreation(inv.issue_date, inv.created_at);
                   const daysRemaining = Math.max(0, 4 - daysElapsed);
                   const scheduledDate = getScheduledSendDateStr(inv.issue_date, inv.created_at);
                   const isPendingEmail = isPendingClientEmail(inv.clients?.email);
                   const isSending = !!sendingIds[inv.id];
+                  const isSendingReminder = !!sendingReminderIds[inv.id];
+                  const reminderRec = remindersMap[inv.id];
+                  const daysSinceFirst = getDaysSinceFirstEmail(inv.email_sent_at);
+                  const reminderDaysRemaining = Math.max(0, 4 - Math.max(0, daysSinceFirst));
+                  const reminderScheduledDate = getScheduledReminderDateStr(inv.email_sent_at, 4);
 
                   return (
                     <tr key={inv.id} className="hover:bg-slate-50/90 transition-colors">
@@ -888,19 +1332,75 @@ export default function ActividadCorreosPage() {
                         </span>
                       </td>
 
-                      {/* Estado / Programación */}
+                      {/* Estado / Programación y Recordatorio de Pago (+4 días) */}
                       <td className="py-2.5 px-3.5">
                         {inv.email_sent_at ? (
-                          <div className="inline-flex flex-col gap-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full w-fit">
-                              <MailCheck size={13} />
-                              Enviado
-                            </span>
-                            <span className="text-[11px] text-slate-400 mt-0.5 tabular-nums">
-                              {formatEmailDate(inv.email_sent_at)}
-                            </span>
+                          <div className="inline-flex flex-col gap-1.5">
+                            <div className="inline-flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full w-fit">
+                                <MailCheck size={12} />
+                                1er correo enviado
+                              </span>
+                              <span className="text-[11px] text-slate-400 tabular-nums">
+                                {formatEmailDate(inv.email_sent_at)}
+                              </span>
+                            </div>
+
+                            {/* Estado del Recordatorio de Pago (4 días después del 1er correo) */}
+                            {reminderRec ? (
+                              <div className="inline-flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full w-fit border ${
+                                    reminderRec.trigger === 'omitted'
+                                      ? 'bg-slate-100 text-slate-600 border-slate-200/80'
+                                      : 'bg-[#0B2737]/10 text-[#0B2737] border-[#0B2737]/20'
+                                  }`}
+                                >
+                                  {reminderRec.trigger === 'omitted' ? <Check size={11} /> : <BellRing size={11} />}
+                                  {reminderRec.trigger === 'omitted'
+                                    ? 'Recordatorio omitido'
+                                    : reminderRec.trigger === 'cron'
+                                      ? 'Recordatorio enviado (Auto Cron)'
+                                      : reminderRec.trigger === 'auto'
+                                        ? 'Recordatorio enviado (Auto)'
+                                        : 'Recordatorio enviado (Manual)'}
+                                </span>
+                                <span className="text-[11px] text-slate-400 tabular-nums">
+                                  {formatEmailDate(reminderRec.reminderSentAt)}
+                                </span>
+                              </div>
+                            ) : isPaid ? (
+                              <span className="text-[11px] text-slate-400">
+                                Sin recordatorio (Factura pagada)
+                              </span>
+                            ) : isPendingEmail ? (
+                              <span className="text-[11px] text-red-600 font-medium">
+                                Recordatorio bloqueado (sin correo válido)
+                              </span>
+                            ) : daysSinceFirst >= 4 ? (
+                              <div className="inline-flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full w-fit">
+                                  <BellRing size={11} className="text-amber-600" />
+                                  Recordatorio listo ({daysSinceFirst} días del 1er correo)
+                                </span>
+                                <span className="text-[10.5px] text-slate-400">
+                                  Cumplió 4 días el {reminderScheduledDate}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex flex-col gap-0.5">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#12435E] bg-[#12435E]/[0.08] border border-[#12435E]/15 px-2 py-0.5 rounded-full w-fit">
+                                  <Calendar size={11} className="text-[#12435E]" />
+                                  Recordatorio en {reminderDaysRemaining}{' '}
+                                  {reminderDaysRemaining === 1 ? 'día' : 'días'} ({reminderScheduledDate})
+                                </span>
+                                <span className="text-[10.5px] text-slate-400">
+                                  Automático 4 días después del 1er correo
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        ) : stats.displayStatus === 'Pagada' || inv.status === 'Pagada' ? (
+                        ) : isPaid ? (
                           <div className="inline-flex flex-col gap-0.5">
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full w-fit">
                               <CheckCircle2 size={12} className="text-emerald-600" />
@@ -965,6 +1465,58 @@ export default function ActividadCorreosPage() {
                               <Edit3 size={12} />
                               Editar Correo
                             </button>
+                          ) : inv.email_sent_at && !isPaid ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={isSendingReminder}
+                                onClick={() => sendSingleReminder(inv)}
+                                className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ${
+                                  reminderRec
+                                    ? 'bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700'
+                                    : 'bg-[#0B2737] hover:bg-[#12435E] text-white'
+                                }`}
+                                title={
+                                  reminderRec
+                                    ? 'Reenviar correo de recordatorio de pago'
+                                    : 'Enviar correo de recordatorio de pago ahora'
+                                }
+                              >
+                                {isSendingReminder ? (
+                                  <>
+                                    <RefreshCw size={12} className="animate-spin" />
+                                    <span>Enviando...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <BellRing size={12} className={reminderRec ? 'text-amber-600' : 'text-amber-400'} />
+                                    <span>{reminderRec ? 'Reenviar Record.' : 'Recordar Pago'}</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openCustomEmailModal(inv, 'reminder')}
+                                className="h-8 px-2.5 rounded-lg bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors inline-flex items-center justify-center cursor-pointer"
+                                title="Personalizar asunto o mensaje del recordatorio de pago"
+                              >
+                                <Mail size={13} />
+                              </button>
+
+                              {!reminderRec && (
+                                <button
+                                  type="button"
+                                  disabled={isSendingReminder}
+                                  onClick={() => handleOmitReminder(inv)}
+                                  className="h-8 px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-700 border border-slate-200/90 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                  title="Omitir el recordatorio automático de pago para esta factura"
+                                >
+                                  <Check size={12} />
+                                  <span>Omitir</span>
+                                </button>
+                              )}
+                            </>
                           ) : (
                             <>
                               <button
@@ -989,7 +1541,7 @@ export default function ActividadCorreosPage() {
 
                               <button
                                 type="button"
-                                onClick={() => openCustomEmailModal(inv)}
+                                onClick={() => openCustomEmailModal(inv, 'invoice')}
                                 className="h-8 px-2.5 rounded-lg bg-white border border-slate-200/90 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors inline-flex items-center justify-center cursor-pointer"
                                 title="Personalizar asunto o mensaje antes de enviar"
                               >
@@ -1106,8 +1658,17 @@ export default function ActividadCorreosPage() {
           >
             <div className="px-5 py-4 border-b border-slate-200/80 flex justify-between items-center bg-slate-50/60 shrink-0">
               <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <Mail size={16} className="text-brand-blue" />
-                Enviar Comprobante #{emailInvoice.invoice_number}
+                {emailModalMode === 'reminder' ? (
+                  <>
+                    <BellRing size={16} className="text-amber-600" />
+                    Recordatorio de Pago #{emailInvoice.invoice_number}
+                  </>
+                ) : (
+                  <>
+                    <Mail size={16} className="text-brand-blue" />
+                    Enviar Comprobante #{emailInvoice.invoice_number}
+                  </>
+                )}
               </h3>
               <button
                 type="button"

@@ -3,6 +3,10 @@
     {
       "path": "/api/reports/accounts-receivable?cron=1",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/invoices/reminders?cron=1",
+      "schedule": "0 15 * * *"
     }
   ]
 }
