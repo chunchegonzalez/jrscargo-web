@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Save,
-  UploadCloud,
+  Upload,
   ScanLine,
   Loader2,
   Check,
@@ -20,6 +19,8 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 import { getLocalTodayDate, formatCurrency } from '@/lib/billing';
@@ -38,17 +39,17 @@ import {
 } from '@/lib/expense-attachments';
 import { readReceiptLocally } from '@/lib/receipt-local-reader';
 
-const MAX_SINGLE_FILE_BYTES = 3_800_000; // Margen seguro por archivo bajo límite de 4.5 MB
+const MAX_SINGLE_FILE_BYTES = 3_800_000;
 const LOCAL_READER_CONCURRENCY = 2;
 
 const CATEGORY_OPTIONS = [
-  { value: 'Pago de Proveedor', label: 'Pago de Proveedor' },
+  { value: 'Pago de Proveedor', label: 'Pago de proveedor' },
+  { value: 'Servicios', label: 'Servicios' },
   { value: 'Combustible', label: 'Combustible' },
-  { value: 'Mantenimiento', label: 'Mantenimiento de Vehículos' },
-  { value: 'Papelería', label: 'Papelería y Oficina' },
-  { value: 'Planillas', label: 'Planillas / Salarios' },
-  { value: 'Viáticos', label: 'Viáticos / Alimentación' },
-  { value: 'Servicios', label: 'Servicios (Agua, Luz, Internet)' },
+  { value: 'Mantenimiento', label: 'Mantenimiento de vehículos' },
+  { value: 'Papelería', label: 'Papelería y oficina' },
+  { value: 'Planillas', label: 'Planillas / salarios' },
+  { value: 'Viáticos', label: 'Viáticos / alimentación' },
   { value: 'Local San Pablo', label: 'Local San Pablo' },
   { value: 'Otros', label: 'Otros' },
 ];
@@ -58,6 +59,7 @@ type RowStatus = 'queued' | 'analyzing' | 'ready' | 'manual' | 'error' | 'saved'
 type ExpenseDraftRow = {
   id: string;
   selected: boolean;
+  collapsed: boolean;
   attachment: ExpenseAttachment | null;
   documentNumber: string;
   providerName: string;
@@ -168,14 +170,16 @@ function makeManualRow(): ExpenseDraftRow {
   return {
     id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     selected: true,
+    collapsed: false,
     attachment: null,
     documentNumber: '',
     providerName: '',
     date: getLocalTodayDate(),
-    currency: 'USD',
+    currency: 'CRC',
     amount: '',
-    category: 'Otros',
+    category: 'Pago de Proveedor',
     status: 'manual',
+    needsConfirmation: true,
   };
 }
 
@@ -256,8 +260,10 @@ export default function NuevoGastoPage() {
             amount: nextAmount,
             category: nextCategory,
             status: extracted.amount ? 'ready' : 'manual',
-            needsConfirmation: extracted.needsConfirmation || !extracted.amount,
-            reviewNotice: extracted.notice,
+            // Siempre permitir revisar y confirmar el monto detectado antes de guardar
+            needsConfirmation: true,
+            reviewNotice:
+              extracted.notice || 'Revisa y confirma que el monto y la moneda coincidan con el comprobante.',
             errorMessage: undefined,
           };
         })
@@ -307,23 +313,25 @@ export default function NuevoGastoPage() {
           }
 
           const hint = extractHaciendaHintFromFilename(file.name);
-          const aiReadable = isAiReadableAttachment(att);
+          const readable = isAiReadableAttachment(att);
           const rowId = `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
           newRows.push({
             id: rowId,
             selected: true,
+            collapsed: false,
             attachment: att,
             documentNumber: hint.documentNumber || '',
             providerName: '',
             date: hint.date || getLocalTodayDate(),
-            currency: 'USD',
+            currency: 'CRC',
             amount: '',
-            category: 'Otros',
-            status: aiReadable ? 'queued' : 'manual',
+            category: bulkCategory || 'Pago de Proveedor',
+            status: readable ? 'queued' : 'manual',
+            needsConfirmation: true,
           });
 
-          if (aiReadable) {
+          if (readable) {
             toAnalyze.push({ id: rowId, attachment: att });
           }
         } catch (err) {
@@ -392,13 +400,12 @@ export default function NuevoGastoPage() {
     );
   };
 
-  // Estadísticas en tiempo real del lote
   const stats = useMemo(() => {
     const unsaved = rows.filter(r => r.status !== 'saved');
     const selectedUnsaved = unsaved.filter(r => r.selected);
     const analyzingCount = rows.filter(r => r.status === 'analyzing' || r.status === 'queued').length;
-    const completedAiCount = rows.filter(r => r.status === 'ready' || r.status === 'saved').length;
     const errorCount = rows.filter(r => r.status === 'error').length;
+    const unconfirmedCount = selectedUnsaved.filter(r => r.needsConfirmation).length;
 
     let totalUSD = 0;
     let countUSD = 0;
@@ -406,7 +413,7 @@ export default function NuevoGastoPage() {
     let countCRC = 0;
 
     selectedUnsaved.forEach(r => {
-      const val = parseFloat(r.amount.replace(',', '.'));
+      const val = parseFloat(String(r.amount || '').replace(/,/g, '.'));
       if (!Number.isNaN(val) && val > 0) {
         if (r.currency === 'CRC') {
           totalCRC += val;
@@ -419,25 +426,27 @@ export default function NuevoGastoPage() {
     });
 
     const allSelected = unsaved.length > 0 && selectedUnsaved.length === unsaved.length;
+    const allCollapsed = rows.length > 0 && rows.every(r => r.collapsed);
 
     return {
       totalRows: rows.length,
       unsavedCount: unsaved.length,
       selectedCount: selectedUnsaved.length,
       analyzingCount,
-      completedAiCount,
       errorCount,
+      unconfirmedCount,
       totalUSD,
       countUSD,
       totalCRC,
       countCRC,
       allSelected,
+      allCollapsed,
     };
   }, [rows]);
 
   const isRowInvalid = (row: ExpenseDraftRow): boolean => {
     if (!row.selected || row.status === 'saved') return false;
-    const num = parseFloat(row.amount.replace(',', '.'));
+    const num = parseFloat(String(row.amount || '').replace(/,/g, '.'));
     return !row.providerName.trim() || !row.date || Number.isNaN(num) || num <= 0;
   };
 
@@ -446,12 +455,36 @@ export default function NuevoGastoPage() {
     setRows(prev => prev.map(r => (r.status === 'saved' ? r : { ...r, selected: target })));
   };
 
+  const handleToggleCollapseAll = () => {
+    const nextCollapsed = !stats.allCollapsed;
+    setRows(prev => prev.map(r => ({ ...r, collapsed: nextCollapsed })));
+  };
+
+  const handleConfirmRowAmount = (rowId: string) => {
+    setRows(prev =>
+      prev.map(r => {
+        if (r.id !== rowId) return r;
+        const num = parseFloat(String(r.amount || '').replace(/,/g, '.'));
+        if (Number.isNaN(num) || num <= 0) {
+          return r;
+        }
+        return {
+          ...r,
+          amount: num.toFixed(2),
+          needsConfirmation: false,
+          reviewNotice: undefined,
+          status: r.status === 'saved' ? 'saved' : 'ready',
+        };
+      })
+    );
+  };
+
   const handleSaveAll = async () => {
     setAttemptedSubmit(true);
     const toSave = rows.filter(r => r.selected && r.status !== 'saved');
 
     if (toSave.length === 0) {
-      await showAlert('Sin gastos seleccionados', 'Selecciona al menos una factura o gasto para guardar.', 'info');
+      await showAlert('Sin gastos seleccionados', 'Selecciona al menos un comprobante o gasto para guardar.', 'info');
       return;
     }
 
@@ -466,9 +499,12 @@ export default function NuevoGastoPage() {
 
     const invalidRows = toSave.filter(isRowInvalid);
     if (invalidRows.length > 0) {
+      // Desplegar las fichas con campos faltantes para que el usuario las vea de inmediato
+      const invalidIds = new Set(invalidRows.map(r => r.id));
+      setRows(prev => prev.map(r => (invalidIds.has(r.id) ? { ...r, collapsed: false } : r)));
       await showAlert(
         'Datos incompletos',
-        `Hay ${invalidRows.length} ${invalidRows.length === 1 ? 'fila seleccionada' : 'filas seleccionadas'} sin proveedor, fecha o monto válido. Revisa los campos marcados en rojo.`,
+        `Hay ${invalidRows.length} ${invalidRows.length === 1 ? 'comprobante seleccionado' : 'comprobantes seleccionados'} sin proveedor, fecha o monto válido. Revisa los campos resaltados en rojo.`,
         'error'
       );
       return;
@@ -478,7 +514,7 @@ export default function NuevoGastoPage() {
     if (unconfirmedRows.length > 0) {
       const confirmed = await showConfirm(
         'Confirmar monto y moneda',
-        `Hay ${unconfirmedRows.length} ${unconfirmedRows.length === 1 ? 'comprobante cuyo monto o moneda' : 'comprobantes cuyos montos o monedas'} requieren confirmación. ¿Confirmas que los totales y monedas (USD / CRC) indicados en la tabla son correctos?`
+        `Hay ${unconfirmedRows.length} ${unconfirmedRows.length === 1 ? 'comprobante con monto por confirmar' : 'comprobantes con montos por confirmar'}. ¿Confirmas que los totales y monedas (USD / CRC) son correctos para guardarlos?`
       );
       if (!confirmed) {
         return;
@@ -501,7 +537,7 @@ export default function NuevoGastoPage() {
     for (let i = 0; i < toSave.length; i++) {
       const row = toSave[i];
       try {
-        const numAmount = parseFloat(row.amount.replace(',', '.'));
+        const numAmount = parseFloat(String(row.amount || '').replace(/,/g, '.'));
         const receiptPayload = serializeExpenseMetadata(
           row.attachment ? [row.attachment] : [],
           row.documentNumber
@@ -526,11 +562,16 @@ export default function NuevoGastoPage() {
         }
 
         savedOk++;
-        updateRow(row.id, { status: 'saved', selected: false, errorMessage: undefined });
+        updateRow(row.id, {
+          status: 'saved',
+          selected: false,
+          needsConfirmation: false,
+          errorMessage: undefined,
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Error de red';
         failedIds.push(row.id);
-        updateRow(row.id, { status: 'error', errorMessage: msg });
+        updateRow(row.id, { status: 'error', collapsed: false, errorMessage: msg });
       } finally {
         setSaveProgress({ done: i + 1, total: toSave.length });
       }
@@ -544,126 +585,110 @@ export default function NuevoGastoPage() {
         'Gastos guardados',
         savedOk === 1
           ? 'El gasto se registró correctamente.'
-          : `Se registraron ${savedOk} gastos correctamente, cada uno con su propia fecha, documento y monto.`,
+          : `Se registraron ${savedOk} gastos correctamente.`,
         'success'
       );
       router.push('/admin/gastos');
     } else {
       await showAlert(
         'Guardado parcial',
-        `Se guardaron ${savedOk} gastos correctamente, pero ${failedIds.length} presentaron error. Los que ya se guardaron quedaron marcados en verde; puedes reintentar solo los pendientes.`,
+        `Se guardaron ${savedOk} gastos correctamente, pero ${failedIds.length} presentaron error. Puedes revisar y reintentar los pendientes.`,
         'info'
       );
     }
   };
 
-  const renderStatusPill = (row: ExpenseDraftRow) => {
-    if (row.status === 'queued') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-          En cola
-        </span>
-      );
-    }
-    if (row.status === 'analyzing') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
-          <Loader2 size={10} className="animate-spin" />
-          Leyendo monto
-        </span>
-      );
-    }
-    if (row.status === 'ready') {
-      if (row.needsConfirmation) {
-        return (
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200"
-            title={row.reviewNotice || 'Confirma el monto y la moneda antes de guardar'}
-          >
-            <AlertCircle size={10} />
-            Confirmar monto
-          </span>
-        );
-      }
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-          <CheckCircle2 size={10} />
-          Monto leído
-        </span>
-      );
-    }
+  const renderHeaderStatusBadge = (row: ExpenseDraftRow) => {
     if (row.status === 'saved') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
-          <Check size={10} />
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600 text-white">
+          <Check size={11} />
           Guardado
+        </span>
+      );
+    }
+    if (row.status === 'analyzing' || row.status === 'queued') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0B2737]/[0.07] text-[#0B2737] border border-[#0B2737]/15">
+          <Loader2 size={11} className="animate-spin" />
+          Leyendo monto…
         </span>
       );
     }
     if (row.status === 'error') {
       return (
         <span
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200/80"
-          title={row.errorMessage || 'Error'}
+          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200"
+          title={row.errorMessage || 'Revisar comprobante'}
         >
-          <AlertCircle size={10} />
-          Revisar
+          <AlertCircle size={11} />
+          Revisar datos
+        </span>
+      );
+    }
+    if (row.needsConfirmation) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100/80 text-amber-900 border border-amber-300/80"
+          title={row.reviewNotice || 'Revisa y confirma el monto antes de guardar'}
+        >
+          Monto por confirmar
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80">
-        Manual
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <CheckCircle2 size={11} />
+        Monto confirmado
       </span>
     );
   };
 
+  const getCardTitle = (row: ExpenseDraftRow): string => {
+    if (!row.attachment) return 'Comprobante manual';
+    if (isPdfAttachment(row.attachment)) return 'Comprobante PDF';
+    if (isImageAttachment(row.attachment)) return 'Comprobante imagen';
+    if (row.attachment.name.toLowerCase().endsWith('.xml')) return 'Comprobante XML';
+    return 'Comprobante adjunto';
+  };
+
+  const formatRowAmountSummary = (row: ExpenseDraftRow): string => {
+    const num = parseFloat(String(row.amount || '').replace(/,/g, '.'));
+    if (Number.isNaN(num) || num <= 0) return 'Sin monto';
+    return formatCurrency(num, row.currency);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-5 pb-10">
-      {/* Cabecera */}
+    <div className="max-w-5xl mx-auto space-y-4 pb-24">
+      {/* 1. Encabezado: Título «Registrar gastos», instrucción «Revisa los montos antes de guardar.» y botón «+ Agregar fila manual» */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start sm:items-center gap-3">
           <Link
             href="/admin/gastos"
-            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors shrink-0"
-            title="Volver a Gastos"
+            className="h-9 w-9 inline-flex items-center justify-center bg-white border border-slate-200/90 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors shrink-0"
+            title="Volver a Gastos y Compras"
           >
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Registrar Gastos</h1>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
-                <ScanLine size={11} /> Leer monto del comprobante
-              </span>
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-[#0B2737]">Registrar gastos</h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Lee el monto de tus comprobantes con lectura local y sin cargos por escaneo. Revisa y confirma el total y la moneda (USD o CRC) antes de guardar.
+              Revisa los montos antes de guardar.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={handleAddManualRow}
-            className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Plus size={14} />
-            <span>Agregar fila manual</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-9 px-3.5 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white font-semibold text-xs inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-          >
-            <UploadCloud size={14} />
-            <span>Subir facturas</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleAddManualRow}
+          className="h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-[#0B2737] font-semibold text-xs inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer w-fit"
+        >
+          <Plus size={14} />
+          <span>Agregar fila manual</span>
+        </button>
       </div>
 
-      {/* Input de archivos oculto: múltiples y acepta cualquier formato */}
+      {/* Input oculto para carga múltiple */}
       <input
         type="file"
         multiple
@@ -672,7 +697,7 @@ export default function NuevoGastoPage() {
         className="hidden"
       />
 
-      {/* Zona de subida (grande si está vacía, compacta si ya hay facturas cargadas) */}
+      {/* 2. Una sola zona compacta para arrastrar comprobantes o pulsar «Agregar archivos» */}
       <div
         onClick={() => fileInputRef.current?.click()}
         onDragOver={e => {
@@ -681,359 +706,405 @@ export default function NuevoGastoPage() {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`rounded-xl border-2 border-dashed cursor-pointer transition-all bg-white ${
-          rows.length === 0 ? 'p-10 sm:p-14 text-center' : 'px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3'
-        } ${
+        className={`rounded-xl border border-dashed px-4 py-3 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-all ${
           isDragging
-            ? 'border-brand-blue bg-brand-blue/[0.05] scale-[1.003]'
-            : 'border-slate-200/90 hover:border-brand-blue/50 hover:bg-slate-50/60'
+            ? 'border-[#12435E] bg-[#12435E]/[0.04]'
+            : 'border-slate-300 hover:border-[#12435E]/60 hover:bg-slate-50/50'
         }`}
       >
-        {rows.length === 0 ? (
-          <div className="max-w-lg mx-auto">
-            <div className="w-14 h-14 bg-brand-blue/10 text-brand-blue rounded-2xl flex items-center justify-center mx-auto mb-3.5">
-              {isProcessingFiles ? <Loader2 size={26} className="animate-spin" /> : <UploadCloud size={26} />}
-            </div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              Lee el monto de tus comprobantes
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-              Arrastra o selecciona <strong>uno o varios comprobantes</strong> (PDF con texto, PDF escaneados, fotos JPG/PNG o XML de Hacienda). El lector local extrae el total a pagar y la moneda (<strong>USD o CRC</strong>) directamente en tu navegador, sin cargos por escaneo ni envío a servicios externos.
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 text-[#0B2737] flex items-center justify-center shrink-0">
+            {isProcessingFiles || stats.analyzingCount > 0 ? (
+              <Loader2 size={16} className="animate-spin text-[#12435E]" />
+            ) : (
+              <Upload size={16} />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs sm:text-sm font-bold text-[#0B2737] truncate">
+              Arrastra tus comprobantes aquí
             </p>
-            <div className="mt-5 flex items-center justify-center gap-2.5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue text-white text-xs font-semibold shadow-2xs">
-                <UploadCloud size={14} /> Seleccionar archivos
-              </span>
+            <p className="text-[11px] text-slate-500 truncate">
+              {stats.analyzingCount > 0
+                ? `Leyendo monto localmente (${stats.totalRows - stats.analyzingCount} de ${stats.totalRows})…`
+                : 'Lee el monto de tus comprobantes (PDF, imágenes o XML) con lectura local y sin cargos.'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            fileInputRef.current?.click();
+          }}
+          className="h-8 px-3.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[#0B2737] font-semibold text-xs inline-flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+        >
+          Agregar archivos
+        </button>
+      </div>
+
+      {/* 3. Resumen del lote en una sola franja horizontal */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80">
+          <div className="px-5 py-3.5">
+            <p className="text-xs font-medium text-slate-500">Facturas a registrar</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-[#0B2737] tabular-nums mt-0.5">
+              {stats.selectedCount}
+            </p>
+          </div>
+
+          <div className="px-5 py-3.5">
+            <p className="text-xs font-medium text-slate-500">Total USD</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-[#0B2737] tabular-nums mt-0.5">
+              {formatCurrency(stats.totalUSD, 'USD')}
+            </p>
+          </div>
+
+          <div className="px-5 py-3.5">
+            <p className="text-xs font-medium text-slate-500">Total CRC</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-[#D97706] tabular-nums mt-0.5">
+              {formatCurrency(stats.totalCRC, 'CRC')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Barra de acciones del lote y listado de fichas por comprobante */}
+      {rows.length > 0 && (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex items-center gap-2 text-xs font-bold text-[#0B2737] cursor-pointer select-none mr-1">
+                <input
+                  type="checkbox"
+                  checked={stats.allSelected}
+                  onChange={handleToggleSelectAll}
+                  className="w-4 h-4 rounded border-slate-300 text-[#0B2737] focus:ring-[#12435E] cursor-pointer"
+                />
+                <span>Categoría del lote</span>
+              </label>
+
+              <select
+                value={bulkCategory}
+                onChange={e => setBulkCategory(e.target.value)}
+                className="h-8 px-3 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-[#12435E] cursor-pointer"
+              >
+                {CATEGORY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
               <button
                 type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  handleAddManualRow();
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                onClick={handleApplyBulkCategory}
+                className="h-8 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold transition-colors cursor-pointer"
               >
-                <Plus size={14} /> O ingresar gasto manual
+                Aplicar a seleccionadas
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 self-end sm:self-center">
+              {stats.errorCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleRetryFailed}
+                  disabled={stats.analyzingCount > 0}
+                  className="text-xs font-semibold text-amber-800 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw size={12} />
+                  <span>Reintentar ({stats.errorCount})</span>
+                </button>
+              )}
+
+              {rows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={handleToggleCollapseAll}
+                  className="text-xs font-semibold text-slate-600 hover:text-[#0B2737] inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {stats.allCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                  <span>{stats.allCollapsed ? 'Desplegar fichas' : 'Plegar fichas'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRows([]);
+                  setAttemptedSubmit(false);
+                }}
+                disabled={isSaving}
+                className="text-xs font-semibold text-slate-500 hover:text-red-600 inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 size={13} />
+                <span>Limpiar lista</span>
               </button>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0">
-                {isProcessingFiles ? <Loader2 size={18} className="animate-spin" /> : <UploadCloud size={18} />}
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-slate-800">
-                  Arrastra más comprobantes aquí o haz clic para añadirlos al lote
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  Cada nuevo archivo se agrega como una fila independiente y lee el monto del comprobante localmente
-                </p>
-              </div>
-            </div>
-            <span className="h-8 px-3 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 self-start sm:self-center">
-              <Plus size={13} /> Agregar archivos
-            </span>
-          </>
-        )}
-      </div>
 
-      {/* Panel Dinámico del Lote (visible cuando hay al menos 1 fila) */}
-      {rows.length > 0 && (
-        <>
-          {/* Barra de progreso de lectura local */}
-          {stats.analyzingCount > 0 && (
-            <div className="bg-white rounded-xl border border-brand-blue/25 p-4 shadow-xs space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                <span className="inline-flex items-center gap-2 text-brand-blue">
-                  <Loader2 size={14} className="animate-spin" />
-                  Leyendo monto del comprobante localmente...
-                </span>
-                <span className="tabular-nums text-slate-500">
-                  {stats.totalRows - stats.analyzingCount} de {stats.totalRows} procesadas
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+          {/* Listado de fichas editables por comprobante (sin scroll horizontal) */}
+          <div className="space-y-3">
+            {rows.map(row => {
+              const invalid = attemptedSubmit && isRowInvalid(row);
+              const isSaved = row.status === 'saved';
+              const badge = row.attachment ? getAttachmentBadge(row.attachment) : null;
+              const numVal = parseFloat(String(row.amount || '').replace(/,/g, '.'));
+              const hasValidAmount = !Number.isNaN(numVal) && numVal > 0;
+
+              return (
                 <div
-                  className="h-full bg-brand-blue rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.max(
-                      8,
-                      Math.round(((stats.totalRows - stats.analyzingCount) / Math.max(1, stats.totalRows)) * 100)
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Resumen KPI del lote en tiempo real */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Facturas a Registrar
-              </p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-slate-900 tabular-nums">{stats.selectedCount}</span>
-                <span className="text-xs text-slate-400">de {stats.totalRows} en lista</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {stats.completedAiCount} con monto leído
-                {stats.errorCount > 0 ? ` · ${stats.errorCount} por revisar` : ''}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Total Lote (USD)
-              </p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-brand-blue tabular-nums">
-                  {formatCurrency(stats.totalUSD, 'USD')}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {stats.countUSD} {stats.countUSD === 1 ? 'factura en dólares' : 'facturas en dólares'}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Total Lote (CRC)
-              </p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-amber-600 tabular-nums">
-                  {formatCurrency(stats.totalCRC, 'CRC')}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {stats.countCRC} {stats.countCRC === 1 ? 'factura en colones' : 'facturas en colones'}
-              </p>
-            </div>
-          </div>
-
-          {/* Tabla / Contenedor Principal del Lote */}
-          <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-            {/* Barra de acciones en lote */}
-            <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-50/70 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-slate-600">Categoría para todas:</span>
-                <select
-                  value={bulkCategory}
-                  onChange={e => setBulkCategory(e.target.value)}
-                  className="h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-brand-blue"
+                  key={row.id}
+                  className={`bg-white rounded-xl border transition-all overflow-hidden ${
+                    isSaved
+                      ? 'border-emerald-300 bg-emerald-50/20'
+                      : invalid
+                      ? 'border-red-300 ring-1 ring-red-100'
+                      : row.needsConfirmation
+                      ? 'border-amber-300/90'
+                      : 'border-slate-200/90'
+                  } ${!row.selected && !isSaved ? 'opacity-65' : ''}`}
                 >
-                  {CATEGORY_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleApplyBulkCategory}
-                  className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  Aplicar a seleccionadas
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                {stats.errorCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleRetryFailed}
-                    disabled={stats.analyzingCount > 0}
-                    className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw size={12} />
-                    <span>Reintentar fallidas ({stats.errorCount})</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRows([]);
-                    setAttemptedSubmit(false);
-                  }}
-                  disabled={isSaving}
-                  className="h-8 px-3 rounded-lg border border-red-200/70 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Trash2 size={12} />
-                  <span>Limpiar lista</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Vista Desktop: Tabla ordenada y editable */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50/95 border-b border-slate-200/90">
-                  <tr className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold select-none">
-                    <th className="py-2.5 px-3 pl-4 w-9">
+                  {/* Encabezado de la ficha */}
+                  <div className="px-4 py-2.5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <input
                         type="checkbox"
-                        checked={stats.allSelected}
-                        onChange={handleToggleSelectAll}
-                        className="w-4 h-4 rounded border-slate-300 text-brand-blue focus:ring-brand-blue cursor-pointer"
-                        title="Seleccionar todas"
+                        checked={row.selected}
+                        disabled={isSaved || isSaving}
+                        onChange={e => updateRow(row.id, { selected: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-300 text-[#0B2737] focus:ring-[#12435E] cursor-pointer shrink-0"
                       />
-                    </th>
-                    <th className="py-2.5 px-3 min-w-[185px]">Archivo / Estado</th>
-                    <th className="py-2.5 px-2.5 min-w-[165px]">N° Documento</th>
-                    <th className="py-2.5 px-2.5 min-w-[185px]">Proveedor / Negocio</th>
-                    <th className="py-2.5 px-2.5 w-[140px]">Fecha</th>
-                    <th className="py-2.5 px-2.5 w-[96px]">Moneda</th>
-                    <th className="py-2.5 px-2.5 w-[125px] text-right">Monto</th>
-                    <th className="py-2.5 px-2.5 min-w-[165px]">Categoría</th>
-                    <th className="py-2.5 px-3 pr-4 w-[105px] text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {rows.map(row => {
-                    const invalid = attemptedSubmit && isRowInvalid(row);
-                    const isSaved = row.status === 'saved';
-                    const badge = row.attachment ? getAttachmentBadge(row.attachment) : null;
-                    const isImg = row.attachment ? isImageAttachment(row.attachment) : false;
 
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`transition-colors ${
-                          isSaved
-                            ? 'bg-emerald-50/50'
-                            : invalid
-                            ? 'bg-red-50/50'
-                            : !row.selected
-                            ? 'bg-slate-50/60 opacity-60'
-                            : 'hover:bg-slate-50/70'
+                      {badge ? (
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border shrink-0 ${badge.colorClass}`}
+                        >
+                          {badge.label}
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                          MANUAL
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => updateRow(row.id, { collapsed: !row.collapsed })}
+                        className="text-left min-w-0 flex items-center gap-2 flex-wrap cursor-pointer"
+                      >
+                        <span className="text-xs sm:text-sm font-bold text-[#0B2737] truncate">
+                          {getCardTitle(row)}
+                        </span>
+                        {row.attachment?.name && (
+                          <span
+                            className="text-[11px] text-slate-400 truncate max-w-[180px] sm:max-w-[260px]"
+                            title={row.attachment.name}
+                          >
+                            ({row.attachment.name})
+                          </span>
+                        )}
+                      </button>
+
+                      {renderHeaderStatusBadge(row)}
+
+                      {/* Resumen compacto visible cuando la ficha está plegada */}
+                      {row.collapsed && (
+                        <div className="hidden md:flex items-center gap-2 text-xs text-slate-600 pl-2 border-l border-slate-200 min-w-0">
+                          <span className="font-semibold text-slate-800 truncate max-w-[180px]">
+                            {row.providerName.trim() || 'Sin proveedor'}
+                          </span>
+                          {row.documentNumber && (
+                            <span className="font-mono text-[11px] text-slate-500">
+                              · #{row.documentNumber}
+                            </span>
+                          )}
+                          <span
+                            className={`font-bold tabular-nums ml-1 ${
+                              row.currency === 'CRC' ? 'text-[#D97706]' : 'text-[#0B2737]'
+                            }`}
+                          >
+                            {formatRowAmountSummary(row)} ({row.currency})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Acciones en el encabezado de la ficha: Ver PDF, Releer, Plegar y Eliminar */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {row.attachment && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewFile(row.attachment)}
+                          className="h-7 px-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-[#0B2737] hover:bg-slate-100 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                          title="Ver comprobante adjunto"
+                        >
+                          <Eye size={14} />
+                          <span>{isPdfAttachment(row.attachment) ? 'Ver PDF' : 'Ver archivo'}</span>
+                        </button>
+                      )}
+
+                      {row.attachment && isAiReadableAttachment(row.attachment) && !isSaved && (
+                        <button
+                          type="button"
+                          disabled={row.status === 'analyzing' || isSaving}
+                          onClick={() => {
+                            if (row.attachment) {
+                              void analyzeSingleRow(row.id, row.attachment);
+                            }
+                          }}
+                          className="h-7 px-2 rounded-lg text-xs font-medium text-slate-500 hover:text-[#0B2737] hover:bg-slate-100 inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40"
+                          title="Volver a leer monto del comprobante"
+                        >
+                          <ScanLine size={13} />
+                          <span className="hidden sm:inline">Leer monto</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => updateRow(row.id, { collapsed: !row.collapsed })}
+                        className="h-7 w-7 rounded-lg text-slate-400 hover:text-[#0B2737] hover:bg-slate-100 inline-flex items-center justify-center transition-colors cursor-pointer"
+                        title={row.collapsed ? 'Desplegar ficha' : 'Plegar ficha'}
+                      >
+                        {row.collapsed ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                      </button>
+
+                      <span className="h-4 w-px bg-slate-200" />
+
+                      <button
+                        type="button"
+                        disabled={isSaving}
+                        onClick={() => handleRemoveRow(row.id)}
+                        className="h-7 w-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 inline-flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
+                        title="Eliminar comprobante"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Resumen en móvil cuando la ficha está plegada */}
+                  {row.collapsed && (
+                    <div className="md:hidden px-4 py-2.5 bg-slate-50/60 flex items-center justify-between gap-2 text-xs">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 truncate">
+                          {row.providerName.trim() || 'Sin proveedor'}
+                        </p>
+                        <p className="font-mono text-[11px] text-slate-500 truncate">
+                          {row.documentNumber || 'Sin N.º de documento'}
+                        </p>
+                      </div>
+                      <span
+                        className={`font-bold tabular-nums shrink-0 ${
+                          row.currency === 'CRC' ? 'text-[#D97706]' : 'text-[#0B2737]'
                         }`}
                       >
-                        <td className="py-2.5 px-3 pl-4 align-middle">
-                          <input
-                            type="checkbox"
-                            checked={row.selected}
-                            disabled={isSaved || isSaving}
-                            onChange={e => updateRow(row.id, { selected: e.target.checked })}
-                            className="w-4 h-4 rounded border-slate-300 text-brand-blue focus:ring-brand-blue cursor-pointer disabled:opacity-40"
-                          />
-                        </td>
+                        {formatRowAmountSummary(row)} ({row.currency})
+                      </span>
+                    </div>
+                  )}
 
-                        {/* Archivo y Estado */}
-                        <td className="py-2.5 px-3 align-middle">
-                          <div className="flex items-center gap-2.5">
-                            {row.attachment ? (
-                              <button
-                                type="button"
-                                onClick={() => setPreviewFile(row.attachment)}
-                                className="w-9 h-9 rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-pointer hover:border-brand-blue/50"
-                                title="Ver documento"
-                              >
-                                {isImg ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={row.attachment.dataUrl}
-                                    alt={row.attachment.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <span
-                                    className={`text-[9px] font-extrabold px-1 py-0.5 rounded ${
-                                      badge ? badge.colorClass : 'bg-slate-100 text-slate-600'
-                                    }`}
-                                  >
-                                    {badge?.label || 'DOC'}
-                                  </span>
-                                )}
-                              </button>
-                            ) : (
-                              <div className="w-9 h-9 rounded-lg border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 text-slate-400">
-                                <FileText size={14} />
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <p
-                                className="text-[11px] font-semibold text-slate-700 truncate max-w-[140px]"
-                                title={row.attachment?.name || 'Registro manual'}
-                              >
-                                {row.attachment?.name || 'Sin archivo'}
-                              </p>
-                              <div className="mt-1 flex items-center gap-1.5">
-                                {renderStatusPill(row)}
-                                {row.attachment?.size ? (
-                                  <span className="text-[10px] text-slate-400 tabular-nums">
-                                    {formatFileSize(row.attachment.size)}
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* N° Documento */}
-                        <td className="py-2.5 px-2.5 align-middle">
+                  {/* Cuerpo editable de la ficha (2 filas limpias sin cortar ningún campo) */}
+                  {!row.collapsed && (
+                    <div className="p-4 space-y-3">
+                      {/* Primera fila: N.º de documento, Proveedor / negocio y Fecha */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+                        <div className="lg:col-span-4">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            N.º de documento
+                          </label>
                           <input
                             type="text"
                             disabled={isSaved || isSaving}
                             value={row.documentNumber}
                             onChange={e => updateRow(row.id, { documentNumber: e.target.value })}
-                            placeholder="Ej. 0010000101..."
-                            className="w-full h-8 px-2.5 bg-white border border-slate-200/90 rounded-lg text-xs font-mono text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-brand-blue disabled:bg-slate-50"
+                            placeholder="001000010100000..."
+                            className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-mono text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50"
                           />
-                        </td>
+                        </div>
 
-                        {/* Proveedor */}
-                        <td className="py-2.5 px-2.5 align-middle">
+                        <div className="lg:col-span-5">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Proveedor / negocio
+                          </label>
                           <input
                             type="text"
                             disabled={isSaved || isSaving}
                             value={row.providerName}
                             onChange={e => updateRow(row.id, { providerName: e.target.value })}
-                            placeholder="Nombre del proveedor"
-                            className={`w-full h-8 px-2.5 bg-white border rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-brand-blue disabled:bg-slate-50 ${
-                              invalid && !row.providerName.trim() ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200/90'
+                            placeholder="Nombre del proveedor o comercio"
+                            className={`w-full h-9 px-3 bg-white border rounded-lg text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 ${
+                              invalid && !row.providerName.trim()
+                                ? 'border-red-400 ring-1 ring-red-200'
+                                : 'border-slate-200/90'
                             }`}
                           />
-                        </td>
+                        </div>
 
-                        {/* Fecha */}
-                        <td className="py-2.5 px-2.5 align-middle">
+                        <div className="sm:col-span-2 lg:col-span-3">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Fecha
+                          </label>
                           <input
                             type="date"
                             disabled={isSaved || isSaving}
                             value={row.date}
                             onChange={e => updateRow(row.id, { date: e.target.value })}
-                            className={`w-full h-8 px-2 bg-white border rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-brand-blue disabled:bg-slate-50 ${
-                              invalid && !row.date ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200/90'
+                            className={`w-full h-9 px-3 bg-white border rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 ${
+                              invalid && !row.date
+                                ? 'border-red-400 ring-1 ring-red-200'
+                                : 'border-slate-200/90'
                             }`}
                           />
-                        </td>
+                        </div>
+                      </div>
 
-                        {/* Moneda */}
-                        <td className="py-2.5 px-2.5 align-middle">
+                      {/* Segunda fila: Categoría, Moneda, Monto y Confirmar monto */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                        <div className="lg:col-span-4">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Categoría
+                          </label>
+                          <select
+                            disabled={isSaved || isSaving}
+                            value={row.category}
+                            onChange={e => updateRow(row.id, { category: e.target.value })}
+                            className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 cursor-pointer"
+                          >
+                            {CATEGORY_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="lg:col-span-2">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Moneda
+                          </label>
                           <select
                             disabled={isSaved || isSaving}
                             value={row.currency}
                             onChange={e =>
                               updateRow(row.id, {
                                 currency: e.target.value === 'CRC' ? 'CRC' : 'USD',
-                                needsConfirmation: false,
-                                reviewNotice: undefined,
                               })
                             }
-                            className={`w-full h-8 px-2 border rounded-lg text-xs font-bold focus:outline-none focus:border-brand-blue disabled:bg-slate-50 ${
-                              row.currency === 'CRC'
-                                ? 'bg-amber-50/70 border-amber-200 text-amber-800'
-                                : 'bg-brand-blue/[0.05] border-brand-blue/20 text-brand-blue'
-                            }`}
+                            className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 cursor-pointer"
                           >
-                            <option value="USD">USD ($)</option>
-                            <option value="CRC">CRC (₡)</option>
+                            <option value="CRC">CRC</option>
+                            <option value="USD">USD</option>
                           </select>
-                        </td>
+                        </div>
 
-                        {/* Monto */}
-                        <td className="py-2.5 px-2.5 align-middle">
+                        <div className="lg:col-span-4">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                            Monto
+                          </label>
                           <input
                             type="number"
                             step="0.01"
@@ -1042,332 +1113,90 @@ export default function NuevoGastoPage() {
                             onChange={e =>
                               updateRow(row.id, {
                                 amount: e.target.value,
-                                needsConfirmation: false,
-                                reviewNotice: undefined,
                               })
                             }
                             placeholder="0.00"
-                            className={`w-full h-8 px-2.5 bg-white border rounded-lg text-xs font-bold text-slate-900 text-right tabular-nums placeholder:text-slate-300 focus:outline-none focus:border-brand-blue disabled:bg-slate-50 ${
-                              invalid && (!row.amount || parseFloat(row.amount.replace(',', '.')) <= 0)
+                            className={`w-full h-9 px-3 bg-white border rounded-lg text-sm font-bold text-[#0B2737] text-right tabular-nums placeholder:text-slate-300 focus:outline-none focus:border-[#12435E] disabled:bg-slate-50 ${
+                              invalid && !hasValidAmount
                                 ? 'border-red-400 ring-1 ring-red-200'
                                 : row.needsConfirmation
-                                ? 'border-amber-400 ring-1 ring-amber-200'
+                                ? 'border-amber-300 bg-amber-50/20'
                                 : 'border-slate-200/90'
                             }`}
                           />
-                        </td>
+                        </div>
 
-                        {/* Categoría */}
-                        <td className="py-2.5 px-2.5 align-middle">
-                          <select
-                            disabled={isSaved || isSaving}
-                            value={row.category}
-                            onChange={e => updateRow(row.id, { category: e.target.value })}
-                            className="w-full h-8 px-2 bg-white border border-slate-200/90 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:border-brand-blue disabled:bg-slate-50"
-                          >
-                            {CATEGORY_OPTIONS.map(opt => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Acciones */}
-                        <td className="py-2.5 px-3 pr-4 align-middle text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end gap-1">
-                            {row.needsConfirmation && !isSaved && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateRow(row.id, {
-                                    needsConfirmation: false,
-                                    reviewNotice: undefined,
-                                    status: row.amount ? 'ready' : row.status,
-                                  })
-                                }
-                                className="h-7 px-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-emerald-50 hover:border-emerald-200 text-amber-800 hover:text-emerald-700 inline-flex items-center gap-1 text-[10px] font-bold cursor-pointer"
-                                title={row.reviewNotice || 'Confirmar monto y moneda'}
-                              >
-                                <Check size={11} />
-                                <span>Confirmar</span>
-                              </button>
-                            )}
-                            {row.attachment && (
-                              <button
-                                type="button"
-                                onClick={() => setPreviewFile(row.attachment)}
-                                className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 inline-flex items-center justify-center cursor-pointer"
-                                title="Ver documento"
-                              >
-                                <Eye size={13} />
-                              </button>
-                            )}
-                            {row.attachment && isAiReadableAttachment(row.attachment) && !isSaved && (
-                              <button
-                                type="button"
-                                disabled={row.status === 'analyzing' || isSaving}
-                                onClick={() => {
-                                  if (row.attachment) {
-                                    void analyzeSingleRow(row.id, row.attachment);
-                                  }
-                                }}
-                                className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-brand-blue/10 hover:text-brand-blue text-slate-500 inline-flex items-center justify-center cursor-pointer disabled:opacity-40"
-                                title="Leer monto del comprobante"
-                              >
-                                <ScanLine size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              disabled={isSaving}
-                              onClick={() => handleRemoveRow(row.id)}
-                              className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-600 text-slate-400 inline-flex items-center justify-center cursor-pointer disabled:opacity-40"
-                              title="Quitar fila"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Vista Móvil / Tablet: Tarjetas ordenadas */}
-            <div className="lg:hidden divide-y divide-slate-200/80">
-              {rows.map(row => {
-                const invalid = attemptedSubmit && isRowInvalid(row);
-                const isSaved = row.status === 'saved';
-                const badge = row.attachment ? getAttachmentBadge(row.attachment) : null;
-
-                return (
-                  <div
-                    key={row.id}
-                    className={`p-4 space-y-3 ${
-                      isSaved ? 'bg-emerald-50/40' : invalid ? 'bg-red-50/40' : !row.selected ? 'opacity-60' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={row.selected}
-                          disabled={isSaved || isSaving}
-                          onChange={e => updateRow(row.id, { selected: e.target.checked })}
-                          className="w-4 h-4 rounded border-slate-300 text-brand-blue shrink-0"
-                        />
-                        {badge && (
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${badge.colorClass}`}>
-                            {badge.label}
-                          </span>
-                        )}
-                        <span className="text-xs font-semibold text-slate-800 truncate">
-                          {row.attachment?.name || 'Gasto manual'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {renderStatusPill(row)}
-                        {row.attachment && (
+                        <div className="sm:col-span-2 lg:col-span-2">
                           <button
                             type="button"
-                            onClick={() => setPreviewFile(row.attachment)}
-                            className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 inline-flex items-center justify-center"
+                            disabled={isSaved || isSaving || !hasValidAmount}
+                            onClick={() => handleConfirmRowAmount(row.id)}
+                            className={`w-full h-9 px-3 rounded-lg border text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 ${
+                              row.needsConfirmation
+                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-emerald-50/70 text-emerald-700 border-emerald-200'
+                            }`}
                           >
-                            <Eye size={13} />
+                            {!row.needsConfirmation && <Check size={13} />}
+                            <span>{row.needsConfirmation ? 'Confirmar monto' : 'Confirmado'}</span>
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          disabled={isSaving}
-                          onClick={() => handleRemoveRow(row.id)}
-                          className="h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-red-600 inline-flex items-center justify-center"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        </div>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">
-                          N° Documento
-                        </label>
-                        <input
-                          type="text"
-                          disabled={isSaved || isSaving}
-                          value={row.documentNumber}
-                          onChange={e => updateRow(row.id, { documentNumber: e.target.value })}
-                          placeholder="Ej. 0010000101..."
-                          className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-800"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">
-                          Proveedor / Negocio
-                        </label>
-                        <input
-                          type="text"
-                          disabled={isSaved || isSaving}
-                          value={row.providerName}
-                          onChange={e => updateRow(row.id, { providerName: e.target.value })}
-                          placeholder="Nombre del proveedor"
-                          className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">
-                          Fecha
-                        </label>
-                        <input
-                          type="date"
-                          disabled={isSaved || isSaving}
-                          value={row.date}
-                          onChange={e => updateRow(row.id, { date: e.target.value })}
-                          className="w-full h-9 px-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">
-                          Moneda
-                        </label>
-                        <select
-                          disabled={isSaved || isSaving}
-                          value={row.currency}
-                          onChange={e =>
-                            updateRow(row.id, {
-                              currency: e.target.value === 'CRC' ? 'CRC' : 'USD',
-                              needsConfirmation: false,
-                              reviewNotice: undefined,
-                            })
-                          }
-                          className="w-full h-9 px-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
-                        >
-                          <option value="USD">USD ($)</option>
-                          <option value="CRC">CRC (₡)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">
-                          Monto
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          disabled={isSaved || isSaving}
-                          value={row.amount}
-                          onChange={e =>
-                            updateRow(row.id, {
-                              amount: e.target.value,
-                              needsConfirmation: false,
-                              reviewNotice: undefined,
-                            })
-                          }
-                          placeholder="0.00"
-                          className={`w-full h-9 px-2.5 bg-white border rounded-lg text-xs font-bold text-slate-900 text-right tabular-nums ${
-                            row.needsConfirmation ? 'border-amber-400 ring-1 ring-amber-200' : 'border-slate-200'
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    {row.needsConfirmation && row.reviewNotice && !isSaved && (
-                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200/80 text-[11px] text-amber-900">
-                        <span>{row.reviewNotice}</span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateRow(row.id, {
-                              needsConfirmation: false,
-                              reviewNotice: undefined,
-                            })
-                          }
-                          className="px-2 py-0.5 rounded bg-amber-800 text-white font-semibold text-[10px] shrink-0"
-                        >
-                          Confirmar
-                        </button>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">
-                        Categoría
-                      </label>
-                      <select
-                        disabled={isSaved || isSaving}
-                        value={row.category}
-                        onChange={e => updateRow(row.id, { category: e.target.value })}
-                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700"
-                      >
-                        {CATEGORY_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer de Guardado */}
-            <div className="px-5 py-4 bg-slate-50/90 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="text-xs text-slate-600">
-                {saveProgress ? (
-                  <span className="inline-flex items-center gap-2 font-semibold text-brand-blue">
-                    <Loader2 size={14} className="animate-spin" />
-                    Guardando {saveProgress.done} de {saveProgress.total} gastos...
-                  </span>
-                ) : (
-                  <span>
-                    Se crearán <strong className="text-slate-900">{stats.selectedCount}</strong>{' '}
-                    {stats.selectedCount === 1 ? 'registro independiente' : 'registros independientes'} en Gastos y Compras, conservando cada archivo, fecha y N° de documento.
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 justify-end">
-                <Link
-                  href="/admin/gastos"
-                  className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs inline-flex items-center transition-colors"
-                >
-                  Cancelar
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleSaveAll}
-                  disabled={isSaving || stats.analyzingCount > 0 || stats.selectedCount === 0}
-                  className="h-9 px-5 rounded-lg border border-brand-blue/20 bg-brand-blue hover:bg-[#0e354b] text-white shadow-2xs inline-flex items-center justify-center gap-1.5 font-semibold text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Guardando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save size={14} />
-                      <span>
-                        {stats.selectedCount === 1
-                          ? 'Guardar 1 Gasto'
-                          : `Guardar ${stats.selectedCount} Gastos`}
-                      </span>
-                    </>
                   )}
-                </button>
-              </div>
-            </div>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
 
-      {/* Modal de vista previa rápida */}
+      {/* 5. Barra inferior visible mientras se revisa el lote, sin tapar los campos */}
+      <div className="sticky bottom-3 z-20 bg-white/95 backdrop-blur-xs rounded-xl border border-slate-200/90 px-5 py-3.5 shadow-[0_4px_20px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="text-xs sm:text-sm font-bold text-[#0B2737]">
+          {saveProgress ? (
+            <span className="inline-flex items-center gap-2 text-[#12435E]">
+              <Loader2 size={15} className="animate-spin" />
+              Guardando {saveProgress.done} de {saveProgress.total} gastos…
+            </span>
+          ) : (
+            <span>
+              {stats.selectedCount}{' '}
+              {stats.selectedCount === 1 ? 'gasto seleccionado' : 'gastos seleccionados'}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5">
+          <Link
+            href="/admin/gastos"
+            className="h-9 px-4 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs inline-flex items-center justify-center transition-colors"
+          >
+            Cancelar
+          </Link>
+          <button
+            type="button"
+            onClick={handleSaveAll}
+            disabled={isSaving || stats.analyzingCount > 0 || stats.selectedCount === 0}
+            className="h-9 px-5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white font-semibold text-xs inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Guardando…</span>
+              </>
+            ) : (
+              <span>
+                {stats.selectedCount === 1
+                  ? 'Guardar 1 gasto'
+                  : `Guardar ${stats.selectedCount} gastos`}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Modal de vista previa rápida del documento */}
       {previewFile && (
         <div
           className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center p-4"
@@ -1379,7 +1208,7 @@ export default function NuevoGastoPage() {
           >
             <div className="px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/80 gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 bg-brand-blue/10 text-brand-blue rounded-lg flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 bg-[#0B2737]/10 text-[#0B2737] rounded-lg flex items-center justify-center shrink-0">
                   <FileText size={16} />
                 </div>
                 <div className="min-w-0">
@@ -1396,7 +1225,7 @@ export default function NuevoGastoPage() {
                     href={previewBlobUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold"
+                    className="h-8 px-2.5 text-slate-600 hover:text-[#0B2737] bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold"
                   >
                     <ExternalLink size={13} />
                     <span className="hidden sm:inline">Abrir</span>
@@ -1405,7 +1234,7 @@ export default function NuevoGastoPage() {
                 <a
                   href={previewFile.dataUrl}
                   download={previewFile.name}
-                  className="h-8 px-2.5 text-slate-600 hover:text-brand-blue bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold"
+                  className="h-8 px-2.5 text-slate-600 hover:text-[#0B2737] bg-white border border-slate-200/90 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold"
                 >
                   <Download size={13} />
                   <span className="hidden sm:inline">Descargar</span>
@@ -1440,7 +1269,7 @@ export default function NuevoGastoPage() {
                 </pre>
               ) : (
                 <div className="text-center py-8 px-4 max-w-sm">
-                  <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center mx-auto mb-3 text-brand-blue">
+                  <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center mx-auto mb-3 text-[#0B2737]">
                     <FileText size={26} />
                   </div>
                   <p className="text-sm font-bold text-slate-800 break-all">{previewFile.name}</p>
@@ -1450,7 +1279,7 @@ export default function NuevoGastoPage() {
                   <a
                     href={previewFile.dataUrl}
                     download={previewFile.name}
-                    className="h-9 px-4 rounded-lg bg-brand-blue hover:bg-[#0e354b] text-white text-xs font-semibold inline-flex items-center gap-1.5"
+                    className="h-9 px-4 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold inline-flex items-center gap-1.5"
                   >
                     <Download size={14} />
                     <span>Descargar archivo</span>
