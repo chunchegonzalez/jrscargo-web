@@ -453,7 +453,7 @@ export default function AjustesPage() {
                       className="w-full h-9 px-2.5 bg-white rounded-lg border border-slate-200/90 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10"
                     >
                       <option value="user">Usuario Regular (Operaciones y Tracking)</option>
-                      <option value="admin">Administrador (Operaciones, Tracking y Contabilidad)</option>
+                      <option value="admin">Administrador (Operaciones, Tracking, Contabilidad, Clientes y WhatsApp)</option>
                       <option value="admin_pro">Administrador Pro (Acceso Total)</option>
                     </select>
                   </div>

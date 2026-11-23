@@ -182,12 +182,13 @@ export function canAccessAdminPath(
     return true;
   }
 
-  // Administrador (estándar): adicionalmente ve solo Compra en sitio web, Cuentas por cobrar y Facturas a Clientes
+  // Administrador (estándar): adicionalmente ve Compra en sitio web, Cuentas por cobrar, Facturas a Clientes y Clientes
   if (user.role === 'admin') {
     if (
       pathname.startsWith('/admin/compra-en-sitio-web') ||
       pathname.startsWith('/admin/cuentas-por-cobrar') ||
-      pathname.startsWith('/admin/facturacion')
+      pathname.startsWith('/admin/facturacion') ||
+      pathname.startsWith('/admin/clientes')
     ) {
       return true;
     }

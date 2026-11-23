@@ -201,7 +201,8 @@ export default function GlobalSearch({ role }: GlobalSearchProps) {
         m.url.startsWith('/admin/tracking') ||
         m.url.startsWith('/admin/facturacion') ||
         m.url.startsWith('/admin/compra-en-sitio-web') ||
-        m.url.startsWith('/admin/cuentas-por-cobrar')
+        m.url.startsWith('/admin/cuentas-por-cobrar') ||
+        m.url.startsWith('/admin/clientes')
       );
     }
     return (

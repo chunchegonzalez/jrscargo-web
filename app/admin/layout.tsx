@@ -515,8 +515,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   })}
                 </div>
               </div>
+            </>
+          )}
 
-              {/* Separador: Gestión */}
+          {/* Separador: Gestión (Administrador, Administrador Pro y Master) */}
+          {canSeeAccounting && (
+            <>
               <div className="pt-4 pb-1 px-3 flex items-center justify-between">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.14em]">Gestión</p>
               </div>
@@ -530,39 +534,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <span>Clientes</span>
               </Link>
 
-              <button 
-                onClick={() => toggleSection('ajustes')}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${
-                  openSections.ajustes ? 'text-slate-200 bg-white/[0.03]' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Settings size={16} className={openSections.ajustes ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
-                  <span>Configuración</span>
-                </div>
-                {openSections.ajustes ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
-              </button>
-              
-              <div className={`overflow-hidden transition-all duration-200 ${openSections.ajustes ? 'max-h-48 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
-                <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
-                  {[
-                    { href: '/admin/ajustes', label: 'Ajustes de Sistema' },
-                    { href: '/admin/servicios', label: 'Servicios y Tarifas' },
-                  ].map(link => {
-                    const isActive = pathname.startsWith(link.href);
-                    return (
-                      <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${
-                        isActive
-                          ? 'text-brand-yellow font-semibold bg-brand-yellow/[0.12]'
-                          : 'text-slate-400/90 hover:text-slate-200 hover:bg-white/[0.04] font-normal'
-                      }`}>
-                        <span>{link.label}</span>
-                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shrink-0" />}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
+              {fullAccess && (
+                <>
+                  <button 
+                    onClick={() => toggleSection('ajustes')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${
+                      openSections.ajustes ? 'text-slate-200 bg-white/[0.03]' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Settings size={16} className={openSections.ajustes ? 'text-brand-yellow shrink-0' : 'text-slate-400 shrink-0'} />
+                      <span>Configuración</span>
+                    </div>
+                    {openSections.ajustes ? <ChevronDown size={13} className="text-slate-500" /> : <ChevronRight size={13} className="text-slate-500" />}
+                  </button>
+                  
+                  <div className={`overflow-hidden transition-all duration-200 ${openSections.ajustes ? 'max-h-48 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+                    <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
+                      {[
+                        { href: '/admin/ajustes', label: 'Ajustes de Sistema' },
+                        { href: '/admin/servicios', label: 'Servicios y Tarifas' },
+                      ].map(link => {
+                        const isActive = pathname.startsWith(link.href);
+                        return (
+                          <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${
+                            isActive
+                              ? 'text-brand-yellow font-semibold bg-brand-yellow/[0.12]'
+                              : 'text-slate-400/90 hover:text-slate-200 hover:bg-white/[0.04] font-normal'
+                          }`}>
+                            <span>{link.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand-yellow shrink-0" />}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <a 
                 href="https://jrs.gaelabscr.com/" 
@@ -710,7 +718,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       <Package size={14} className="text-slate-400" />
                       <span>Inventario Costa Rica</span>
                     </Link>
-                    {fullAccess && (
+                    {canSeeAccounting && (
                       <Link
                         href="/admin/clientes"
                         onClick={() => setIsProfileDropdownOpen(false)}
