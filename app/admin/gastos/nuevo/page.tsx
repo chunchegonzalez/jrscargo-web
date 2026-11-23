@@ -7,7 +7,7 @@ import {
   ArrowLeft,
   Save,
   UploadCloud,
-  Sparkles,
+  ScanLine,
   Loader2,
   Check,
   X,
@@ -36,9 +36,10 @@ import {
   dataUrlToBlobUrl,
   decodeTextFromDataUrl,
 } from '@/lib/expense-attachments';
+import { readReceiptLocally } from '@/lib/receipt-local-reader';
 
 const MAX_SINGLE_FILE_BYTES = 3_800_000; // Margen seguro por archivo bajo límite de 4.5 MB
-const AI_CONCURRENCY = 3;
+const LOCAL_READER_CONCURRENCY = 2;
 
 const CATEGORY_OPTIONS = [
   { value: 'Pago de Proveedor', label: 'Pago de Proveedor' },
@@ -65,6 +66,8 @@ type ExpenseDraftRow = {
   amount: string;
   category: string;
   status: RowStatus;
+  needsConfirmation?: boolean;
+  reviewNotice?: string;
   errorMessage?: string;
 };
 
@@ -177,7 +180,7 @@ function makeManualRow(): ExpenseDraftRow {
 }
 
 export default function NuevoGastoPage() {
-  const { showAlert } = useModal();
+  const { showAlert, showConfirm } = useModal();
   const router = useRouter();
 
   const [rows, setRows] = useState<ExpenseDraftRow[]>([]);
@@ -217,78 +220,32 @@ export default function NuevoGastoPage() {
 
   const analyzeSingleRow = async (rowId: string, attachment: ExpenseAttachment) => {
     if (!isAiReadableAttachment(attachment)) {
-      updateRow(rowId, { status: 'manual', errorMessage: undefined });
+      updateRow(rowId, {
+        status: 'manual',
+        needsConfirmation: true,
+        reviewNotice: 'Ingresa y confirma el monto y la moneda manualmente.',
+        errorMessage: undefined,
+      });
       return;
     }
 
-    const commaIdx = attachment.dataUrl.indexOf(',');
-    if (commaIdx === -1) {
-      updateRow(rowId, { status: 'manual', errorMessage: undefined });
-      return;
-    }
-
-    const base64Data = attachment.dataUrl.slice(commaIdx + 1);
     updateRow(rowId, { status: 'analyzing', errorMessage: undefined });
 
     try {
-      const res = await fetch('/api/expenses/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: [
-            {
-              name: attachment.name,
-              mimeType: attachment.mimeType,
-              base64Data,
-            },
-          ],
-        }),
-      });
+      const extracted = await readReceiptLocally(attachment);
 
-      const textResponse = await res.text();
-      let parsed: {
-        success?: boolean;
-        skipped?: boolean;
-        error?: string;
-        data?: {
-          document_number?: string;
-          provider_name?: string;
-          date?: string;
-          amount?: number | string;
-          currency?: string;
-          category?: string;
-        };
-      };
-
-      try {
-        parsed = JSON.parse(textResponse);
-      } catch {
-        throw new Error('Respuesta inválida del servidor.');
-      }
-
-      if (!res.ok || !parsed.success) {
-        throw new Error(parsed.error || 'No se pudo leer este documento.');
-      }
-
-      if (parsed.skipped || !parsed.data) {
-        updateRow(rowId, { status: 'manual', errorMessage: undefined });
-        return;
-      }
-
-      const d = parsed.data;
       setRows(prev =>
         prev.map(r => {
           if (r.id !== rowId) return r;
-          const nextAmount =
-            d.amount !== undefined && d.amount !== null && d.amount !== ''
-              ? String(d.amount)
-              : r.amount;
+          const nextAmount = extracted.amount ? extracted.amount : r.amount;
           const nextCurrency: 'USD' | 'CRC' =
-            d.currency === 'CRC' ? 'CRC' : d.currency === 'USD' ? 'USD' : r.currency;
-          const nextDate = d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : r.date;
-          const nextDoc = d.document_number ? String(d.document_number).trim() : r.documentNumber;
-          const nextProvider = d.provider_name ? String(d.provider_name).trim() : r.providerName;
-          const nextCategory = d.category ? String(d.category).trim() : r.category;
+            extracted.currency === 'CRC' ? 'CRC' : extracted.currency === 'USD' ? 'USD' : r.currency;
+          const nextDate =
+            extracted.date && /^\d{4}-\d{2}-\d{2}$/.test(extracted.date) ? extracted.date : r.date;
+          const nextDoc = extracted.documentNumber ? extracted.documentNumber.trim() : r.documentNumber;
+          const nextProvider = extracted.providerName ? extracted.providerName.trim() : r.providerName;
+          const nextCategory =
+            extracted.category && extracted.category !== 'Otros' ? extracted.category : r.category;
 
           return {
             ...r,
@@ -298,20 +255,27 @@ export default function NuevoGastoPage() {
             currency: nextCurrency,
             amount: nextAmount,
             category: nextCategory,
-            status: 'ready',
+            status: extracted.amount ? 'ready' : 'manual',
+            needsConfirmation: extracted.needsConfirmation || !extracted.amount,
+            reviewNotice: extracted.notice,
             errorMessage: undefined,
           };
         })
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error analizando documento';
-      updateRow(rowId, { status: 'error', errorMessage: msg });
+      const msg = err instanceof Error ? err.message : 'No se pudo leer el comprobante localmente';
+      updateRow(rowId, {
+        status: 'error',
+        needsConfirmation: true,
+        reviewNotice: 'No se pudo leer automáticamente. Ingresa el monto y la moneda manualmente.',
+        errorMessage: msg,
+      });
     }
   };
 
   const runBatchAnalysis = async (items: Array<{ id: string; attachment: ExpenseAttachment }>) => {
     let cursor = 0;
-    const workerCount = Math.min(AI_CONCURRENCY, items.length);
+    const workerCount = Math.min(LOCAL_READER_CONCURRENCY, items.length);
 
     const workers = Array.from({ length: workerCount }, async () => {
       while (cursor < items.length) {
@@ -493,8 +457,8 @@ export default function NuevoGastoPage() {
 
     if (stats.analyzingCount > 0) {
       await showAlert(
-        'Análisis en progreso',
-        'Espera unos segundos a que la IA termine de leer las facturas pendientes antes de guardar.',
+        'Lectura en progreso',
+        'Espera unos segundos a que termine la lectura local del monto de los comprobantes antes de guardar.',
         'info'
       );
       return;
@@ -508,6 +472,24 @@ export default function NuevoGastoPage() {
         'error'
       );
       return;
+    }
+
+    const unconfirmedRows = toSave.filter(r => r.needsConfirmation);
+    if (unconfirmedRows.length > 0) {
+      const confirmed = await showConfirm(
+        'Confirmar monto y moneda',
+        `Hay ${unconfirmedRows.length} ${unconfirmedRows.length === 1 ? 'comprobante cuyo monto o moneda' : 'comprobantes cuyos montos o monedas'} requieren confirmación. ¿Confirmas que los totales y monedas (USD / CRC) indicados en la tabla son correctos?`
+      );
+      if (!confirmed) {
+        return;
+      }
+      setRows(prev =>
+        prev.map(r =>
+          r.selected && r.needsConfirmation
+            ? { ...r, needsConfirmation: false, reviewNotice: undefined }
+            : r
+        )
+      );
     }
 
     setIsSaving(true);
@@ -587,15 +569,26 @@ export default function NuevoGastoPage() {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
           <Loader2 size={10} className="animate-spin" />
-          Leyendo IA
+          Leyendo monto
         </span>
       );
     }
     if (row.status === 'ready') {
+      if (row.needsConfirmation) {
+        return (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200"
+            title={row.reviewNotice || 'Confirma el monto y la moneda antes de guardar'}
+          >
+            <AlertCircle size={10} />
+            Confirmar monto
+          </span>
+        );
+      }
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
           <CheckCircle2 size={10} />
-          IA Lista
+          Monto leído
         </span>
       );
     }
@@ -641,11 +634,11 @@ export default function NuevoGastoPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">Registrar Gastos</h1>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-blue/10 text-brand-blue border border-brand-blue/15">
-                <Sparkles size={11} /> Lectura Individual con IA
+                <ScanLine size={11} /> Leer monto del comprobante
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Sube una o varias facturas a la vez. Cada archivo se analiza por separado con su propio N° de documento, fecha, moneda y monto.
+              Lee el monto de tus comprobantes con lectura local y sin cargos por escaneo. Revisa y confirma el total y la moneda (USD o CRC) antes de guardar.
             </p>
           </div>
         </div>
@@ -702,10 +695,10 @@ export default function NuevoGastoPage() {
               {isProcessingFiles ? <Loader2 size={26} className="animate-spin" /> : <UploadCloud size={26} />}
             </div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              Arrastra tus facturas aquí o haz clic para seleccionarlas
+              Lee el monto de tus comprobantes
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-              Puedes subir <strong>5, 10 o más archivos a la vez</strong> (PDF, imágenes JPG/PNG, XML de Hacienda, Excel, Word o cualquier documento). La IA organizará cada factura en su propia fila con su fecha, número de documento y monto en <strong>USD o CRC</strong>.
+              Arrastra o selecciona <strong>uno o varios comprobantes</strong> (PDF con texto, PDF escaneados, fotos JPG/PNG o XML de Hacienda). El lector local extrae el total a pagar y la moneda (<strong>USD o CRC</strong>) directamente en tu navegador, sin cargos por escaneo ni envío a servicios externos.
             </p>
             <div className="mt-5 flex items-center justify-center gap-2.5 flex-wrap">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue text-white text-xs font-semibold shadow-2xs">
@@ -731,10 +724,10 @@ export default function NuevoGastoPage() {
               </div>
               <div>
                 <p className="text-xs sm:text-sm font-bold text-slate-800">
-                  Arrastra más facturas aquí o haz clic para añadirlas al lote
+                  Arrastra más comprobantes aquí o haz clic para añadirlos al lote
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Cada nuevo archivo se agrega como una fila independiente y se lee automáticamente con IA
+                  Cada nuevo archivo se agrega como una fila independiente y lee el monto del comprobante localmente
                 </p>
               </div>
             </div>
@@ -748,13 +741,13 @@ export default function NuevoGastoPage() {
       {/* Panel Dinámico del Lote (visible cuando hay al menos 1 fila) */}
       {rows.length > 0 && (
         <>
-          {/* Barra de progreso de IA */}
+          {/* Barra de progreso de lectura local */}
           {stats.analyzingCount > 0 && (
             <div className="bg-white rounded-xl border border-brand-blue/25 p-4 shadow-xs space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
                 <span className="inline-flex items-center gap-2 text-brand-blue">
                   <Loader2 size={14} className="animate-spin" />
-                  Analizando facturas individualmente con IA...
+                  Leyendo monto del comprobante localmente...
                 </span>
                 <span className="tabular-nums text-slate-500">
                   {stats.totalRows - stats.analyzingCount} de {stats.totalRows} procesadas
@@ -785,7 +778,7 @@ export default function NuevoGastoPage() {
                 <span className="text-xs text-slate-400">de {stats.totalRows} en lista</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {stats.completedAiCount} leídas con IA
+                {stats.completedAiCount} con monto leído
                 {stats.errorCount > 0 ? ` · ${stats.errorCount} por revisar` : ''}
               </p>
             </div>
@@ -1022,7 +1015,11 @@ export default function NuevoGastoPage() {
                             disabled={isSaved || isSaving}
                             value={row.currency}
                             onChange={e =>
-                              updateRow(row.id, { currency: e.target.value === 'CRC' ? 'CRC' : 'USD' })
+                              updateRow(row.id, {
+                                currency: e.target.value === 'CRC' ? 'CRC' : 'USD',
+                                needsConfirmation: false,
+                                reviewNotice: undefined,
+                              })
                             }
                             className={`w-full h-8 px-2 border rounded-lg text-xs font-bold focus:outline-none focus:border-brand-blue disabled:bg-slate-50 ${
                               row.currency === 'CRC'
@@ -1042,11 +1039,19 @@ export default function NuevoGastoPage() {
                             step="0.01"
                             disabled={isSaved || isSaving}
                             value={row.amount}
-                            onChange={e => updateRow(row.id, { amount: e.target.value })}
+                            onChange={e =>
+                              updateRow(row.id, {
+                                amount: e.target.value,
+                                needsConfirmation: false,
+                                reviewNotice: undefined,
+                              })
+                            }
                             placeholder="0.00"
                             className={`w-full h-8 px-2.5 bg-white border rounded-lg text-xs font-bold text-slate-900 text-right tabular-nums placeholder:text-slate-300 focus:outline-none focus:border-brand-blue disabled:bg-slate-50 ${
                               invalid && (!row.amount || parseFloat(row.amount.replace(',', '.')) <= 0)
                                 ? 'border-red-400 ring-1 ring-red-200'
+                                : row.needsConfirmation
+                                ? 'border-amber-400 ring-1 ring-amber-200'
                                 : 'border-slate-200/90'
                             }`}
                           />
@@ -1071,6 +1076,23 @@ export default function NuevoGastoPage() {
                         {/* Acciones */}
                         <td className="py-2.5 px-3 pr-4 align-middle text-right whitespace-nowrap">
                           <div className="inline-flex items-center justify-end gap-1">
+                            {row.needsConfirmation && !isSaved && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateRow(row.id, {
+                                    needsConfirmation: false,
+                                    reviewNotice: undefined,
+                                    status: row.amount ? 'ready' : row.status,
+                                  })
+                                }
+                                className="h-7 px-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-emerald-50 hover:border-emerald-200 text-amber-800 hover:text-emerald-700 inline-flex items-center gap-1 text-[10px] font-bold cursor-pointer"
+                                title={row.reviewNotice || 'Confirmar monto y moneda'}
+                              >
+                                <Check size={11} />
+                                <span>Confirmar</span>
+                              </button>
+                            )}
                             {row.attachment && (
                               <button
                                 type="button"
@@ -1091,9 +1113,9 @@ export default function NuevoGastoPage() {
                                   }
                                 }}
                                 className="h-7 w-7 rounded-lg border border-slate-200 bg-white hover:bg-brand-blue/10 hover:text-brand-blue text-slate-500 inline-flex items-center justify-center cursor-pointer disabled:opacity-40"
-                                title="Re-analizar esta factura con IA"
+                                title="Leer monto del comprobante"
                               >
-                                <Sparkles size={13} />
+                                <ScanLine size={13} />
                               </button>
                             )}
                             <button
@@ -1218,7 +1240,11 @@ export default function NuevoGastoPage() {
                           disabled={isSaved || isSaving}
                           value={row.currency}
                           onChange={e =>
-                            updateRow(row.id, { currency: e.target.value === 'CRC' ? 'CRC' : 'USD' })
+                            updateRow(row.id, {
+                              currency: e.target.value === 'CRC' ? 'CRC' : 'USD',
+                              needsConfirmation: false,
+                              reviewNotice: undefined,
+                            })
                           }
                           className="w-full h-9 px-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                         >
@@ -1235,12 +1261,38 @@ export default function NuevoGastoPage() {
                           step="0.01"
                           disabled={isSaved || isSaving}
                           value={row.amount}
-                          onChange={e => updateRow(row.id, { amount: e.target.value })}
+                          onChange={e =>
+                            updateRow(row.id, {
+                              amount: e.target.value,
+                              needsConfirmation: false,
+                              reviewNotice: undefined,
+                            })
+                          }
                           placeholder="0.00"
-                          className="w-full h-9 px-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 text-right tabular-nums"
+                          className={`w-full h-9 px-2.5 bg-white border rounded-lg text-xs font-bold text-slate-900 text-right tabular-nums ${
+                            row.needsConfirmation ? 'border-amber-400 ring-1 ring-amber-200' : 'border-slate-200'
+                          }`}
                         />
                       </div>
                     </div>
+
+                    {row.needsConfirmation && row.reviewNotice && !isSaved && (
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200/80 text-[11px] text-amber-900">
+                        <span>{row.reviewNotice}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateRow(row.id, {
+                              needsConfirmation: false,
+                              reviewNotice: undefined,
+                            })
+                          }
+                          className="px-2 py-0.5 rounded bg-amber-800 text-white font-semibold text-[10px] shrink-0"
+                        >
+                          Confirmar
+                        </button>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[10px] font-semibold uppercase text-slate-500 mb-1">

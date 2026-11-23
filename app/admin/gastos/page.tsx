@@ -313,7 +313,7 @@ export default function GastosPage() {
               Operativo
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona tus gastos operativos y analiza facturas con IA.</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Gestiona tus gastos operativos y lee el monto de tus comprobantes.</p>
         </div>
         <Link 
           href="/admin/gastos/nuevo"
@@ -366,7 +366,7 @@ export default function GastosPage() {
                 <span className="text-xs font-medium text-slate-400 tabular-nums">de {expenses.length}</span>
               )}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Soportan extracción con IA 🤖</p>
+            <p className="text-[11px] text-slate-400 mt-1">Lee el monto de tus comprobantes</p>
           </div>
           <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
             <FileText size={19} />
@@ -546,7 +546,7 @@ export default function GastosPage() {
             <strong className="font-semibold text-slate-700">{expenses.length}</strong> gastos registrados
           </span>
           <span className="text-[11px] text-slate-400 hidden sm:inline">
-            Tip de IA: sube fotos de facturas físicas en &ldquo;Nuevo Gasto&rdquo; para extracción automática
+            Lee el monto de tus comprobantes en &ldquo;Nuevo Gasto&rdquo; (lectura local sin cargos)
           </span>
         </div>
       </div>
