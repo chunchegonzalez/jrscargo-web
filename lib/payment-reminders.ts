@@ -235,7 +235,7 @@ export async function sendPaymentReminderForInvoice(opts: {
   if (invoice.status === 'Anulada') {
     return { success: false, error: 'La factura está anulada.' };
   }
-  if (invoice.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.balance <= 0.009) {
+  if (invoice.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.pending <= 0.009) {
     return { success: false, error: 'La factura ya se encuentra pagada.' };
   }
 
@@ -255,7 +255,7 @@ export async function sendPaymentReminderForInvoice(opts: {
   const firstName = clientName.split(' ')[0] || clientName;
   const exchangeRate = Number(invoice.exchange_rate) || 530;
   const totalVal = Number(invoice.total || 0);
-  const balanceVal = Number(stats.balance ?? totalVal);
+  const balanceVal = Number(stats.pending ?? totalVal);
   const paidVal = Math.max(0, totalVal - balanceVal);
   const balanceColones = Number(balanceVal * exchangeRate).toLocaleString('es-CR', {
     minimumFractionDigits: 2,
@@ -547,7 +547,7 @@ export async function runDuePaymentReminders(opts: {
     if (state.reminders[inv.id]) return false;
 
     const stats = getInvoiceStats(inv);
-    if (inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.balance <= 0.009) {
+    if (inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.pending <= 0.009) {
       return false;
     }
 

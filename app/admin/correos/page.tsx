@@ -274,7 +274,7 @@ export default function ActividadCorreosPage() {
 
     invoices.forEach(inv => {
       const stats = getInvoiceStats(inv);
-      const isPaid = inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.balance <= 0.009;
+      const isPaid = inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.pending <= 0.009;
       const reminderRecord = remindersMap[inv.id];
 
       if (reminderRecord) {
@@ -1243,7 +1243,7 @@ export default function ActividadCorreosPage() {
               ) : (
                 visibleInvoices.map(inv => {
                   const stats = getInvoiceStats(inv);
-                  const isPaid = inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.balance <= 0.009;
+                  const isPaid = inv.status === 'Pagada' || stats.displayStatus === 'Pagada' || stats.pending <= 0.009;
                   const daysElapsed = getDaysSinceCreation(inv.issue_date, inv.created_at);
                   const daysRemaining = Math.max(0, 4 - daysElapsed);
                   const scheduledDate = getScheduledSendDateStr(inv.issue_date, inv.created_at);
