@@ -12,6 +12,7 @@ import {
   getRoleDisplayName,
   isAdminOrPro,
   isFullAccessUser,
+  isMasterUser,
 } from '@/lib/auth';
 
 function getAdminPageTitle(pathname: string): string {
@@ -37,6 +38,7 @@ function getAdminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/clientes')) return 'Clientes | Panel de JRS';
   if (pathname.startsWith('/admin/chat-bot')) return 'Chat Bot (Clari) | Panel de JRS';
   if (pathname.startsWith('/admin/correos')) return 'Actividad de Correos | Panel de JRS';
+  if (pathname.startsWith('/admin/campanas')) return 'Campañas de Correo | Panel de JRS';
   if (pathname.startsWith('/admin/reportes-cobros')) return 'Reporte Diario de Cobros | Panel de JRS';
   if (pathname.startsWith('/admin/monitor')) return 'Monitoreo Web | Panel de JRS';
   if (pathname.startsWith('/admin/ajustes')) return 'Ajustes de Sistema | Panel de JRS';
@@ -172,6 +174,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const fullAccess = isFullAccessUser(currentUser);
   const canSeeAccounting = isAdminOrPro(currentUser);
+  const isMaster = isMasterUser(currentUser?.username);
 
   // Redirigir automáticamente si el usuario intenta abrir una sección fuera de su rol
   useEffect(() => {
@@ -458,7 +461,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   pathname.startsWith('/admin/reporte-maritimo') ||
                   pathname.startsWith('/admin/monitor') ||
                   pathname.startsWith('/admin/chat-bot') ||
-                  pathname.startsWith('/admin/correos')
+                  pathname.startsWith('/admin/correos') ||
+                  pathname.startsWith('/admin/campanas')
                     ? 'text-slate-200 bg-white/[0.03]'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                 }`}
@@ -472,7 +476,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       pathname.startsWith('/admin/reporte-maritimo') ||
                       pathname.startsWith('/admin/monitor') ||
                       pathname.startsWith('/admin/chat-bot') ||
-                      pathname.startsWith('/admin/correos')
+                      pathname.startsWith('/admin/correos') ||
+                      pathname.startsWith('/admin/campanas')
                         ? 'text-brand-yellow shrink-0'
                         : 'text-slate-400 shrink-0'
                     }
@@ -489,15 +494,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </button>
 
-              <div className={`overflow-hidden transition-all duration-200 ${openSections.reportes ? 'max-h-72 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
+              <div className={`overflow-hidden transition-all duration-200 ${openSections.reportes ? 'max-h-80 opacity-100 mt-0.5' : 'max-h-0 opacity-0'}`}>
                 <div className="flex flex-col gap-0.5 ml-5 pl-3 border-l border-white/[0.08]">
                   {[
-                    { href: '/admin/correos', label: 'Actividad de correos', isBot: false },
-                    { href: '/admin/chat-bot', label: 'Chat Bot (Clari)', isBot: true },
-                    { href: '/admin/monitor', label: 'Monitoreo web', isBot: false },
-                    { href: '/admin/reportes-cobros', label: 'Reporte diario de cobros', isBot: false },
-                    { href: '/admin/reporte-maritimo', label: 'Reporte marítimo', isBot: false },
-                  ].map(link => {
+                    { href: '/admin/correos', label: 'Actividad de correos', isBot: false, masterOnly: false },
+                    { href: '/admin/campanas', label: 'Campañas de correo', isBot: false, masterOnly: true },
+                    { href: '/admin/chat-bot', label: 'Chat Bot (Clari)', isBot: true, masterOnly: false },
+                    { href: '/admin/monitor', label: 'Monitoreo web', isBot: false, masterOnly: false },
+                    { href: '/admin/reportes-cobros', label: 'Reporte diario de cobros', isBot: false, masterOnly: false },
+                    { href: '/admin/reporte-maritimo', label: 'Reporte marítimo', isBot: false, masterOnly: false },
+                  ].filter(link => !link.masterOnly || isMaster).map(link => {
                     const isActive = pathname.startsWith(link.href);
                     return (
                       <Link key={link.href} href={link.href} className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-[12px] transition-all ${

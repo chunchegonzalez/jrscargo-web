@@ -167,6 +167,10 @@ export function canAccessAdminPath(
 ): boolean {
   if (!user || !pathname) return true;
   if (pathname === '/admin/login') return true;
+  // Campañas de correo: exclusivo del usuario Master (Jose Gonzalez)
+  if (pathname.startsWith('/admin/campanas')) {
+    return isMasterUser(user.username);
+  }
   if (isFullAccessUser(user)) return true;
 
   // Todos pueden entrar a /admin/ajustes para ver y cambiar únicamente su propia contraseña
