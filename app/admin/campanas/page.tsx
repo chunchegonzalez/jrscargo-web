@@ -541,6 +541,28 @@ export default function CampanasCorreoPage() {
 
   const canSend = validationErrors.length === 0;
 
+  // Consejos anti-spam en tiempo real (evita que Gmail o Hotmail envíen el correo a Spam)
+  const spamWarnings = useMemo(() => {
+    const warns: string[] = [];
+    const s = subject.trim();
+    const b = body.trim();
+    const letters = s.replace(/[^a-zA-ZÁÉÍÓÚÑáéíóúñ]/g, '');
+    const upperLetters = s.replace(/[^A-ZÁÉÍÓÚÑ]/g, '');
+    if (letters.length >= 8 && upperLetters.length / letters.length > 0.55) {
+      warns.push('Evita escribir el asunto en MAYÚSCULAS; los filtros de Gmail y Hotmail lo marcan como spam.');
+    }
+    if (/!{2,}/.test(s) || /!{3,}/.test(b)) {
+      warns.push('Evita múltiples signos de exclamación (!!!); usa un tono natural.');
+    }
+    if (/\b(100%\s*gratis|dinero\s*f[aá]cil|ganador|urgente\s*ahora|oferta\s*incre[ií]ble)\b/i.test(`${s} ${b}`)) {
+      warns.push('Detectamos palabras que suelen activar filtros de spam (ej. "100% gratis", "urgente ahora").');
+    }
+    if (images.length > 0 && b.length < 70) {
+      warns.push('Agrega un poco más de texto junto a la imagen para mantener buena relación texto/imagen.');
+    }
+    return warns;
+  }, [subject, body, images.length]);
+
   const previewRecipient = selectedRecipients[0] || {
     id: 'cliente',
     name: 'María Pérez',
@@ -839,7 +861,7 @@ export default function CampanasCorreoPage() {
     const total = selectedRecipients.length;
     setSendingProgress({ active: true, total, processed: 0, sent: 0, errors: 0 });
 
-    const CHUNK_SIZE = 10;
+    const CHUNK_SIZE = 8;
     let totalSent = 0;
     let totalErrors = 0;
     const allErrors: string[] = [];
@@ -1164,6 +1186,21 @@ export default function CampanasCorreoPage() {
             <ul className="list-disc list-inside space-y-0.5">
               {validationErrors.map((err, i) => (
                 <li key={i}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* Consejos anti-spam en tiempo real */}
+      {validationErrors.length === 0 && spamWarnings.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start gap-3">
+          <AlertTriangle size={17} className="text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1 text-xs text-amber-900">
+            <p className="font-bold">Recomendaciones para evitar la carpeta de Spam:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {spamWarnings.map((w, i) => (
+                <li key={i}>{w}</li>
               ))}
             </ul>
           </div>

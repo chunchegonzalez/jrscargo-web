@@ -544,11 +544,71 @@ export function buildCampaignEmailHtml(opts: {
     '      <div style="border-top:1px solid #e2e8f0;padding-top:18px;text-align:center;">',
     '        <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#0B2737;letter-spacing:0.3px;">JRS CARGO S.A.</p>',
     '        <p style="margin:0;font-size:12.5px;color:#475569;line-height:1.6;">San Pablo de Heredia, Costa Rica<br/>+506 7260-1238 &nbsp;&middot;&nbsp; <a href="https://www.jrscargocr.com" style="color:#12435E;text-decoration:none;font-weight:600;">www.jrscargocr.com</a></p>',
+    '        <p style="margin:10px 0 0;font-size:11px;color:#94a3b8;line-height:1.5;">Recibes este correo por ser cliente de JRS Cargo. Si prefieres no recibir avisos informativos, responde con la palabra BAJA.</p>',
     '      </div>',
     '    </td></tr>',
     '  </table>',
     '</body></html>',
   ].join('\n');
+}
+
+export function buildCampaignPlainText(opts: {
+  recipientName?: string;
+  recipientId?: string;
+  category?: CampaignCategory;
+  variables?: CampaignVariables;
+  headline: string;
+  body: string;
+  highlights?: string[];
+  ctaText?: string;
+  ctaUrl?: string;
+  showWhatsappSecondary?: boolean;
+}): string {
+  const firstName = (opts.recipientName || 'Cliente').trim().split(' ')[0] || 'Cliente';
+  const varCtx = {
+    recipientName: opts.recipientName,
+    recipientId: opts.recipientId,
+    category: opts.category,
+    variables: opts.variables,
+  };
+
+  const lines: string[] = [
+    resolveCampaignVariables(opts.headline, varCtx),
+    '',
+    `Hola, ${firstName}:`,
+    '',
+    resolveCampaignVariables(opts.body, varCtx),
+  ];
+
+  const validHighlights = (opts.highlights || [])
+    .map(h => resolveCampaignVariables(h, varCtx).trim())
+    .filter(Boolean);
+
+  if (validHighlights.length > 0) {
+    lines.push('');
+    validHighlights.forEach(h => lines.push(`- ${h}`));
+  }
+
+  const resolvedCtaText = resolveCampaignVariables(opts.ctaText || '', varCtx).trim();
+  const resolvedCtaUrl = resolveCampaignVariables(opts.ctaUrl || '', varCtx).trim();
+  if (resolvedCtaText && resolvedCtaUrl) {
+    lines.push('', `${resolvedCtaText}: ${resolvedCtaUrl}`);
+  }
+
+  if (opts.showWhatsappSecondary !== false) {
+    lines.push('', '¿Necesitas ayuda? Escríbenos por WhatsApp: https://wa.me/50672601238');
+  }
+
+  lines.push(
+    '',
+    '---',
+    'JRS CARGO S.A.',
+    'San Pablo de Heredia, Costa Rica',
+    'Teléfono / WhatsApp: +506 7260-1238 | https://www.jrscargocr.com',
+    'Si prefieres no recibir estos avisos, responde a este correo con la palabra BAJA.'
+  );
+
+  return lines.join('\n');
 }
 
 export async function sendCampaignBatchEmails(opts: {
@@ -580,15 +640,19 @@ export async function sendCampaignBatchEmails(opts: {
     port: 465,
     secure: true,
     pool: true,
-    maxConnections: 3,
+    maxConnections: 1,
+    rateDelta: 1000,
+    rateLimit: 2,
     auth: { user: smtpUser, pass: smtpPass },
   });
 
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   let sentCount = 0;
   let errorCount = 0;
   const errors: string[] = [];
 
-  for (const rec of opts.recipients) {
+  for (let idx = 0; idx < opts.recipients.length; idx++) {
+    const rec = opts.recipients[idx];
     const email = String(rec.email || '').trim();
     if (!isValidCampaignEmail(email)) continue;
 
@@ -617,16 +681,40 @@ export async function sendCampaignBatchEmails(opts: {
         isTest: opts.isTest,
       });
 
-      const finalSubject = opts.isTest ? `[PRUEBA] ${resolvedSubject}` : resolvedSubject;
+      const text = buildCampaignPlainText({
+        recipientName: rec.name || 'Cliente',
+        recipientId: rec.id,
+        category: opts.category,
+        variables: opts.variables,
+        headline: opts.headline,
+        body: opts.body,
+        highlights: opts.highlights,
+        ctaText: opts.ctaText,
+        ctaUrl: opts.ctaUrl,
+        showWhatsappSecondary: opts.showWhatsappSecondary,
+      });
+
+      const finalSubject = opts.isTest ? `Prueba: ${resolvedSubject}` : resolvedSubject;
 
       await transporter.sendMail({
-        from: `"JRS CARGO" <${smtpUser}>`,
+        from: `"JRS Cargo" <${smtpUser}>`,
+        replyTo: `"JRS Cargo" <${smtpUser}>`,
         to: email,
         subject: finalSubject,
+        text,
         html,
+        headers: {
+          'List-Unsubscribe': `<mailto:${smtpUser}?subject=Baja%20de%20correos%20JRS%20Cargo>`,
+          'X-Entity-Ref-ID': `jrs-camp-${Date.now()}-${idx}`,
+        },
         attachments: attachments && attachments.length > 0 ? attachments : undefined,
       });
       sentCount++;
+
+      // Pausa suave entre correos para evitar filtros anti-ráfaga de Gmail y Hotmail
+      if (idx < opts.recipients.length - 1) {
+        await sleep(600);
+      }
     } catch (err) {
       errorCount++;
       errors.push(`${email}: ${err instanceof Error ? err.message : 'Error SMTP'}`);
