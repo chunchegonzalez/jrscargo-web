@@ -4,6 +4,7 @@ import { formatCostaRicaDateTime } from './billing';
 
 export const EMAIL_CAMPAIGNS_ROW_ID = '__JRS_EMAIL_CAMPAIGNS_STATE__';
 
+export type CampaignCategory = 'promocion' | 'paquete' | 'cobro' | 'estado_cuenta';
 export type CampaignImagePosition = 'top' | 'middle' | 'bottom';
 
 export interface CampaignImage {
@@ -13,11 +14,17 @@ export interface CampaignImage {
   position: CampaignImagePosition;
 }
 
+export interface CampaignVariables {
+  trackingNumber?: string;
+  campaignDate?: string;
+  customLink?: string;
+}
+
 export interface EmailCampaignDraft {
   id: string;
   title: string;
   idea: string;
-  category: 'promocion' | 'aviso' | 'temporada' | 'informativo';
+  category: CampaignCategory;
   subject: string;
   preheader: string;
   badgeText: string;
@@ -27,6 +34,8 @@ export interface EmailCampaignDraft {
   images?: CampaignImage[];
   ctaText: string;
   ctaUrl: string;
+  showWhatsappSecondary?: boolean;
+  variables?: CampaignVariables;
   updatedAtIso: string;
   updatedAtDisplay: string;
 }
@@ -37,6 +46,7 @@ export interface EmailCampaignHistoryEntry {
   sentAtDisplay: string;
   title: string;
   subject: string;
+  category?: CampaignCategory;
   totalRecipients: number;
   sentCount: number;
   errorCount: number;
@@ -54,6 +64,26 @@ const DEFAULT_STATE: EmailCampaignsState = {
   drafts: [],
   history: [],
 };
+
+const FORBIDDEN_PLACEHOLDERS = [
+  'titular de tu campaña',
+  '(sin asunto aún)',
+  '(sin asunto)',
+  '(escribe aquí tu idea)',
+  'lorem ipsum',
+  '[pendiente]',
+  'texto de ejemplo',
+];
+
+const AMOUNT_PATTERN_IN_STATEMENT =
+  /(?:[$₡]\s*\d|\b(?:usd|crc|colones|dólares|dolares)\s*[:.]?\s*\d|\d+(?:[.,]\d{2})?\s*(?:usd|crc|colones|dólares|dolares)\b)/i;
+
+export function normalizeCampaignCategory(raw?: unknown): CampaignCategory {
+  if (raw === 'promocion' || raw === 'paquete' || raw === 'cobro' || raw === 'estado_cuenta') {
+    return raw;
+  }
+  return 'promocion';
+}
 
 export function isValidCampaignEmail(email?: string | null): boolean {
   if (!email) return false;
@@ -92,6 +122,99 @@ export function sanitizeCampaignImages(raw: unknown): CampaignImage[] {
     });
   }
   return valid;
+}
+
+export function validateCampaignPayload(payload: {
+  category: CampaignCategory;
+  subject: string;
+  headline: string;
+  body: string;
+  ctaText: string;
+  ctaUrl: string;
+  variables?: CampaignVariables;
+}): string[] {
+  const errors: string[] = [];
+  const subject = String(payload.subject || '').trim();
+  const headline = String(payload.headline || '').trim();
+  const body = String(payload.body || '').trim();
+  const ctaText = String(payload.ctaText || '').trim();
+  const ctaUrl = String(payload.ctaUrl || '').trim();
+
+  if (!subject) errors.push('Falta el asunto del correo.');
+  if (!headline) errors.push('Falta el título principal del correo.');
+  if (!body) errors.push('Falta el mensaje principal.');
+  if (!ctaText) errors.push('Falta el texto del botón principal.');
+  if (!ctaUrl) {
+    errors.push('Falta el enlace del botón principal.');
+  } else if (
+    !ctaUrl.includes('{{enlace}}') &&
+    !ctaUrl.startsWith('https://') &&
+    !ctaUrl.startsWith('http://')
+  ) {
+    errors.push('El enlace del botón principal debe iniciar con https:// o usar {{enlace}}.');
+  }
+
+  const combined = `${subject}\n${headline}\n${body}\n${ctaText}`;
+  const combinedLower = combined.toLowerCase();
+
+  for (const forbidden of FORBIDDEN_PLACEHOLDERS) {
+    if (combinedLower.includes(forbidden)) {
+      errors.push(`El correo contiene texto de ejemplo sin reemplazar («${forbidden}»).`);
+    }
+  }
+
+  if (/\{\{\s*guia\s*\}\}/i.test(combined) && !String(payload.variables?.trackingNumber || '').trim()) {
+    errors.push('Usaste {{guia}} pero falta completar el número de guía.');
+  }
+  if (/\{\{\s*fecha\s*\}\}/i.test(combined) && !String(payload.variables?.campaignDate || '').trim()) {
+    errors.push('Usaste {{fecha}} pero falta completar la fecha.');
+  }
+  if (
+    payload.category !== 'estado_cuenta' &&
+    (/\{\{\s*enlace\s*\}\}/i.test(combined) || /\{\{\s*enlace\s*\}\}/i.test(ctaUrl)) &&
+    !String(payload.variables?.customLink || '').trim()
+  ) {
+    errors.push('Usaste {{enlace}} pero falta completar el enlace variable.');
+  }
+
+  if (payload.category === 'estado_cuenta') {
+    const statementText = `${subject}\n${headline}\n${body}`;
+    if (AMOUNT_PATTERN_IN_STATEMENT.test(statementText)) {
+      errors.push(
+        'En correos de Estado de Cuenta no incluyas montos pendientes en el mensaje; invita al cliente a consultarlo en línea mediante el botón.'
+      );
+    }
+  }
+
+  return errors;
+}
+
+export function resolveCampaignVariables(
+  text: string,
+  opts: {
+    recipientName?: string;
+    recipientId?: string;
+    category?: CampaignCategory;
+    variables?: CampaignVariables;
+  }
+): string {
+  const firstName = (opts.recipientName || 'Cliente').trim().split(' ')[0] || 'Cliente';
+  const trackingNumber = String(opts.variables?.trackingNumber || '').trim();
+  const campaignDate = String(opts.variables?.campaignDate || '').trim();
+  const statementLink =
+    opts.category === 'estado_cuenta' && opts.recipientId
+      ? `https://www.jrscargocr.com/estado-cuenta/${encodeURIComponent(opts.recipientId)}`
+      : '';
+  const resolvedLink =
+    statementLink ||
+    String(opts.variables?.customLink || '').trim() ||
+    'https://www.jrscargocr.com';
+
+  return String(text || '')
+    .replace(/\{\{\s*nombre\s*\}\}/gi, firstName)
+    .replace(/\{\{\s*guia\s*\}\}/gi, trackingNumber)
+    .replace(/\{\{\s*fecha\s*\}\}/gi, campaignDate)
+    .replace(/\{\{\s*enlace\s*\}\}/gi, resolvedLink);
 }
 
 export async function loadEmailCampaignsState(): Promise<EmailCampaignsState> {
@@ -235,19 +358,29 @@ function prepareInlineImages(images?: CampaignImage[]): {
 function renderImageBlockHtml(img: { src: string; caption: string }, isHero: boolean): string {
   const marginStyle = isHero ? 'margin:0 0 22px;' : 'margin:20px 0 22px;';
   const captionHtml = img.caption
-    ? `<p style="margin:0;padding:10px 14px;background-color:#f8fafc;border-top:1px solid #e2e8f0;font-size:12px;color:#475569;text-align:center;line-height:1.45;font-weight:500;">${escapeHtml(img.caption)}</p>`
+    ? `<p style="margin:0;padding:10px 14px;background-color:#f8fafc;border-top:1px solid #e2e8f0;font-size:12px;color:#475569;text-align:center;line-height:1.45;">${escapeHtml(img.caption)}</p>`
     : '';
 
   return (
-    `<div style="${marginStyle}border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background-color:#f8fafc;">` +
-    `<img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.caption || 'JRS Cargo')}" style="width:100%;max-width:540px;height:auto;display:block;border:0;outline:none;" />` +
+    `<div style="${marginStyle}border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background-color:#f8fafc;">` +
+    `<img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.caption || 'JRS Cargo')}" style="width:100%;max-width:536px;height:auto;display:block;border:0;outline:none;" />` +
     captionHtml +
     '</div>'
   );
 }
 
+/**
+ * Plantilla HTML limpia, sobria y 100% compatible con Gmail, Outlook y móviles:
+ * Encabezado compacto azul JRS Cargo con logo oficial + línea naranja/ámbar ->
+ * Título centrado -> Saludo personalizado -> Mensaje (+ imágenes opcionales) ->
+ * Botón principal según el propósito -> Acción secundaria de WhatsApp ->
+ * Pie compacto con datos de contacto y línea inferior naranja/ámbar.
+ */
 export function buildCampaignEmailHtml(opts: {
   recipientName?: string;
+  recipientId?: string;
+  category?: CampaignCategory;
+  variables?: CampaignVariables;
   preheader?: string;
   badgeText?: string;
   headline: string;
@@ -256,28 +389,40 @@ export function buildCampaignEmailHtml(opts: {
   resolvedImages?: Array<{ src: string; caption: string; position: CampaignImagePosition }>;
   ctaText?: string;
   ctaUrl?: string;
+  showWhatsappSecondary?: boolean;
   isTest?: boolean;
 }): string {
   const firstName = (opts.recipientName || 'Cliente').trim().split(' ')[0] || 'Cliente';
-  const greeting = `Hola ${escapeHtml(firstName)},`;
+  const greeting = `Hola, ${escapeHtml(firstName)}:`;
+
+  const varCtx = {
+    recipientName: opts.recipientName,
+    recipientId: opts.recipientId,
+    category: opts.category,
+    variables: opts.variables,
+  };
+
+  const resolvedHeadline = resolveCampaignVariables(opts.headline, varCtx);
+  const resolvedPreheader = resolveCampaignVariables(opts.preheader || opts.headline, varCtx);
+  const resolvedBody = resolveCampaignVariables(opts.body, varCtx);
+  const resolvedCtaText = resolveCampaignVariables(opts.ctaText || '', varCtx).trim();
+  const resolvedCtaUrl = resolveCampaignVariables(opts.ctaUrl || '', varCtx).trim();
 
   const imgs = opts.resolvedImages || [];
   const topImages = imgs.filter(i => i.position === 'top');
   const middleImages = imgs.filter(i => i.position === 'middle');
   const bottomImages = imgs.filter(i => i.position === 'bottom');
 
-  const rawParagraphs = String(opts.body || '')
-    .replace(/\{\{\s*nombre\s*\}\}/gi, firstName)
+  const rawParagraphs = resolvedBody
     .split(/\n{2,}/)
     .map(p => p.trim())
     .filter(Boolean);
 
   const paragraphHtmlList = rawParagraphs.map(
     p =>
-      `<p style="margin:0 0 15px;font-size:15px;color:#334155;line-height:1.7;">${escapeHtml(p).replace(/\n/g, '<br/>')}</p>`
+      `<p style="margin:0 0 14px;font-size:15px;color:#334155;line-height:1.65;">${escapeHtml(p).replace(/\n/g, '<br/>')}</p>`
   );
 
-  // Place "middle" images right after the 1st paragraph (or at the end if only 0-1 paragraphs)
   let bodyWithMiddleImages = '';
   if (middleImages.length > 0 && paragraphHtmlList.length > 1) {
     const midHtml = middleImages.map(img => renderImageBlockHtml(img, false)).join('');
@@ -292,46 +437,67 @@ export function buildCampaignEmailHtml(opts: {
   const topImagesHtml = topImages.map(img => renderImageBlockHtml(img, true)).join('');
   const bottomImagesHtml = bottomImages.map(img => renderImageBlockHtml(img, false)).join('');
 
-  const validHighlights = (opts.highlights || []).map(h => h.trim()).filter(Boolean);
+  const validHighlights = (opts.highlights || [])
+    .map(h => resolveCampaignVariables(h, varCtx).trim())
+    .filter(Boolean);
+
   const highlightsHtml =
     validHighlights.length > 0
-      ? '<div style="margin:22px 0 24px;padding:20px 22px;background-color:#f8fafc;border:1px solid #e2e8f0;border-top:3px solid #F59E0B;border-radius:12px;">' +
-        '<p style="margin:0 0 12px;font-size:11px;font-weight:800;color:#0B2737;text-transform:uppercase;letter-spacing:1px;">Lo que debes saber</p>' +
-        '<table role="presentation" style="width:100%;border-collapse:collapse;">' +
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 22px;background-color:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #F59E0B;border-radius:8px;">' +
+        '<tr><td style="padding:14px 18px;">' +
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
         validHighlights
           .map(
             h =>
               '<tr>' +
-              '<td style="padding:5px 0;vertical-align:top;width:24px;">' +
-              '<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:999px;background-color:#FEF3C7;color:#B45309;font-size:11px;font-weight:800;">&#10003;</span>' +
-              '</td>' +
-              '<td style="padding:5px 0;font-size:14px;color:#1e293b;line-height:1.5;font-weight:500;">' +
+              '<td width="18" valign="top" style="padding:3px 0;font-size:14px;color:#F59E0B;font-weight:700;">&#8226;</td>' +
+              '<td valign="top" style="padding:3px 0;font-size:14px;color:#1e293b;line-height:1.5;">' +
               escapeHtml(h) +
               '</td>' +
               '</tr>'
           )
           .join('') +
-        '</table></div>'
+        '</table></td></tr></table>'
       : '';
 
-  const ctaUrl = (opts.ctaUrl || '').trim();
-  const ctaText = (opts.ctaText || '').trim();
   const ctaHtml =
-    ctaUrl && ctaText
-      ? '<div style="margin:26px 0 10px;padding:22px 20px;background-color:#0B2737;background-image:linear-gradient(135deg,#0B2737 0%,#12435E 100%);border-radius:12px;text-align:center;">' +
-        '<p style="margin:0 0 14px;font-size:13.5px;color:#e2e8f0;line-height:1.5;">¿Listo para coordinar tus envíos o recibir asesoría personalizada?</p>' +
-        '<table role="presentation" style="margin:0 auto;border-collapse:collapse;">' +
-        '<tr><td align="center" style="border-radius:10px;background-color:#F59E0B;">' +
+    resolvedCtaUrl && resolvedCtaText
+      ? '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">' +
+        '<tr><td align="center">' +
+        '<table role="presentation" cellpadding="0" cellspacing="0">' +
+        '<tr><td align="center" bgcolor="#0B2737" style="border-radius:8px;background-color:#0B2737;">' +
         '<a href="' +
-        escapeHtml(ctaUrl) +
-        '" target="_blank" style="display:inline-block;background-color:#F59E0B;color:#0B2737;font-size:15px;font-weight:800;line-height:20px;text-align:center;text-decoration:none;padding:14px 32px;border-radius:10px;">' +
-        escapeHtml(ctaText) +
-        ' &rarr;</a></td></tr></table></div>'
+        escapeHtml(resolvedCtaUrl) +
+        '" target="_blank" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;">' +
+        escapeHtml(resolvedCtaText) +
+        ' &rarr;</a>' +
+        '</td></tr></table>' +
+        '</td></tr></table>'
       : '';
 
-  const badgeText = (opts.badgeText || 'JRS Cargo Informa').trim();
+  const showWhatsapp = opts.showWhatsappSecondary !== false;
+  const whatsappUrl =
+    'https://wa.me/50672601238?text=' +
+    encodeURIComponent(`Hola JRS Cargo, tengo una consulta sobre: ${resolvedHeadline}`);
+
+  const secondaryWhatsappHtml = showWhatsapp
+    ? '<p style="margin:18px 0 0;text-align:center;font-size:13.5px;color:#475569;line-height:1.5;">' +
+      '¿Necesitas ayuda? ' +
+      '<a href="' +
+      whatsappUrl +
+      '" target="_blank" style="color:#0B2737;font-weight:700;text-decoration:underline;">Escríbenos por WhatsApp</a>' +
+      '</p>'
+    : '';
+
+  const badgeHtml =
+    opts.badgeText && opts.badgeText.trim()
+      ? '<p style="margin:0 0 8px;text-align:center;font-size:11px;font-weight:700;color:#12435E;text-transform:uppercase;letter-spacing:1px;">' +
+        escapeHtml(opts.badgeText.trim()) +
+        '</p>'
+      : '';
+
   const testBanner = opts.isTest
-    ? '<p style="margin:0 0 16px;padding:9px 14px;border-radius:8px;background-color:#fffbeb;border:1px solid #fde68a;color:#b45309;font-size:12px;font-weight:700;text-align:center;">VISTA DE PRUEBA &middot; Este correo es una prueba de campaña antes del envío masivo.</p>'
+    ? '<p style="margin:0 0 18px;padding:8px 12px;border-radius:6px;background-color:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12px;font-weight:700;text-align:center;">CORREO DE PRUEBA &middot; Verificación antes del envío a clientes</p>'
     : '';
 
   return [
@@ -340,76 +506,45 @@ export function buildCampaignEmailHtml(opts: {
     '<style>',
     '  @media only screen and (max-width: 600px) {',
     '    .email-shell { padding: 12px 8px !important; }',
-    '    .email-pad { padding: 22px 18px !important; }',
-    '    .hero-pad { padding: 24px 20px !important; }',
+    '    .email-body { padding: 24px 20px !important; }',
+    '    .email-title { font-size: 21px !important; }',
     '  }',
     '</style>',
     '</head>',
     '<body class="email-shell" style="margin:0;padding:24px 12px;background-color:#eef2f6;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;-webkit-font-smoothing:antialiased;">',
     '  <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:#eef2f6;">' +
-      escapeHtml(opts.preheader || opts.headline) +
+      escapeHtml(resolvedPreheader) +
       '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>',
-    '  <table role="presentation" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border:1px solid #dbe4ee;border-radius:16px;overflow:hidden;border-collapse:separate;">',
-    '    <!-- FRANJA TRICOLOR DEL LOGO JRS CARGO -->',
-    '    <tr><td style="padding:0;height:5px;font-size:0;line-height:0;">',
-    '      <table role="presentation" style="width:100%;border-collapse:collapse;"><tr>',
-    '        <td style="width:55%;height:5px;background-color:#0B2737;"></td>',
-    '        <td style="width:25%;height:5px;background-color:#F59E0B;"></td>',
-    '        <td style="width:20%;height:5px;background-color:#EF4444;"></td>',
+    '  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;margin:0 auto;background-color:#ffffff;border:1px solid #dbe4ee;border-radius:12px;overflow:hidden;">',
+    '    <!-- ENCABEZADO COMPACTO JRS CARGO -->',
+    '    <tr><td align="center" bgcolor="#0B2737" style="padding:18px 24px;background-color:#0B2737;border-bottom:4px solid #F59E0B;">',
+    '      <table role="presentation" cellpadding="0" cellspacing="0"><tr>',
+    '        <td align="center" bgcolor="#ffffff" style="background-color:#ffffff;padding:6px 14px;border-radius:8px;">',
+    '          <img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" height="36" style="height:36px;width:auto;display:block;border:0;" />',
+    '        </td>',
     '      </tr></table>',
     '    </td></tr>',
-    '    <!-- ENCABEZADO HERO -->',
-    '    <tr><td class="hero-pad" style="padding:28px 30px 26px;background-color:#0B2737;background-image:linear-gradient(135deg,#0B2737 0%,#12435E 100%);color:#ffffff;">',
-    '      <table role="presentation" style="width:100%;border-collapse:collapse;">',
-    '        <tr>',
-    '          <td style="vertical-align:middle;">',
-    '            <div style="display:inline-block;background-color:#ffffff;padding:7px 13px;border-radius:10px;">',
-    '              <img src="https://www.jrscargocr.com/logo.png" alt="JRS Cargo" style="height:36px;width:auto;display:block;" />',
-    '            </div>',
-    '          </td>',
-    '          <td style="text-align:right;vertical-align:middle;">',
-    '            <span style="display:inline-block;padding:5px 12px;border-radius:999px;background-color:rgba(245,158,11,0.18);border:1px solid rgba(250,204,21,0.45);color:#FACC15;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.9px;">' +
-      escapeHtml(badgeText) +
-      '</span>',
-    '          </td>',
-    '        </tr>',
-    '      </table>',
-    '      <h1 style="margin:20px 0 0;font-size:25px;font-weight:800;line-height:1.22;color:#ffffff;letter-spacing:-0.4px;">' +
-      escapeHtml(opts.headline) +
-      '</h1>',
-    '      <div style="margin-top:12px;width:54px;height:3px;border-radius:99px;background-color:#F59E0B;"></div>',
-    '    </td></tr>',
     '    <!-- CUERPO DEL CORREO -->',
-    '    <tr><td class="email-pad" style="padding:28px 30px;background-color:#ffffff;">',
+    '    <tr><td class="email-body" style="padding:30px 32px 26px;background-color:#ffffff;">',
     testBanner,
     topImagesHtml,
-    '      <p style="margin:0 0 12px;font-size:17px;font-weight:800;color:#0B2737;">' + greeting + '</p>',
+    badgeHtml,
+    '      <h1 class="email-title" style="margin:0 0 22px;text-align:center;font-size:24px;font-weight:800;line-height:1.25;color:#0B2737;letter-spacing:-0.3px;">' +
+      escapeHtml(resolvedHeadline) +
+      '</h1>',
+    '      <p style="margin:0 0 10px;font-size:16px;font-weight:700;color:#0B2737;">' + greeting + '</p>',
     bodyWithMiddleImages,
     highlightsHtml,
     bottomImagesHtml,
     ctaHtml,
-    '      <!-- FRANJA DE CONFIANZA JRS CARGO -->',
-    '      <table role="presentation" style="width:100%;border-collapse:collapse;margin-top:22px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">',
-    '        <tr>',
-    '          <td style="width:33.3%;padding:12px 8px;text-align:center;border-right:1px solid #e2e8f0;">',
-    '            <p style="margin:0;font-size:11px;font-weight:800;color:#0B2737;text-transform:uppercase;letter-spacing:0.4px;">Miami &rarr; CR</p>',
-    '            <p style="margin:2px 0 0;font-size:11px;color:#64748b;">Aéreo y Marítimo</p>',
-    '          </td>',
-    '          <td style="width:33.3%;padding:12px 8px;text-align:center;border-right:1px solid #e2e8f0;">',
-    '            <p style="margin:0;font-size:11px;font-weight:800;color:#12435E;text-transform:uppercase;letter-spacing:0.4px;">Tracking 24/7</p>',
-    '            <p style="margin:2px 0 0;font-size:11px;color:#64748b;">Seguimiento en línea</p>',
-    '          </td>',
-    '          <td style="width:33.3%;padding:12px 8px;text-align:center;">',
-    '            <p style="margin:0;font-size:11px;font-weight:800;color:#EF4444;text-transform:uppercase;letter-spacing:0.4px;">Soporte Directo</p>',
-    '            <p style="margin:2px 0 0;font-size:11px;color:#64748b;">WhatsApp +506 7260-1238</p>',
-    '          </td>',
-    '        </tr>',
-    '      </table>',
+    secondaryWhatsappHtml,
     '    </td></tr>',
-    '    <!-- PIE DE PÁGINA -->',
-    '    <tr><td style="padding:20px 24px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">',
-    '      <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#0B2737;letter-spacing:0.3px;">JRS CARGO S.A.</p>',
-    '      <p style="margin:0;font-size:11.5px;color:#64748b;line-height:1.65;">San Pablo de Heredia, Costa Rica &nbsp;&middot;&nbsp; <a href="https://wa.me/50672601238" style="color:#12435E;text-decoration:none;font-weight:700;">+506 7260-1238</a><br/><a href="mailto:info@jrscargocr.com" style="color:#64748b;text-decoration:none;">info@jrscargocr.com</a> &nbsp;&middot;&nbsp; <a href="https://www.jrscargocr.com" style="color:#12435E;text-decoration:none;font-weight:700;">www.jrscargocr.com</a></p>',
+    '    <!-- PIE DE PÁGINA COMPACTO -->',
+    '    <tr><td style="padding:0 32px 24px;background-color:#ffffff;border-bottom:4px solid #F59E0B;">',
+    '      <div style="border-top:1px solid #e2e8f0;padding-top:18px;text-align:center;">',
+    '        <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#0B2737;letter-spacing:0.3px;">JRS CARGO S.A.</p>',
+    '        <p style="margin:0;font-size:12.5px;color:#475569;line-height:1.6;">San Pablo de Heredia, Costa Rica<br/>+506 7260-1238 &nbsp;&middot;&nbsp; <a href="https://www.jrscargocr.com" style="color:#12435E;text-decoration:none;font-weight:600;">www.jrscargocr.com</a></p>',
+    '      </div>',
     '    </td></tr>',
     '  </table>',
     '</body></html>',
@@ -417,7 +552,9 @@ export function buildCampaignEmailHtml(opts: {
 }
 
 export async function sendCampaignBatchEmails(opts: {
-  recipients: Array<{ email: string; name?: string }>;
+  recipients: Array<{ id?: string; email: string; name?: string }>;
+  category?: CampaignCategory;
+  variables?: CampaignVariables;
   subject: string;
   preheader?: string;
   badgeText?: string;
@@ -427,6 +564,7 @@ export async function sendCampaignBatchEmails(opts: {
   images?: CampaignImage[];
   ctaText?: string;
   ctaUrl?: string;
+  showWhatsappSecondary?: boolean;
   isTest?: boolean;
 }): Promise<{ sentCount: number; errorCount: number; errors: string[] }> {
   const smtpUser = process.env.SMTP_USER;
@@ -455,8 +593,18 @@ export async function sendCampaignBatchEmails(opts: {
     if (!isValidCampaignEmail(email)) continue;
 
     try {
+      const resolvedSubject = resolveCampaignVariables(opts.subject, {
+        recipientName: rec.name || 'Cliente',
+        recipientId: rec.id,
+        category: opts.category,
+        variables: opts.variables,
+      });
+
       const html = buildCampaignEmailHtml({
         recipientName: rec.name || 'Cliente',
+        recipientId: rec.id,
+        category: opts.category,
+        variables: opts.variables,
         preheader: opts.preheader,
         badgeText: opts.badgeText,
         headline: opts.headline,
@@ -465,10 +613,11 @@ export async function sendCampaignBatchEmails(opts: {
         resolvedImages,
         ctaText: opts.ctaText,
         ctaUrl: opts.ctaUrl,
+        showWhatsappSecondary: opts.showWhatsappSecondary,
         isTest: opts.isTest,
       });
 
-      const finalSubject = opts.isTest ? `[PRUEBA] ${opts.subject}` : opts.subject;
+      const finalSubject = opts.isTest ? `[PRUEBA] ${resolvedSubject}` : resolvedSubject;
 
       await transporter.sendMail({
         from: `"JRS CARGO" <${smtpUser}>`,

@@ -2,14 +2,17 @@ import { NextResponse } from 'next/server';
 import { getAuthUserFromRequest, isMasterUser } from '@/lib/auth';
 import { getClients } from '@/lib/supabase';
 import {
+  CampaignVariables,
   createDraftTimestamp,
   EmailCampaignDraft,
   EmailCampaignHistoryEntry,
   isValidCampaignEmail,
   loadEmailCampaignsState,
+  normalizeCampaignCategory,
   sanitizeCampaignImages,
   saveEmailCampaignsState,
   sendCampaignBatchEmails,
+  validateCampaignPayload,
 } from '@/lib/email-campaigns';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +40,16 @@ async function requireMaster(request: Request) {
   return { error: null, user };
 }
 
+function sanitizeVariables(raw: unknown): CampaignVariables {
+  if (!raw || typeof raw !== 'object') return {};
+  const obj = raw as Record<string, unknown>;
+  return {
+    trackingNumber: typeof obj.trackingNumber === 'string' ? obj.trackingNumber.trim() : '',
+    campaignDate: typeof obj.campaignDate === 'string' ? obj.campaignDate.trim() : '',
+    customLink: typeof obj.customLink === 'string' ? obj.customLink.trim() : '',
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const auth = await requireMaster(request);
@@ -47,7 +60,6 @@ export async function GET(request: Request) {
       getClients(),
     ]);
 
-    // Deduplicate clients by lowercase email, filtering out invalid / pendiente@pendiente
     const seen = new Set<string>();
     const recipients: Array<{ id: string; name: string; email: string }> = [];
 
@@ -93,10 +105,9 @@ export async function POST(request: Request) {
     if (action === 'save_draft') {
       const state = await loadEmailCampaignsState();
       const ts = createDraftTimestamp();
-      const incomingId = typeof body.id === 'string' && body.id.trim() ? body.id.trim() : `draft-${Date.now()}`;
-      const category = ['promocion', 'aviso', 'temporada', 'informativo'].includes(body.category)
-        ? body.category
-        : 'promocion';
+      const incomingId =
+        typeof body.id === 'string' && body.id.trim() ? body.id.trim() : `draft-${Date.now()}`;
+      const category = normalizeCampaignCategory(body.category);
 
       const draft: EmailCampaignDraft = {
         id: incomingId,
@@ -105,7 +116,7 @@ export async function POST(request: Request) {
         category,
         subject: String(body.subject || '').trim(),
         preheader: String(body.preheader || '').trim(),
-        badgeText: String(body.badgeText || 'JRS Cargo').trim(),
+        badgeText: String(body.badgeText || '').trim(),
         headline: String(body.headline || '').trim(),
         body: String(body.body || '').trim(),
         highlights: Array.isArray(body.highlights)
@@ -114,6 +125,8 @@ export async function POST(request: Request) {
         images: sanitizeCampaignImages(body.images),
         ctaText: String(body.ctaText || '').trim(),
         ctaUrl: String(body.ctaUrl || '').trim(),
+        showWhatsappSecondary: body.showWhatsappSecondary !== false,
+        variables: sanitizeVariables(body.variables),
         updatedAtIso: ts.iso,
         updatedAtDisplay: ts.display,
       };
@@ -121,7 +134,7 @@ export async function POST(request: Request) {
       const remaining = (state.drafts || []).filter(d => d.id !== draft.id);
       const nextState = {
         ...state,
-        drafts: [draft, ...remaining].slice(0, 50),
+        drafts: [draft, ...remaining].slice(0, 30),
       };
       await saveEmailCampaignsState(nextState);
       return NextResponse.json({ success: true, draft, data: nextState });
@@ -139,7 +152,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, data: nextState });
     }
 
-    // 3. Send test email
+    // 3. Send test email (with strict validation)
     if (action === 'send_test') {
       const toEmail = String(body.to || '').trim();
       if (!isValidCampaignEmail(toEmail)) {
@@ -149,17 +162,39 @@ export async function POST(request: Request) {
         );
       }
 
+      const category = normalizeCampaignCategory(body.category);
+      const variables = sanitizeVariables(body.variables);
+      const validationErrors = validateCampaignPayload({
+        category,
+        subject: String(body.subject || ''),
+        headline: String(body.headline || ''),
+        body: String(body.body || ''),
+        ctaText: String(body.ctaText || ''),
+        ctaUrl: String(body.ctaUrl || ''),
+        variables,
+      });
+
+      if (validationErrors.length > 0) {
+        return NextResponse.json(
+          { success: false, error: validationErrors[0], validationErrors },
+          { status: 400 }
+        );
+      }
+
       const result = await sendCampaignBatchEmails({
-        recipients: [{ email: toEmail, name: auth.user.username || 'José González' }],
-        subject: String(body.subject || 'Campaña JRS Cargo').trim(),
+        recipients: [{ id: '', email: toEmail, name: auth.user.username || 'José González' }],
+        category,
+        variables,
+        subject: String(body.subject || '').trim(),
         preheader: String(body.preheader || '').trim(),
-        badgeText: String(body.badgeText || 'JRS Cargo').trim(),
-        headline: String(body.headline || body.subject || 'Novedades JRS Cargo').trim(),
+        badgeText: String(body.badgeText || '').trim(),
+        headline: String(body.headline || '').trim(),
         body: String(body.body || '').trim(),
         highlights: Array.isArray(body.highlights) ? body.highlights : [],
         images: sanitizeCampaignImages(body.images),
         ctaText: String(body.ctaText || '').trim(),
         ctaUrl: String(body.ctaUrl || '').trim(),
+        showWhatsappSecondary: body.showWhatsappSecondary !== false,
         isTest: true,
       });
 
@@ -173,10 +208,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, sentCount: result.sentCount, to: toEmail });
     }
 
-    // 4. Send chunk of real recipients (called sequentially by UI for safe progress & no timeouts)
+    // 4. Send chunk of real recipients (with strict validation)
     if (action === 'send_chunk') {
+      const category = normalizeCampaignCategory(body.category);
+      const variables = sanitizeVariables(body.variables);
+      const validationErrors = validateCampaignPayload({
+        category,
+        subject: String(body.subject || ''),
+        headline: String(body.headline || ''),
+        body: String(body.body || ''),
+        ctaText: String(body.ctaText || ''),
+        ctaUrl: String(body.ctaUrl || ''),
+        variables,
+      });
+
+      if (validationErrors.length > 0) {
+        return NextResponse.json(
+          { success: false, error: validationErrors[0], validationErrors },
+          { status: 400 }
+        );
+      }
+
       const recipients = Array.isArray(body.recipients)
-        ? body.recipients.slice(0, 15).map((r: { email?: string; name?: string }) => ({
+        ? body.recipients.slice(0, 15).map((r: { id?: string; email?: string; name?: string }) => ({
+            id: typeof r?.id === 'string' ? r.id.trim() : '',
             email: String(r?.email || '').trim(),
             name: String(r?.name || 'Cliente').trim(),
           }))
@@ -188,15 +243,18 @@ export async function POST(request: Request) {
 
       const result = await sendCampaignBatchEmails({
         recipients,
-        subject: String(body.subject || 'Campaña JRS Cargo').trim(),
+        category,
+        variables,
+        subject: String(body.subject || '').trim(),
         preheader: String(body.preheader || '').trim(),
-        badgeText: String(body.badgeText || 'JRS Cargo').trim(),
-        headline: String(body.headline || body.subject || 'Novedades JRS Cargo').trim(),
+        badgeText: String(body.badgeText || '').trim(),
+        headline: String(body.headline || '').trim(),
         body: String(body.body || '').trim(),
         highlights: Array.isArray(body.highlights) ? body.highlights : [],
         images: sanitizeCampaignImages(body.images),
         ctaText: String(body.ctaText || '').trim(),
         ctaUrl: String(body.ctaUrl || '').trim(),
+        showWhatsappSecondary: body.showWhatsappSecondary !== false,
         isTest: false,
       });
 
@@ -218,6 +276,7 @@ export async function POST(request: Request) {
         sentAtDisplay: ts.display,
         title: String(body.title || body.subject || 'Campaña').trim(),
         subject: String(body.subject || '').trim(),
+        category: normalizeCampaignCategory(body.category),
         totalRecipients: Number(body.totalRecipients) || 0,
         sentCount: Number(body.sentCount) || 0,
         errorCount: Number(body.errorCount) || 0,

@@ -24,10 +24,16 @@ import {
   ShieldCheck,
   ImagePlus,
   Link2,
+  Monitor,
+  Smartphone,
+  Package,
+  Tag,
+  Receipt,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 
-type CampaignCategory = 'promocion' | 'aviso' | 'temporada' | 'informativo';
+type CampaignCategory = 'promocion' | 'paquete' | 'cobro' | 'estado_cuenta';
 type CampaignImagePosition = 'top' | 'middle' | 'bottom';
 
 type CampaignImage = {
@@ -35,6 +41,12 @@ type CampaignImage = {
   src: string;
   caption?: string;
   position: CampaignImagePosition;
+};
+
+type CampaignVariables = {
+  trackingNumber?: string;
+  campaignDate?: string;
+  customLink?: string;
 };
 
 type CampaignDraft = {
@@ -51,6 +63,8 @@ type CampaignDraft = {
   images?: CampaignImage[];
   ctaText: string;
   ctaUrl: string;
+  showWhatsappSecondary?: boolean;
+  variables?: CampaignVariables;
   updatedAtIso: string;
   updatedAtDisplay: string;
 };
@@ -61,10 +75,12 @@ type CampaignHistoryEntry = {
   sentAtDisplay: string;
   title: string;
   subject: string;
+  category?: CampaignCategory;
   totalRecipients: number;
   sentCount: number;
   errorCount: number;
   sentBy: string;
+  imagesCount?: number;
   errors?: string[];
 };
 
@@ -74,113 +90,193 @@ type Recipient = {
   email: string;
 };
 
-const CATEGORY_OPTIONS: Array<{ id: CampaignCategory; label: string; badge: string }> = [
-  { id: 'promocion', label: 'Promoción / Descuento', badge: 'Promoción Especial' },
-  { id: 'aviso', label: 'Aviso / Horario', badge: 'Aviso Importante' },
-  { id: 'temporada', label: 'Temporada / Festivo', badge: 'Temporada JRS Cargo' },
-  { id: 'informativo', label: 'Informativo / Novedad', badge: 'Novedades JRS Cargo' },
+const FORBIDDEN_PLACEHOLDERS = [
+  'titular de tu campaña',
+  '(sin asunto aún)',
+  '(sin asunto)',
+  '(escribe aquí tu idea)',
+  'lorem ipsum',
+  '[pendiente]',
+  'texto de ejemplo',
 ];
 
-const DEFAULT_WHATSAPP_URL =
-  'https://wa.me/50672601238?text=' + encodeURIComponent('Hola JRS Cargo, vi su campaña y deseo más información.');
+const AMOUNT_PATTERN_IN_STATEMENT =
+  /(?:[$₡]\s*\d|\b(?:usd|crc|colones|dólares|dolares)\s*[:.]?\s*\d|\d+(?:[.,]\d{2})?\s*(?:usd|crc|colones|dólares|dolares)\b)/i;
 
-function generateLocalDraftFromIdea(idea: string, category: CampaignCategory): {
-  subject: string;
-  preheader: string;
-  badgeText: string;
-  headline: string;
-  body: string;
-  highlights: string[];
-  ctaText: string;
-  ctaUrl: string;
-} {
+const TEMPLATE_TYPES: Array<{
+  id: CampaignCategory;
+  label: string;
+  shortDesc: string;
+  badge: string;
+  defaultSubject: string;
+  defaultHeadline: string;
+  defaultBody: string;
+  defaultHighlights: string[];
+  defaultCtaText: string;
+  defaultCtaUrl: string;
+  showWhatsappSecondary: boolean;
+}> = [
+  {
+    id: 'promocion',
+    label: 'Promociones',
+    shortDesc: 'Descuentos, tarifas especiales y temporadas',
+    badge: 'Promoción Especial',
+    defaultSubject: 'Beneficio especial en tus próximos envíos con JRS Cargo',
+    defaultHeadline: 'Aprovecha nuestra promoción de envíos',
+    defaultBody:
+      'Queremos agradecer tu confianza en JRS Cargo con una promoción especial para tus próximas compras en Estados Unidos.\n\nCoordina tus envíos aéreos o marítimos antes del {{fecha}} y aprovecha nuestras condiciones preferenciales directo hasta Costa Rica.',
+    defaultHighlights: [
+      'Envíos seguros desde nuestra bodega en Miami hasta Heredia',
+      'Seguimiento en línea para cada uno de tus paquetes',
+    ],
+    defaultCtaText: 'Ver promoción en línea',
+    defaultCtaUrl: 'https://www.jrscargocr.com',
+    showWhatsappSecondary: true,
+  },
+  {
+    id: 'paquete',
+    label: 'Actualizaciones de paquetes',
+    shortDesc: 'En tránsito, recibido en bodega o listo para retiro',
+    badge: 'Actualización de Envío',
+    defaultSubject: 'Tu paquete {{guia}} está en camino - JRS Cargo',
+    defaultHeadline: 'Tu paquete está en camino',
+    defaultBody:
+      'Tu envío {{guia}} ya está en tránsito hacia Costa Rica. Puedes consultar el estado y los movimientos de tu paquete desde el siguiente enlace.',
+    defaultHighlights: [],
+    defaultCtaText: 'Rastrear mi paquete',
+    defaultCtaUrl: 'https://www.jrscargocr.com/tracking',
+    showWhatsappSecondary: true,
+  },
+  {
+    id: 'cobro',
+    label: 'Notificaciones de cobro',
+    shortDesc: 'Aviso de comprobante disponible o recordatorio de pago',
+    badge: 'Notificación de Cobro',
+    defaultSubject: 'Recordatorio de pago disponible - JRS Cargo',
+    defaultHeadline: 'Tienes un comprobante pendiente de revisión',
+    defaultBody:
+      'Te recordamos amablemente que tienes un comprobante emitido el {{fecha}} pendiente de cancelación.\n\nPuedes revisar el detalle completo desde tu portal en línea. Si ya realizaste el pago recientemente, por favor omite este aviso o compártenos el comprobante por WhatsApp.',
+    defaultHighlights: [],
+    defaultCtaText: 'Consultar mis comprobantes',
+    defaultCtaUrl: 'https://www.jrscargocr.com',
+    showWhatsappSecondary: true,
+  },
+  {
+    id: 'estado_cuenta',
+    label: 'Estados de cuenta',
+    shortDesc: 'Invitación segura al portal (sin monto en el mensaje)',
+    badge: 'Estado de Cuenta',
+    defaultSubject: 'Tu estado de cuenta en línea está disponible - JRS Cargo',
+    defaultHeadline: 'Tu estado de cuenta está actualizado',
+    defaultBody:
+      'Tu estado de cuenta en JRS Cargo ya se encuentra actualizado al {{fecha}}.\n\nIngresa de forma segura desde el siguiente botón para revisar tus comprobantes, pagos aplicados y el detalle de tu cuenta en línea.',
+    defaultHighlights: [],
+    defaultCtaText: 'Ver mi estado de cuenta en línea',
+    defaultCtaUrl: '{{enlace}}',
+    showWhatsappSecondary: true,
+  },
+];
+
+function getTodayCostaRicaLabel(): string {
+  const cr = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const dd = String(cr.getUTCDate()).padStart(2, '0');
+  const mm = String(cr.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = cr.getUTCFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function generateLocalDraftFromIdea(idea: string, category: CampaignCategory) {
+  const base = TEMPLATE_TYPES.find(t => t.id === category) || TEMPLATE_TYPES[0];
   const cleanIdea = idea.trim();
-  const shortTitle =
-    cleanIdea.length > 62 ? cleanIdea.slice(0, 59).trim() + '...' : cleanIdea || 'Novedades para tus envíos';
-
-  if (category === 'promocion') {
+  if (!cleanIdea) {
     return {
-      subject: `Aprovecha nuestra promoción: ${shortTitle} - JRS Cargo`,
-      preheader: `${cleanIdea || 'Beneficio exclusivo para clientes de JRS Cargo'}.`,
-      badgeText: 'Promoción Especial',
-      headline: cleanIdea || 'Beneficio especial en tus próximos envíos',
-      body: `En JRS Cargo queremos premiar tu confianza con una oportunidad especial pensada para ti:\n\n${cleanIdea || 'Aprovecha condiciones preferenciales en tus envíos aéreos y marítimos desde Estados Unidos hasta Costa Rica.'}\n\nSi deseas cotizar o coordinar tus compras, nuestro equipo está listo para ayudarte hoy mismo.`,
-      highlights: [
-        'Atención personalizada por WhatsApp y seguimiento de tus paquetes',
-        'Envíos seguros desde Miami directo a nuestra bodega en Heredia',
-        'Consulta tu estado de cuenta y tracking en línea en cualquier momento',
-      ],
-      ctaText: 'Aprovechar por WhatsApp',
-      ctaUrl: DEFAULT_WHATSAPP_URL,
+      subject: base.defaultSubject,
+      badgeText: base.badge,
+      headline: base.defaultHeadline,
+      body: base.defaultBody,
+      highlights: base.defaultHighlights,
+      ctaText: base.defaultCtaText,
+      ctaUrl: base.defaultCtaUrl,
+      showWhatsappSecondary: base.showWhatsappSecondary,
     };
   }
 
-  if (category === 'aviso') {
+  const shortTitle = cleanIdea.length > 60 ? cleanIdea.slice(0, 57).trim() + '...' : cleanIdea;
+
+  if (category === 'estado_cuenta') {
     return {
-      subject: `Aviso importante: ${shortTitle} - JRS Cargo`,
-      preheader: `Información importante para tus paquetes y retiros en JRS Cargo.`,
-      badgeText: 'Aviso Importante',
-      headline: cleanIdea || 'Comunicado importante para nuestros clientes',
-      body: `Te compartimos la siguiente actualización importante sobre nuestra operación en JRS Cargo:\n\n${cleanIdea || 'Por favor toma nota de esta información para planificar el envío y retiro de tus paquetes sin inconvenientes.'}\n\nAgradecemos tu comprensión y quedamos a tu disposición ante cualquier consulta.`,
-      highlights: [
-        'Revisa el estado de tus paquetes en tiempo real en nuestra web',
-        'Nuestro equipo de soporte sigue disponible vía WhatsApp (+506 7260-1238)',
-      ],
-      ctaText: 'Consultar por WhatsApp',
-      ctaUrl: DEFAULT_WHATSAPP_URL,
+      subject: `Estado de cuenta actualizado - JRS Cargo`,
+      badgeText: base.badge,
+      headline: 'Tu estado de cuenta está listo para consulta',
+      body: `${cleanIdea}\n\nIngresa de forma segura a tu portal personal desde el siguiente botón para consultar tus comprobantes y movimientos actualizados.`,
+      highlights: [],
+      ctaText: 'Ver mi estado de cuenta en línea',
+      ctaUrl: '{{enlace}}',
+      showWhatsappSecondary: true,
     };
   }
 
-  if (category === 'temporada') {
+  if (category === 'paquete') {
     return {
-      subject: `${shortTitle} - JRS Cargo`,
-      preheader: `Planifica tus compras y envíos de temporada con JRS Cargo.`,
-      badgeText: 'Temporada JRS Cargo',
-      headline: cleanIdea || 'Prepara tus envíos de temporada con JRS Cargo',
-      body: `Se acerca una temporada muy especial y en JRS Cargo queremos ayudarte a recibir todas tus compras a tiempo:\n\n${cleanIdea || 'Te recomendamos realizar tus pedidos con anticipación para asegurar una entrega rápida y sin contratiempos.'}\n\nCuenta con nosotros para traer tus paquetes con total seguridad.`,
-      highlights: [
-        'Salidas constantes y monitoreo de cada paquete desde Miami a Costa Rica',
-        'Asesoría directa para compras en sitio web y consolidación',
-        'Retiro ágil en San Pablo de Heredia o coordinación de entrega',
-      ],
-      ctaText: 'Coordinar mis envíos',
-      ctaUrl: DEFAULT_WHATSAPP_URL,
+      subject: `Actualización de tu paquete - JRS Cargo`,
+      badgeText: base.badge,
+      headline: shortTitle,
+      body: `${cleanIdea}\n\nPuedes consultar el estado y los movimientos actualizados de tu envío en línea desde el siguiente enlace.`,
+      highlights: [],
+      ctaText: 'Rastrear mi paquete',
+      ctaUrl: 'https://www.jrscargocr.com/tracking',
+      showWhatsappSecondary: true,
+    };
+  }
+
+  if (category === 'cobro') {
+    return {
+      subject: `Aviso importante sobre tu comprobante - JRS Cargo`,
+      badgeText: base.badge,
+      headline: shortTitle,
+      body: `${cleanIdea}\n\nSi ya realizaste tu pago recientemente, puedes compartirnos el comprobante por WhatsApp para aplicarlo de inmediato.`,
+      highlights: [],
+      ctaText: 'Ver mis comprobantes en línea',
+      ctaUrl: 'https://www.jrscargocr.com',
+      showWhatsappSecondary: true,
     };
   }
 
   return {
     subject: `${shortTitle} - JRS Cargo`,
-    preheader: `Conoce las novedades que tenemos preparadas para ti en JRS Cargo.`,
-    badgeText: 'Novedades JRS Cargo',
-    headline: cleanIdea || 'Novedades en JRS Cargo para tus envíos',
-    body: `Queremos contarte las últimas novedades que hemos preparado para mejorar tu experiencia con JRS Cargo:\n\n${cleanIdea || 'Seguimos mejorando nuestros servicios para que importar tus compras sea cada vez más rápido y sencillo.'}\n\nGracias por confiar tus envíos a nuestro equipo.`,
+    badgeText: base.badge,
+    headline: shortTitle,
+    body: `${cleanIdea}\n\nAprovecha esta oportunidad para traer tus compras desde Estados Unidos con el respaldo y la seguridad de JRS Cargo.`,
     highlights: [
-      'Seguimiento claro de todos tus paquetes y comprobantes',
-      'Soporte directo por WhatsApp para cotizaciones y consultas',
+      'Envíos seguros desde Miami directo a San Pablo de Heredia',
+      'Seguimiento en línea para cada paquete',
     ],
-    ctaText: 'Visitar JRS Cargo',
+    ctaText: 'Ver promoción en línea',
     ctaUrl: 'https://www.jrscargocr.com',
+    showWhatsappSecondary: true,
   };
 }
 
 function buildGeminiPrompt(idea: string, category: CampaignCategory): string {
-  const catLabel = CATEGORY_OPTIONS.find(c => c.id === category)?.label || 'Promoción';
+  const cat = TEMPLATE_TYPES.find(t => t.id === category) || TEMPLATE_TYPES[0];
+  const statementRule =
+    category === 'estado_cuenta'
+      ? 'REGLA OBLIGATORIA: NO incluyas ningún monto ni cifra de dinero en el correo. Invita al cliente a consultar su estado de cuenta en línea con el botón.'
+      : 'Puedes usar las variables {{nombre}}, {{guia}}, {{fecha}} o {{enlace}} solo si aplican.';
+
   return [
-    'Actúa como redactor de marketing para JRS Cargo S.A. (empresa de courier y envíos de Estados Unidos a Costa Rica, ubicada en San Pablo de Heredia, WhatsApp +506 7260-1238, web www.jrscargocr.com).',
-    `Tipo de campaña: ${catLabel}.`,
-    `Idea principal: ${idea.trim() || '(escribe aquí tu idea)'}`,
+    'Redacta un correo profesional, limpio y cercano en español de Costa Rica para JRS Cargo S.A. (courier de Estados Unidos a Costa Rica, San Pablo de Heredia, WhatsApp +506 7260-1238, www.jrscargocr.com).',
+    `Tipo de correo: ${cat.label}.`,
+    `Idea principal: ${idea.trim() || cat.defaultHeadline}`,
+    statementRule,
+    'Evita sonar genérico o exagerado. Usa EXACTAMENTE estas etiquetas:',
     '',
-    'Redacta un correo claro, cercano, profesional y persuasivo en español de Costa Rica. Usa EXACTAMENTE estas etiquetas para poder pegarlo en el sistema:',
-    '',
-    'ASUNTO: (máximo 65 caracteres, atractivo y directo)',
-    'ETIQUETA: (2 o 3 palabras, ej: Promoción Especial)',
-    'TITULAR: (título principal del banner del correo)',
-    'MENSAJE: (2 o 3 párrafos cortos, sin incluir saludo "Hola" porque el sistema lo agrega automáticamente con el nombre de cada cliente)',
-    'DESTACADOS:',
-    '- Punto clave 1',
-    '- Punto clave 2',
-    '- Punto clave 3',
-    'BOTON: (texto corto para el botón principal, ej: Cotizar por WhatsApp)',
+    'ASUNTO: (máximo 65 caracteres, claro y directo)',
+    'ETIQUETA: (2 o 3 palabras, ej: Actualización de Envío)',
+    'TITULAR: (título principal corto y claro)',
+    'MENSAJE: (1 a 3 párrafos breves y fáciles de leer en celular, sin escribir "Hola" porque el sistema lo agrega personalizado)',
+    'DESTACADOS: (opcional, 0 a 3 viñetas cortas con guion)',
+    'BOTON: (texto claro para el botón principal según el propósito del correo)',
   ].join('\n');
 }
 
@@ -218,7 +314,6 @@ function parseGeminiResponse(rawText: string): Partial<{
         .filter(Boolean)
     : [];
 
-  // Fallback: if user pasted plain text without labels, put it into body
   if (!subject && !headline && !body) {
     return { body: text };
   }
@@ -264,6 +359,32 @@ function compressImageFileToDataUrl(file: File, maxWidth = 960, quality = 0.84):
   });
 }
 
+function resolvePreviewVariables(
+  text: string,
+  opts: {
+    sampleName: string;
+    sampleClientId?: string;
+    category: CampaignCategory;
+    trackingNumber: string;
+    campaignDate: string;
+    customLink: string;
+  }
+): string {
+  const firstName = (opts.sampleName || 'María').trim().split(' ')[0] || 'María';
+  const statementLink =
+    opts.category === 'estado_cuenta'
+      ? `https://www.jrscargocr.com/estado-cuenta/${encodeURIComponent(opts.sampleClientId || 'cliente')}`
+      : '';
+  const resolvedLink =
+    statementLink || opts.customLink.trim() || 'https://www.jrscargocr.com';
+
+  return String(text || '')
+    .replace(/\{\{\s*nombre\s*\}\}/gi, firstName)
+    .replace(/\{\{\s*guia\s*\}\}/gi, opts.trackingNumber.trim() || '{{guia}}')
+    .replace(/\{\{\s*fecha\s*\}\}/gi, opts.campaignDate.trim() || '{{fecha}}')
+    .replace(/\{\{\s*enlace\s*\}\}/gi, resolvedLink);
+}
+
 export default function CampanasCorreoPage() {
   const { showAlert } = useModal();
 
@@ -273,33 +394,41 @@ export default function CampanasCorreoPage() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [excludedEmails, setExcludedEmails] = useState<Record<string, boolean>>({});
 
-  // Current editor state
+  // Default template: Actualizaciones de paquetes (clean & ready to inspect)
+  const initialTemplate = TEMPLATE_TYPES[0];
   const [activeDraftId, setActiveDraftId] = useState<string>('');
   const [idea, setIdea] = useState('');
-  const [category, setCategory] = useState<CampaignCategory>('promocion');
-  const [subject, setSubject] = useState('');
+  const [category, setCategory] = useState<CampaignCategory>(initialTemplate.id);
+  const [subject, setSubject] = useState(initialTemplate.defaultSubject);
   const [preheader, setPreheader] = useState('');
-  const [badgeText, setBadgeText] = useState('Promoción Especial');
-  const [headline, setHeadline] = useState('');
-  const [body, setBody] = useState('');
-  const [highlightsText, setHighlightsText] = useState('');
+  const [badgeText, setBadgeText] = useState(initialTemplate.badge);
+  const [headline, setHeadline] = useState(initialTemplate.defaultHeadline);
+  const [body, setBody] = useState(initialTemplate.defaultBody);
+  const [highlightsText, setHighlightsText] = useState(initialTemplate.defaultHighlights.join('\n'));
   const [images, setImages] = useState<CampaignImage[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [showImageUrlInput, setShowImageUrlInput] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [ctaText, setCtaText] = useState('Escribir por WhatsApp');
-  const [ctaUrl, setCtaUrl] = useState(DEFAULT_WHATSAPP_URL);
+  const [ctaText, setCtaText] = useState(initialTemplate.defaultCtaText);
+  const [ctaUrl, setCtaUrl] = useState(initialTemplate.defaultCtaUrl);
+  const [showWhatsappSecondary, setShowWhatsappSecondary] = useState<boolean>(true);
+
+  // Variables state
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [campaignDate, setCampaignDate] = useState(() => getTodayCostaRicaLabel());
+  const [customLink, setCustomLink] = useState('https://www.jrscargocr.com');
 
   // Gemini web zero-token helper state
   const [promptCopied, setPromptCopied] = useState(false);
   const [showPasteBox, setShowPasteBox] = useState(false);
   const [geminiPasteText, setGeminiPasteText] = useState('');
 
-  // Actions & Modals
+  // Actions & Preview state
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState('josegon2000@hotmail.com');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [activeSideTab, setActiveSideTab] = useState<'preview' | 'drafts' | 'history'>('preview');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   // Recipients selector modal
   const [recipientsModalOpen, setRecipientsModalOpen] = useState(false);
@@ -360,20 +489,107 @@ export default function CampanasCorreoPage() {
     [highlightsText]
   );
 
-  const handleGenerateLocalDraft = () => {
-    if (!idea.trim()) {
-      showAlert('Escribe tu idea', 'Primero escribe una breve idea de campaña para generar el borrador.', 'error');
-      return;
+  // Strict real-time validation blocking sends if missing required data or placeholders
+  const validationErrors = useMemo(() => {
+    const errs: string[] = [];
+    const s = subject.trim();
+    const h = headline.trim();
+    const b = body.trim();
+    const ct = ctaText.trim();
+    const cu = ctaUrl.trim();
+
+    if (!s) errs.push('Falta el asunto del correo.');
+    if (!h) errs.push('Falta el título principal.');
+    if (!b) errs.push('Falta el mensaje principal.');
+    if (!ct) errs.push('Falta el texto del botón principal.');
+    if (!cu) {
+      errs.push('Falta el enlace del botón principal.');
+    } else if (!cu.includes('{{enlace}}') && !cu.startsWith('https://') && !cu.startsWith('http://')) {
+      errs.push('El enlace del botón principal debe empezar con https:// o usar {{enlace}}.');
     }
+
+    const combined = `${s}\n${h}\n${b}\n${ct}`;
+    const lower = combined.toLowerCase();
+    for (const forbidden of FORBIDDEN_PLACEHOLDERS) {
+      if (lower.includes(forbidden)) {
+        errs.push(`Reemplaza el texto de ejemplo («${forbidden}») antes de enviar.`);
+      }
+    }
+
+    if (/\{\{\s*guia\s*\}\}/i.test(combined) && !trackingNumber.trim()) {
+      errs.push('El mensaje usa {{guia}}: completa el campo «Número de guía».');
+    }
+    if (/\{\{\s*fecha\s*\}\}/i.test(combined) && !campaignDate.trim()) {
+      errs.push('El mensaje usa {{fecha}}: completa el campo «Fecha».');
+    }
+    if (
+      category !== 'estado_cuenta' &&
+      (/\{\{\s*enlace\s*\}\}/i.test(combined) || /\{\{\s*enlace\s*\}\}/i.test(cu)) &&
+      !customLink.trim()
+    ) {
+      errs.push('El correo usa {{enlace}}: completa el campo «Enlace».');
+    }
+
+    if (category === 'estado_cuenta' && AMOUNT_PATTERN_IN_STATEMENT.test(`${s}\n${h}\n${b}`)) {
+      errs.push(
+        'En correos de Estado de Cuenta no incluyas montos pendientes en el mensaje; invita al cliente a consultarlo en línea mediante el botón.'
+      );
+    }
+
+    return errs;
+  }, [subject, headline, body, ctaText, ctaUrl, trackingNumber, campaignDate, customLink, category]);
+
+  const canSend = validationErrors.length === 0;
+
+  const previewRecipient = selectedRecipients[0] || {
+    id: 'cliente',
+    name: 'María Pérez',
+    email: testEmailTo || 'cliente@ejemplo.com',
+  };
+
+  const previewVarCtx = useMemo(
+    () => ({
+      sampleName: previewRecipient.name,
+      sampleClientId: previewRecipient.id,
+      category,
+      trackingNumber,
+      campaignDate,
+      customLink,
+    }),
+    [previewRecipient.name, previewRecipient.id, category, trackingNumber, campaignDate, customLink]
+  );
+
+  const previewSubject = resolvePreviewVariables(subject, previewVarCtx);
+  const previewHeadline = resolvePreviewVariables(headline, previewVarCtx);
+  const previewBody = resolvePreviewVariables(body, previewVarCtx);
+  const previewCtaText = resolvePreviewVariables(ctaText, previewVarCtx);
+  const previewFirstName = (previewRecipient.name || 'María').trim().split(' ')[0] || 'María';
+
+  const applyTemplatePreset = (catId: CampaignCategory) => {
+    const preset = TEMPLATE_TYPES.find(t => t.id === catId) || TEMPLATE_TYPES[0];
+    setCategory(preset.id);
+    setSubject(preset.defaultSubject);
+    setBadgeText(preset.badge);
+    setHeadline(preset.defaultHeadline);
+    setBody(preset.defaultBody);
+    setHighlightsText(preset.defaultHighlights.join('\n'));
+    setCtaText(preset.defaultCtaText);
+    setCtaUrl(preset.defaultCtaUrl);
+    setShowWhatsappSecondary(preset.showWhatsappSecondary);
+    if (!campaignDate.trim()) setCampaignDate(getTodayCostaRicaLabel());
+    setActiveSideTab('preview');
+  };
+
+  const handleGenerateLocalDraft = () => {
     const generated = generateLocalDraftFromIdea(idea, category);
     setSubject(generated.subject);
-    setPreheader(generated.preheader);
     setBadgeText(generated.badgeText);
     setHeadline(generated.headline);
     setBody(generated.body);
     setHighlightsText(generated.highlights.join('\n'));
     setCtaText(generated.ctaText);
     setCtaUrl(generated.ctaUrl);
+    setShowWhatsappSecondary(generated.showWhatsappSecondary);
     setActiveSideTab('preview');
   };
 
@@ -384,7 +600,7 @@ export default function CampanasCorreoPage() {
       setPromptCopied(true);
       setTimeout(() => setPromptCopied(false), 3500);
     } catch {
-      // Fallback: still open Gemini and show paste box
+      // Ignore clipboard failure
     }
     setShowPasteBox(true);
     window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
@@ -407,37 +623,42 @@ export default function CampanasCorreoPage() {
     setShowPasteBox(false);
     setGeminiPasteText('');
     setActiveSideTab('preview');
-    showAlert('Borrador actualizado', 'Se aplicó la respuesta de Gemini a tu campaña. Revísala en la vista previa.', 'success');
+    showAlert('Borrador actualizado', 'Se aplicó la respuesta de Gemini a tu plantilla.', 'success');
   };
 
   const handleNewDraft = () => {
     setActiveDraftId('');
     setIdea('');
-    setCategory('promocion');
-    setSubject('');
-    setPreheader('');
-    setBadgeText('Promoción Especial');
-    setHeadline('');
-    setBody('');
-    setHighlightsText('');
     setImages([]);
-    setCtaText('Escribir por WhatsApp');
-    setCtaUrl(DEFAULT_WHATSAPP_URL);
+    setTrackingNumber('');
+    setCampaignDate(getTodayCostaRicaLabel());
+    applyTemplatePreset(category);
   };
 
   const handleLoadDraft = (d: CampaignDraft) => {
+    const validCat: CampaignCategory =
+      d.category === 'promocion' ||
+      d.category === 'paquete' ||
+      d.category === 'cobro' ||
+      d.category === 'estado_cuenta'
+        ? d.category
+        : 'promocion';
     setActiveDraftId(d.id);
     setIdea(d.idea || '');
-    setCategory(d.category || 'promocion');
+    setCategory(validCat);
     setSubject(d.subject || '');
     setPreheader(d.preheader || '');
-    setBadgeText(d.badgeText || 'JRS Cargo');
+    setBadgeText(d.badgeText || '');
     setHeadline(d.headline || '');
     setBody(d.body || '');
     setHighlightsText((d.highlights || []).join('\n'));
     setImages(Array.isArray(d.images) ? d.images : []);
     setCtaText(d.ctaText || '');
-    setCtaUrl(d.ctaUrl || DEFAULT_WHATSAPP_URL);
+    setCtaUrl(d.ctaUrl || 'https://www.jrscargocr.com');
+    setShowWhatsappSecondary(d.showWhatsappSecondary !== false);
+    setTrackingNumber(d.variables?.trackingNumber || '');
+    setCampaignDate(d.variables?.campaignDate || getTodayCostaRicaLabel());
+    setCustomLink(d.variables?.customLink || 'https://www.jrscargocr.com');
     setActiveSideTab('preview');
   };
 
@@ -445,7 +666,7 @@ export default function CampanasCorreoPage() {
     if (!fileList || fileList.length === 0) return;
     const remainingSlots = Math.max(0, 4 - images.length);
     if (remainingSlots === 0) {
-      showAlert('Límite alcanzado', 'Puedes incluir hasta 4 imágenes por campaña.', 'error');
+      showAlert('Límite alcanzado', 'Puedes incluir hasta 4 imágenes por correo.', 'error');
       return;
     }
 
@@ -481,7 +702,7 @@ export default function CampanasCorreoPage() {
       return;
     }
     if (images.length >= 4) {
-      showAlert('Límite alcanzado', 'Puedes incluir hasta 4 imágenes por campaña.', 'error');
+      showAlert('Límite alcanzado', 'Puedes incluir hasta 4 imágenes por correo.', 'error');
       return;
     }
     setImages(prev => [
@@ -500,7 +721,7 @@ export default function CampanasCorreoPage() {
 
   const handleSaveDraft = async () => {
     if (!subject.trim() && !headline.trim() && !body.trim()) {
-      showAlert('Borrador vacío', 'Agrega al menos un asunto o mensaje antes de guardar el borrador.', 'error');
+      showAlert('Borrador vacío', 'Agrega al menos un asunto o mensaje antes de guardar.', 'error');
       return;
     }
     setIsSavingDraft(true);
@@ -511,7 +732,7 @@ export default function CampanasCorreoPage() {
         body: JSON.stringify({
           action: 'save_draft',
           id: activeDraftId || undefined,
-          title: subject.trim() || headline.trim() || 'Borrador de campaña',
+          title: subject.trim() || headline.trim() || 'Borrador',
           idea,
           category,
           subject,
@@ -523,13 +744,15 @@ export default function CampanasCorreoPage() {
           images,
           ctaText,
           ctaUrl,
+          showWhatsappSecondary,
+          variables: { trackingNumber, campaignDate, customLink },
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         if (data.draft?.id) setActiveDraftId(data.draft.id);
         if (Array.isArray(data.data?.drafts)) setDrafts(data.data.drafts);
-        showAlert('Borrador guardado', 'Tu borrador de campaña quedó guardado correctamente.', 'success');
+        showAlert('Borrador guardado', 'Tu borrador quedó guardado correctamente.', 'success');
       } else {
         showAlert('Error', data.error || 'No se pudo guardar el borrador.', 'error');
       }
@@ -558,8 +781,8 @@ export default function CampanasCorreoPage() {
   };
 
   const handleSendTest = async () => {
-    if (!subject.trim() || !body.trim()) {
-      showAlert('Faltan datos', 'Completa el asunto y el mensaje antes de enviar una prueba.', 'error');
+    if (!canSend) {
+      showAlert('Corrige antes de enviar', validationErrors[0], 'error');
       return;
     }
     const cleanTo = testEmailTo.trim();
@@ -575,15 +798,18 @@ export default function CampanasCorreoPage() {
         body: JSON.stringify({
           action: 'send_test',
           to: cleanTo,
+          category,
           subject,
           preheader,
           badgeText,
-          headline: headline || subject,
+          headline,
           body,
           highlights: highlightsArray,
           images,
           ctaText,
           ctaUrl,
+          showWhatsappSecondary,
+          variables: { trackingNumber, campaignDate, customLink },
         }),
       });
       const data = await res.json();
@@ -600,8 +826,8 @@ export default function CampanasCorreoPage() {
   };
 
   const handleConfirmMassSend = async () => {
-    if (!subject.trim() || !body.trim()) {
-      showAlert('Faltan datos', 'Completa el asunto y el mensaje de la campaña.', 'error');
+    if (!canSend) {
+      showAlert('Corrige antes de enviar', validationErrors[0], 'error');
       return;
     }
     if (selectedRecipients.length === 0) {
@@ -626,16 +852,19 @@ export default function CampanasCorreoPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'send_chunk',
-            recipients: chunk.map(r => ({ email: r.email, name: r.name })),
+            recipients: chunk.map(r => ({ id: r.id, email: r.email, name: r.name })),
+            category,
             subject,
             preheader,
             badgeText,
-            headline: headline || subject,
+            headline,
             body,
             highlights: highlightsArray,
             images,
             ctaText,
             ctaUrl,
+            showWhatsappSecondary,
+            variables: { trackingNumber, campaignDate, customLink },
           }),
         });
         const data = await res.json();
@@ -661,13 +890,13 @@ export default function CampanasCorreoPage() {
       });
     }
 
-    // Record campaign in persistent history
     try {
       const recRes = await fetch('/api/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'record_campaign',
+          category,
           title: headline || subject,
           subject,
           totalRecipients: total,
@@ -688,10 +917,21 @@ export default function CampanasCorreoPage() {
     setSendingProgress(null);
     setActiveSideTab('history');
     showAlert(
-      'Campaña finalizada',
+      'Envío finalizado',
       `Se enviaron ${totalSent} de ${total} correos${totalErrors > 0 ? ` (${totalErrors} con error)` : ''}.`,
       totalErrors > 0 ? 'error' : 'success'
     );
+  };
+
+  const renderCategoryIcon = (catId: CampaignCategory) => {
+    if (catId === 'promocion') return <Tag size={14} />;
+    if (catId === 'paquete') return <Package size={14} />;
+    if (catId === 'cobro') return <Receipt size={14} />;
+    return <FileSpreadsheet size={14} />;
+  };
+
+  const insertVariableIntoBody = (token: string) => {
+    setBody(prev => (prev ? `${prev} ${token}` : token));
   };
 
   return (
@@ -700,7 +940,7 @@ export default function CampanasCorreoPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Campañas de Correo</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Campañas y Plantillas de Correo</h1>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0B2737] text-amber-400">
               <ShieldCheck size={12} />
               Solo Master
@@ -710,7 +950,7 @@ export default function CampanasCorreoPage() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Crea borradores con tu idea de campaña (generador local o usando Gemini Web gratis), revisa la vista previa y envíala a todos tus clientes.
+            Elige una plantilla por tipo, personaliza el contenido con variables o Gemini Web, revisa la vista previa fiel y envía con seguridad.
           </p>
         </div>
 
@@ -721,7 +961,7 @@ export default function CampanasCorreoPage() {
             className="h-9 px-3 rounded-lg bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
           >
             <Plus size={14} />
-            <span>Nueva campaña</span>
+            <span>Limpiar</span>
           </button>
 
           <button
@@ -748,14 +988,14 @@ export default function CampanasCorreoPage() {
           <button
             type="button"
             onClick={() => {
-              if (!subject.trim() || !body.trim()) {
-                showAlert('Completa el borrador', 'Agrega un asunto y mensaje antes de enviar la campaña.', 'error');
+              if (!canSend) {
+                showAlert('Corrige antes de enviar', validationErrors[0], 'error');
                 return;
               }
               setConfirmSendOpen(true);
             }}
-            disabled={!!sendingProgress?.active || selectedRecipients.length === 0}
-            className="h-9 px-4 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-bold shadow-2xs inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            disabled={!canSend || !!sendingProgress?.active || selectedRecipients.length === 0}
+            className="h-9 px-4 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-bold shadow-2xs inline-flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
           >
             <Send size={13} className="text-amber-400" />
             <span>Enviar a {selectedRecipients.length} clientes</span>
@@ -769,7 +1009,7 @@ export default function CampanasCorreoPage() {
           <div className="flex items-center justify-between text-xs font-semibold mb-2">
             <span className="inline-flex items-center gap-2">
               <RefreshCw size={14} className="animate-spin text-amber-400" />
-              Enviando campaña a clientes... ({sendingProgress.processed} / {sendingProgress.total})
+              Enviando correos... ({sendingProgress.processed} / {sendingProgress.total})
             </span>
             <span className="tabular-nums text-amber-300">
               {Math.round((sendingProgress.processed / Math.max(1, sendingProgress.total)) * 100)}%
@@ -789,130 +1029,159 @@ export default function CampanasCorreoPage() {
         </div>
       )}
 
-      {/* PASO 1: Idea de campaña + Gemini Web (0 costo de tokens) */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 sm:p-5 space-y-3.5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Sparkles size={16} className="text-amber-500" />
-              1. Idea de campaña (sin consumo de tokens)
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Escribe tu idea. Podés generar un borrador al instante aquí mismo o copiar el prompt estructurado para usar tu cuenta gratuita de Gemini Web y pegar la respuesta.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {CATEGORY_OPTIONS.map(opt => (
+      {/* PASO 1: Plantillas organizadas por tipo + Idea con Gemini (0 tokens) */}
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 sm:p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <Sparkles size={15} className="text-amber-500" />
+            1. Tipo de plantilla y redacción (sin costo de tokens)
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Selecciona una plantilla base lista para JRS Cargo o redacta tu idea para crear el borrador al instante o con Gemini Web.
+          </p>
+        </div>
+
+        {/* 4 Tarjetas de tipo de plantilla */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {TEMPLATE_TYPES.map(t => {
+            const isSelected = category === t.id;
+            return (
               <button
-                key={opt.id}
+                key={t.id}
                 type="button"
-                onClick={() => {
-                  setCategory(opt.id);
-                  setBadgeText(opt.badge);
-                }}
-                className={`h-7 px-2.5 rounded-full text-[11px] font-semibold border transition-colors cursor-pointer ${
-                  category === opt.id
-                    ? 'bg-[#0B2737] text-white border-[#0B2737]'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                onClick={() => applyTemplatePreset(t.id)}
+                className={`text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#0B2737] text-white border-[#0B2737] shadow-xs'
+                    : 'bg-slate-50/70 text-slate-800 border-slate-200/90 hover:bg-white hover:border-slate-300'
                 }`}
               >
-                {opt.label}
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-amber-400/20 text-amber-300' : 'bg-white border border-slate-200 text-[#12435E]'
+                    }`}
+                  >
+                    {renderCategoryIcon(t.id)}
+                  </span>
+                  <span className="text-xs font-bold leading-tight">{t.label}</span>
+                </div>
+                <p className={`text-[11px] mt-1.5 leading-snug ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
+                  {t.shortDesc}
+                </p>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        <textarea
-          rows={2}
-          value={idea}
-          onChange={e => setIdea(e.target.value)}
-          placeholder="Ej: Promoción de Black Friday con 15% de descuento en envíos aéreos para paquetes recibidos hasta el 30 de noviembre..."
-          className="w-full p-3 bg-slate-50/60 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12435E] focus:ring-2 focus:ring-[#12435E]/10 resize-none"
-        />
+        <div className="space-y-2.5 pt-1 border-t border-slate-100">
+          <textarea
+            rows={2}
+            value={idea}
+            onChange={e => setIdea(e.target.value)}
+            placeholder="Opcional: escribe tu idea (ej: Aviso de cierre de bodega por feriado el viernes, o promoción 15% aéreo)..."
+            className="w-full p-3 bg-slate-50/60 border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#12435E] focus:ring-2 focus:ring-[#12435E]/10 resize-none"
+          />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleGenerateLocalDraft}
-            className="h-9 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <FileText size={14} className="text-amber-400" />
-            <span>Crear borrador al instante (local)</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGenerateLocalDraft}
+              className="h-9 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <FileText size={14} className="text-amber-400" />
+              <span>Generar borrador local</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleCopyPromptAndOpenGemini}
-            className="h-9 px-3.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            {promptCopied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} className="text-amber-700" />}
-            <span>{promptCopied ? '¡Prompt copiado! Abriendo Gemini...' : 'Copiar prompt y abrir Gemini (gratis)'}</span>
-            <ExternalLink size={12} className="opacity-70" />
-          </button>
+            <button
+              type="button"
+              onClick={handleCopyPromptAndOpenGemini}
+              className="h-9 px-3.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              {promptCopied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} className="text-amber-700" />}
+              <span>{promptCopied ? '¡Prompt copiado! Abriendo Gemini...' : 'Copiar prompt y abrir Gemini (gratis)'}</span>
+              <ExternalLink size={12} className="opacity-70" />
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setShowPasteBox(prev => !prev)}
-            className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <ClipboardPaste size={14} className="text-[#12435E]" />
-            <span>Pegar respuesta de Gemini</span>
-          </button>
-        </div>
-
-        {showPasteBox && (
-          <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/90 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-slate-700">
-                Pega aquí el texto que generó Gemini Web (detecta automáticamente Asunto, Titular, Mensaje, Destacados y Botón):
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowPasteBox(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <textarea
-              rows={5}
-              value={geminiPasteText}
-              onChange={e => setGeminiPasteText(e.target.value)}
-              placeholder="ASUNTO: ...&#10;TITULAR: ...&#10;MENSAJE: ...&#10;DESTACADOS:&#10;- ...&#10;BOTON: ..."
-              className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPasteBox(false)}
-                className="h-8 px-3 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleApplyGeminiResponse}
-                className="h-8 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold cursor-pointer"
-              >
-                Aplicar al borrador
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowPasteBox(prev => !prev)}
+              className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ClipboardPaste size={14} className="text-[#12435E]" />
+              <span>Pegar respuesta de Gemini</span>
+            </button>
           </div>
-        )}
+
+          {showPasteBox && (
+            <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200/90 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-slate-700">
+                  Pega la respuesta de Gemini Web para rellenar el borrador automáticamente:
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowPasteBox(false)}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <textarea
+                rows={4}
+                value={geminiPasteText}
+                onChange={e => setGeminiPasteText(e.target.value)}
+                placeholder="ASUNTO: ...&#10;TITULAR: ...&#10;MENSAJE: ...&#10;BOTON: ..."
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPasteBox(false)}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyGeminiResponse}
+                  className="h-8 px-3.5 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-xs font-semibold cursor-pointer"
+                >
+                  Aplicar al borrador
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* PASO 2: Editor + Vista previa / Borradores / Historial */}
+      {/* Alerta de validación si faltan datos obligatorios o hay texto inválido */}
+      {validationErrors.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <div className="space-y-1 text-xs text-red-800">
+            <p className="font-bold">Corrige los siguientes puntos antes de enviar el correo:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {validationErrors.map((err, i) => (
+                <li key={i}>{err}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* PASO 2: Editor + Vista previa fiel */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-        {/* Columna izquierda: Editor del borrador */}
+        {/* Columna izquierda: Editor */}
         <div className="xl:col-span-6 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Mail size={16} className="text-[#12435E]" />
-              2. Editor del borrador
+              2. Editor del correo
             </h2>
             {activeDraftId && (
               <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
-                Editando borrador guardado
+                Borrador guardado
               </span>
             )}
           </div>
@@ -926,19 +1195,19 @@ export default function CampanasCorreoPage() {
                 type="text"
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
-                placeholder="Ej: 15% de descuento en tus envíos aéreos - JRS Cargo"
+                placeholder="Ej: Tu paquete está en camino - JRS Cargo"
                 className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-900 font-medium focus:outline-none focus:border-[#12435E] focus:ring-2 focus:ring-[#12435E]/10"
               />
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Etiqueta superior
+                Etiqueta (opcional)
               </label>
               <input
                 type="text"
                 value={badgeText}
                 onChange={e => setBadgeText(e.target.value)}
-                placeholder="Promoción Especial"
+                placeholder="Actualización de Envío"
                 className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#12435E]"
               />
             </div>
@@ -946,15 +1215,87 @@ export default function CampanasCorreoPage() {
 
           <div>
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Titular principal (banner azul)
+              Título principal *
             </label>
             <input
               type="text"
               value={headline}
               onChange={e => setHeadline(e.target.value)}
-              placeholder="Ej: ¡Aprovecha tarifas especiales esta semana!"
+              placeholder="Ej: Tu paquete está en camino"
               className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-900 font-semibold focus:outline-none focus:border-[#12435E]"
             />
+          </div>
+
+          {/* Variables rápidas */}
+          <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-[#0B2737] uppercase tracking-wider">
+                Datos variables (clic para insertar en el mensaje)
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { token: '{{nombre}}', label: 'Nombre' },
+                  { token: '{{guia}}', label: 'Guía' },
+                  { token: '{{fecha}}', label: 'Fecha' },
+                  { token: '{{enlace}}', label: 'Enlace' },
+                ].map(v => (
+                  <button
+                    key={v.token}
+                    type="button"
+                    onClick={() => insertVariableIntoBody(v.token)}
+                    className="h-6 px-2 rounded-md bg-white hover:bg-[#0B2737] hover:text-white border border-slate-200 text-[10.5px] font-mono font-semibold text-[#12435E] transition-colors cursor-pointer"
+                    title={`Insertar ${v.token} (${v.label})`}
+                  >
+                    {v.token}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">
+                  N.º de guía ({'{{guia}}'})
+                </label>
+                <input
+                  type="text"
+                  value={trackingNumber}
+                  onChange={e => setTrackingNumber(e.target.value)}
+                  placeholder="Ej: 1Z999AA101234"
+                  className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 font-mono focus:outline-none focus:border-[#12435E]"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">
+                  Fecha ({'{{fecha}}'})
+                </label>
+                <input
+                  type="text"
+                  value={campaignDate}
+                  onChange={e => setCampaignDate(e.target.value)}
+                  placeholder="dd/mm/aaaa"
+                  className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">
+                  Enlace ({'{{enlace}}'})
+                </label>
+                {category === 'estado_cuenta' ? (
+                  <div className="h-8 px-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-800 flex items-center truncate">
+                    Personal automático por cliente
+                  </div>
+                ) : (
+                  <input
+                    type="url"
+                    value={customLink}
+                    onChange={e => setCustomLink(e.target.value)}
+                    placeholder="https://www.jrscargocr.com"
+                    className="w-full h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
@@ -963,16 +1304,21 @@ export default function CampanasCorreoPage() {
                 Mensaje principal *
               </label>
               <span className="text-[11px] text-slate-400">
-                El saludo «Hola [Nombre],» se personaliza automáticamente
+                Saludo «Hola, [Nombre]:» automático
               </span>
             </div>
             <textarea
-              rows={6}
+              rows={5}
               value={body}
               onChange={e => setBody(e.target.value)}
-              placeholder="Escribe aquí el contenido de tu campaña. Separa los párrafos con una línea en blanco..."
+              placeholder="Redacta aquí el mensaje claro y directo para tus clientes..."
               className="w-full p-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 leading-relaxed focus:outline-none focus:border-[#12435E] focus:ring-2 focus:ring-[#12435E]/10"
             />
+            {category === 'estado_cuenta' && (
+              <p className="text-[11px] text-amber-700 mt-1 font-medium">
+                Nota de privacidad: en correos de estado de cuenta no incluyas el monto pendiente en el texto; el botón dirige al estado de cuenta personal en línea.
+              </p>
+            )}
           </div>
 
           <div>
@@ -980,13 +1326,51 @@ export default function CampanasCorreoPage() {
               Puntos destacados (opcional, uno por línea)
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={highlightsText}
               onChange={e => setHighlightsText(e.target.value)}
-              placeholder="Envíos seguros desde Miami a Heredia&#10;Atención personalizada por WhatsApp&#10;Seguimiento en línea 24/7"
+              placeholder="Opcional: agrega puntos breves clave..."
               className="w-full p-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 leading-relaxed focus:outline-none focus:border-[#12435E]"
             />
           </div>
+
+          {/* Botón principal + Acción secundaria WhatsApp */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Texto del botón principal *
+              </label>
+              <input
+                type="text"
+                value={ctaText}
+                onChange={e => setCtaText(e.target.value)}
+                placeholder="Ej: Rastrear mi paquete"
+                className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:border-[#12435E]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Enlace del botón principal *
+              </label>
+              <input
+                type="text"
+                value={ctaUrl}
+                onChange={e => setCtaUrl(e.target.value)}
+                placeholder="https://www.jrscargocr.com/tracking"
+                className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#12435E]"
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showWhatsappSecondary}
+              onChange={e => setShowWhatsappSecondary(e.target.checked)}
+              className="rounded border-slate-300 text-[#0B2737] focus:ring-[#0B2737]"
+            />
+            <span>Mostrar enlace secundario de WhatsApp («¿Necesitas ayuda? Escríbenos por WhatsApp»)</span>
+          </label>
 
           {/* Imágenes dentro del correo */}
           <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 space-y-3">
@@ -994,10 +1378,10 @@ export default function CampanasCorreoPage() {
               <div>
                 <p className="text-[11px] font-bold text-[#0B2737] uppercase tracking-wider flex items-center gap-1.5">
                   <ImagePlus size={14} className="text-amber-500" />
-                  Imágenes dentro del correo ({images.length}/4)
+                  Imágenes en el correo ({images.length}/4)
                 </p>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Se incrustan directo en el correo (compatibles con Gmail, Hotmail y celulares).
+                  Incrustadas directo en el correo (compatibles con Gmail, Outlook y móviles).
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -1034,7 +1418,7 @@ export default function CampanasCorreoPage() {
                   type="url"
                   value={imageUrlInput}
                   onChange={e => setImageUrlInput(e.target.value)}
-                  placeholder="https://ejemplo.com/banner-promocion.jpg"
+                  placeholder="https://ejemplo.com/imagen.jpg"
                   className="flex-1 h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
                 />
                 <button
@@ -1063,8 +1447,8 @@ export default function CampanasCorreoPage() {
                     <div className="flex-1 min-w-0 w-full space-y-1.5">
                       <div className="flex flex-wrap items-center gap-1">
                         {[
-                          { id: 'top' as CampaignImagePosition, label: 'Arriba (Banner)' },
-                          { id: 'middle' as CampaignImagePosition, label: 'Dentro del cuerpo' },
+                          { id: 'top' as CampaignImagePosition, label: 'Arriba' },
+                          { id: 'middle' as CampaignImagePosition, label: 'En el cuerpo' },
                           { id: 'bottom' as CampaignImagePosition, label: 'Al final' },
                         ].map(pos => (
                           <button
@@ -1097,7 +1481,7 @@ export default function CampanasCorreoPage() {
                             )
                           )
                         }
-                        placeholder="Pie de foto opcional (ej: Válido del 24 al 30 de noviembre)"
+                        placeholder="Pie de foto opcional"
                         className="w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded-md text-[11px] text-slate-700 focus:bg-white focus:outline-none focus:border-[#12435E]"
                       />
                     </div>
@@ -1115,37 +1499,10 @@ export default function CampanasCorreoPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Texto del botón (CTA)
-              </label>
-              <input
-                type="text"
-                value={ctaText}
-                onChange={e => setCtaText(e.target.value)}
-                placeholder="Ej: Escribir por WhatsApp"
-                className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#12435E]"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Enlace del botón
-              </label>
-              <input
-                type="url"
-                value={ctaUrl}
-                onChange={e => setCtaUrl(e.target.value)}
-                placeholder="https://wa.me/50672601238"
-                className="w-full h-9 px-3 bg-white border border-slate-200/90 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-[#12435E]"
-              />
-            </div>
-          </div>
-
-          {/* Envío de prueba rápido */}
+          {/* Envío de prueba */}
           <div className="pt-3 border-t border-slate-100">
             <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-              Probar correo antes de enviar a todos
+              Enviar correo de prueba antes de despachar
             </label>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
@@ -1158,13 +1515,13 @@ export default function CampanasCorreoPage() {
               <button
                 type="button"
                 onClick={handleSendTest}
-                disabled={isSendingTest}
-                className="h-9 px-4 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shrink-0"
+                disabled={isSendingTest || !canSend}
+                className="h-9 px-4 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold inline-flex items-center justify-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer shrink-0"
               >
                 {isSendingTest ? (
                   <>
                     <RefreshCw size={13} className="animate-spin" />
-                    <span>Enviando prueba...</span>
+                    <span>Enviando...</span>
                   </>
                 ) : (
                   <>
@@ -1177,9 +1534,9 @@ export default function CampanasCorreoPage() {
           </div>
         </div>
 
-        {/* Columna derecha: Vista previa en vivo / Borradores guardados / Historial */}
+        {/* Columna derecha: Vista previa fiel / Borradores / Historial */}
         <div className="xl:col-span-6 bg-white rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-slate-200/80 bg-slate-50/80 flex items-center justify-between gap-2">
+          <div className="px-4 py-2.5 border-b border-slate-200/80 bg-slate-50/80 flex flex-wrap items-center justify-between gap-2">
             <div className="inline-flex bg-white border border-slate-200/90 rounded-lg p-0.5 gap-0.5">
               <button
                 type="button"
@@ -1209,127 +1566,163 @@ export default function CampanasCorreoPage() {
                 }`}
               >
                 <History size={13} />
-                <span>Enviadas ({history.length})</span>
+                <span>Historial ({history.length})</span>
               </button>
             </div>
+
+            {activeSideTab === 'preview' && (
+              <div className="inline-flex bg-white border border-slate-200/90 rounded-lg p-0.5 gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`h-7 px-2 rounded text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer ${
+                    previewDevice === 'desktop' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Vista computadora"
+                >
+                  <Monitor size={12} />
+                  <span>PC</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`h-7 px-2 rounded text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer ${
+                    previewDevice === 'mobile' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Vista celular"
+                >
+                  <Smartphone size={12} />
+                  <span>Celular</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* TAB: Vista previa */}
+          {/* TAB: Vista previa fiel */}
           {activeSideTab === 'preview' && (
-            <div className="p-4 sm:p-5 bg-slate-100/80">
-              <div className="mb-3 px-3 py-2 bg-white rounded-lg border border-slate-200/80 text-xs">
-                <span className="text-slate-400 font-semibold">Asunto: </span>
-                <span className="font-bold text-slate-900">{subject || '(Sin asunto aún)'}</span>
+            <div className="p-4 sm:p-5 bg-[#eef2f6]">
+              {/* Cabecera de revisión antes de enviar */}
+              <div className="mb-3.5 p-3 bg-white rounded-lg border border-slate-200/90 text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-semibold w-14 shrink-0">Para:</span>
+                  <span className="text-slate-700 font-medium truncate">
+                    {previewRecipient.name} &lt;{previewRecipient.email}&gt;
+                    {selectedRecipients.length > 1 && (
+                      <span className="text-slate-400"> (+{selectedRecipients.length - 1} clientes)</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 font-semibold w-14 shrink-0">Asunto:</span>
+                  {previewSubject.trim() ? (
+                    <span className="font-bold text-slate-900 truncate">{previewSubject}</span>
+                  ) : (
+                    <span className="text-red-600 font-semibold italic">Falta asunto obligatorio</span>
+                  )}
+                </div>
               </div>
 
-              <div className="max-w-[540px] mx-auto bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                {/* Franja tricolor del logo JRS Cargo */}
-                <div className="flex h-1.5 w-full">
-                  <div className="w-[55%] bg-[#0B2737]" />
-                  <div className="w-[25%] bg-[#F59E0B]" />
-                  <div className="w-[20%] bg-[#EF4444]" />
-                </div>
-
-                {/* Banner Hero */}
-                <div className="px-6 py-6 bg-gradient-to-br from-[#0B2737] to-[#12435E] text-white">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="inline-block bg-white px-2.5 py-1.5 rounded-lg">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/logo.png" alt="JRS Cargo" className="h-7 w-auto block" />
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-amber-400/20 border border-amber-400/45 text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
-                      {badgeText || 'JRS Cargo'}
-                    </span>
+              {/* Tarjeta fiel del correo JRS Cargo */}
+              <div
+                className={`mx-auto bg-white border border-[#dbe4ee] rounded-xl overflow-hidden shadow-xs transition-all duration-200 ${
+                  previewDevice === 'mobile' ? 'max-w-[360px]' : 'max-w-[560px]'
+                }`}
+              >
+                {/* Encabezado compacto azul JRS Cargo + borde inferior ámbar */}
+                <div className="bg-[#0B2737] py-4 px-6 border-b-4 border-[#F59E0B] flex items-center justify-center">
+                  <div className="bg-white px-3.5 py-1.5 rounded-lg inline-flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/logo.png" alt="JRS Cargo" className="h-9 w-auto block" />
                   </div>
-                  <h3 className="mt-4 text-xl font-extrabold leading-snug text-white">
-                    {headline || subject || 'Titular de tu campaña'}
-                  </h3>
-                  <div className="mt-2.5 w-12 h-1 rounded-full bg-amber-400" />
                 </div>
 
-                {/* Cuerpo */}
-                <div className="p-6 text-slate-700 space-y-3.5">
-                  {/* Imágenes arriba (Banner) */}
+                {/* Cuerpo del correo */}
+                <div className={previewDevice === 'mobile' ? 'p-5 space-y-3.5' : 'px-8 py-7 space-y-4'}>
+                  {/* Imágenes arriba */}
                   {images
                     .filter(i => i.position === 'top')
                     .map(img => (
-                      <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                      <div key={img.id} className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={img.src} alt={img.caption || 'Banner'} className="w-full h-auto block" />
+                        <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
                         {img.caption && (
-                          <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                          <p className="px-3 py-2 text-[11.5px] text-slate-600 text-center bg-slate-50 border-t border-slate-200">
                             {img.caption}
                           </p>
                         )}
                       </div>
                     ))}
 
-                  <p className="text-[15px] font-extrabold text-[#0B2737]">Hola José,</p>
+                  {badgeText.trim() && (
+                    <p className="text-center text-[11px] font-bold uppercase tracking-[0.12em] text-[#12435E]">
+                      {badgeText}
+                    </p>
+                  )}
+
+                  {previewHeadline.trim() ? (
+                    <h3
+                      className={`text-center font-extrabold text-[#0B2737] leading-snug tracking-tight ${
+                        previewDevice === 'mobile' ? 'text-xl' : 'text-2xl'
+                      }`}
+                    >
+                      {previewHeadline}
+                    </h3>
+                  ) : (
+                    <p className="text-center text-xs text-red-600 font-semibold py-2 border border-dashed border-red-200 rounded-lg bg-red-50/50">
+                      Falta el título principal del correo
+                    </p>
+                  )}
+
+                  <p className="text-[15.5px] font-bold text-[#0B2737] pt-1">
+                    Hola, {previewFirstName}:
+                  </p>
 
                   {(() => {
-                    const paragraphs = body
-                      ? body.split(/\n{2,}/).filter(Boolean)
+                    const paragraphs = previewBody
+                      ? previewBody.split(/\n{2,}/).filter(Boolean)
                       : [];
                     const midImages = images.filter(i => i.position === 'middle');
 
                     if (paragraphs.length === 0) {
                       return (
-                        <>
-                          <p className="text-xs text-slate-400 italic">
-                            Escribe tu mensaje o genera un borrador en el paso 1 para ver la vista previa aquí.
-                          </p>
-                          {midImages.map(img => (
-                            <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
-                              {img.caption && (
-                                <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
-                                  {img.caption}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </>
+                        <p className="text-xs text-red-600 font-semibold py-3 px-3 border border-dashed border-red-200 rounded-lg bg-red-50/50">
+                          Falta redactar el mensaje principal
+                        </p>
                       );
                     }
 
                     return (
-                      <>
-                        <p className="text-[13.5px] text-slate-600 leading-relaxed whitespace-pre-line">
-                          {paragraphs[0].replace(/\{\{\s*nombre\s*\}\}/gi, 'José')}
+                      <div className="space-y-3">
+                        <p className="text-[14.5px] text-slate-700 leading-relaxed whitespace-pre-line">
+                          {paragraphs[0]}
                         </p>
                         {midImages.map(img => (
-                          <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 my-2">
+                          <div key={img.id} className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50 my-2">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
                             {img.caption && (
-                              <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                              <p className="px-3 py-2 text-[11.5px] text-slate-600 text-center bg-slate-50 border-t border-slate-200">
                                 {img.caption}
                               </p>
                             )}
                           </div>
                         ))}
                         {paragraphs.slice(1).map((p, idx) => (
-                          <p key={idx} className="text-[13.5px] text-slate-600 leading-relaxed whitespace-pre-line">
-                            {p.replace(/\{\{\s*nombre\s*\}\}/gi, 'José')}
+                          <p key={idx} className="text-[14.5px] text-slate-700 leading-relaxed whitespace-pre-line">
+                            {p}
                           </p>
                         ))}
-                      </>
+                      </div>
                     );
                   })()}
 
                   {highlightsArray.length > 0 && (
-                    <div className="my-3 p-4 rounded-xl bg-slate-50 border border-slate-200 border-t-[3px] border-t-amber-500">
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2737] mb-2">
-                        Lo que debes saber
-                      </p>
+                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 border-l-[3px] border-l-[#F59E0B]">
                       <ul className="space-y-1.5">
                         {highlightsArray.map((item, idx) => (
-                          <li key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
-                              ✓
-                            </span>
-                            <span>{item}</span>
+                          <li key={idx} className="text-[13.5px] text-slate-800 flex items-start gap-2">
+                            <span className="text-[#F59E0B] font-bold">•</span>
+                            <span>{resolvePreviewVariables(item, previewVarCtx)}</span>
                           </li>
                         ))}
                       </ul>
@@ -1340,48 +1733,48 @@ export default function CampanasCorreoPage() {
                   {images
                     .filter(i => i.position === 'bottom')
                     .map(img => (
-                      <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                      <div key={img.id} className="rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
                         {img.caption && (
-                          <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                          <p className="px-3 py-2 text-[11.5px] text-slate-600 text-center bg-slate-50 border-t border-slate-200">
                             {img.caption}
                           </p>
                         )}
                       </div>
                     ))}
 
-                  {ctaText.trim() && ctaUrl.trim() && (
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-[#0B2737] to-[#12435E] text-center space-y-2.5">
-                      <p className="text-xs text-slate-200">
-                        ¿Listo para coordinar tus envíos o recibir asesoría personalizada?
-                      </p>
-                      <span className="inline-block px-6 py-2.5 rounded-lg bg-[#F59E0B] text-[#0B2737] text-xs font-extrabold">
-                        {ctaText} →
+                  {/* Botón principal (según el propósito del correo) */}
+                  {previewCtaText.trim() && ctaUrl.trim() ? (
+                    <div className="pt-2 text-center">
+                      <span className="inline-block px-7 py-3 rounded-lg bg-[#0B2737] text-white text-sm font-bold">
+                        {previewCtaText} →
                       </span>
                     </div>
+                  ) : (
+                    <p className="text-center text-xs text-red-600 font-semibold py-2 border border-dashed border-red-200 rounded-lg bg-red-50/50">
+                      Falta configurar el botón principal
+                    </p>
                   )}
 
-                  {/* Franja de confianza JRS Cargo */}
-                  <div className="grid grid-cols-3 rounded-lg bg-slate-50 border border-slate-200 divide-x divide-slate-200 text-center py-2.5">
-                    <div className="px-1">
-                      <p className="text-[10px] font-extrabold text-[#0B2737] uppercase">Miami → CR</p>
-                      <p className="text-[10px] text-slate-500">Aéreo y Marítimo</p>
-                    </div>
-                    <div className="px-1">
-                      <p className="text-[10px] font-extrabold text-[#12435E] uppercase">Tracking 24/7</p>
-                      <p className="text-[10px] text-slate-500">En línea</p>
-                    </div>
-                    <div className="px-1">
-                      <p className="text-[10px] font-extrabold text-[#EF4444] uppercase">Soporte</p>
-                      <p className="text-[10px] text-slate-500">7260-1238</p>
-                    </div>
-                  </div>
+                  {/* Acción secundaria WhatsApp */}
+                  {showWhatsappSecondary && (
+                    <p className="text-center text-[13px] text-slate-600 pt-1">
+                      ¿Necesitas ayuda?{' '}
+                      <span className="text-[#0B2737] font-bold underline">
+                        Escríbenos por WhatsApp
+                      </span>
+                    </p>
+                  )}
                 </div>
 
-                <div className="py-4 px-5 bg-slate-50 border-t border-slate-200 text-center text-[11px] text-slate-500">
-                  <p className="font-extrabold text-[#0B2737]">JRS CARGO S.A.</p>
-                  <p>San Pablo de Heredia, Costa Rica &middot; +506 7260-1238 &middot; www.jrscargocr.com</p>
+                {/* Pie compacto con línea inferior ámbar */}
+                <div className="px-8 pb-5 border-b-4 border-[#F59E0B]">
+                  <div className="border-t border-slate-200 pt-4 text-center text-xs text-slate-600 space-y-0.5">
+                    <p className="font-extrabold text-[#0B2737]">JRS CARGO S.A.</p>
+                    <p>San Pablo de Heredia, Costa Rica</p>
+                    <p>+506 7260-1238 &middot; www.jrscargocr.com</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1389,12 +1782,12 @@ export default function CampanasCorreoPage() {
 
           {/* TAB: Borradores guardados */}
           {activeSideTab === 'drafts' && (
-            <div className="divide-y divide-slate-100 max-h-[560px] overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
               {loading ? (
                 <div className="p-8 text-center text-xs text-slate-400">Cargando borradores...</div>
               ) : drafts.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
-                  No hay borradores guardados todavía. Usa «Guardar borrador» para conservar tus campañas.
+                  No hay borradores guardados todavía. Usa «Guardar borrador» para conservar tus plantillas.
                 </div>
               ) : (
                 drafts.map(d => (
@@ -1427,9 +1820,9 @@ export default function CampanasCorreoPage() {
             </div>
           )}
 
-          {/* TAB: Historial de campañas enviadas */}
+          {/* TAB: Historial de envíos */}
           {activeSideTab === 'history' && (
-            <div className="divide-y divide-slate-100 max-h-[560px] overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
               {history.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
                   Aún no se han enviado campañas masivas.
@@ -1474,7 +1867,7 @@ export default function CampanasCorreoPage() {
               <div>
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                   <Users size={16} className="text-[#12435E]" />
-                  Destinatarios de la campaña ({selectedRecipients.length} / {recipients.length})
+                  Destinatarios ({selectedRecipients.length} / {recipients.length})
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
                   Correos válidos únicos (excluye automáticamente pendiente@pendiente).
@@ -1564,7 +1957,7 @@ export default function CampanasCorreoPage() {
         </div>
       )}
 
-      {/* Modal de confirmación de envío masivo */}
+      {/* Modal de confirmación de envío */}
       {confirmSendOpen && (
         <div
           className="fixed inset-0 bg-slate-900/40 backdrop-blur-[1px] z-50 flex items-center justify-center p-4"
@@ -1576,19 +1969,28 @@ export default function CampanasCorreoPage() {
           >
             <div className="px-5 py-4 border-b border-slate-200/80 bg-slate-50 flex items-center gap-2">
               <AlertTriangle size={18} className="text-amber-500" />
-              <h3 className="font-bold text-slate-900 text-base">Confirmar envío de campaña</h3>
+              <h3 className="font-bold text-slate-900 text-base">Confirmar envío de correo</h3>
             </div>
             <div className="p-5 space-y-3 text-xs sm:text-sm text-slate-600">
               <p>
-                Estás a punto de enviar esta campaña a{' '}
+                Estás a punto de enviar este correo a{' '}
                 <strong className="text-slate-900">{selectedRecipients.length} clientes</strong> con correo válido.
               </p>
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-                <p className="text-slate-400 font-semibold">Asunto:</p>
-                <p className="font-bold text-slate-900 mt-0.5">{subject}</p>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
+                <p>
+                  <span className="text-slate-400 font-semibold">Tipo: </span>
+                  <strong className="text-slate-800">
+                    {TEMPLATE_TYPES.find(t => t.id === category)?.label}
+                  </strong>
+                </p>
+                <p>
+                  <span className="text-slate-400 font-semibold">Asunto: </span>
+                  <strong className="text-slate-900">{previewSubject}</strong>
+                </p>
               </div>
               <p className="text-xs text-slate-500">
-                Cada correo se enviará personalizado con el nombre del cliente.
+                Cada correo se enviará personalizado con el nombre de cada cliente
+                {category === 'estado_cuenta' ? ' y su enlace personal de estado de cuenta' : ''}.
               </p>
             </div>
             <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50 flex justify-end gap-2">
