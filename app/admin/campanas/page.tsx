@@ -287,35 +287,124 @@ function parseGeminiResponse(rawText: string): Partial<{
   body: string;
   highlights: string[];
   ctaText: string;
+  ctaUrl: string;
 }> {
-  const text = rawText.replace(/\r\n/g, '\n').trim();
-  if (!text) return {};
+  // Remove markdown code fences if Gemini wrapped the reply in ```
+  const cleanedRaw = rawText
+    .replace(/\r\n/g, '\n')
+    .replace(/```[a-zA-Z]*\n?/g, '')
+    .trim();
 
-  const extractField = (label: string) => {
-    const regex = new RegExp(
-      `(?:^|\\n)\\s*(?:\\*\\*)?${label}(?:\\*\\*)?\\s*:\\s*([\\s\\S]*?)(?=\\n\\s*(?:\\*\\*)?(?:ASUNTO|ETIQUETA|TITULAR|MENSAJE|CUERPO|DESTACADOS|PUNTOS DESTACADOS|BOTON|BOTÓN|CTA)(?:\\*\\*)?\\s*:|$)`,
-      'i'
-    );
-    const m = text.match(regex);
-    return m ? m[1].trim().replace(/^\*\*|\*\*$/g, '').trim() : '';
+  if (!cleanedRaw) return {};
+
+  type FieldKey = 'subject' | 'badgeText' | 'headline' | 'body' | 'highlights' | 'ctaText' | 'ctaUrl';
+
+  const LABEL_MAP: Array<{ key: FieldKey; pattern: RegExp }> = [
+    { key: 'subject', pattern: /^(?:asunto(?:\s+del\s+correo)?|subject)$/i },
+    { key: 'badgeText', pattern: /^(?:etiqueta(?:\s+superior)?|badge|categor[ií]a)$/i },
+    { key: 'headline', pattern: /^(?:titular(?:\s+principal)?|t[ií]tulo(?:\s+principal)?|encabezado)$/i },
+    { key: 'body', pattern: /^(?:mensaje(?:\s+principal)?|cuerpo(?:\s+del\s+correo)?|texto|contenido)$/i },
+    { key: 'highlights', pattern: /^(?:destacados|puntos\s+destacados|puntos\s+clave|beneficios)$/i },
+    { key: 'ctaText', pattern: /^(?:bot[oó]n(?:\s+principal)?|texto\s+del\s+bot[oó]n|cta|llamado\s+a\s+la\s+acci[oó]n(?:\s*\(cta\))?)$/i },
+    { key: 'ctaUrl', pattern: /^(?:enlace(?:\s+del\s+bot[oó]n)?|url|link)$/i },
+  ];
+
+  const stripMd = (s: string) =>
+    s
+      .replace(/^\*+|\*+$/g, '')
+      .replace(/^_+|_+$/g, '')
+      .replace(/^["'«]|["'»]$/g, '')
+      .trim();
+
+  const buckets: Record<FieldKey, string[]> = {
+    subject: [],
+    badgeText: [],
+    headline: [],
+    body: [],
+    highlights: [],
+    ctaText: [],
+    ctaUrl: [],
   };
 
-  const subject = extractField('ASUNTO');
-  const badgeText = extractField('ETIQUETA');
-  const headline = extractField('TITULAR');
-  const body = extractField('MENSAJE') || extractField('CUERPO');
-  const rawHighlights = extractField('DESTACADOS') || extractField('PUNTOS DESTACADOS');
-  const ctaText = extractField('BOT[OÓ]N') || extractField('CTA');
+  let currentField: FieldKey | null = null;
+  const lines = cleanedRaw.split('\n');
 
-  const highlights = rawHighlights
-    ? rawHighlights
-        .split('\n')
-        .map(line => line.replace(/^[-*•\d.)\s]+/, '').trim())
-        .filter(Boolean)
-    : [];
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
 
-  if (!subject && !headline && !body) {
-    return { body: text };
+    // Stop if Gemini adds a horizontal divider followed by conversational closing notes
+    if (/^[-*_]{3,}$/.test(trimmed) && currentField !== null) {
+      currentField = null;
+      continue;
+    }
+
+    // Normalize line prefix: remove headings (#), list bullets (*, -, •, 1.) and bold markers (** or __)
+    const normalizedForHeader = trimmed
+      .replace(/^#{1,6}\s*/, '')
+      .replace(/^(?:[-*•]|\d+[.)])\s+/, '')
+      .replace(/\*\*/g, '')
+      .replace(/__/g, '')
+      .trim();
+
+    const colonIdx = normalizedForHeader.indexOf(':');
+    let matchedField: FieldKey | null = null;
+    let inlineValue = '';
+
+    if (colonIdx > 0 && colonIdx <= 40) {
+      const candidateLabel = normalizedForHeader.slice(0, colonIdx).trim();
+      for (const entry of LABEL_MAP) {
+        if (entry.pattern.test(candidateLabel)) {
+          matchedField = entry.key;
+          inlineValue = normalizedForHeader.slice(colonIdx + 1).trim();
+          break;
+        }
+      }
+    }
+
+    if (matchedField) {
+      currentField = matchedField;
+      if (inlineValue) {
+        buckets[currentField].push(inlineValue);
+      }
+      continue;
+    }
+
+    if (currentField) {
+      // Ignore Gemini's polite closing questions if they appear after CTA
+      if (
+        (currentField === 'ctaText' || currentField === 'ctaUrl') &&
+        /^(?:¿|si\s+deseas|av[ií]same|espero\s+que|nota:)/i.test(normalizedForHeader)
+      ) {
+        currentField = null;
+        continue;
+      }
+      buckets[currentField].push(rawLine);
+    }
+  }
+
+  const subject = stripMd(buckets.subject.join(' ').trim());
+  const badgeText = stripMd(buckets.badgeText.join(' ').trim());
+  const headline = stripMd(buckets.headline.join(' ').trim());
+  const ctaText = stripMd(buckets.ctaText.join(' ').trim());
+  const ctaUrl = stripMd(buckets.ctaUrl.join(' ').trim());
+
+  const body = buckets.body
+    .join('\n')
+    .replace(/\*\*/g, '')
+    .replace(/^\s*hola[,\s]+(?:\{\{nombre\}\}|\[nombre\]|cliente)[^:\n]*[:!]?\s*\n+/i, '')
+    .trim();
+
+  const highlights = buckets.highlights
+    .map(l =>
+      l
+        .replace(/\*\*/g, '')
+        .replace(/^\s*(?:[-*•✓✔]|\d+[.)])\s*/, '')
+        .trim()
+    )
+    .filter(Boolean);
+
+  if (!subject && !headline && !body && !ctaText && highlights.length === 0) {
+    return { body: cleanedRaw.replace(/\*\*/g, '').trim() };
   }
 
   return {
@@ -325,6 +414,9 @@ function parseGeminiResponse(rawText: string): Partial<{
     ...(body ? { body } : {}),
     ...(highlights.length > 0 ? { highlights } : {}),
     ...(ctaText ? { ctaText } : {}),
+    ...(ctaUrl && (ctaUrl.startsWith('http://') || ctaUrl.startsWith('https://') || ctaUrl.includes('{{enlace}}'))
+      ? { ctaUrl }
+      : {}),
   };
 }
 
@@ -634,18 +726,45 @@ export default function CampanasCorreoPage() {
       return;
     }
     const parsed = parseGeminiResponse(geminiPasteText);
-    if (parsed.subject) setSubject(parsed.subject);
-    if (parsed.badgeText) setBadgeText(parsed.badgeText);
-    if (parsed.headline) setHeadline(parsed.headline);
-    if (parsed.body) setBody(parsed.body);
+    const appliedLabels: string[] = [];
+    if (parsed.subject) {
+      setSubject(parsed.subject);
+      appliedLabels.push('Asunto');
+    }
+    if (parsed.badgeText) {
+      setBadgeText(parsed.badgeText);
+      appliedLabels.push('Etiqueta');
+    }
+    if (parsed.headline) {
+      setHeadline(parsed.headline);
+      appliedLabels.push('Título');
+    }
+    if (parsed.body) {
+      setBody(parsed.body);
+      appliedLabels.push('Mensaje');
+    }
     if (parsed.highlights && parsed.highlights.length > 0) {
       setHighlightsText(parsed.highlights.join('\n'));
+      appliedLabels.push('Destacados');
     }
-    if (parsed.ctaText) setCtaText(parsed.ctaText);
+    if (parsed.ctaText) {
+      setCtaText(parsed.ctaText);
+      appliedLabels.push('Botón');
+    }
+    if (parsed.ctaUrl) {
+      setCtaUrl(parsed.ctaUrl);
+      appliedLabels.push('Enlace');
+    }
     setShowPasteBox(false);
     setGeminiPasteText('');
     setActiveSideTab('preview');
-    showAlert('Borrador actualizado', 'Se aplicó la respuesta de Gemini a tu plantilla.', 'success');
+    showAlert(
+      'Borrador actualizado',
+      appliedLabels.length > 0
+        ? `Se completaron automáticamente: ${appliedLabels.join(', ')}.`
+        : 'Se aplicó el texto de Gemini a tu plantilla.',
+      'success'
+    );
   };
 
   const handleNewDraft = () => {
