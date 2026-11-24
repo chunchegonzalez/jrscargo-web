@@ -22,10 +22,20 @@ import {
   Search,
   X,
   ShieldCheck,
+  ImagePlus,
+  Link2,
 } from 'lucide-react';
 import { useModal } from '@/app/components/ModalProvider';
 
 type CampaignCategory = 'promocion' | 'aviso' | 'temporada' | 'informativo';
+type CampaignImagePosition = 'top' | 'middle' | 'bottom';
+
+type CampaignImage = {
+  id: string;
+  src: string;
+  caption?: string;
+  position: CampaignImagePosition;
+};
 
 type CampaignDraft = {
   id: string;
@@ -38,6 +48,7 @@ type CampaignDraft = {
   headline: string;
   body: string;
   highlights: string[];
+  images?: CampaignImage[];
   ctaText: string;
   ctaUrl: string;
   updatedAtIso: string;
@@ -222,6 +233,37 @@ function parseGeminiResponse(rawText: string): Partial<{
   };
 }
 
+function compressImageFileToDataUrl(file: File, maxWidth = 960, quality = 0.84): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error('Formato de imagen no compatible.'));
+      img.onload = () => {
+        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(String(reader.result || ''));
+          return;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const outType = file.type === 'image/png' && file.size < 220_000 ? 'image/png' : 'image/jpeg';
+        resolve(canvas.toDataURL(outType, quality));
+      };
+      img.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function CampanasCorreoPage() {
   const { showAlert } = useModal();
 
@@ -241,6 +283,10 @@ export default function CampanasCorreoPage() {
   const [headline, setHeadline] = useState('');
   const [body, setBody] = useState('');
   const [highlightsText, setHighlightsText] = useState('');
+  const [images, setImages] = useState<CampaignImage[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [showImageUrlInput, setShowImageUrlInput] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [ctaText, setCtaText] = useState('Escribir por WhatsApp');
   const [ctaUrl, setCtaUrl] = useState(DEFAULT_WHATSAPP_URL);
 
@@ -374,6 +420,7 @@ export default function CampanasCorreoPage() {
     setHeadline('');
     setBody('');
     setHighlightsText('');
+    setImages([]);
     setCtaText('Escribir por WhatsApp');
     setCtaUrl(DEFAULT_WHATSAPP_URL);
   };
@@ -388,8 +435,66 @@ export default function CampanasCorreoPage() {
     setHeadline(d.headline || '');
     setBody(d.body || '');
     setHighlightsText((d.highlights || []).join('\n'));
+    setImages(Array.isArray(d.images) ? d.images : []);
     setCtaText(d.ctaText || '');
     setCtaUrl(d.ctaUrl || DEFAULT_WHATSAPP_URL);
+    setActiveSideTab('preview');
+  };
+
+  const handleUploadImages = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const remainingSlots = Math.max(0, 4 - images.length);
+    if (remainingSlots === 0) {
+      showAlert('Límite alcanzado', 'Puedes incluir hasta 4 imágenes por campaña.', 'error');
+      return;
+    }
+
+    setIsProcessingImage(true);
+    try {
+      const files = Array.from(fileList).slice(0, remainingSlots);
+      const added: CampaignImage[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        const dataUrl = await compressImageFileToDataUrl(file);
+        added.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          src: dataUrl,
+          caption: '',
+          position: images.length === 0 && added.length === 0 ? 'top' : 'middle',
+        });
+      }
+      if (added.length > 0) {
+        setImages(prev => [...prev, ...added].slice(0, 4));
+        setActiveSideTab('preview');
+      }
+    } catch (err) {
+      showAlert('Error de imagen', err instanceof Error ? err.message : 'No se pudo cargar la imagen.', 'error');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const handleAddImageUrl = () => {
+    const url = imageUrlInput.trim();
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      showAlert('Enlace inválido', 'Ingresa una URL válida que empiece con https://', 'error');
+      return;
+    }
+    if (images.length >= 4) {
+      showAlert('Límite alcanzado', 'Puedes incluir hasta 4 imágenes por campaña.', 'error');
+      return;
+    }
+    setImages(prev => [
+      ...prev,
+      {
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        src: url,
+        caption: '',
+        position: prev.length === 0 ? 'top' : 'middle',
+      },
+    ]);
+    setImageUrlInput('');
+    setShowImageUrlInput(false);
     setActiveSideTab('preview');
   };
 
@@ -415,6 +520,7 @@ export default function CampanasCorreoPage() {
           headline,
           body,
           highlights: highlightsArray,
+          images,
           ctaText,
           ctaUrl,
         }),
@@ -475,6 +581,7 @@ export default function CampanasCorreoPage() {
           headline: headline || subject,
           body,
           highlights: highlightsArray,
+          images,
           ctaText,
           ctaUrl,
         }),
@@ -526,6 +633,7 @@ export default function CampanasCorreoPage() {
             headline: headline || subject,
             body,
             highlights: highlightsArray,
+            images,
             ctaText,
             ctaUrl,
           }),
@@ -565,6 +673,7 @@ export default function CampanasCorreoPage() {
           totalRecipients: total,
           sentCount: totalSent,
           errorCount: totalErrors,
+          imagesCount: images.length,
           errors: allErrors.slice(0, 20),
         }),
       });
@@ -879,6 +988,133 @@ export default function CampanasCorreoPage() {
             />
           </div>
 
+          {/* Imágenes dentro del correo */}
+          <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/90 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-bold text-[#0B2737] uppercase tracking-wider flex items-center gap-1.5">
+                  <ImagePlus size={14} className="text-amber-500" />
+                  Imágenes dentro del correo ({images.length}/4)
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Se incrustan directo en el correo (compatibles con Gmail, Hotmail y celulares).
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <label className="h-8 px-3 rounded-lg bg-[#0B2737] hover:bg-[#12435E] text-white text-[11px] font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                  <ImagePlus size={13} className="text-amber-400" />
+                  <span>{isProcessingImage ? 'Optimizando...' : 'Subir imagen'}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                    disabled={isProcessingImage || images.length >= 4}
+                    onChange={e => {
+                      handleUploadImages(e.target.files);
+                      e.target.value = '';
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowImageUrlInput(prev => !prev)}
+                  disabled={images.length >= 4}
+                  className="h-8 px-2.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold inline-flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                >
+                  <Link2 size={13} />
+                  <span>URL</span>
+                </button>
+              </div>
+            </div>
+
+            {showImageUrlInput && (
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={imageUrlInput}
+                  onChange={e => setImageUrlInput(e.target.value)}
+                  placeholder="https://ejemplo.com/banner-promocion.jpg"
+                  className="flex-1 h-8 px-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#12435E]"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  className="h-8 px-3 rounded-lg bg-[#0B2737] text-white text-xs font-semibold cursor-pointer"
+                >
+                  Agregar
+                </button>
+              </div>
+            )}
+
+            {images.length > 0 && (
+              <div className="space-y-2">
+                {images.map(img => (
+                  <div
+                    key={img.id}
+                    className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 p-2.5 bg-white rounded-lg border border-slate-200"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.src}
+                      alt={img.caption || 'Imagen'}
+                      className="w-20 h-14 object-cover rounded-md border border-slate-200 shrink-0 bg-slate-100"
+                    />
+                    <div className="flex-1 min-w-0 w-full space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {[
+                          { id: 'top' as CampaignImagePosition, label: 'Arriba (Banner)' },
+                          { id: 'middle' as CampaignImagePosition, label: 'Dentro del cuerpo' },
+                          { id: 'bottom' as CampaignImagePosition, label: 'Al final' },
+                        ].map(pos => (
+                          <button
+                            key={pos.id}
+                            type="button"
+                            onClick={() =>
+                              setImages(prev =>
+                                prev.map(item =>
+                                  item.id === img.id ? { ...item, position: pos.id } : item
+                                )
+                              )
+                            }
+                            className={`h-6 px-2 rounded-md text-[10.5px] font-semibold border transition-colors cursor-pointer ${
+                              img.position === pos.id
+                                ? 'bg-[#0B2737] text-white border-[#0B2737]'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="text"
+                        value={img.caption || ''}
+                        onChange={e =>
+                          setImages(prev =>
+                            prev.map(item =>
+                              item.id === img.id ? { ...item, caption: e.target.value } : item
+                            )
+                          )
+                        }
+                        placeholder="Pie de foto opcional (ej: Válido del 24 al 30 de noviembre)"
+                        className="w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded-md text-[11px] text-slate-700 focus:bg-white focus:outline-none focus:border-[#12435E]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setImages(prev => prev.filter(item => item.id !== img.id))}
+                      className="h-8 w-8 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 flex items-center justify-center shrink-0 cursor-pointer self-end sm:self-center"
+                      title="Quitar imagen"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
@@ -986,50 +1222,113 @@ export default function CampanasCorreoPage() {
                 <span className="font-bold text-slate-900">{subject || '(Sin asunto aún)'}</span>
               </div>
 
-              <div className="max-w-[540px] mx-auto bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-                {/* Banner */}
-                <div className="px-6 py-5 bg-gradient-to-br from-[#0B2737] to-[#12435E] border-b-[3px] border-amber-500 text-white">
+              <div className="max-w-[540px] mx-auto bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                {/* Franja tricolor del logo JRS Cargo */}
+                <div className="flex h-1.5 w-full">
+                  <div className="w-[55%] bg-[#0B2737]" />
+                  <div className="w-[25%] bg-[#F59E0B]" />
+                  <div className="w-[20%] bg-[#EF4444]" />
+                </div>
+
+                {/* Banner Hero */}
+                <div className="px-6 py-6 bg-gradient-to-br from-[#0B2737] to-[#12435E] text-white">
                   <div className="flex items-center justify-between gap-2">
                     <div className="inline-block bg-white px-2.5 py-1.5 rounded-lg">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src="/logo.png" alt="JRS Cargo" className="h-7 w-auto block" />
                     </div>
-                    <span className="px-2.5 py-1 rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
+                    <span className="px-2.5 py-1 rounded-full bg-amber-400/20 border border-amber-400/45 text-amber-300 text-[10px] font-extrabold uppercase tracking-wider">
                       {badgeText || 'JRS Cargo'}
                     </span>
                   </div>
-                  <h3 className="mt-4 text-lg font-extrabold leading-snug text-white">
+                  <h3 className="mt-4 text-xl font-extrabold leading-snug text-white">
                     {headline || subject || 'Titular de tu campaña'}
                   </h3>
+                  <div className="mt-2.5 w-12 h-1 rounded-full bg-amber-400" />
                 </div>
 
                 {/* Cuerpo */}
-                <div className="p-6 text-slate-700 space-y-3">
-                  <p className="text-sm font-bold text-slate-900">Hola José,</p>
-                  {body ? (
-                    body
-                      .split(/\n{2,}/)
-                      .filter(Boolean)
-                      .map((p, idx) => (
-                        <p key={idx} className="text-[13px] text-slate-600 leading-relaxed whitespace-pre-line">
-                          {p.replace(/\{\{\s*nombre\s*\}\}/gi, 'José')}
+                <div className="p-6 text-slate-700 space-y-3.5">
+                  {/* Imágenes arriba (Banner) */}
+                  {images
+                    .filter(i => i.position === 'top')
+                    .map(img => (
+                      <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.src} alt={img.caption || 'Banner'} className="w-full h-auto block" />
+                        {img.caption && (
+                          <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                            {img.caption}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+
+                  <p className="text-[15px] font-extrabold text-[#0B2737]">Hola José,</p>
+
+                  {(() => {
+                    const paragraphs = body
+                      ? body.split(/\n{2,}/).filter(Boolean)
+                      : [];
+                    const midImages = images.filter(i => i.position === 'middle');
+
+                    if (paragraphs.length === 0) {
+                      return (
+                        <>
+                          <p className="text-xs text-slate-400 italic">
+                            Escribe tu mensaje o genera un borrador en el paso 1 para ver la vista previa aquí.
+                          </p>
+                          {midImages.map(img => (
+                            <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
+                              {img.caption && (
+                                <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                                  {img.caption}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <p className="text-[13.5px] text-slate-600 leading-relaxed whitespace-pre-line">
+                          {paragraphs[0].replace(/\{\{\s*nombre\s*\}\}/gi, 'José')}
                         </p>
-                      ))
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">
-                      Escribe tu mensaje o genera un borrador en el paso 1 para ver la vista previa aquí.
-                    </p>
-                  )}
+                        {midImages.map(img => (
+                          <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 my-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
+                            {img.caption && (
+                              <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                                {img.caption}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                        {paragraphs.slice(1).map((p, idx) => (
+                          <p key={idx} className="text-[13.5px] text-slate-600 leading-relaxed whitespace-pre-line">
+                            {p.replace(/\{\{\s*nombre\s*\}\}/gi, 'José')}
+                          </p>
+                        ))}
+                      </>
+                    );
+                  })()}
 
                   {highlightsArray.length > 0 && (
-                    <div className="my-3 p-3.5 rounded-lg bg-slate-50 border border-slate-200 border-l-4 border-l-amber-500">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0B2737] mb-1.5">
-                        Puntos destacados
+                    <div className="my-3 p-4 rounded-xl bg-slate-50 border border-slate-200 border-t-[3px] border-t-amber-500">
+                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0B2737] mb-2">
+                        Lo que debes saber
                       </p>
-                      <ul className="space-y-1">
+                      <ul className="space-y-1.5">
                         {highlightsArray.map((item, idx) => (
                           <li key={idx} className="text-xs text-slate-700 flex items-start gap-2">
-                            <span className="text-amber-500 font-bold">•</span>
+                            <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
+                              ✓
+                            </span>
                             <span>{item}</span>
                           </li>
                         ))}
@@ -1037,18 +1336,52 @@ export default function CampanasCorreoPage() {
                     </div>
                   )}
 
+                  {/* Imágenes al final */}
+                  {images
+                    .filter(i => i.position === 'bottom')
+                    .map(img => (
+                      <div key={img.id} className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={img.src} alt={img.caption || 'Imagen'} className="w-full h-auto block" />
+                        {img.caption && (
+                          <p className="px-3 py-2 text-[11px] text-slate-600 text-center bg-slate-50 border-t border-slate-200 font-medium">
+                            {img.caption}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+
                   {ctaText.trim() && ctaUrl.trim() && (
-                    <div className="pt-2 text-center">
-                      <span className="inline-block px-6 py-2.5 rounded-lg bg-[#0B2737] text-white text-xs font-bold">
-                        {ctaText}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-[#0B2737] to-[#12435E] text-center space-y-2.5">
+                      <p className="text-xs text-slate-200">
+                        ¿Listo para coordinar tus envíos o recibir asesoría personalizada?
+                      </p>
+                      <span className="inline-block px-6 py-2.5 rounded-lg bg-[#F59E0B] text-[#0B2737] text-xs font-extrabold">
+                        {ctaText} →
                       </span>
                     </div>
                   )}
 
-                  <div className="pt-4 mt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">
-                    <p className="font-bold text-[#0B2737]">JRS CARGO S.A.</p>
-                    <p>San Pablo de Heredia, Costa Rica &middot; +506 7260-1238</p>
+                  {/* Franja de confianza JRS Cargo */}
+                  <div className="grid grid-cols-3 rounded-lg bg-slate-50 border border-slate-200 divide-x divide-slate-200 text-center py-2.5">
+                    <div className="px-1">
+                      <p className="text-[10px] font-extrabold text-[#0B2737] uppercase">Miami → CR</p>
+                      <p className="text-[10px] text-slate-500">Aéreo y Marítimo</p>
+                    </div>
+                    <div className="px-1">
+                      <p className="text-[10px] font-extrabold text-[#12435E] uppercase">Tracking 24/7</p>
+                      <p className="text-[10px] text-slate-500">En línea</p>
+                    </div>
+                    <div className="px-1">
+                      <p className="text-[10px] font-extrabold text-[#EF4444] uppercase">Soporte</p>
+                      <p className="text-[10px] text-slate-500">7260-1238</p>
+                    </div>
                   </div>
+                </div>
+
+                <div className="py-4 px-5 bg-slate-50 border-t border-slate-200 text-center text-[11px] text-slate-500">
+                  <p className="font-extrabold text-[#0B2737]">JRS CARGO S.A.</p>
+                  <p>San Pablo de Heredia, Costa Rica &middot; +506 7260-1238 &middot; www.jrscargocr.com</p>
                 </div>
               </div>
             </div>

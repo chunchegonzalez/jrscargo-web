@@ -7,6 +7,7 @@ import {
   EmailCampaignHistoryEntry,
   isValidCampaignEmail,
   loadEmailCampaignsState,
+  sanitizeCampaignImages,
   saveEmailCampaignsState,
   sendCampaignBatchEmails,
 } from '@/lib/email-campaigns';
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
         highlights: Array.isArray(body.highlights)
           ? body.highlights.map((h: unknown) => String(h || '').trim()).filter(Boolean)
           : [],
+        images: sanitizeCampaignImages(body.images),
         ctaText: String(body.ctaText || '').trim(),
         ctaUrl: String(body.ctaUrl || '').trim(),
         updatedAtIso: ts.iso,
@@ -155,6 +157,7 @@ export async function POST(request: Request) {
         headline: String(body.headline || body.subject || 'Novedades JRS Cargo').trim(),
         body: String(body.body || '').trim(),
         highlights: Array.isArray(body.highlights) ? body.highlights : [],
+        images: sanitizeCampaignImages(body.images),
         ctaText: String(body.ctaText || '').trim(),
         ctaUrl: String(body.ctaUrl || '').trim(),
         isTest: true,
@@ -191,6 +194,7 @@ export async function POST(request: Request) {
         headline: String(body.headline || body.subject || 'Novedades JRS Cargo').trim(),
         body: String(body.body || '').trim(),
         highlights: Array.isArray(body.highlights) ? body.highlights : [],
+        images: sanitizeCampaignImages(body.images),
         ctaText: String(body.ctaText || '').trim(),
         ctaUrl: String(body.ctaUrl || '').trim(),
         isTest: false,
@@ -218,6 +222,7 @@ export async function POST(request: Request) {
         sentCount: Number(body.sentCount) || 0,
         errorCount: Number(body.errorCount) || 0,
         sentBy: auth.user.username,
+        imagesCount: Number(body.imagesCount) || 0,
         errors: Array.isArray(body.errors) ? body.errors.slice(0, 20) : undefined,
       };
 
